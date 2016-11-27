@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "name": "wiki boot",
+  "version": "0.0.0.1",
+  "permissions": [
+          "<all_urls>",
+		  "storage",
+		  "unlimitedStorage"
+        ],
+	"background": {
+		"persistent":true,
+		"scripts": ["jquery-3.1.0.min.js","wikiParser.js","boot.js","shanghay.js"]
+  }
+}
