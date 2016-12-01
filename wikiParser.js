@@ -127,9 +127,12 @@ var WikiUpdater = (()=> {
 		}
 	});
 	
-
-	$.get('https://he.wikipedia.org/w/api.php?action=query&meta=tokens&format=json&assert=bot',
-	(res)=> _token = res.query.tokens.csrftoken);
+	
+	fetch('https://he.wikipedia.org/w/api.php?action=query&meta=tokens&format=json&assert=bot',{
+		credentials: 'include'
+	})
+	.then(res=> res.json())
+	.then(res=> _token = res.query.tokens.csrftoken);
 	
 	class WikiUpdater {
 		constructor() {
@@ -137,9 +140,14 @@ var WikiUpdater = (()=> {
 		}
 		
 		editSection(articleTitle, sectionTitle,sectionId, content) {
-			$.post('https://he.wikipedia.org/w/api.php?action=edit&format=json&assert=bot&bot=true',
-				{title:articleTitle,section:sectionId,text:content,token:_token,summary:sectionTitle}, 
-				(res)=> {
+			var fetchDetails = {
+				method : 'post',
+				body:InfraStructure.objectToFormData({title:articleTitle,section:sectionId,text:content,token:_token,summary:sectionTitle}),
+				credentials: 'include'
+			};
+			fetch('https://he.wikipedia.org/w/api.php?action=edit&format=json&assert=bot&bot=true',fetchDetails)
+			.then(res=> res.json())
+			.then(res=> {
 					_that._edits.push({revisionId:res.edit.newrevid, title: articleTitle});
 					this.saveEdits();
 				});
@@ -147,9 +155,14 @@ var WikiUpdater = (()=> {
 		
 		updateArticle(articleTitle, summary, content) {
 			var _that = this;
-			$.post('https://he.wikipedia.org/w/api.php?action=edit&format=json&assert=bot&bot=true',
-				{title:articleTitle,text:content,token:_token,summary:summary}, 
-				(res)=> {
+			var fetchDetails = {
+				method : 'post',
+				body:InfraStructure.objectToFormData({title:articleTitle,text:content,token:_token,summary:summary}),
+				credentials: 'include' 
+			};
+			fetch('https://he.wikipedia.org/w/api.php?action=edit&format=json&assert=bot&bot=true',fetchDetails)
+				.then(res=> res.json())
+				.then(res=> {
 					_that._edits.push({revisionId:res.edit.newrevid, title: articleTitle});
 					this.saveEdits();
 				});
@@ -162,8 +175,14 @@ var WikiUpdater = (()=> {
 		}
 		rollbackEdit(articleTitle, summary, revisionId) {
 			var _that = this;
-			$.post('https://he.wikipedia.org/w/api.php?action=edit&format=json&assert=bot&bot=1',
-				{title:articleTitle,undo:revisionId,token:_token}, (res)=> console.log(res));
+			var fetchDetails = {
+				method : 'post',
+				body:InfraStructure.objectToFormData({title:articleTitle,undo:revisionId,token:_token}),
+				credentials: 'include' 
+			};
+			fetch('https://he.wikipedia.org/w/api.php?action=edit&format=json&assert=bot&bot=1',fetchDetails)
+				.then(res=> res.json())
+				.then(res=> console.log(res));
 		}
 		saveEdits(){
 			var _that = this;
@@ -288,21 +307,19 @@ var WikiTableParser = (function(){
 	}
 })();
 
-var WikiAPI = (function($){
-	'use strict';
-	
-	return {
-		getLangLinkName,
-		contentOfPage
-	};
-	
-	function contentOfPage(title, callback){
-		$.get('https://he.wikipedia.org/w/api.php?action=query&format=json&prop=revisions&rvprop=content&titles=דירוג_אקדמי_של_אוניברסיטאות_בעולם',
-			res=>callback(res.query.pages['758765'].revisions[0]['*']));
+class WikiAPI {
+	static contentOfPage(title, callback){
+		fetch(`https://he.wikipedia.org/w/api.php?action=query&format=json&prop=revisions&rvprop=content&titles=${title}`)
+			.then(res=>res.json())
+			.then(res=>{
+				var pageId = Object.keys(res.query.pages)[0];
+				callback(res.query.pages[pageId].revisions[0]['*']);
+			});
 	}
-	
-	function getLangLinkName(name, srcLng, destLang, callback){
-		$.get('https://'+srcLng+'.wikipedia.org/w/api.php?action=query&prop=langlinks&titles=' + name + '&redirects=&lllang='+destLang+'&format=json',function(res){
+	static getLangLinkName(name, srcLng, destLang, callback){
+		fetch('https://'+srcLng+'.wikipedia.org/w/api.php?action=query&prop=langlinks&titles=' + name + '&redirects=&lllang='+destLang+'&format=json')
+		.then(res=>res.json())
+		.then(res => {
 			var pages = res.query.pages;
 			var page = pages[Object.keys(pages)[0]];
 			if (page.langlinks){
@@ -312,4 +329,14 @@ var WikiAPI = (function($){
 			}
 		});
 	}
-})($);
+}
+
+class InfraStructure {
+	static objectToFormData(obj){
+		let fd = new FormData();
+		for (let k in obj ) {
+			fd.append(k,obj[k]);
+		}
+		return fd;
+	}
+}
