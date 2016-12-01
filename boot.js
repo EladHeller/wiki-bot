@@ -13,11 +13,21 @@ var nc = companies.filter(x=>x.newArticleText.indexOf('== הערות שוליי�
 
 var TradeTemplateBoot = (function(){
 	'use strict';
-
-	const mayaLinkRegex = /^http:\/\/maya\.tase\.co\.il\/bursa\/CompanyDetails\.asp\?CompanyCd=\d*$/;
-	const excelLink ='mayafiles.tase.co.il/Pages/ExcelFinanceReport.aspx?CompanyCd=';
-	const companyPageLink ='maya.tase.co.il/bursa/CompanyDetails.asp?CompanyCd=';
-	
+	const mayaLinkRegex = /^http:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/;
+	const jsonLink ='http://mayaapi.tase.co.il/api/company/financereports?companyId=';
+	const companyPageLink ='http://maya.tase.co.il/company/'
+	const companyReportView  ='?view=reports';
+	const mayaGetOptions = {
+		method : 'get',
+		credentials: 'include',
+		headers: new Headers({
+			'X-Maya-With':'allow'
+		})
+	};
+	let mayaOptionsOptions = {
+		method : 'options',
+		credentials: 'include',
+	};
 	TradeTemplateBoot.wikiUpdater = new WikiUpdater();
 	TradeTemplateBoot.prototype.run = run;
 	TradeTemplateBoot.prototype.getRelevantCompanies = getRelevantCompanies;
@@ -39,7 +49,7 @@ var TradeTemplateBoot = (function(){
 		}
 		var geicontinue = continueParam ? ('&geicontinue=' + continueParam) : '';
 		var _that = this;
-		$.get("https://he.wikipedia.org/w/api.php?action=query&format=json" + 
+		fetch("https://he.wikipedia.org/w/api.php?action=query&format=json" + 
 			  // Pages with תבנית:מידע בורסאי
 			  "&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=תבנית:מידע בורסאי" + geicontinue +
 			  "&prop=templates|revisions|extlinks"+
@@ -48,8 +58,11 @@ var TradeTemplateBoot = (function(){
 			  // Get content of page
 			  "&rvprop=content" +
 			  // Get maya link
-			  "&elprotocol=http&elquery=maya.tase.co.il/bursa/CompanyDetails.asp?CompanyCd=&ellimit=5000",
-			  (res) => onListLoad.call(_that,res));
+			  "&elprotocol=http&elquery=maya.tase.co.il/company/&ellimit=5000",{
+				credentials: 'include'
+			  })
+			.then(res => res.json())
+			.then(res => onListLoad.call(_that,res));
 	}
 	
 	function onListLoad(res){
@@ -59,36 +72,37 @@ var TradeTemplateBoot = (function(){
 		
 		var pages = res.query.pages;
 		this._exceptPages += Object.keys(pages).length;
-		var company;
 		var _that = this;
 		var extLink;
-		
+
 		for (let companyId in pages) {
-			company = pages[companyId];
-			extLink = company.extlinks.find(link=>link['*'].match(mayaLinkRegex))
-			$.get(extLink['*'].replace(companyPageLink,excelLink),
-			getCompanyDetailsCallback(company,this));
+			let company = pages[companyId];
+			extLink = company.extlinks.find(link=>link['*'].match(mayaLinkRegex))['*'];
+			let companyFinnaceDetailsUrl =
+				extLink.replace(companyPageLink,jsonLink).replace(companyReportView,'');
+						 
+			fetch(companyFinnaceDetailsUrl,mayaOptionsOptions)
+				.then((res)=>fetch(companyFinnaceDetailsUrl,mayaGetOptions))
+				.then((res)=>res.json())
+				.then(jsonRes=> {
+					companyDetailsCallback.call(this,company,jsonRes)
+				});
 		}
 	}
 
-	function getCompanyDetailsCallback(company,that) {
-		return function(res){		
-			var mayaDetails = new Map();
-			var rows = $(res).filter('table[rules="all"]').find('tr');
-
-			rows.each(function (index, row) {
-				mayaDetails.set(row.children[0].textContent,
-								row.children[row.children.length-1].textContent);
-			});
-			
-			var companyObj = new Company(company.title,mayaDetails,company);
-			that.companies.push(companyObj);
-			that._getPages++;
-			
-			if (that._getPages === that._exceptPages) {
-				console.log('finnish!');
-			}
-		};
+	function companyDetailsCallback(company,res) {
+		var mayaDetails = new Map();
+		for (let row of res.AllRows) {
+			mayaDetails.set(row.Name, row.CurrPeriodValue);
+		}
+		
+		var companyObj = new Company(company.title,mayaDetails,company, res.CurrentPeriod.Year);
+		this.companies.push(companyObj);
+		this._getPages++;
+		
+		if (this._getPages === this._exceptPages) {
+			console.log('finnish!');
+		}
 	}
 	
 	function tableFormat() {
@@ -142,11 +156,11 @@ var Company = (function(){
 	Company.prototype.updateCompanyArticle = updateCompanyArticle;
 	return Company;
 	
-	function Company(name, mayaData, wikiData) {
+	function Company(name, mayaData, wikiData, year) {
 		this.name = name;
 		
 		if (mayaData) {
-			this.appendMayaData(mayaData);
+			this.appendMayaData(mayaData, year);
 		}
 		if (wikiData) {
 			this.appendWikiData(wikiData);
@@ -195,11 +209,10 @@ var Company = (function(){
 		}
 	}
 	
-	function appendMayaData(mayaData) {
+	function appendMayaData(mayaData, year) {
 		this.mayaDataForWiki = {};
 		this.wikiTemplateData = {};
 		this.hasData = false;
-		var year =  mayaData.values().next().value.match(/\d{4}/)[0];
 		
 		for	(let field of fieldsForWiki) {
 			var fieldData = mayaData.get(field.mayaName);
@@ -241,7 +254,7 @@ var Company = (function(){
 				sumStr = Number(fieldData.substring(0,fieldData.length - 6)).toLocaleString();
 			}
 			var commentKey = `דוח${year}`;
-			var comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference} דוח תקופתי ושנתי לשנת ${year}] באתר [[מאי"ה]].` :''}}}`;
+			var comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference} דיווחי החברה] באתר [[מאי"ה]].` :''}}}`;
 			finalString += `${sumStr} [[${order}]] [[${NIS}]] ([[${year}]])${comment}`;
 		}
 		
