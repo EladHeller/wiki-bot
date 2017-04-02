@@ -17,6 +17,7 @@ var TradeTemplateBoot = (function(){
 	const jsonLink ='http://mayaapi.tase.co.il/api/company/financereports?companyId=';
 	const companyPageLink ='http://maya.tase.co.il/company/'
 	const companyReportView  ='?view=reports';
+	const companyFinanceView  ='?view=finance';
 	const mayaGetOptions = {
 		method : 'get',
 		credentials: 'include',
@@ -38,7 +39,7 @@ var TradeTemplateBoot = (function(){
 		if (!year) {
 			throw new Exception('year parameter is required');
 		}
-		this.year = year.toString();
+		this.year = year;
 		this.companies = [];
 	}
 
@@ -86,7 +87,14 @@ var TradeTemplateBoot = (function(){
 				.then((res)=>res.json())
 				.then(jsonRes=> {
 					companyDetailsCallback.call(this,company,jsonRes)
-				});
+				})
+			.catch(e=> {
+				this._getPages++;
+				console.error(e);
+				if (this._getPages === this._exceptPages) {
+					console.log('finnish!');
+				}
+			});
 		}
 	}
 
@@ -148,7 +156,8 @@ var Company = (function(){
 	];
 	const NAME_FIELD = 'שם';
 	const NAME_STRING = '{{שם הדף בלי הסוגריים}}';
-	
+	const companyReportView  ='?view=reports';
+	const companyFinanceView  ='?view=finance';
 	Company.wikiUpdater = new WikiUpdater();
 	Company.prototype.updateWikiTamplate = updateWikiTamplate;
 	Company.prototype.appendMayaData = appendMayaData;
@@ -165,6 +174,7 @@ var Company = (function(){
 		if (wikiData) {
 			this.appendWikiData(wikiData);
 		}
+		this.updateWikiTamplate();
 	}
 	
 	function updateCompanyArticle() {
@@ -203,10 +213,6 @@ var Company = (function(){
 		this.articleText = wikiData.revisions[0]['*'];
 		this.reference = wikiData.extlinks[0]['*'];
 		this.templateParser = new WikiTemplateParser(this.articleText, TEMPLATE_NAME);			
-
-		if (this.wikiTemplateData) {
-			this.updateWikiTamplate();
-		}
 	}
 	
 	function appendMayaData(mayaData, year) {
@@ -221,10 +227,6 @@ var Company = (function(){
 		}
 
 		this.wikiTemplateData.year = year;
-		
-		if (this.reference) {
-			this.updateWikiTamplate();
-		}
 	}
 	
 	function getFieldString(fieldData, year, reference, name, isFirst) {
@@ -253,8 +255,8 @@ var Company = (function(){
 				order = milliardStr;
 				sumStr = Number(fieldData.substring(0,fieldData.length - 6)).toLocaleString();
 			}
-			var commentKey = `דוח${year}`;
-			var comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference} דיווחי החברה] באתר [[מאי"ה]].` :''}}}`;
+			var commentKey = `דוח${year}-${name}`;
+			var comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference.replace(companyReportView,companyFinanceView)} נתונים כספיים] באתר [[מאי"ה]].` :''}}}`;
 			finalString += `${sumStr} [[${order}]] [[${NIS}]] ([[${year}]])${comment}`;
 		}
 		
