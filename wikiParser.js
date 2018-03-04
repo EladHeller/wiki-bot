@@ -117,7 +117,7 @@ var WikiParser = (function(){
 		return rowStr;
 	}
 })();
-var WikiUpdater = (()=> {
+const WikiUpdater = (()=> {
 	'use strict';
 	let _token;
 	
