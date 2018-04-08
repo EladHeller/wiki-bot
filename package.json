@@ -1,0 +1,25 @@
+{
+  "name": "tradeboot",
+  "version": "1.0.0",
+  "description": "\"# tradeBoot\"",
+  "main": "boot.js",
+  "scripts": {
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EladHeller/tradeBoot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EladHeller/tradeBoot/issues"
+  },
+  "homepage": "https://github.com/EladHeller/tradeBoot#readme",
+  "devDependencies": {
+    "eslint": "^4.19.1",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.10.0"
+  }
+}

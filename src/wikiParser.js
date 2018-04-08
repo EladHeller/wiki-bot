@@ -1,6 +1,4 @@
-var WikiTemplateParser = (function(){
-	'use strict';
-
+const WikiTemplateParser = (function(){
 	ctor.prototype.updateTamplateFromData = updateTamplateFromData;
 	ctor.prototype.updateDataFromTemplete = updateDataFromTemplete;
 	
@@ -16,9 +14,9 @@ var WikiTemplateParser = (function(){
 	function updateTamplateFromData(templateData = this.templateData, 
 		templateName = this._templateName){
 		
-		var tamplateStr = `{{${templateName}\n`;
-		var value;
-		for (let key in templateData) {
+		const tamplateStr = `{{${templateName}\n`;
+		const value;
+		for (const key in templateData) {
 			value = templateData[key];
 			tamplateStr += `|${key}=${value}\n`;
 		}
@@ -29,15 +27,15 @@ var WikiTemplateParser = (function(){
 	}
 	
 	function updateDataFromTemplete(templateText = this.templateText) {
-		var obj = {};
+		const obj = {};
 		if (templateText) {
-			var currIndex = templateText.indexOf('|') + 1;
+			const currIndex = templateText.indexOf('|') + 1;
 			
-			var pipeSignIndex;
-			var key;
-			var value;
-			var equalSignIndex;
-			var isTemplateEnd = false;
+			const pipeSignIndex;
+			const key;
+			const value;
+			const equalSignIndex;
+			const isTemplateEnd = false;
 			while (!isTemplateEnd) {
 				equalSignIndex = templateText.indexOf('=', currIndex);
 				key = templateText.substring(currIndex, equalSignIndex).trim();
@@ -61,11 +59,11 @@ var WikiTemplateParser = (function(){
 	
 	function findTamplateText(templateName = this._templateName, 
 							  articleContent=this._articleContent) {
-		var startStr = `{{${templateName}`;
-		var templateText = '';
-		var startIndex = articleContent.indexOf(startStr);
+		const startStr = `{{${templateName}`;
+		const templateText = '';
+		const startIndex = articleContent.indexOf(startStr);
 		if (startIndex > -1) {
-			var endIndex = WikiParser.nextWikiText(articleContent,startIndex+ startStr.length, '}}') + 2;
+			const endIndex = WikiParser.nextWikiText(articleContent,startIndex+ startStr.length, '}}') + 2;
 			templateText = articleContent.substring(startIndex,endIndex);
 		}
 		return templateText;
@@ -73,7 +71,7 @@ var WikiTemplateParser = (function(){
 })();
 
 
-var WikiParser = (function(){
+const WikiParser = (function(){
 	'use strict';
 	const nowiki = '<nowiki>';
 	const nowikiEnd = '</nowiki>';
@@ -108,10 +106,10 @@ var WikiParser = (function(){
 	}
 	
 	function buildTableRow(fields, style, isHeader) {
-		var delimiter = isHeader ? '!' : '|';
+		const delimiter = isHeader ? '!' : '|';
 		style = style ? (style + delimiter) : '';
-		var rowStr = `\n|-\n${delimiter}${style}[[${fields[0]}]]`;
-		for	(let i = 1; i < (fields.length); i++) {
+		const rowStr = `\n|-\n${delimiter}${style}[[${fields[0]}]]`;
+		for	(const i = 1; i < (fields.length); i++) {
 			rowStr += ' || ' + (fields[i] === undefined ? '---' : fields[i]);
 		}
 		return rowStr;
@@ -119,7 +117,7 @@ var WikiParser = (function(){
 })();
 const WikiUpdater = (()=> {
 	'use strict';
-	let _token;
+	const _token;
 	
 	chrome.storage.local.get('revisionData', (res) => {
 		if (!res.revisionData) {
@@ -140,7 +138,7 @@ const WikiUpdater = (()=> {
 		}
 		
 		editSection(articleTitle, sectionTitle,sectionId, content) {
-			var fetchDetails = {
+			const fetchDetails = {
 				method : 'post',
 				body:InfraStructure.objectToFormData({title:articleTitle,section:sectionId,text:content,token:_token,summary:sectionTitle}),
 				credentials: 'include'
@@ -154,8 +152,8 @@ const WikiUpdater = (()=> {
 		}
 		
 		updateArticle(articleTitle, summary, content) {
-			var _that = this;
-			var fetchDetails = {
+			const _that = this;
+			const fetchDetails = {
 				method : 'post',
 				body:InfraStructure.objectToFormData({title:articleTitle,text:content,token:_token,summary:summary}),
 				credentials: 'include' 
@@ -168,14 +166,14 @@ const WikiUpdater = (()=> {
 				});
 		}
 		rollbackAllEdits(summary) {
-			for	(let edit of this._edits) {
+			for	(const edit of this._edits) {
 				this.rollbackEdit(edit.title, summary, edit.revisionId);
 			}
 			this._edits  = [];
 		}
 		rollbackEdit(articleTitle, summary, revisionId) {
-			var _that = this;
-			var fetchDetails = {
+			const _that = this;
+			const fetchDetails = {
 				method : 'post',
 				body:InfraStructure.objectToFormData({title:articleTitle,undo:revisionId,token:_token}),
 				credentials: 'include' 
@@ -185,9 +183,9 @@ const WikiUpdater = (()=> {
 				.then(res=> console.log(res));
 		}
 		saveEdits(){
-			var _that = this;
+			const _that = this;
 			chrome.storage.local.get('revisionData', (res) => {
-				for (let edit of _that._edits) {
+				for (const edit of _that._edits) {
 					res.revisionData[edit.revisionId] = edit.title;
 				}
 				chrome.storage.local.set({revisionData:res.revisionData});
@@ -196,7 +194,7 @@ const WikiUpdater = (()=> {
 		
 		rollbackAllStorageEdits(summery) {
 			chrome.storage.local.get('revisionData', (res) => {
-				for	(let revId in res.revisionData) {
+				for	(const revId in res.revisionData) {
 					rollbackEdit(res.revisionData[revId], summery, revId);
 				}
 			});
@@ -208,58 +206,57 @@ const WikiUpdater = (()=> {
 	return WikiUpdater;
 })();
 
-var WikiTableParser = (function(){
+const WikiTableParser = (function(){
 	WikiTableParser.prototype.findTablesText = findTablesText;
 	return WikiTableParser;
 	function WikiTableParser(articleText) {
 		this._articleContent = articleText;
-		var tableTexts = this.findTablesText();
+		const tableTexts = this.findTablesText();
 		
-		this.tables = tableTexts
-			.map(tableTextToObject);
+		this.tables = tableTexts.map(tableTextToObject);
 	}
 	
 	function tableTextToObject(tableText) {
-		var startStr = '{|';
-		var tableData = {text: tableText, rows:[]};
-		
-		var headerIndex = tableText.indexOf('!', startStr.length);
-		var rowIndex = tableText.indexOf('|',startStr.length);
-		var hasHeader = (headerIndex > -1) && (headerIndex < rowIndex);
-		var currIndex = hasHeader ? headerIndex : rowIndex;
+		const startStr = '{|';
+		const tableData = {text: tableText, rows:[]};
+		let rowText
+		const headerIndex = tableText.indexOf('!', startStr.length);
+		const rowIndex = tableText.indexOf('|',startStr.length);
+		const hasHeader = (headerIndex > -1) && (headerIndex < rowIndex);
+		let currIndex = hasHeader ? headerIndex : rowIndex;
 		tableData.tableStyle = tableText.substring(startStr.length,currIndex).trim();
-		var nextRowIndex = WikiParser.nextWikiText(tableText, currIndex, '|-');
+		let nextRowIndex = WikiParser.nextWikiText(tableText, currIndex, '|-');
 		
 		if (hasHeader) {
-			var rowText = tableText.substring(currIndex+1,nextRowIndex).trim();
+			rowText = tableText.substring(currIndex + 1, nextRowIndex).trim();
 			tableData.rows.push(getTableRow(rowText, true));
 			currIndex = nextRowIndex += 2;
 			nextRowIndex = WikiParser.nextWikiText(tableText, currIndex, '|-');
 		}
 		
 		while (nextRowIndex > -1) {
-			var rowText = tableText.substring(currIndex+1,nextRowIndex).trim();
+			rowText = tableText.substring(currIndex + 1, nextRowIndex).trim();
 			tableData.rows.push(getTableRow(rowText, false));
 			currIndex = nextRowIndex += 2;
 			nextRowIndex = WikiParser.nextWikiText(tableText, currIndex, '|-');
 		}
 		
-		var rowText = tableText.substr(currIndex+1).trim();
+		const rowText = tableText.substr(currIndex + 1).trim();
 		tableData.rows.push(getTableRow(rowText, false));
 		
 		return tableData;
 	}
 	
 	function getTableRow(rowText, isHeader){
-		var delimiter = isHeader ? '!' : '|';
-		var row = {values:[]};
-		var currIndex = 0;
+		const delimiter = isHeader ? '!' : '|';
+		const row = {values:[]};
+		let currIndex = 0;
 		
 		if (rowText[currIndex] === delimiter) {
 			currIndex++;
 		}
 		
-		var nextDelimiterIndex = 
+		let nextDelimiterIndex = 
 			WikiParser.nextWikiText(rowText, currIndex, delimiter);
 		
 		// Row has style cell
@@ -282,24 +279,24 @@ var WikiTableParser = (function(){
 	}
 	
 	function getNextRowDelimiterIndex(rowText, currIndex, delimiter){
-		var nextDelimiterIndex1 = 
+		const nextDelimiterIndex1 = 
 			WikiParser.nextWikiText(rowText, currIndex, delimiter + delimiter);
-		var nextDelimiterIndex2 = 
+		const nextDelimiterIndex2 = 
 			WikiParser.nextWikiText(rowText, currIndex, '\n' + delimiter);
-		var index = ((nextDelimiterIndex2 === -1) || ((nextDelimiterIndex1 < nextDelimiterIndex2) && (nextDelimiterIndex1 > -1))) ? 
+		const index = ((nextDelimiterIndex2 === -1) || ((nextDelimiterIndex1 < nextDelimiterIndex2) && (nextDelimiterIndex1 > -1))) ? 
 				nextDelimiterIndex1 : 
 				nextDelimiterIndex2;
 		return index;
 	}
 	
 	function findTablesText(articleContent=this._articleContent) {
-		var startStr = '{|';
-		var tables = [];
+		const startStr = '{|';
+		const tables = [];
 		
-		var startIndex = articleContent.indexOf(startStr);
-		
+		let startIndex = articleContent.indexOf(startStr);
+		let endIndex
 		while (startIndex > -1) {
-			var endIndex = WikiParser.nextWikiText(articleContent,startIndex+ startStr.length, '|}') + 2;
+			endIndex = WikiParser.nextWikiText(articleContent,startIndex+ startStr.length, '|}') + 2;
 			tables.push(articleContent.substring(startIndex,endIndex));
 			startIndex = articleContent.indexOf(startStr, endIndex);
 		}
@@ -312,31 +309,27 @@ class WikiAPI {
 		fetch(`https://he.wikipedia.org/w/api.php?action=query&format=json&prop=revisions&rvprop=content&titles=${title}`)
 			.then(res=>res.json())
 			.then(res=>{
-				var pageId = Object.keys(res.query.pages)[0];
+				const pageId = Object.keys(res.query.pages)[0];
 				callback(res.query.pages[pageId].revisions[0]['*']);
 			});
 	}
-	static getLangLinkName(name, srcLng, destLang, callback){
-		fetch('https://'+srcLng+'.wikipedia.org/w/api.php?action=query&prop=langlinks&titles=' + name + '&redirects=&lllang='+destLang+'&format=json')
-		.then(res=>res.json())
-		.then(res => {
-			var pages = res.query.pages;
-			var page = pages[Object.keys(pages)[0]];
-			if (page.langlinks){
-				callback(page.langlinks[0]['*']);
-			} else {
-				callback();
-			}
-		});
+	async static getLangLinkName(name, srcLng, destLang) {
+		const fetchRes = await fetch(`https://${srcLng}.wikipedia.org/w/api.php?action=query&prop=langlinks&titles=${name}&redirects=&lllang=${destLang}&format=json`)
+		const res = await fetchRes.json()
+		const pages = res.query.pages;
+		const page = pages[Object.keys(pages)[0]];
+		if (page.langlinks){
+			return page.langlinks[0]['*'];
+		}
+
+		return false
 	}
 }
 
 class InfraStructure {
 	static objectToFormData(obj){
-		let fd = new FormData();
-		for (let k in obj ) {
-			fd.append(k,obj[k]);
-		}
+		const fd = new FormData();
+		Object.entries(obj).forEach(([key, val]) => fd.append(key, val))
 		return fd;
 	}
 }
