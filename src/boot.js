@@ -74,8 +74,7 @@ const TradeTemplateBoot = (() => {
     const {pages} = res.query
     this._exceptPages += Object.keys(pages).length
     let extLink
-    pages.keys().forEach((companyId) => {
-      const company = pages[companyId]
+    Object.values(pages).forEach((company) => {
       extLink = company.extlinks.find(link => link['*'].match(mayaLinkRegex))['*']
       const companyFinnaceDetailsUrl = extLink.replace(companyPageLink, jsonLink).replace(companyReportView, '')
 
@@ -112,12 +111,8 @@ const TradeTemplateBoot = (() => {
 
   function tableFormat() {
     let tableRows = ''
-    let details
     this.companies.forEach((company) => {
-      details = [company.name]
-      company.mayaDataForWiki.values().forEach((val) => {
-        details.push(val || '---')
-      })
+      const details = [company.name, ...Object.values(company.mayaDataForWiki).map(val => val || '---')]
       details.push(company.wikiTemplateData.year)
       details.push(company.isContainsTamplate)
       tableRows += WikiParser.buildTableRow(details)
