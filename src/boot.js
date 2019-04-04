@@ -118,7 +118,7 @@ const TradeTemplateBoot = (() => {
       tableRows += WikiParser.buildTableRow(details)
     })
 
-    return `{| class="wikitable sortable"\n! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`
+    return `{| class="wikitable sortable"\n! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`
   }
 
   function getRelevantCompanies() {
