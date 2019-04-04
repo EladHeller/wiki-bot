@@ -1,5 +1,5 @@
 /*
-const tradeTemplateBoot = new TradeTemplateBoot(2017)
+const tradeTemplateBoot = new TradeTemplateBoot(2018)
 tradeTemplateBoot.run()
 ---
 const tableFormatData = tradeTemplateBoot.tableFormat()
@@ -18,7 +18,6 @@ const TradeTemplateBoot = (() => {
   const jsonLink = 'http://mayaapi.tase.co.il/api/company/financereports?companyId='
   const companyPageLink = 'http://maya.tase.co.il/company/'
   const companyReportView = '?view=reports'
-  const companyFinanceView = '?view=finance'
   const mayaGetOptions = {
     method: 'get',
     credentials: 'include',
@@ -50,21 +49,21 @@ const TradeTemplateBoot = (() => {
       this._exceptPages = 0
     }
     const geicontinue = continueParam ? (`&geicontinue=${continueParam}`) : ''
-    const _that = this
+    const that = this
     fetch(`${'https://he.wikipedia.org/w/api.php?action=query&format=json' +
-			  // Pages with תבנית:מידע בורסאי
-			  '&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=תבנית:מידע בורסאי'}${geicontinue
-			  }&prop=templates|revisions|extlinks` +
-			  // This page contains תבנית:חברה מסחרית?
-			  '&tltemplates=תבנית:חברה מסחרית&tllimit=5000' +
-			  // Get content of page
-			  '&rvprop=content' +
-			  // Get maya link
-			  '&elprotocol=http&elquery=maya.tase.co.il/company/&ellimit=5000', {
+      // Pages with תבנית:מידע בורסאי
+      '&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=תבנית:מידע בורסאי'}${geicontinue
+    }&prop=templates|revisions|extlinks` +
+      // This page contains תבנית:חברה מסחרית?
+      '&tltemplates=תבנית:חברה מסחרית&tllimit=5000' +
+      // Get content of page
+      '&rvprop=content' +
+      // Get maya link
+      '&elprotocol=http&elquery=maya.tase.co.il/company/&ellimit=5000', {
       credentials: 'include',
-			  })
+    })
       .then(res => res.json())
-      .then(res => onListLoad.call(_that, res))
+      .then(res => onListLoad.call(that, res))
   }
 
   function onListLoad(res) {
@@ -72,20 +71,17 @@ const TradeTemplateBoot = (() => {
       this.run(res.continue.geicontinue)
     }
 
-    const pages = res.query.pages
+    const {pages} = res.query
     this._exceptPages += Object.keys(pages).length
-    const _that = this
     let extLink
-
-    for (const companyId in pages) {
+    pages.keys().forEach((companyId) => {
       const company = pages[companyId]
       extLink = company.extlinks.find(link => link['*'].match(mayaLinkRegex))['*']
-      const companyFinnaceDetailsUrl =
-				extLink.replace(companyPageLink, jsonLink).replace(companyReportView, '')
+      const companyFinnaceDetailsUrl = extLink.replace(companyPageLink, jsonLink).replace(companyReportView, '')
 
       fetch(companyFinnaceDetailsUrl, mayaOptionsOptions)
-        .then(res => fetch(companyFinnaceDetailsUrl, mayaGetOptions))
-        .then(res => res.json())
+        .then(() => fetch(companyFinnaceDetailsUrl, mayaGetOptions))
+        .then(result => result.json())
         .then((jsonRes) => {
           companyDetailsCallback.call(this, company, jsonRes)
         })
@@ -96,14 +92,14 @@ const TradeTemplateBoot = (() => {
             console.log('finnish!')
           }
         })
-    }
+    })
   }
 
   function companyDetailsCallback(company, res) {
     const mayaDetails = new Map()
-    for (const row of res.AllRows) {
+    res.AllRows.forEach((row) => {
       mayaDetails.set(row.Name, row.CurrPeriodValue)
-    }
+    })
 
     const companyObj = new Company(company.title, mayaDetails, company, res.CurrentPeriod.Year)
     this.companies.push(companyObj)
@@ -117,30 +113,29 @@ const TradeTemplateBoot = (() => {
   function tableFormat() {
     let tableRows = ''
     let details
-
-    for (const company of this.companies) {
+    this.companies.forEach((company) => {
       details = [company.name]
-      for (const field in company.mayaDataForWiki) {
-        details.push(company.wikiTemplateData[field] || '---')
-      }
+      company.mayaDataForWiki.values().forEach((val) => {
+        details.push(val || '---')
+      })
       details.push(company.wikiTemplateData.year)
       details.push(company.isContainsTamplate)
       tableRows += WikiParser.buildTableRow(details)
-    }
+    })
 
     return `{| class="wikitable sortable"\n! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`
   }
 
   function getRelevantCompanies() {
-    const _that = this
+    const that = this
     return this.companies.filter(company => company.newArticleText &&
-				(company.wikiTemplateData.year === _that.year) &&
-				company.hasData &&
-				company.newArticleText !== company.articleText)
+      (company.wikiTemplateData.year === that.year) &&
+      company.hasData &&
+      company.newArticleText !== company.articleText)
   }
 })()
 
-const Company = (function () {
+const Company = (function companyClass() {
   const TEMPLATE_NAME = 'חברה מסחרית'
   const lossStr = 'הפסד של'
   const thousandStr = '1000 (מספר)|אלף'
@@ -151,6 +146,8 @@ const Company = (function () {
     {mayaName: 'סה"כ הכנסות', wikiName: 'הכנסה'},
     {mayaName: 'רווח תפעולי', wikiName: 'רווח תפעולי'},
     {mayaName: 'רווח נקי', wikiName: 'רווח'},
+    {mayaName: 'הון עצמי', wikiName: 'הון עצמי'},
+    {mayaName: 'סך מאזן', wikiName: 'סך המאזן'},
   ]
   const NAME_FIELD = 'שם'
   const NAME_STRING = '{{שם הדף בלי הסוגריים}}'
@@ -181,21 +178,19 @@ const Company = (function () {
 
   function updateWikiTamplate() {
     let isFirst = true
-
-    for	(const field of fieldsForWiki) {
+    fieldsForWiki.forEach((field) => {
       this.wikiTemplateData[field.wikiName] =
-				getFieldString(
-				  this.mayaDataForWiki[field.wikiName],
-							   this.wikiTemplateData.year,
-							   this.reference,
-							   this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
-							   isFirst
-				)
+      getFieldString(
+        this.mayaDataForWiki[field.wikiName],
+        this.wikiTemplateData.year,
+        this.reference,
+        this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
+        isFirst
+      )
       isFirst = false
 
-      this.templateParser.templateData[field.wikiName] =
-				this.wikiTemplateData[field.wikiName]
-    }
+      this.templateParser.templateData[field.wikiName] = this.wikiTemplateData[field.wikiName]
+    })
 
 
     const oldTemplate = this.templateParser.templateText
@@ -220,11 +215,11 @@ const Company = (function () {
     this.wikiTemplateData = {}
     this.hasData = false
 
-    for	(const field of fieldsForWiki) {
+    fieldsForWiki.forEach((field) => {
       const fieldData = mayaData.get(field.mayaName)
       this.hasData = this.hasData || !!fieldData
       this.mayaDataForWiki[field.wikiName] = mayaData.get(field.mayaName)
-    }
+    })
 
     this.wikiTemplateData.year = year
   }
@@ -239,9 +234,11 @@ const Company = (function () {
         fieldData = fieldData.substr(1)
       }
 
-      let order
+      let order = ''
       let sumStr
-      if (fieldData.length < 4) {
+      if (fieldData === '0') {
+        sumStr = fieldData
+      } else if (fieldData.length < 4) {
         order = thousandStr
         sumStr = fieldData
       } else if (fieldData.length < 10) {
@@ -257,7 +254,7 @@ const Company = (function () {
       }
       const commentKey = `דוח${year}-${name}`
       const comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference.replace(companyReportView, companyFinanceView)} נתונים כספיים] באתר [[מאי"ה]].` : ''}}}`
-      finalString += `${sumStr} [[${order}]] [[${NIS}]] ([[${year}]])${comment}`
+      finalString += `${sumStr} ${order ? `[[${order}]]` : ''} [[${NIS}]] ([[${year}]])${comment}`
     }
 
     return finalString
