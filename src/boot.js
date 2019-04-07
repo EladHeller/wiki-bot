@@ -174,17 +174,22 @@ const Company = (function companyClass() {
   function updateWikiTamplate() {
     let isFirst = true
     fieldsForWiki.forEach((field) => {
-      this.wikiTemplateData[field.wikiName] =
-      getFieldString(
-        this.mayaDataForWiki[field.wikiName],
-        this.wikiTemplateData.year,
-        this.reference,
-        this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
-        isFirst
-      )
-      isFirst = false
+      const fieldData = this.mayaDataForWiki[field.wikiName];
+      if (fieldData) {
+        this.wikiTemplateData[field.wikiName] =
+          getFieldString(
+            fieldData,
+            this.wikiTemplateData.year,
+            this.reference,
+            this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
+            isFirst
+          )
+          
+          isFirst = false
+      }
+      
 
-      this.templateParser.templateData[field.wikiName] = this.wikiTemplateData[field.wikiName]
+      this.templateParser.templateData[field.wikiName] = this.wikiTemplateData[field.wikiName] || ''
     })
 
 
