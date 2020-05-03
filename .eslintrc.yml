@@ -7,8 +7,8 @@ env:
 
 rules:
   max-len: [error, 120]
-  semi: [error, never]
   linebreak-style: off
+  no-underscore-dangle: off
   comma-dangle: [error, always-multiline]
   quotes: [error, single]
   no-plusplus: off
@@ -19,6 +19,7 @@ rules:
   no-empty: [error, allowEmptyCatch: true]
   import/prefer-default-export: off
   no-nested-ternary: off
+  eslintno-underscore-dangle: off
 
 settings:
   import/resolver:

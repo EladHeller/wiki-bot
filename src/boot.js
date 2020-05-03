@@ -1,5 +1,6 @@
+/* eslint-disable no-underscore-dangle */
 /*
-const tradeTemplateBoot = new TradeTemplateBoot(2018)
+const tradeTemplateBoot = new TradeTemplateBoot(2019)
 tradeTemplateBoot.run()
 ---
 const tableFormatData = tradeTemplateBoot.tableFormat()
@@ -14,249 +15,245 @@ x.newArticleText.indexOf('== הערות שוליים ==') === -1 && x.newArticle
 /* eslint-disable no-use-before-define */
 // eslint-disable-next-line
 const TradeTemplateBoot = (() => {
-  const mayaLinkRegex = /^http:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/
-  const jsonLink = 'http://mayaapi.tase.co.il/api/company/financereports?companyId='
-  const companyPageLink = 'http://maya.tase.co.il/company/'
-  const companyReportView = '?view=reports'
+  const mayaLinkRegex = /^http:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/;
+  const jsonLink = 'http://mayaapi.tase.co.il/api/company/financereports?companyId=';
+  const companyPageLink = 'http://maya.tase.co.il/company/';
+  const companyReportView = '?view=reports';
   const mayaGetOptions = {
     method: 'get',
     credentials: 'include',
     headers: new Headers({
       'X-Maya-With': 'allow',
     }),
-  }
+  };
   const mayaOptionsOptions = {
     method: 'options',
     credentials: 'include',
-  }
-  TradeTemplateBoot.wikiUpdater = new WikiUpdater()
-  TradeTemplateBoot.prototype.run = run
-  TradeTemplateBoot.prototype.getRelevantCompanies = getRelevantCompanies
-  TradeTemplateBoot.prototype.tableFormat = tableFormat
-  return TradeTemplateBoot
+  };
+  TradeTemplateBoot.wikiUpdater = new WikiUpdater();
+  TradeTemplateBoot.prototype.run = run;
+  TradeTemplateBoot.prototype.getRelevantCompanies = getRelevantCompanies;
+  TradeTemplateBoot.prototype.tableFormat = tableFormat;
+  return TradeTemplateBoot;
 
   function TradeTemplateBoot(year) {
     if (!year) {
-      throw new Exception('year parameter is required')
+      throw new Error('year parameter is required');
     }
-    this.year = year
-    this.companies = []
+    this.year = year;
+    this.companies = [];
   }
 
   function run(continueParam) {
     if (!continueParam) {
-      this._getPages = 0
-      this._exceptPages = 0
+      this._getPages = 0;
+      this._exceptPages = 0;
     }
-    const geicontinue = continueParam ? (`&geicontinue=${continueParam}`) : ''
-    const that = this
-    fetch(`${'https://he.wikipedia.org/w/api.php?action=query&format=json' +
+    const geicontinue = continueParam ? (`&geicontinue=${continueParam}`) : '';
+    const that = this;
+    fetch(`${'https://he.wikipedia.org/w/api.php?action=query&format=json'
       // Pages with תבנית:מידע בורסאי
-      '&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=תבנית:מידע בורסאי'}${geicontinue
-    }&prop=templates|revisions|extlinks` +
+      + '&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=תבנית:מידע בורסאי'}${geicontinue
+    }&prop=templates|revisions|extlinks`
       // This page contains תבנית:חברה מסחרית?
-      '&tltemplates=תבנית:חברה מסחרית&tllimit=5000' +
+      + '&tltemplates=תבנית:חברה מסחרית&tllimit=5000'
       // Get content of page
-      '&rvprop=content' +
+      + '&rvprop=content'
       // Get maya link
-      '&elprotocol=http&elquery=maya.tase.co.il/company/&ellimit=5000', {
+      + '&elprotocol=http&elquery=maya.tase.co.il/company/&ellimit=5000', {
       credentials: 'include',
     })
-      .then(res => res.json())
-      .then(res => onListLoad.call(that, res))
+      .then((res) => res.json())
+      .then((res) => onListLoad.call(that, res));
   }
 
   function onListLoad(res) {
     if (res.continue) {
-      this.run(res.continue.geicontinue)
+      this.run(res.continue.geicontinue);
     }
 
-    const {pages} = res.query
-    this._exceptPages += Object.keys(pages).length
-    let extLink
+    const {pages} = res.query;
+    this._exceptPages += Object.keys(pages).length;
+    let extLink;
     Object.values(pages).forEach((company) => {
-      extLink = company.extlinks.find(link => link['*'].match(mayaLinkRegex))['*']
-      const companyFinnaceDetailsUrl = extLink.replace(companyPageLink, jsonLink).replace(companyReportView, '')
+      extLink = company.extlinks.find((link) => link['*'].match(mayaLinkRegex))['*'];
+      const companyFinnaceDetailsUrl = extLink.replace(companyPageLink, jsonLink).replace(companyReportView, '');
 
       fetch(companyFinnaceDetailsUrl, mayaOptionsOptions)
         .then(() => fetch(companyFinnaceDetailsUrl, mayaGetOptions))
-        .then(result => result.json())
+        .then((result) => result.json())
         .then((jsonRes) => {
-          companyDetailsCallback.call(this, company, jsonRes)
+          companyDetailsCallback.call(this, company, jsonRes);
         })
         .catch((e) => {
-          this._getPages++
-          console.error(company, e)
+          this._getPages++;
+          console.error(company, e);
           if (this._getPages === this._exceptPages) {
-            console.log('finnish!')
+            console.log('finnish!');
           }
-        })
-    })
+        });
+    });
   }
 
   function companyDetailsCallback(company, res) {
-    const mayaDetails = new Map()
+    const mayaDetails = new Map();
     res.AllRows.forEach((row) => {
-      mayaDetails.set(row.Name, row.CurrPeriodValue)
-    })
+      mayaDetails.set(row.Name, row.CurrPeriodValue);
+    });
 
-    const companyObj = new Company(company.title, mayaDetails, company, res.CurrentPeriod.Year)
-    this.companies.push(companyObj)
-    this._getPages++
+    const companyObj = new Company(company.title, mayaDetails, company, res.CurrentPeriod.Year);
+    this.companies.push(companyObj);
+    this._getPages++;
 
     if (this._getPages === this._exceptPages) {
-      console.log('finnish!')
+      console.log('finnish!');
     }
   }
 
   function tableFormat() {
-    let tableRows = ''
+    let tableRows = '';
     this.companies.forEach((company) => {
-      const details = [company.name, ...Object.values(company.mayaDataForWiki).map(val => val || '---')]
-      details.push(company.wikiTemplateData.year)
-      details.push(company.isContainsTamplate)
-      tableRows += WikiParser.buildTableRow(details)
-    })
+      const details = [company.name, ...Object.values(company.mayaDataForWiki).map((val) => val || '---')];
+      details.push(company.wikiTemplateData.year);
+      details.push(company.isContainsTamplate);
+      tableRows += WikiParser.buildTableRow(details);
+    });
 
-    return `{| class="wikitable sortable"\n! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`
+    return `{| class="wikitable sortable"\n! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`;
   }
 
   function getRelevantCompanies() {
-    const that = this
-    return this.companies.filter(company => company.newArticleText &&
-      (company.wikiTemplateData.year === that.year) &&
-      company.hasData &&
-      company.newArticleText !== company.articleText)
+    const that = this;
+    return this.companies.filter((company) => company.newArticleText
+      && (company.wikiTemplateData.year === that.year)
+      && company.hasData
+      && company.newArticleText !== company.articleText);
   }
-})()
+})();
 
 const Company = (function companyClass() {
-  const TEMPLATE_NAME = 'חברה מסחרית'
-  const lossStr = 'הפסד של'
-  const thousandStr = '1000 (מספר)|אלף'
-  const millionStr = 'מיליון'
-  const milliardStr = 'מיליארד'
-  const NIS = 'ש"ח'
+  const TEMPLATE_NAME = 'חברה מסחרית';
+  const lossStr = 'הפסד של';
+  const thousandStr = '1000 (מספר)|אלף';
+  const millionStr = 'מיליון';
+  const milliardStr = 'מיליארד';
+  const NIS = 'ש"ח';
   const fieldsForWiki = [
     {mayaName: 'סה"כ הכנסות', wikiName: 'הכנסה'},
     {mayaName: 'רווח תפעולי', wikiName: 'רווח תפעולי'},
     {mayaName: 'רווח נקי', wikiName: 'רווח'},
     {mayaName: 'הון עצמי', wikiName: 'הון עצמי'},
     {mayaName: 'סך מאזן', wikiName: 'סך המאזן'},
-  ]
-  const NAME_FIELD = 'שם'
-  const NAME_STRING = '{{שם הדף בלי הסוגריים}}'
-  const companyReportView = '?view=reports'
-  const companyFinanceView = '?view=finance'
-  Company.wikiUpdater = new WikiUpdater()
-  Company.prototype.updateWikiTamplate = updateWikiTamplate
-  Company.prototype.appendMayaData = appendMayaData
-  Company.prototype.appendWikiData = appendWikiData
-  Company.prototype.updateCompanyArticle = updateCompanyArticle
-  return Company
+  ];
+  const NAME_FIELD = 'שם';
+  const NAME_STRING = '{{שם הדף בלי הסוגריים}}';
+  const companyReportView = '?view=reports';
+  const companyFinanceView = '?view=finance';
+  Company.wikiUpdater = new WikiUpdater();
+  Company.prototype.updateWikiTamplate = updateWikiTamplate;
+  Company.prototype.appendMayaData = appendMayaData;
+  Company.prototype.appendWikiData = appendWikiData;
+  Company.prototype.updateCompanyArticle = updateCompanyArticle;
+  return Company;
 
   function Company(name, mayaData, wikiData, year) {
-    this.name = name
+    this.name = name;
 
     if (mayaData) {
-      this.appendMayaData(mayaData, year)
+      this.appendMayaData(mayaData, year);
     }
     if (wikiData) {
-      this.appendWikiData(wikiData)
+      this.appendWikiData(wikiData);
     }
-    this.updateWikiTamplate()
+    this.updateWikiTamplate();
   }
 
   function updateCompanyArticle() {
-    Company.wikiUpdater.updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', this.newArticleText)
+    Company.wikiUpdater.updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', this.newArticleText);
   }
 
   function updateWikiTamplate() {
-    let isFirst = true
+    let isFirst = true;
     fieldsForWiki.forEach((field) => {
       const fieldData = this.mayaDataForWiki[field.wikiName];
       if (fieldData) {
-        this.wikiTemplateData[field.wikiName] =
-          getFieldString(
-            fieldData,
-            this.wikiTemplateData.year,
-            this.reference,
-            this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
-            isFirst
-          )
-          
-          isFirst = false
+        this.wikiTemplateData[field.wikiName] = getFieldString(
+          fieldData,
+          this.wikiTemplateData.year,
+          this.reference,
+          this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
+          isFirst,
+        );
+
+        isFirst = false;
+        this.templateParser.templateData[field.wikiName] = this.wikiTemplateData[field.wikiName] || '';
       }
-      
+    });
 
-      this.templateParser.templateData[field.wikiName] = this.wikiTemplateData[field.wikiName] || ''
-    })
-
-
-    const oldTemplate = this.templateParser.templateText
-    this.templateParser.updateTamplateFromData()
+    const oldTemplate = this.templateParser.templateText;
+    this.templateParser.updateTamplateFromData();
     if (this.isContainsTamplate) {
-      this.newArticleText = this.articleText.replace(oldTemplate, this.templateParser.templateText)
+      this.newArticleText = this.articleText.replace(oldTemplate, this.templateParser.templateText);
       // If not contains template and not has other template
     } else if (!this.articleText.trim().startsWith('{')) {
-      this.newArticleText = `${this.templateParser.templateText}\n${this.articleText}`
+      this.newArticleText = `${this.templateParser.templateText}\n${this.articleText}`;
     }
   }
 
   function appendWikiData(wikiData) {
-    this.isContainsTamplate = 'templates' in wikiData
-    this.articleText = wikiData.revisions[0]['*']
-    this.reference = wikiData.extlinks[0]['*']
-    this.templateParser = new WikiTemplateParser(this.articleText, TEMPLATE_NAME)
+    this.isContainsTamplate = 'templates' in wikiData;
+    this.articleText = wikiData.revisions[0]['*'];
+    this.reference = wikiData.extlinks[0]['*'];
+    this.templateParser = new WikiTemplateParser(this.articleText, TEMPLATE_NAME);
   }
 
   function appendMayaData(mayaData, year) {
-    this.mayaDataForWiki = {}
-    this.wikiTemplateData = {}
-    this.hasData = false
+    this.mayaDataForWiki = {};
+    this.wikiTemplateData = {};
+    this.hasData = false;
 
     fieldsForWiki.forEach((field) => {
-      const fieldData = mayaData.get(field.mayaName)
-      this.hasData = this.hasData || !!fieldData
-      this.mayaDataForWiki[field.wikiName] = mayaData.get(field.mayaName)
-    })
+      const fieldData = mayaData.get(field.mayaName);
+      this.hasData = this.hasData || !!fieldData;
+      this.mayaDataForWiki[field.wikiName] = mayaData.get(field.mayaName);
+    });
 
-    this.wikiTemplateData.year = year
+    this.wikiTemplateData.year = year;
   }
 
   function getFieldString(fieldData, year, reference, name, isFirst) {
-    let finalString = ''
+    let finalString = '';
     if (fieldData) {
-      fieldData = fieldData.trim().replace(/,/g, '')
+      fieldData = fieldData.trim().replace(/,/g, '');
 
       if (fieldData.startsWith('-')) {
-        finalString += `${lossStr} `
-        fieldData = fieldData.substr(1)
+        finalString += `${lossStr} `;
+        fieldData = fieldData.substr(1);
       }
 
-      let order = ''
-      let sumStr
+      let order = '';
+      let sumStr;
       if (fieldData === '0') {
-        sumStr = fieldData
+        sumStr = fieldData;
       } else if (fieldData.length < 4) {
-        order = thousandStr
-        sumStr = fieldData
+        order = thousandStr;
+        sumStr = fieldData;
       } else if (fieldData.length < 10) {
-        order = fieldData.length < 7 ? millionStr : milliardStr
-        sumStr = fieldData.substring(0, 3)
-        const remind = fieldData.length % 3
+        order = fieldData.length < 7 ? millionStr : milliardStr;
+        sumStr = fieldData.substring(0, 3);
+        const remind = fieldData.length % 3;
         if (remind) {
-          sumStr = [sumStr.slice(0, remind), '.', sumStr.slice(remind)].join('')
+          sumStr = [sumStr.slice(0, remind), '.', sumStr.slice(remind)].join('');
         }
       } else {
-        order = milliardStr
-        sumStr = Number(fieldData.substring(0, fieldData.length - 6)).toLocaleString()
+        order = milliardStr;
+        sumStr = Number(fieldData.substring(0, fieldData.length - 6)).toLocaleString();
       }
-      const commentKey = `דוח${year}-${name}`
-      const comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference.replace(companyReportView, companyFinanceView)} נתונים כספיים] באתר [[מאי"ה]].` : ''}}}`
-      finalString += `${sumStr} ${order ? `[[${order}]]` : ''} [[${NIS}]] ([[${year}]])${comment}`
+      const commentKey = `דוח${year}-${name}`;
+      const comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference.replace(companyReportView, companyFinanceView)} נתונים כספיים] באתר [[מאי"ה]].` : ''}}}`;
+      finalString += `${sumStr} ${order ? `[[${order}]]` : ''} [[${NIS}]] ([[${year}]])${comment}`;
     }
 
-    return finalString
+    return finalString;
   }
-}())
+}());
