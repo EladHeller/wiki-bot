@@ -1,6 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 /*
-const tradeTemplateBoot = new TradeTemplateBoot(2019)
+const tradeTemplateBoot = new TradeTemplateBoot(2020)
 tradeTemplateBoot.run()
 ---
 const tableFormatData = tradeTemplateBoot.tableFormat()
@@ -139,11 +139,11 @@ const Company = (function companyClass() {
   const milliardStr = 'מיליארד';
   const NIS = 'ש"ח';
   const fieldsForWiki = [
-    {mayaName: 'סה"כ הכנסות', wikiName: 'הכנסה'},
-    {mayaName: 'רווח תפעולי', wikiName: 'רווח תפעולי'},
-    {mayaName: 'רווח נקי', wikiName: 'רווח'},
-    {mayaName: 'הון עצמי', wikiName: 'הון עצמי'},
-    {mayaName: 'סך מאזן', wikiName: 'סך המאזן'},
+    {mayaName: 'Revenues', wikiName: 'הכנסה'},
+    {mayaName: 'Operating Income', wikiName: 'רווח תפעולי'},
+    {mayaName: 'Net Income', wikiName: 'רווח'},
+    {mayaName: 'Shareholders Equity', wikiName: 'הון עצמי'},
+    {mayaName: 'Total Assets', wikiName: 'סך המאזן'},
   ];
   const NAME_FIELD = 'שם';
   const NAME_STRING = '{{שם הדף בלי הסוגריים}}';
