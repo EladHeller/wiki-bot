@@ -1,14 +1,22 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "wiki boot",
   "version": "0.0.0.1",
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "permissions": [
-          "<all_urls>",
 		  "storage",
 		  "unlimitedStorage"
         ],
-	"background": {
-		"persistent":false,
-		"scripts": ["wikiParser.js","boot.js"]
+  "action": {
+    "default_icon": {
+      "16": "images/16.png",
+      "32": "images/31.png"
+    },
+    "default_title": "Click Me"
+  },
+  "background": {
+    "service_worker": "background.js"
   }
 }
