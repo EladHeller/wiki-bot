@@ -46,7 +46,7 @@ function getTableRow(rowText: string, isHeader: boolean): TableRow {
     nextDelimiterIndex = getNextRowDelimiterIndex(rowText, currIndex, delimiter);
   }
 
-  row.values.push(rowText.substr(currIndex).trim());
+  row.values.push(rowText.substring(currIndex).trim());
 
   return row;
 }
@@ -92,7 +92,7 @@ function tableTextToObject(tableText: string): TableData {
     nextRowIndex = nextWikiText(tableText, currIndex, '|-');
   }
 
-  rowText = tableText.substr(currIndex + 1).trim();
+  rowText = tableText.substring(currIndex + 1).trim();
   tableData.rows.push(getTableRow(rowText, false));
 
   return tableData;

@@ -31,7 +31,7 @@ function getFieldString(
 
     if (fieldData.startsWith('-')) {
       finalString += `${lossStr} `;
-      fixedFieldData = fixedFieldData.substr(1);
+      fixedFieldData = fixedFieldData.substring(1);
     }
 
     let order = '';

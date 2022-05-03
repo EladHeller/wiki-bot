@@ -7,10 +7,10 @@ export function noWikiEndTagIndex(text: string, startIndex: number): number {
 
 export function nextWikiText(text: string, currIndex: number, str: string): number {
   let index = currIndex;
-  while (text.substr(index, str.length) !== str && index < text.length) {
-    if (text.substr(index, nowiki.length) === nowiki) {
+  while (text.substring(index, index + str.length) !== str && index < text.length) {
+    if (text.substring(index, index + nowiki.length) === nowiki) {
       index = noWikiEndTagIndex(text, index);
-    } else if (text.substr(index, 2) === '{{') {
+    } else if (text.substring(index, index + 2) === '{{') {
       index = nextWikiText(text, index + 2, '}}') + 2;
     } else if (text[index] === '{') {
       index = nextWikiText(text, index + 1, '}') + 1;
