@@ -15,13 +15,13 @@ const year = process.env.YEAR;
 async function saveTable(companies: Company[]) {
   let tableRows = '';
   companies.forEach((company) => {
-    const details = [company.name, ...Object.values(company.mayaDataForWiki).map((val) => val || '---')];
+    const details = [`[${company.reference}]`, `[[${company.name}]]`, ...Object.values(company.mayaDataForWiki).map((val) => val || '---')];
     details.push(company.wikiTemplateData.year);
     details.push(company.isContainsTamplate);
     tableRows += buildTableRow(details);
   });
 
-  const tableString = `{| class="wikitable sortable"\n! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`;
+  const tableString = `{| class="wikitable sortable"\n! קישור !! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`;
 
   const res = await updateArticle(
     'משתמש:Sapper-bot/tradeBootData', 'עדכון', tableString,
@@ -50,20 +50,21 @@ async function main() {
   const companies = mayaResults
     .filter((x) => x != null)
     .filter(({ maya, wiki }: MayaWithWiki) => maya && wiki)
-    .map(({ maya, wiki }: MayaWithWiki) => {
-      const mayaDetails = new Map();
-      maya.AllRows.forEach((row) => {
-        mayaDetails.set(row.Name, row.CurrPeriodValue);
-      });
-
-      return new Company(wiki.title, mayaDetails, wiki, maya.CurrentPeriod.Year);
-    });
+    .map(({ maya, wiki }: MayaWithWiki) => new Company(wiki.title, maya, wiki));
 
   await saveTable(companies);
 
   const relevantCompanies = getRelevantCompanies(companies);
   console.log(relevantCompanies.length);
-  relevantCompanies.forEach((company) => company.updateCompanyArticle());
+  await Promise.all(relevantCompanies.map((company) => company.updateCompanyArticle()));
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  if (error?.data) {
+    console.log(error?.data);
+  } else if (error?.message) {
+    console.log(error?.message);
+  } else {
+    console.log(error);
+  }
+});

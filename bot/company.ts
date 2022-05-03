@@ -1,6 +1,8 @@
+import { MayaCompany } from './mayaAPI';
 import { updateArticle, WikiPage } from './wikiAPI';
 import WikiTemplateParser from './WikiTemplateParser';
 
+const currentYear = process.env.YEAR;
 const TEMPLATE_NAME = 'חברה מסחרית';
 const lossStr = 'הפסד של';
 const thousandStr = '1000 (מספר)|אלף';
@@ -8,11 +10,11 @@ const millionStr = 'מיליון';
 const milliardStr = 'מיליארד';
 const NIS = 'ש"ח';
 const fieldsForWiki = [
-  { mayaName: 'סה"כ הכנסות', wikiName: 'הכנסה' },
-  { mayaName: 'רווח תפעולי', wikiName: 'רווח תפעולי' },
-  { mayaName: 'רווח נקי', wikiName: 'רווח' },
-  { mayaName: 'הון עצמי', wikiName: 'הון עצמי' },
-  { mayaName: 'סך מאזן', wikiName: 'סך המאזן' },
+  { mayaName: ['סה"כ הכנסות'], wikiName: 'הכנסה' },
+  { mayaName: ['רווח תפעולי'], wikiName: 'רווח תפעולי' },
+  { mayaName: ['רווח נקי', 'רווח נקי מיוחס לבעלי המניות'], wikiName: 'רווח' },
+  { mayaName: ['הון עצמי', 'הון עצמי מיוחס לבעלי המניות'], wikiName: 'הון עצמי' },
+  { mayaName: ['סך מאזן'], wikiName: 'סך המאזן' },
 ];
 const NAME_FIELD = 'שם';
 const NAME_STRING = '{{שם הדף בלי הסוגריים}}';
@@ -77,20 +79,30 @@ export default class Company {
 
   hasData: boolean;
 
-  constructor(name: string, mayaData: Map<string, any>, wikiData: WikiPage, year: number) {
+  constructor(name: string, mayData: MayaCompany, wikiData: WikiPage) {
     this.name = name;
+    const mayaDetails = new Map();
+    let rowsField = '';
+    let periodField = 'CurrentPeriod';
+    if (mayData.PreviousYear.Title === `שנתי ${currentYear}`) {
+      rowsField = 'PrevYearValue';
+      periodField = 'PreviousYear';
+    } else if (mayData.CurrentPeriod.Title === `שנתי ${currentYear}`) {
+      periodField = 'CurrentPeriod';
+      rowsField = 'CurrPeriodValue';
+    }
+    mayData.AllRows.forEach((row) => {
+      mayaDetails.set(row.Name, row[rowsField]);
+    });
+    const mayaYear = mayData[periodField].Year;
 
-    if (mayaData) {
-      this.appendMayaData(mayaData, year);
-    }
-    if (wikiData) {
-      this.appendWikiData(wikiData);
-    }
+    this.appendMayaData(mayaDetails, mayaYear);
+    this.appendWikiData(wikiData);
     this.updateWikiTamplate();
   }
 
   updateCompanyArticle() {
-    updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', this.newArticleText);
+    return updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', this.newArticleText);
   }
 
   updateWikiTamplate() {
@@ -134,9 +146,9 @@ export default class Company {
     this.hasData = false;
 
     fieldsForWiki.forEach((field) => {
-      const fieldData = mayaData.get(field.mayaName);
+      const fieldData = field.mayaName.map((name) => mayaData.get(name)).find((x) => !!x);
       this.hasData = this.hasData || !!fieldData;
-      this.mayaDataForWiki[field.wikiName] = mayaData.get(field.mayaName);
+      this.mayaDataForWiki[field.wikiName] = fieldData;
     });
 
     this.wikiTemplateData.year = year;

@@ -1,8 +1,5 @@
-/* eslint-disable no-restricted-syntax */
-
 import { nextWikiText } from './WikiParser';
 
-/* eslint-disable guard-for-in */
 export default class WikiTemplateParser {
   articleContent: string;
 
@@ -24,11 +21,10 @@ export default class WikiTemplateParser {
     templateName = this.templateName,
   ) {
     let tamplateStr = `{{${templateName}\n`;
-    let value;
-    for (const key in templateData) {
-      value = templateData[key];
+
+    Object.entries(templateData).forEach(([key, value]) => {
       tamplateStr += `|${key}=${value}\n`;
-    }
+    });
     tamplateStr += '}}';
     this.templateText = tamplateStr;
 

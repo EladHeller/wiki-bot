@@ -28,7 +28,7 @@ export function nextWikiText(text: string, currIndex: number, str: string): numb
 export function buildTableRow(fields: string[], style?: string, isHeader = false) {
   const delimiter = isHeader ? '!' : '|';
   const styleWithDelimiter = style ? (style + delimiter) : '';
-  let rowStr = `\n|-\n${delimiter}${styleWithDelimiter}[[${fields[0]}]]`;
+  let rowStr = `\n|-\n${delimiter}${styleWithDelimiter}${fields[0]}`;
   for (let i = 1; i < fields.length; i += 1) {
     rowStr += ` || ${fields[i] === undefined ? '---' : fields[i]}`;
   }
