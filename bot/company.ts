@@ -8,11 +8,11 @@ const millionStr = 'מיליון';
 const milliardStr = 'מיליארד';
 const NIS = 'ש"ח';
 const fieldsForWiki = [
-  { mayaName: 'סה"כ הכנסות', wikiName: 'הכנסה' },
-  { mayaName: 'רווח תפעולי', wikiName: 'רווח תפעולי' },
-  { mayaName: 'רווח נקי', wikiName: 'רווח' },
-  { mayaName: 'הון עצמי', wikiName: 'הון עצמי' },
-  { mayaName: 'סך מאזן', wikiName: 'סך המאזן' },
+  { mayaName: ['סה"כ הכנסות'], wikiName: 'הכנסה' },
+  { mayaName: ['רווח תפעולי'], wikiName: 'רווח תפעולי' },
+  { mayaName: ['רווח נקי', 'רווח נקי מיוחס לבעלי המניות'], wikiName: 'רווח' },
+  { mayaName: ['הון עצמי', 'הון עצמי מיוחס לבעלי המניות'], wikiName: 'הון עצמי' },
+  { mayaName: ['סך מאזן'], wikiName: 'סך המאזן' },
 ];
 const NAME_FIELD = 'שם';
 const NAME_STRING = '{{שם הדף בלי הסוגריים}}';
@@ -134,9 +134,9 @@ export default class Company {
     this.hasData = false;
 
     fieldsForWiki.forEach((field) => {
-      const fieldData = mayaData.get(field.mayaName);
+      const fieldData = field.mayaName.map((name) => mayaData.get(name)).find((x) => !!x);
       this.hasData = this.hasData || !!fieldData;
-      this.mayaDataForWiki[field.wikiName] = mayaData.get(field.mayaName);
+      this.mayaDataForWiki[field.wikiName] = fieldData;
     });
 
     this.wikiTemplateData.year = year;
