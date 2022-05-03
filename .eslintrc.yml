@@ -15,5 +15,6 @@ plugins:
   - '@typescript-eslint'
 rules:
   camelcase: 0
+  no-console: off
   import/extensions:
       ['error', 'ignorePackages', {'js': 'never', 'jsx': 'never', 'ts': 'never', 'tsx': 'never'}]
