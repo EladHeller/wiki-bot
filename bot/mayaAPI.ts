@@ -80,7 +80,7 @@ export default async function getMayaDetails(
       wiki: wikiPage,
     }))
     .catch((e) => {
-      console.error(e);
+      console.error(e?.data || e?.message || e);
       return undefined;
     });
 }

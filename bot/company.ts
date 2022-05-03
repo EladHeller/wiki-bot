@@ -1,6 +1,8 @@
+import { MayaCompany } from './mayaAPI';
 import { updateArticle, WikiPage } from './wikiAPI';
 import WikiTemplateParser from './WikiTemplateParser';
 
+const currentYear = process.env.YEAR;
 const TEMPLATE_NAME = 'חברה מסחרית';
 const lossStr = 'הפסד של';
 const thousandStr = '1000 (מספר)|אלף';
@@ -77,20 +79,30 @@ export default class Company {
 
   hasData: boolean;
 
-  constructor(name: string, mayaData: Map<string, any>, wikiData: WikiPage, year: number) {
+  constructor(name: string, mayData: MayaCompany, wikiData: WikiPage) {
     this.name = name;
+    const mayaDetails = new Map();
+    let rowsField = '';
+    let periodField = 'CurrentPeriod';
+    if (mayData.PreviousYear.Title === `שנתי ${currentYear}`) {
+      rowsField = 'PrevYearValue';
+      periodField = 'PreviousYear';
+    } else if (mayData.CurrentPeriod.Title === `שנתי ${currentYear}`) {
+      periodField = 'CurrentPeriod';
+      rowsField = 'CurrPeriodValue';
+    }
+    mayData.AllRows.forEach((row) => {
+      mayaDetails.set(row.Name, row[rowsField]);
+    });
+    const mayaYear = mayData[periodField].Year;
 
-    if (mayaData) {
-      this.appendMayaData(mayaData, year);
-    }
-    if (wikiData) {
-      this.appendWikiData(wikiData);
-    }
+    this.appendMayaData(mayaDetails, mayaYear);
+    this.appendWikiData(wikiData);
     this.updateWikiTamplate();
   }
 
   updateCompanyArticle() {
-    updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', this.newArticleText);
+    return updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', this.newArticleText);
   }
 
   updateWikiTamplate() {
