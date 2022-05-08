@@ -3,6 +3,7 @@ import { WikiPage } from './wikiAPI';
 
 const mayaLinkRegex = /^http:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/;
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';
+const jsonAllLink = 'https://mayaapi.tase.co.il/api/company/alldetails?companyId=';
 const companyPageLink = 'http://maya.tase.co.il/company/';
 const companyReportView = '?view=reports';
 const mayaGetOptions = {
@@ -10,7 +11,6 @@ const mayaGetOptions = {
   credentials: 'include',
   headers: {
     'X-Maya-With': 'allow',
-    origin: 'https://maya.tase.co.il',
     referer: 'https://maya.tase.co.il/',
     accept: 'application/json',
     authority: 'mayaapi.tase.co.il',
@@ -61,6 +61,7 @@ export type MayaCompany = {
 
 export type MayaWithWiki = {
   maya: MayaCompany;
+  marketValue: number;
   wiki: WikiPage;
 }
 
@@ -73,14 +74,25 @@ export default async function getMayaDetails(
     return undefined;
   }
   const companyFinnaceDetailsUrl = extLink.replace(companyPageLink, jsonLink).replace(companyReportView, '');
+  const companyAllDetailsUrl = extLink.replace(companyPageLink, jsonAllLink).replace(companyReportView, '');
 
-  return axios(companyFinnaceDetailsUrl, mayaGetOptions)
+  return Promise.all([
+    axios(companyFinnaceDetailsUrl, mayaGetOptions).catch((e) => {
+      console.error('companyFinnaceDetailsUrl', wikiPage.title, e?.data || e?.message || e);
+      throw e;
+    }),
+    axios(companyAllDetailsUrl, mayaGetOptions).catch((e) => {
+      console.error('companyAllDetailsUrl', wikiPage.title, e?.data || e?.message || e);
+      throw e;
+    }),
+  ])
     .then((result) => ({
-      maya: result.data,
+      maya: result[0]?.data,
+      marketValue: result[1]?.data?.CompanyDetails?.MarketValue,
       wiki: wikiPage,
     }))
     .catch((e) => {
-      console.error(e?.data || e?.message || e);
+      console.error(wikiPage.title, e?.data || e?.message || e);
       return undefined;
     });
 }

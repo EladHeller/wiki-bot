@@ -79,8 +79,11 @@ export default class Company {
 
   hasData: boolean;
 
-  constructor(name: string, mayData: MayaCompany, wikiData: WikiPage) {
+  marketValue: number;
+
+  constructor(name: string, mayData: MayaCompany, wikiData: WikiPage, marketValue: number) {
     this.name = name;
+    this.marketValue = marketValue;
     const mayaDetails = new Map();
     let rowsField = '';
     let periodField = 'CurrentPeriod';
@@ -122,6 +125,16 @@ export default class Company {
         this.templateParser.templateData[field.wikiName] = this.wikiTemplateData[field.wikiName] || '';
       }
     });
+
+    if (this.marketValue) {
+      this.templateParser.templateData['שווי'] = getFieldString(
+        this.marketValue.toString(),
+        this.wikiTemplateData.year,
+        this.reference,
+        this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
+        false,
+      );
+    }
 
     const oldTemplate = this.templateParser.templateText;
     this.templateParser.updateTamplateFromData();
