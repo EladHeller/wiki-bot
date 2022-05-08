@@ -16,12 +16,13 @@ async function saveTable(companies: Company[]) {
   let tableRows = '';
   companies.forEach((company) => {
     const details = [`[${company.reference}]`, `[[${company.name}]]`, ...Object.values(company.mayaDataForWiki).map((val) => val || '---')];
+    details.push(company.marketValue ? company.marketValue.toLocaleString() : '---');
     details.push(company.wikiTemplateData.year);
     details.push(company.isContainsTamplate);
     tableRows += buildTableRow(details);
   });
 
-  const tableString = `{| class="wikitable sortable"\n! קישור !! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`;
+  const tableString = `{| class="wikitable sortable"\n! קישור !! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!שווי שוק!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`;
 
   const res = await updateArticle(
     'משתמש:Sapper-bot/tradeBootData', 'עדכון', tableString,
@@ -39,18 +40,23 @@ function getRelevantCompanies(companies: Company[]) {
 async function main() {
   const logintoken = await getToken();
   await login(logintoken);
+  console.log('Login success');
 
   const wikiResult = await getData();
   await fs.writeFile('./res.json', JSON.stringify(wikiResult, null, 2), 'utf8');
   const pages: WikiPage[] = Object.values(wikiResult);
+  // const pages: WikiPage[] = Object.values(JSON.parse(await fs.readFile('./res.json', 'utf-8')));
   const mayaResults = await Promise.all(pages.map(getMayaDetails));
   await fs.writeFile('./maya-res.json', JSON.stringify(mayaResults, null, 2), 'utf8');
 
   // const mayaResults: MayaWithWiki[] = JSON.parse(await fs.readFile('./maya-res.json', 'utf8'));
+  console.log('get data success');
   const companies = mayaResults
     .filter((x) => x != null)
     .filter(({ maya, wiki }: MayaWithWiki) => maya && wiki)
-    .map(({ maya, wiki }: MayaWithWiki) => new Company(wiki.title, maya, wiki));
+    .map(({ maya, wiki, marketValue }: MayaWithWiki) => new Company(
+      wiki.title, maya, wiki, marketValue,
+    ));
 
   await saveTable(companies);
 

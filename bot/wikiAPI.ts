@@ -69,7 +69,6 @@ export async function login(logintoken: string) {
 
   const tokenResult = await client('https://he.wikipedia.org/w/api.php?action=query&meta=tokens&format=json&assert=bot');
   token = tokenResult.data.query.tokens.csrftoken;
-  console.log({ token });
 }
 
 export async function getData(): Promise<Record<string, WikiPage>> {
