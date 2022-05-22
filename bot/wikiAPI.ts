@@ -71,7 +71,7 @@ export async function login(logintoken: string) {
   token = tokenResult.data.query.tokens.csrftoken;
 }
 
-export async function getData(): Promise<Record<string, WikiPage>> {
+export async function getCompanies(): Promise<Record<string, WikiPage>> {
   const template = encodeURIComponent('תבנית:מידע בורסאי');
   const template2 = encodeURIComponent('תבנית:חברה מסחרית');
   const props = encodeURIComponent('templates|revisions|extlinks');
@@ -90,6 +90,20 @@ export async function getData(): Promise<Record<string, WikiPage>> {
   return result.data.query.pages;
 }
 
+export async function getMayaLinks(): Promise<Record<string, WikiPage>> {
+  const template = encodeURIComponent('תבנית:מידע בורסאי');
+  const props = encodeURIComponent('extlinks');
+  const mayaLink = encodeURIComponent('maya.tase.co.il/company/');
+  const path = 'https://he.wikipedia.org/w/api.php?action=query&format=json'
+  // Pages with תבנית:מידע בורסאי
+  + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
+  + `&prop=${props}`
+  // Get maya link
+  + `&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
+  const result = await client(path);
+  return result.data.query.pages;
+}
+
 export async function updateArticle(articleTitle: string, summary:string, content: string) {
   const queryDetails = {
     method: 'post',
@@ -101,4 +115,14 @@ export async function updateArticle(articleTitle: string, summary:string, conten
   const result = await client(queryDetails);
 
   return result.data;
+}
+
+export async function getArticleContent(title: string): Promise<string | undefined> {
+  const path = `https://he.wikipedia.org/w/api.php?action=query&format=json&rvprop=content&rvslots=*&prop=revisions&titles=${
+    encodeURIComponent(title)
+  }`;
+  const result = await client(path);
+  const wikiPages:Record<string, Partial<WikiPage>> = result.data.query.pages;
+
+  return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
 }

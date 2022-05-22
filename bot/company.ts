@@ -1,14 +1,12 @@
 import { MayaCompany } from './mayaAPI';
+import { prettyNumericValue } from './utilities';
 import { updateArticle, WikiPage } from './wikiAPI';
 import WikiTemplateParser from './WikiTemplateParser';
 
 const currentYear = process.env.YEAR;
 const TEMPLATE_NAME = 'חברה מסחרית';
 const lossStr = 'הפסד של';
-const thousandStr = '1000 (מספר)|אלף';
-const millionStr = 'מיליון';
-const milliardStr = 'מיליארד';
-const NIS = 'ש"ח';
+
 const fieldsForWiki = [
   { mayaName: ['סה"כ הכנסות'], wikiName: 'הכנסה' },
   { mayaName: ['רווח תפעולי'], wikiName: 'רווח תפעולי' },
@@ -34,27 +32,10 @@ function getFieldString(
       fixedFieldData = fixedFieldData.substring(1);
     }
 
-    let order = '';
-    let sumStr;
-    if (fixedFieldData === '0') {
-      sumStr = fixedFieldData;
-    } else if (fixedFieldData.length < 4) {
-      order = thousandStr;
-      sumStr = fixedFieldData;
-    } else if (fixedFieldData.length < 10) {
-      order = fixedFieldData.length < 7 ? millionStr : milliardStr;
-      sumStr = fixedFieldData.substring(0, 3);
-      const remind = fixedFieldData.length % 3;
-      if (remind) {
-        sumStr = [sumStr.slice(0, remind), '.', sumStr.slice(remind)].join('');
-      }
-    } else {
-      order = milliardStr;
-      sumStr = Number(fixedFieldData.substring(0, fixedFieldData.length - 6)).toLocaleString();
-    }
+    const numericString = prettyNumericValue(fixedFieldData);
     const commentKey = `דוח${year}-${name}`;
     const comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference.replace(companyReportView, companyFinanceView)} נתונים כספיים] באתר [[מאי"ה]].` : ''}}}`;
-    finalString += `${sumStr} ${order ? `[[${order}]]` : ''} [[${NIS}]] ([[${year}]])${comment}`;
+    finalString += `${numericString} ([[${year}]])${comment}`;
   }
 
   return finalString;
@@ -62,6 +43,8 @@ function getFieldString(
 
 export default class Company {
   name: string;
+
+  mayaId: string;
 
   mayaDataForWiki: Record<string, any>;
 
@@ -79,11 +62,16 @@ export default class Company {
 
   hasData: boolean;
 
-  marketValue: number;
+  companyId: string;
 
-  constructor(name: string, mayData: MayaCompany, wikiData: WikiPage, marketValue: number) {
-    this.name = name;
+  marketValue: number | undefined;
+
+  constructor(
+    name: string, mayData: MayaCompany, wikiData: WikiPage, companyId: string, marketValue?: number,
+  ) {
     this.marketValue = marketValue;
+    this.companyId = companyId;
+    this.name = name;
     const mayaDetails = new Map();
     let rowsField = '';
     let periodField = 'CurrentPeriod';
@@ -127,13 +115,11 @@ export default class Company {
     });
 
     if (this.marketValue) {
-      this.templateParser.templateData['שווי'] = getFieldString(
-        this.marketValue.toString(),
-        this.wikiTemplateData.year,
-        this.reference,
-        this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
-        false,
-      );
+      this.templateParser.templateData['שווי'] = `{{שווי שוק חברה בורסאית|ID=${this.companyId}}}`;
+      this.templateParser.templateData['תאריך שווי שוק'] = '{{שווי שוק חברה בורסאית|ID=timestamp}}';
+    } else {
+      delete this.templateParser.templateData['שווי'];
+      delete this.templateParser.templateData['תאריך שווי שוק'];
     }
 
     const oldTemplate = this.templateParser.templateText;

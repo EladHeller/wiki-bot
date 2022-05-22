@@ -1,14 +1,11 @@
 import 'dotenv/config';
 import fs from 'fs/promises';
 import Company from './company';
-import getMayaDetails, { MayaWithWiki } from './mayaAPI';
+import getMayaDetails, { MayaMarketValue, MayaWithWiki } from './mayaAPI';
 import {
-  getData, getToken, login, updateArticle, WikiPage,
+  getCompanies, getToken, login, updateArticle, WikiPage,
 } from './wikiAPI';
 import { buildTableRow } from './WikiParser';
-// import {
-//   getData, getToken, login,
-// } from './wikiAPI';
 
 const year = process.env.YEAR;
 
@@ -16,13 +13,12 @@ async function saveTable(companies: Company[]) {
   let tableRows = '';
   companies.forEach((company) => {
     const details = [`[${company.reference}]`, `[[${company.name}]]`, ...Object.values(company.mayaDataForWiki).map((val) => val || '---')];
-    details.push(company.marketValue ? company.marketValue.toLocaleString() : '---');
     details.push(company.wikiTemplateData.year);
     details.push(company.isContainsTamplate);
     tableRows += buildTableRow(details);
   });
 
-  const tableString = `{| class="wikitable sortable"\n! קישור !! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!שווי שוק!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`;
+  const tableString = `{| class="wikitable sortable"\n! קישור !! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`;
 
   const res = await updateArticle(
     'משתמש:Sapper-bot/tradeBootData', 'עדכון', tableString,
@@ -42,27 +38,39 @@ async function main() {
   await login(logintoken);
   console.log('Login success');
 
-  const wikiResult = await getData();
+  const wikiResult = await getCompanies();
   await fs.writeFile('./res.json', JSON.stringify(wikiResult, null, 2), 'utf8');
   const pages: WikiPage[] = Object.values(wikiResult);
   // const pages: WikiPage[] = Object.values(JSON.parse(await fs.readFile('./res.json', 'utf-8')));
-  const mayaResults = await Promise.all(pages.map(getMayaDetails));
+
+  const mayaResults: MayaWithWiki[] = [];
+  for (const page of pages) {
+    const res = await getMayaDetails(page);
+    if (res) {
+      console.log(`success ${page.title}`);
+      mayaResults.push(res);
+    }
+  }
   await fs.writeFile('./maya-res.json', JSON.stringify(mayaResults, null, 2), 'utf8');
+  const marketValues:MayaMarketValue[] = JSON.parse(await fs.readFile('./maya-markets-res.json', 'utf8'));
 
   // const mayaResults: MayaWithWiki[] = JSON.parse(await fs.readFile('./maya-res.json', 'utf8'));
   console.log('get data success');
   const companies = mayaResults
     .filter((x) => x != null)
     .filter(({ maya, wiki }: MayaWithWiki) => maya && wiki)
-    .map(({ maya, wiki, marketValue }: MayaWithWiki) => new Company(
-      wiki.title, maya, wiki, marketValue,
+    .map(({ maya, wiki, companyId }: MayaWithWiki) => new Company(
+      wiki.title, maya, wiki, companyId,
+      marketValues.find(({ id }) => companyId === id.toString())?.marketValue,
     ));
 
   await saveTable(companies);
 
   const relevantCompanies = getRelevantCompanies(companies);
   console.log(relevantCompanies.length);
-  await Promise.all(relevantCompanies.map((company) => company.updateCompanyArticle()));
+  for (let i = 5; i < relevantCompanies.length; i += 1) {
+    await relevantCompanies[i].updateCompanyArticle();
+  }
 }
 
 main().catch((error) => {

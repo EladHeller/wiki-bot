@@ -6,7 +6,8 @@
   "scripts": {
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "start": "ts-node-esm bot/index.ts"
+    "start": "ts-node-esm bot/index.ts",
+    "bot": "ts-node-esm bot/newBot.ts"
   },
   "repository": {
     "type": "git",
