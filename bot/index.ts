@@ -61,7 +61,7 @@ async function main() {
     .filter(({ maya, wiki }: MayaWithWiki) => maya && wiki)
     .map(({ maya, wiki, companyId }: MayaWithWiki) => new Company(
       wiki.title, maya, wiki, companyId,
-      marketValues.find(({ id }) => companyId === id.toString())?.marketValue,
+      marketValues.find(({ id }) => companyId === id)?.marketValue,
     ));
 
   await saveTable(companies);

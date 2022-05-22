@@ -62,12 +62,12 @@ export default class Company {
 
   hasData: boolean;
 
-  companyId: string;
+  companyId: number;
 
   marketValue: number | undefined;
 
   constructor(
-    name: string, mayData: MayaCompany, wikiData: WikiPage, companyId: string, marketValue?: number,
+    name: string, mayData: MayaCompany, wikiData: WikiPage, companyId: number, marketValue?: number,
   ) {
     this.marketValue = marketValue;
     this.companyId = companyId;

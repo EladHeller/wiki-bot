@@ -19,19 +19,22 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
   if (!content) {
     throw new Error('Failed to get template content');
   }
-  const template = new WikiTemplateParser(content, '#switch');
+  const template = new WikiTemplateParser(content, '#switch: {{{ID}}}');
+  const oldTemplate = template.templateText;
   const relevantCompanies = marketValues.filter(({ marketValue }) => marketValue > 0);
   const companies = relevantCompanies.map(
     (marketValue) => [marketValue.id, prettyNumericValue(marketValue.marketValue.toString())],
   );
+
   template.updateTamplateFromData({
     ...Object.fromEntries(companies),
     timestamp: getHebrewDate(relevantCompanies[0].correctionDate),
     '#default': '',
   });
-  // await fs.writeFile(marketValueTemplate, template.articleContent, 'utf-8');
+  const newContent = content.replace(oldTemplate, template.templateText);
+  // await fs.writeFile(marketValueTemplate, newContent, 'utf-8');
   const res = await updateArticle(
-    marketValueTemplate, 'עדכון', template.articleContent,
+    marketValueTemplate, 'עדכון', newContent,
   );
   console.log(res);
 }

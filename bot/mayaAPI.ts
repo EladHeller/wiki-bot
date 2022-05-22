@@ -62,7 +62,7 @@ export type MayaCompany = {
 export type MayaWithWiki = {
   maya: MayaCompany;
   wiki: WikiPage;
-  companyId: string;
+  companyId: number;
 }
 
 export type MayaMarketValue = {
@@ -106,7 +106,7 @@ export default async function getMayaDetails(
     console.error('No extlinks', wikiPage.title, wikiPage.extlinks);
     return undefined;
   }
-  const companyId = extLink.replace(companyPageLink, '').replace(companyReportView, '');
+  const companyId = Number(extLink.replace(companyPageLink, '').replace(companyReportView, ''));
   const companyFinnaceDetailsUrl = extLink.replace(companyPageLink, jsonLink).replace(companyReportView, '');
 
   return axios(companyFinnaceDetailsUrl, mayaGetOptions).catch((e) => {
