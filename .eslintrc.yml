@@ -16,5 +16,7 @@ plugins:
 rules:
   camelcase: 0
   no-console: off
+  no-await-in-loop: off
+  no-restricted-syntax: off
   import/extensions:
       ['error', 'ignorePackages', {'js': 'never', 'jsx': 'never', 'ts': 'never', 'tsx': 'never'}]

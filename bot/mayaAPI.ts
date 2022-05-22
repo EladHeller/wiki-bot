@@ -61,8 +61,41 @@ export type MayaCompany = {
 
 export type MayaWithWiki = {
   maya: MayaCompany;
-  marketValue: number;
   wiki: WikiPage;
+  companyId: string;
+}
+
+export type MayaMarketValue = {
+  marketValue: number;
+  correctionDate: string;
+  title?: string;
+  id: number;
+}
+
+export async function getMarketValue(
+  wikiPage: Partial<WikiPage>,
+): Promise<MayaMarketValue | undefined> {
+  const extLink = wikiPage.extlinks?.find((link) => link['*'].match(mayaLinkRegex))?.['*'];
+  if (!extLink) {
+    console.error('No extlinks', wikiPage.title, wikiPage.extlinks);
+    return undefined;
+  }
+  const companyAllDetailsUrl = extLink.replace(companyPageLink, jsonAllLink).replace(companyReportView, '');
+
+  return axios(companyAllDetailsUrl, mayaGetOptions).catch((e) => {
+    console.error('companyAllDetailsUrl', wikiPage.title, e?.data || e?.message || e);
+    throw e;
+  })
+    .then((result) => ({
+      marketValue: result?.data?.CompanyDetails?.MarketValue,
+      correctionDate: result?.data?.CompanyDetails?.CorrectionDate,
+      title: wikiPage.title,
+      id: result?.data?.CompanyDetails?.CompanyId,
+    }))
+    .catch((e) => {
+      console.error(wikiPage.title, e?.data || e?.message || e);
+      return undefined;
+    });
 }
 
 export default async function getMayaDetails(
@@ -73,22 +106,16 @@ export default async function getMayaDetails(
     console.error('No extlinks', wikiPage.title, wikiPage.extlinks);
     return undefined;
   }
+  const companyId = extLink.replace(companyPageLink, '').replace(companyReportView, '');
   const companyFinnaceDetailsUrl = extLink.replace(companyPageLink, jsonLink).replace(companyReportView, '');
-  const companyAllDetailsUrl = extLink.replace(companyPageLink, jsonAllLink).replace(companyReportView, '');
 
-  return Promise.all([
-    axios(companyFinnaceDetailsUrl, mayaGetOptions).catch((e) => {
-      console.error('companyFinnaceDetailsUrl', wikiPage.title, e?.data || e?.message || e);
-      throw e;
-    }),
-    axios(companyAllDetailsUrl, mayaGetOptions).catch((e) => {
-      console.error('companyAllDetailsUrl', wikiPage.title, e?.data || e?.message || e);
-      throw e;
-    }),
-  ])
+  return axios(companyFinnaceDetailsUrl, mayaGetOptions).catch((e) => {
+    console.error('companyFinnaceDetailsUrl', wikiPage.title, e?.data || e?.message || e);
+    throw e;
+  })
     .then((result) => ({
-      maya: result[0]?.data,
-      marketValue: result[1]?.data?.CompanyDetails?.MarketValue,
+      maya: result?.data,
+      companyId,
       wiki: wikiPage,
     }))
     .catch((e) => {
