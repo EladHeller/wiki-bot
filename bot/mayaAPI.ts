@@ -77,8 +77,7 @@ export async function getMarketValue(
 ): Promise<MayaMarketValue | undefined> {
   const extLink = wikiPage.extlinks?.find((link) => link['*'].match(mayaLinkRegex))?.['*'];
   if (!extLink) {
-    console.error('No extlinks', wikiPage.title, wikiPage.extlinks);
-    return undefined;
+    throw new Error(`No extlinks: ${wikiPage.title} ${wikiPage.extlinks}`);
   }
   const companyAllDetailsUrl = extLink.replace(companyPageLink, jsonAllLink).replace(companyReportView, '');
 
@@ -91,11 +90,7 @@ export async function getMarketValue(
       correctionDate: result?.data?.CompanyDetails?.CorrectionDate,
       title: wikiPage.title,
       id: result?.data?.CompanyDetails?.CompanyId,
-    }))
-    .catch((e) => {
-      console.error(wikiPage.title, e?.data || e?.message || e);
-      return undefined;
-    });
+    }));
 }
 
 export default async function getMayaDetails(

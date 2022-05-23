@@ -50,6 +50,7 @@ async function main() {
   for (const page of Object.values(results)) {
     const res = await getMarketValue(page);
     if (res) {
+      console.log(page.title);
       marketValues.push(res);
     }
   }

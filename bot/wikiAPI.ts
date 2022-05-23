@@ -7,6 +7,7 @@ const client = wrapper(axios.create({ jar }));
 
 const name = process.env.USER_NAME;
 const password = process.env.PASSWORD;
+const baseUrl = 'https://he.wikipedia.org/w/api.php';
 
 export type WikiPage = {
   pageid: number;
@@ -39,13 +40,13 @@ function objectToFormData(obj: Record<string, any>) {
 }
 
 export async function getToken() {
-  const result = await client('https://he.wikipedia.org/w/api.php?action=query&meta=tokens&type=login&format=json');
+  const result = await client(`${baseUrl}?action=query&meta=tokens&type=login&format=json`);
   const { logintoken } = result.data.query.tokens;
   return logintoken;
 }
 
 export async function login(logintoken: string) {
-  const url = 'https://he.wikipedia.org/w/api.php';
+  const url = `${baseUrl}`;
   if (!name || !password) {
     throw new Error('Name and password are required');
   }
@@ -67,7 +68,7 @@ export async function login(logintoken: string) {
     throw new Error('Failed to login');
   }
 
-  const tokenResult = await client('https://he.wikipedia.org/w/api.php?action=query&meta=tokens&format=json&assert=bot');
+  const tokenResult = await client(`${baseUrl}?action=query&meta=tokens&format=json&assert=bot`);
   token = tokenResult.data.query.tokens.csrftoken;
 }
 
@@ -76,7 +77,7 @@ export async function getCompanies(): Promise<Record<string, WikiPage>> {
   const template2 = encodeURIComponent('תבנית:חברה מסחרית');
   const props = encodeURIComponent('templates|revisions|extlinks');
   const mayaLink = encodeURIComponent('maya.tase.co.il/company/');
-  const path = 'https://he.wikipedia.org/w/api.php?action=query&format=json'
+  const path = `${baseUrl}?action=query&format=json`
   // Pages with תבנית:מידע בורסאי
   + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
   + `&prop=${props}`
@@ -94,7 +95,7 @@ export async function getMayaLinks(): Promise<Record<string, WikiPage>> {
   const template = encodeURIComponent('תבנית:מידע בורסאי');
   const props = encodeURIComponent('extlinks');
   const mayaLink = encodeURIComponent('maya.tase.co.il/company/');
-  const path = 'https://he.wikipedia.org/w/api.php?action=query&format=json'
+  const path = `${baseUrl}?action=query&format=json`
   // Pages with תבנית:מידע בורסאי
   + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
   + `&prop=${props}`
@@ -110,7 +111,7 @@ export async function updateArticle(articleTitle: string, summary:string, conten
     data: objectToFormData({
       title: articleTitle, text: content, token, summary,
     }),
-    url: 'https://he.wikipedia.org/w/api.php?action=edit&format=json&assert=bot&bot=true',
+    url: `${baseUrl}?action=edit&format=json&assert=bot&bot=true`,
   };
   const result = await client(queryDetails);
 
@@ -118,7 +119,7 @@ export async function updateArticle(articleTitle: string, summary:string, conten
 }
 
 export async function getArticleContent(title: string): Promise<string | undefined> {
-  const path = `https://he.wikipedia.org/w/api.php?action=query&format=json&rvprop=content&rvslots=*&prop=revisions&titles=${
+  const path = `${baseUrl}?action=query&format=json&rvprop=content&rvslots=*&prop=revisions&titles=${
     encodeURIComponent(title)
   }`;
   const result = await client(path);
