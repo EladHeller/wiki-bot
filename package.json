@@ -7,7 +7,6 @@
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "build": "rm -rf dist && tsc",
-    "zip": "rm -f dist.zip && zip -r9 dist.zip ./dist",
     "start": "ts-node-esm bot/index.ts",
     "bot": "ts-node-esm bot/newBot.ts",
     "upload-lambda": "ts-node-esm upload-lambda.ts"

@@ -10,6 +10,10 @@ async function main() {
     FunctionName: 'trade-boot',
     ZipFile: await fs.readFile('./dist.zip'),
   }).promise();
+  await lambda.updateFunctionCode({
+    FunctionName: 'send-email',
+    ZipFile: await fs.readFile('./email.zip'),
+  }).promise();
 }
 
 main().catch(console.error);
