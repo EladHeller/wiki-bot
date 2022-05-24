@@ -9,7 +9,7 @@ import WikiTemplateParser from './WikiTemplateParser';
 
 function getHebrewDate(dateString:string): string {
   const date = new Date(dateString);
-  return `[[${date.toLocaleString('he', { month: 'long', day: 'numeric' })}]] [[${new Date(date).getFullYear()}]]`;
+  return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${new Date(date).getFullYear()}`;
 }
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 
