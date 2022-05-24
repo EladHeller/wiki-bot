@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import fs from 'fs/promises';
 import { getMarketValue, MayaMarketValue } from './mayaAPI';
 import { prettyNumericValue } from './utilities';
 import {
@@ -32,21 +31,19 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
     '#default': '',
   });
   const newContent = content.replace(oldTemplate, template.templateText);
-  // await fs.writeFile(marketValueTemplate, newContent, 'utf-8');
   const res = await updateArticle(
     marketValueTemplate, 'עדכון', newContent,
   );
   console.log(res);
 }
 
-async function main() {
+export async function main() {
   const logintoken = await getToken();
   await login(logintoken);
   console.log('Login success');
 
   const results = await getMayaLinks();
   const marketValues:MayaMarketValue[] = [];
-  await fs.writeFile('./bot-res.json', JSON.stringify(results, null, 2), 'utf8');
   for (const page of Object.values(results)) {
     const res = await getMarketValue(page);
     if (res) {
@@ -54,17 +51,9 @@ async function main() {
       marketValues.push(res);
     }
   }
-  await fs.writeFile('./maya-markets-res.json', JSON.stringify(marketValues, null, 2), 'utf8');
-  // const marketValues = JSON.parse(await fs.readFile('./maya-markets-res.json', 'utf8'));
   await updateTemplate(marketValues);
 }
 
-main().catch((error) => {
-  if (error?.data) {
-    console.log(error?.data);
-  } else if (error?.message) {
-    console.log(error?.message);
-  } else {
-    console.log(error);
-  }
-});
+export default {
+  main,
+};

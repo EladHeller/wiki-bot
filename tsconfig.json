@@ -1,12 +1,15 @@
 {
     "compilerOptions": {
-        "noEmit": true,
         "target": "ES2020",
         "module": "CommonJS",
         "skipLibCheck": true,
         "esModuleInterop": true,
         "strictNullChecks": true,
+        "outDir": "dist"
     },
+    "include": [
+        "bot"
+    ],
     "exclude": [
         "node_modules"
     ]
