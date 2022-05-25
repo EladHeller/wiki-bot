@@ -20,7 +20,11 @@ const companyFinanceView = '?view=finance';
 const companyReportView = '?view=reports';
 
 function getFieldString(
-  fieldData: string, year: number, reference: string, name: string, isFirst: boolean,
+  fieldData: string,
+  year: number,
+  reference: string,
+  name: string,
+  isFirst: boolean,
 ) {
   let finalString = '';
 
@@ -48,7 +52,7 @@ export default class Company {
 
   mayaDataForWiki: Record<string, any>;
 
-  wikiTemplateData: Record<string, any>
+  wikiTemplateData: Record<string, any>;
 
   isContainsTamplate: boolean;
 
@@ -67,7 +71,11 @@ export default class Company {
   marketValue: number | undefined;
 
   constructor(
-    name: string, mayData: MayaCompany, wikiData: WikiPage, companyId: number, marketValue?: number,
+    name: string,
+    mayData: MayaCompany,
+    wikiData: WikiPage,
+    companyId: number,
+    marketValue?: number,
   ) {
     this.marketValue = marketValue;
     this.companyId = companyId;
