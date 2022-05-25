@@ -23,7 +23,7 @@ export function prettyNumericValue(number: string): string {
     sumStr = Number(number.substring(0, number.length - 6)).toLocaleString();
   }
 
-  return `${sumStr} ${orderOfMagmitude ? `[[${orderOfMagmitude}]]` : ''} [[${NIS}]]`;
+  return `${sumStr}${orderOfMagmitude ? ` [[${orderOfMagmitude}]]` : ''} [[${NIS}]]`;
 }
 
 export default {
