@@ -21,7 +21,9 @@ async function saveTable(companies: Company[]) {
   const tableString = `{| class="wikitable sortable"\n! קישור !! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`;
 
   const res = await updateArticle(
-    'משתמש:Sapper-bot/tradeBootData', 'עדכון', tableString,
+    'משתמש:Sapper-bot/tradeBootData',
+    'עדכון',
+    tableString,
   );
   console.log(res);
 }
@@ -60,7 +62,10 @@ async function main() {
     .filter((x) => x != null)
     .filter(({ maya, wiki }: MayaWithWiki) => maya && wiki)
     .map(({ maya, wiki, companyId }: MayaWithWiki) => new Company(
-      wiki.title, maya, wiki, companyId,
+      wiki.title,
+      maya,
+      wiki,
+      companyId,
       marketValues.find(({ id }) => companyId === id)?.marketValue,
     ));
 

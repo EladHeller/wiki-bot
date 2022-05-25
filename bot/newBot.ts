@@ -32,7 +32,9 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
   });
   const newContent = content.replace(oldTemplate, template.templateText);
   const res = await updateArticle(
-    marketValueTemplate, 'עדכון', newContent,
+    marketValueTemplate,
+    'עדכון',
+    newContent,
   );
   console.log(res);
 }
