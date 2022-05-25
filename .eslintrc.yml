@@ -1,12 +1,12 @@
 env:
   browser: true
   es2021: true
-  webextensions: true
 globals:
   RequestCredentials: readonly
 extends:
   - airbnb-base
   - plugin:import/typescript
+  - plugin:jest/all
 parser: '@typescript-eslint/parser'
 parserOptions:
   ecmaVersion: 12
@@ -14,7 +14,9 @@ parserOptions:
 plugins:
   - '@typescript-eslint'
 rules:
-  camelcase: 0
+  jest/prefer-expect-assertions: 0
+  jest/no-hooks: 0
+  jest/require-hook: 0
   no-console: off
   no-await-in-loop: off
   no-restricted-syntax: off

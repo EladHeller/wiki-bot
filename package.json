@@ -4,12 +4,15 @@
   "description": "tradeBoot",
   "main": "dist/index.js",
   "scripts": {
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "lint:test": "eslint ./**/*.ts ./send-email/**/*.js --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "test": "jest",
     "build": "rm -rf dist && tsc",
+    "deploy": "sh ./build/deploy.sh",
     "start": "ts-node-esm bot/index.ts",
     "bot": "ts-node-esm bot/newBot.ts",
-    "upload-lambda": "ts-node-esm upload-lambda.ts"
+    "upload-lambda": "ts-node-esm ./build/upload-lambda.ts",
+    "test:ci": "npm run type-check && npm test && npm run lint:test"
   },
   "repository": {
     "type": "git",
@@ -28,14 +31,19 @@
     "tough-cookie": "^4.0.0"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.18.0",
+    "@babel/preset-typescript": "^7.17.12",
+    "@types/jest": "^27.5.1",
     "@types/node": "^17.0.35",
-    "aws-sdk": "^2.1141.0",
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.2.0",
     "@typescript-eslint/parser": "^5.2.0",
+    "aws-sdk": "^2.1141.0",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-jest": "^26.2.2",
+    "jest": "^28.1.0",
     "ts-node": "^10.7.0"
   }
 }
