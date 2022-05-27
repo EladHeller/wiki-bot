@@ -1,0 +1,11 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  BucketCodeName:
+    Description: The name of code bucket.
+    Type: String
+
+Resources:
+  MarketValueLambdaCode:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Ref BucketCodeName
