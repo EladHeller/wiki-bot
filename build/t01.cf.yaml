@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  BucketCodeName:
+    Description: The name of code bucket.
+    Type: String
+  WikiUserName:
+    Description: The name of wiki user.
+    Type: String
+  WikiPassword:
+    Description: The password of wiki user.
+    Type: String
+
+Resources:
+  MarketValueLambdaIamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      RoleName: Market-value-lambda-role
+      Policies:
+        - PolicyName: Lambda-execution-basic
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+  MarketValueLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: Market-value-function
+      Runtime: nodejs16.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/newBot.main
+      Timeout: 360
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+  MarketValueTopic:
+    DependsOn: 
+      - MarketValueLambda
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: Market-value-topic
+      Subscription:
+        - Endpoint: !GetAtt MarketValueLambda.Arn
+          Protocol: lambda
+  MarketValueEventRule:
+    DependsOn:
+      - MarketValueTopic
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: Market-value-scheduler
+      ScheduleExpression: cron(0 2 ? * SUN-FRI *)
+      Targets:
+        - Id: topic-target
+          Arn: !Ref MarketValueTopic
+  

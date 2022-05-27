@@ -12,6 +12,7 @@
     "start": "ts-node-esm bot/index.ts",
     "bot": "ts-node-esm bot/newBot.ts",
     "upload-lambda": "ts-node-esm ./build/upload-lambda.ts",
+    "create-env": "ts-node-esm ./build/create-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test"
   },
   "repository": {

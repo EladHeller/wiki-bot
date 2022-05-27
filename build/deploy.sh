@@ -1,13 +1,14 @@
 npm run build && \
 cp ./package.json ./dist/package.json  && \
 cd ./dist && \
-npm install --only=prod && \
-rm ./package-lock.json && \
+npm --quiet i --only=prod && \
+rm -rf ./__tests__ ./package-lock.json && \
 cd - && \
-rm -f dist.zip && zip -r9 dist.zip ./dist && \
+rm -f dist.zip && \
+zip -rq9 dist.zip ./dist && \
 cd ./send-email && \
-npm i && \
+npm --quiet i --only=prod && \
 cd - && \
-rm -f email.zip && zip -r9 email.zip ./send-email && \
-npm run upload-lambda && \
+rm -f email.zip && \
+zip -rq9 email.zip ./send-email && \
 echo finnish bot!
