@@ -67,7 +67,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: Market-value-scheduler
-      ScheduleExpression: cron(0 2 ? * SUN-FRI *)
+      ScheduleExpression: cron(0 2 ? * MON-FRI *)
       Targets:
         - Id: topic-target
           Arn: !Ref MarketValueTopic
