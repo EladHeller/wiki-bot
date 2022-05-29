@@ -39,3 +39,4 @@ jobs:
           export USER_NAME=${{ secrets.WIKI_USER_NAME }}
           export PASSWORD=${{ secrets.WIKI_USER_PASSWORD }}
           npm run deploy
+          npm run update-lambda
