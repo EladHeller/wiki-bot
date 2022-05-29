@@ -1,16 +1,12 @@
 import 'dotenv/config';
 import { getMarketValue, MayaMarketValue } from './mayaAPI';
-import { prettyNumericValue } from './utilities';
+import { getLocalDate, prettyNumericValue } from './utilities';
 import {
   getArticleContent,
   getMayaLinks, getToken, login, updateArticle,
 } from './wikiAPI';
 import WikiTemplateParser from './WikiTemplateParser';
 
-function getHebrewDate(dateString:string): string {
-  const date = new Date(dateString);
-  return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${new Date(date).getFullYear()}`;
-}
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 
 async function updateTemplate(marketValues: MayaMarketValue[]) {
@@ -27,7 +23,7 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
 
   template.updateTamplateFromData({
     ...Object.fromEntries(companies),
-    timestamp: getHebrewDate(relevantCompanies[0].correctionDate),
+    timestamp: getLocalDate(relevantCompanies[0].correctionDate),
     '#default': '',
   });
   const newContent = content.replace(oldTemplate, template.templateText);

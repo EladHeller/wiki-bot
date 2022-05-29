@@ -26,6 +26,7 @@ export function prettyNumericValue(number: string): string {
   return `${sumStr}${orderOfMagmitude ? ` [[${orderOfMagmitude}]]` : ''} [[${NIS}]]`;
 }
 
-export default {
-  prettyNumericValue,
-};
+export function getLocalDate(dateString:string): string {
+  const date = new Date(dateString);
+  return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${new Date(date).getFullYear()}`;
+}
