@@ -1,8 +1,8 @@
 const AWS = require('aws-sdk'); // eslint-disable-line import/no-extraneous-dependencies
 const zlib = require('zlib');
 
-AWS.config.region = 'us-west-2';
-const ses = new AWS.SES({ apiVersion: '2010-12-01' });
+const region = process.env.REGION;
+const ses = new AWS.SES({ apiVersion: '2010-12-01', region });
 
 function sendMail(to, subject, html) {
   const params = {

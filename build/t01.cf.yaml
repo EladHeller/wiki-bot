@@ -52,6 +52,41 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+
+  SendEmailLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: Send-email-function
+      Runtime: nodejs16.x
+      Environment:
+        Variables:
+          REGION: !Ref "AWS::Region"
+      Handler: send-email/index.handler
+      Timeout: 15
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: email.zip
+  LogGroupInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SendEmailLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Market-value-function:*'
+
+  LogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/Market-value-function'
+
   MarketValueTopic:
     DependsOn: 
       - MarketValueLambda
