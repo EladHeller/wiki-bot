@@ -1,5 +1,5 @@
 /* eslint-disable jest/prefer-expect-assertions */
-import { prettyNumericValue } from '../utilities';
+import { getLocalDate, prettyNumericValue } from '../utilities';
 
 describe('prettyNumericValue', () => {
   it('should return 0 for zero', () => {
@@ -48,5 +48,13 @@ describe('prettyNumericValue', () => {
     const result = prettyNumericValue('1123520');
 
     expect(result).toBe('1.12 [[מיליארד]] [[ש"ח]]');
+  });
+});
+
+describe('getLocalDate', () => {
+  it('should get local date', () => {
+    const localDate = getLocalDate('2027-01-13');
+
+    expect(localDate).toBe('13 בינואר 2027');
   });
 });
