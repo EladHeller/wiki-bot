@@ -11,5 +11,5 @@ npm --quiet i --only=prod && \
 cd - && \
 rm -f email.zip && \
 zip -rq9 email.zip ./send-email && \
-npm run update-lambda && \
+npm run update-s3 && \
 echo finnish deploy!
