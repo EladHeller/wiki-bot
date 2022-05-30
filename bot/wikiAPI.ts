@@ -76,6 +76,7 @@ export async function getCompanies(): Promise<Record<string, WikiPage>> {
   const template = encodeURIComponent('תבנית:מידע בורסאי');
   const template2 = encodeURIComponent('תבנית:חברה מסחרית');
   const props = encodeURIComponent('templates|revisions|extlinks');
+  const rvprops = encodeURIComponent('content|size');
   const mayaLink = encodeURIComponent('maya.tase.co.il/company/');
   const path = `${baseUrl}?action=query&format=json`
   // Pages with תבנית:מידע בורסאי
@@ -84,7 +85,7 @@ export async function getCompanies(): Promise<Record<string, WikiPage>> {
   // This page contains תבנית:חברה מסחרית?
   + `&tltemplates=${template2}&tllimit=500`
   // Get content of page
-    + '&rvprop=content&rvslots=*'
+  + `&rvprop=${rvprops}&rvslots=*`
   // Get maya link
   + `&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
   const result = await client(path);
