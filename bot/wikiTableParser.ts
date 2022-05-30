@@ -5,7 +5,7 @@ type TableRow = {
   rowStyle: string;
 }
 
-type TableData = {
+export type TableData = {
   text: string;
   rows: TableRow[];
   tableStyle: string;

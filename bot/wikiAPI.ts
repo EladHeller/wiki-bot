@@ -17,6 +17,8 @@ export type WikiPage = {
     title: string;
   }[];
   revisions: {
+    user: string;
+    size: number;
     slots: {
       main: {
         contentmodel: string;
@@ -70,6 +72,17 @@ export async function login(logintoken: string) {
 
   const tokenResult = await client(`${baseUrl}?action=query&meta=tokens&format=json&assert=bot`);
   token = tokenResult.data.query.tokens.csrftoken;
+}
+
+export async function getCompany(title: string): Promise<Record<string, WikiPage>> {
+  const rvprops = encodeURIComponent('user|size');
+  const path = `${baseUrl}?action=query&format=json&rvprop=${
+    rvprops
+  }&rvslots=*&rvlimit=1&prop=revisions&titles=${
+    encodeURIComponent(title)
+  }&rvdir=newer`;
+  const result = await client(path);
+  return result.data.query.pages;
 }
 
 export async function getCompanies(): Promise<Record<string, WikiPage>> {
