@@ -3,11 +3,11 @@ import fs from 'fs/promises';
 import {
   AllDetailsResponse,
   getAllDetails,
-} from './mayaAPI';
+} from '../mayaAPI';
 import {
   getCompanies, getToken, login, WikiPage,
-} from './wikiAPI';
-import WikiTemplateParser from './WikiTemplateParser';
+} from '../wikiAPI';
+import WikiTemplateParser from '../WikiTemplateParser';
 
 async function main() {
   const logintoken = await getToken();
