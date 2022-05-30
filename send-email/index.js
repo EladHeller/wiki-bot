@@ -26,7 +26,7 @@ function sendMail(to, subject, html) {
   return ses.sendEmail(params).promise();
 }
 
-const cloudWatchLink = 'https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#logsV2:log-groups/log-group/$252Faws$252Flambda$252Ftrade-boot';
+const cloudWatchLink = 'https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Faws$252Flambda$252FMarket-value-function';
 
 exports.handler = async (event) => {
   let logevents;

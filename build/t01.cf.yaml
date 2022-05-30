@@ -34,6 +34,7 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
+                  - 'ses:SendEmail'
                 Resource: '*'
   MarketValueLambda:
     DependsOn:
