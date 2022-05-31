@@ -97,6 +97,7 @@ Resources:
       Subscription:
         - Endpoint: !GetAtt MarketValueLambda.Arn
           Protocol: lambda
+
   MarketValueEventRule:
     DependsOn:
       - MarketValueTopic
@@ -107,4 +108,17 @@ Resources:
       Targets:
         - Id: topic-target
           Arn: !Ref MarketValueTopic
+
+  MarketValueInvokePermission:
+    DependsOn:
+      - MarketValueTopic
+      - MarketValueLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn:  !Ref MarketValueTopic 
+      FunctionName: Market-value-function
+
+
   
