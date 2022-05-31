@@ -36,7 +36,7 @@ async function runTemplate(
 }
 
 async function main() {
-  await runTemplate('./build/t00.cf.yaml', 'Market-value-attemp-code-3', [{
+  await runTemplate('./build/t00.cf.yaml', 'Market-value-code-bucket', [{
     ParameterKey: 'BucketCodeName',
     ParameterValue: bucketCodeName,
   }]);
@@ -54,7 +54,7 @@ async function main() {
 
   await runTemplate(
     './build/t01.cf.yaml',
-    'Market-value-attemp-1',
+    'Market-value',
     [{
       ParameterKey: 'BucketCodeName',
       ParameterValue: bucketCodeName,
