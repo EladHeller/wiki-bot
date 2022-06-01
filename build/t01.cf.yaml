@@ -106,7 +106,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties: 
       Action: lambda:InvokeFunction
-      Principal: lambda.amazonaws.com
+      Principal: events.amazonaws.com
       SourceArn:  !GetAtt MarketValueEventRule.Arn 
       FunctionName: Market-value-function
 
