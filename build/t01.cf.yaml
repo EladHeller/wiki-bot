@@ -88,36 +88,26 @@ Resources:
       FilterPattern: Invoke Error
       LogGroupName: '/aws/lambda/Market-value-function'
 
-  MarketValueTopic:
-    DependsOn: 
-      - MarketValueLambda
-    Type: 'AWS::SNS::Topic'
-    Properties:
-      TopicName: Market-value-topic
-      Subscription:
-        - Endpoint: !GetAtt MarketValueLambda.Arn
-          Protocol: lambda
-
   MarketValueEventRule:
     DependsOn:
-      - MarketValueTopic
+      - MarketValueLambda
     Type: 'AWS::Events::Rule'
     Properties:
       Name: Market-value-scheduler
-      ScheduleExpression: cron(0 2 ? * MON-FRI *)
+      ScheduleExpression: cron(0 20 ? * SUN-THU *)
       Targets:
-        - Id: topic-target
-          Arn: !Ref MarketValueTopic
+        - Id: market-value-function
+          Arn: !GetAtt MarketValueLambda.Arn
 
   MarketValueInvokePermission:
     DependsOn:
-      - MarketValueTopic
+      - MarketValueEventRule
       - MarketValueLambda
     Type: AWS::Lambda::Permission
     Properties: 
       Action: lambda:InvokeFunction
-      Principal: sns.amazonaws.com
-      SourceArn:  !Ref MarketValueTopic 
+      Principal: lambda.amazonaws.com
+      SourceArn:  !GetAtt MarketValueEventRule.Arn 
       FunctionName: Market-value-function
 
 
