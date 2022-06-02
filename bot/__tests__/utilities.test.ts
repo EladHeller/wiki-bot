@@ -49,6 +49,18 @@ describe('prettyNumericValue', () => {
 
     expect(result).toBe('1.12 [[מיליארד]] [[ש"ח]]');
   });
+
+  it('should return dolar for dolar values', () => {
+    const result = prettyNumericValue('51123520', 'USD');
+
+    expect(result).toBe('51.1 [[מיליארד]] [[דולר אמריקאי|דולר]]');
+  });
+
+  it('should return euro for euro values', () => {
+    const result = prettyNumericValue('132123520', 'EUR');
+
+    expect(result).toBe('132 [[מיליארד]] [[אירו]]');
+  });
 });
 
 describe('getLocalDate', () => {

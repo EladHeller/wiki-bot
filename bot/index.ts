@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import fs from 'fs/promises';
 import Company from './company';
-import getMayaDetails, { MayaMarketValue, MayaWithWiki } from './mayaAPI';
+import getMayaDetails, { MayaWithWiki } from './mayaAPI';
 import {
   getCompanies, getToken, login, updateArticle, WikiPage,
 } from './wikiAPI';
@@ -54,7 +54,6 @@ async function main() {
     }
   }
   await fs.writeFile('./maya-res.json', JSON.stringify(mayaResults, null, 2), 'utf8');
-  const marketValues:MayaMarketValue[] = JSON.parse(await fs.readFile('./maya-markets-res.json', 'utf8'));
 
   // const mayaResults: MayaWithWiki[] = JSON.parse(await fs.readFile('./maya-res.json', 'utf8'));
   console.log('get data success');
@@ -66,7 +65,6 @@ async function main() {
       maya,
       wiki,
       companyId,
-      marketValues.find(({ id }) => companyId === id)?.marketValue,
     ));
 
   await saveTable(companies);

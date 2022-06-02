@@ -1,5 +1,5 @@
 import { MayaCompany } from './mayaAPI';
-import { prettyNumericValue } from './utilities';
+import { CurrencyCode, prettyNumericValue } from './utilities';
 import { updateArticle, WikiPage } from './wikiAPI';
 import WikiTemplateParser from './WikiTemplateParser';
 
@@ -25,6 +25,7 @@ function getFieldString(
   reference: string,
   name: string,
   isFirst: boolean,
+  currency: CurrencyCode,
 ) {
   let finalString = '';
 
@@ -36,7 +37,7 @@ function getFieldString(
       fixedFieldData = fixedFieldData.substring(1);
     }
 
-    const numericString = prettyNumericValue(fixedFieldData);
+    const numericString = prettyNumericValue(fixedFieldData, currency);
     const commentKey = `דוח${year}-${name}`;
     const comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference.replace(companyReportView, companyFinanceView)} נתונים כספיים] באתר [[מאי"ה]].` : ''}}}`;
     finalString += `${numericString} ([[${year}]])${comment}`;
@@ -44,6 +45,12 @@ function getFieldString(
 
   return finalString;
 }
+
+const currencyDict: Record<string, CurrencyCode> = {
+  '(אלפי דולרים)': 'USD',
+  '(אלפי ש"ח)': 'NIS',
+  '(  אלפי אירו)': 'EUR',
+};
 
 export default class Company {
   name: string;
@@ -68,18 +75,20 @@ export default class Company {
 
   companyId: number;
 
-  marketValue: number | undefined;
+  currency: CurrencyCode;
 
   constructor(
     name: string,
     mayData: MayaCompany,
     wikiData: WikiPage,
     companyId: number,
-    marketValue?: number,
   ) {
-    this.marketValue = marketValue;
     this.companyId = companyId;
     this.name = name;
+    this.currency = currencyDict[mayData.CurrencyName];
+    if (!this.currency) {
+      throw new Error('Currency missing!');
+    }
     const mayaDetails = new Map();
     let rowsField = '';
     let periodField = 'CurrentPeriod';
@@ -115,20 +124,13 @@ export default class Company {
           this.reference,
           this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
           isFirst,
+          this.currency,
         );
 
         isFirst = false;
         this.templateParser.templateData[field.wikiName] = this.wikiTemplateData[field.wikiName] || '';
       }
     });
-
-    if (this.marketValue) {
-      this.templateParser.templateData['שווי'] = `{{שווי שוק חברה בורסאית|ID=${this.companyId}}}`;
-      this.templateParser.templateData['תאריך שווי שוק'] = '{{שווי שוק חברה בורסאית|ID=timestamp}}';
-    } else {
-      delete this.templateParser.templateData['שווי'];
-      delete this.templateParser.templateData['תאריך שווי שוק'];
-    }
 
     const oldTemplate = this.templateParser.templateText;
     this.templateParser.updateTamplateFromData();
