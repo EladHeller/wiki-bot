@@ -1,9 +1,15 @@
 const thousandStr = '1000 (מספר)|אלף';
 const millionStr = 'מיליון';
 const milliardStr = 'מיליארד';
-const NIS = 'ש"ח';
+export type CurrencyCode = 'USD' | 'NIS' | 'EUR';
 
-export function prettyNumericValue(number: string): string {
+const currencyNama: Record<CurrencyCode, string> = {
+  EUR: 'אירו',
+  NIS: 'ש"ח',
+  USD: 'דולר אמריקאי|דולר',
+};
+
+export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 'NIS'): string {
   let orderOfMagmitude = '';
   let sumStr = '';
   if (number === '0') {
@@ -23,7 +29,7 @@ export function prettyNumericValue(number: string): string {
     sumStr = Number(number.substring(0, number.length - 6)).toLocaleString();
   }
 
-  return `${sumStr}${orderOfMagmitude ? ` [[${orderOfMagmitude}]]` : ''} [[${NIS}]]`;
+  return `${sumStr}${orderOfMagmitude ? ` [[${orderOfMagmitude}]]` : ''} [[${currencyNama[currencyCode]}]]`;
 }
 
 export function getLocalDate(dateString:string): string {
