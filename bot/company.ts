@@ -77,17 +77,20 @@ export default class Company {
 
   currency: CurrencyCode;
 
+  revisionSize: number;
+
   constructor(
     name: string,
     mayData: MayaCompany,
     wikiData: WikiPage,
     companyId: number,
   ) {
+    this.revisionSize = wikiData.revisions[0].size;
     this.companyId = companyId;
     this.name = name;
     this.currency = currencyDict[mayData.CurrencyName];
     if (!this.currency) {
-      throw new Error('Currency missing!');
+      throw new Error(`${name}: Currency missing!`);
     }
     const mayaDetails = new Map();
     let rowsField = '';
