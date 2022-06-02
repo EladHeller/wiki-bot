@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import Company from './company';
 import getMayaDetails, { MayaWithWiki } from './mayaAPI';
 import {
-  getCompanies, getToken, login, updateArticle, WikiPage,
+  getCompanies, getCompany, getToken, login, updateArticle, WikiPage,
 } from './wikiAPI';
 import { buildTableRow } from './WikiParser';
 
@@ -11,14 +11,22 @@ const year = process.env.YEAR;
 
 async function saveTable(companies: Company[]) {
   let tableRows = '';
-  companies.forEach((company) => {
+
+  for (const company of companies) {
+    console.log(company.name);
+    const firstRevision = Object.values(await getCompany(company.name))[0].revisions[0];
     const details = [`[${company.reference}]`, `[[${company.name}]]`, ...Object.values(company.mayaDataForWiki).map((val) => val || '---')];
+    details.push(company.currency);
     details.push(company.wikiTemplateData.year);
     details.push(company.isContainsTamplate);
+    details.push(`[[משתמש:${firstRevision.user}|${firstRevision.user}]]`, firstRevision.size);
+    details.push(company.revisionSize);
     tableRows += buildTableRow(details);
-  });
+  }
 
-  const tableString = `{| class="wikitable sortable"\n! קישור !! שם החברה !! הכנסות !! רווח תפעולי !! רווח!!הון עצמי!!סך המאזן!!תאריך הנתונים!!מכיל [[תבנית:חברה מסחרית]]${tableRows}\n|}`;
+  const tableString = '{| class="wikitable sortable"\n'
+  + `! קישור !! שם החברה !! הכנסות !! רווח תפעולי !! רווח !! הון עצמי !! סך המאזן !! מטבע !! תאריך הנתונים !! מכיל [[תבנית:חברה מסחרית]] !! משתמש יוצר !! גודל ביצירה !! גודל נוכחי${
+    tableRows}\n|}`;
 
   const res = await updateArticle(
     'משתמש:Sapper-bot/tradeBootData',
@@ -47,18 +55,19 @@ async function main() {
 
   const mayaResults: MayaWithWiki[] = [];
   for (const page of pages) {
-    const res = await getMayaDetails(page);
-    if (res) {
+    const mayDetails = await getMayaDetails(page);
+    if (mayDetails) {
       console.log(`success ${page.title}`);
-      mayaResults.push(res);
+      mayaResults.push(mayDetails);
     }
   }
   await fs.writeFile('./maya-res.json', JSON.stringify(mayaResults, null, 2), 'utf8');
 
   // const mayaResults: MayaWithWiki[] = JSON.parse(await fs.readFile('./maya-res.json', 'utf8'));
   console.log('get data success');
+  console.log(mayaResults.length);
   const companies = mayaResults
-    .filter((x) => x != null)
+    .filter((x) => x != null && x.maya && x.wiki && x.maya.CurrencyName != null)
     .filter(({ maya, wiki }: MayaWithWiki) => maya && wiki)
     .map(({ maya, wiki, companyId }: MayaWithWiki) => new Company(
       wiki.title,
@@ -66,12 +75,12 @@ async function main() {
       wiki,
       companyId,
     ));
-
+  console.log(companies.length);
   await saveTable(companies);
 
   const relevantCompanies = getRelevantCompanies(companies);
   console.log(relevantCompanies.length);
-  for (let i = 5; i < relevantCompanies.length; i += 1) {
+  for (let i = 0; i < relevantCompanies.length; i += 1) {
     await relevantCompanies[i].updateCompanyArticle();
   }
 }
