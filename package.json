@@ -46,6 +46,6 @@
     "eslint-plugin-import": "^2.25.2",
     "eslint-plugin-jest": "^26.5.1",
     "jest": "^28.1.0",
-    "ts-node": "^10.7.0"
+    "ts-node": "^10.8.1"
   }
 }
