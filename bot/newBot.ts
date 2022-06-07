@@ -32,7 +32,12 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
     'עדכון',
     newContent,
   );
+
   console.log(res);
+
+  if ('error' in res) {
+    throw new Error(JSON.stringify(res.error));
+  }
 }
 
 export async function main() {
