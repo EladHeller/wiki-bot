@@ -13,7 +13,7 @@
     "bot": "ts-node-esm bot/newBot.ts",
     "update-lambda": "ts-node-esm ./build/update-lambda.ts",
     "update-s3": "ts-node-esm ./build/update-s3.ts",
-    "create-env": "ts-node-esm ./build/create-env.ts",
+    "update-env": "ts-node-esm ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test"
   },
   "repository": {
