@@ -1,8 +1,6 @@
 name: Deploy
 on:
   push:
-    paths:
-      - '**.[tj]s'
     branches:
       - master
 jobs:
@@ -40,5 +38,5 @@ jobs:
           export CODE_BUCKET=${{ secrets.CODE_BUCKET_NAME }}
           export USER_NAME=${{ secrets.WIKI_USER_NAME }}
           export PASSWORD=${{ secrets.WIKI_USER_PASSWORD }}
-          npm run deploy
+          npm run update-env
           npm run update-lambda
