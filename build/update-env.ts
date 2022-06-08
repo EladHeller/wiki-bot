@@ -15,15 +15,38 @@ async function runTemplate(
   parameters?: CloudFormation.Parameters,
   capabilities?: CloudFormation.Capabilities,
 ) {
-  await cf.createStack({
+  const stack = await cf.describeStacks({
     StackName: name,
-    TemplateBody: await fs.readFile(templatePath, 'utf-8'),
-    Capabilities: capabilities,
-    Parameters: parameters,
   }).promise();
+  const template = await fs.readFile(templatePath, 'utf-8');
+  const newStack = stack.Stacks != null && stack.Stacks.length < 1;
+  if (newStack) {
+    await cf.createStack({
+      StackName: name,
+      TemplateBody: template,
+      Capabilities: capabilities,
+      Parameters: parameters,
+    }).promise();
+  } else {
+    try {
+      await cf.updateStack({
+        StackName: name,
+        TemplateBody: template,
+        Capabilities: capabilities,
+        Parameters: parameters,
+      }).promise();
+    } catch (e) {
+      if (e.message === 'No updates are to be performed.') {
+        console.log(`template ${name} No updates are to be performed.`);
+        return null;
+      }
+      throw e;
+    }
+  }
 
   const { $response: { data, error } } = await Promise.race([
     cf.waitFor('stackCreateComplete', { StackName: name }).promise(),
+    cf.waitFor('stackUpdateComplete', { StackName: name }).promise(),
     cf.waitFor('stackRollbackComplete', { StackName: name }).promise(),
   ]);
   if (error || !data
@@ -31,7 +54,7 @@ async function runTemplate(
     console.log(error, data);
     throw new Error('Creation failed');
   }
-
+  console.log(`template ${name} ${newStack ? 'created' : 'updated'}.`);
   return data.Stacks?.[0].Outputs;
 }
 
