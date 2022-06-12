@@ -39,7 +39,7 @@
     "@types/node": "^17.0.42",
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.27.1",
-    "@typescript-eslint/parser": "^5.27.0",
+    "@typescript-eslint/parser": "^5.27.1",
     "aws-sdk": "^2.1152.0",
     "eslint": "^8.17.0",
     "eslint-config-airbnb-base": "^15.0.0",
