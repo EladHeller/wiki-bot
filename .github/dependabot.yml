@@ -10,7 +10,7 @@ updates:
       day: sunday
       time: "04:00"
       timezone: Asia/Jerusalem
-    target-branch: master
+    target-branch: develop
     commit-message:
       prefix: "[dependabot]"
     assignees:
