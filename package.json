@@ -36,7 +36,7 @@
     "@babel/preset-env": "^7.19.4",
     "@babel/preset-typescript": "^7.18.6",
     "@types/jest": "^29.2.0",
-    "@types/node": "^18.11.8",
+    "@types/node": "^18.11.9",
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.41.0",
     "@typescript-eslint/parser": "^5.40.1",
