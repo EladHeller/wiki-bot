@@ -40,11 +40,11 @@ async function upload(bucket: string, key: string, filePath: string) {
     return;
   }
 
-  // await s3.upload({
-  //   Bucket: bucket,
-  //   Key: key,
-  //   Body: file,
-  // }).promise();
+  await s3.upload({
+    Bucket: bucket,
+    Key: key,
+    Body: file,
+  }).promise();
   console.log(`${key} updated`);
 }
 
