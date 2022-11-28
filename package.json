@@ -11,6 +11,7 @@
     "deploy": "sh ./build/deploy.sh",
     "start": "ts-node-esm bot/index.ts",
     "bot": "ts-node-esm bot/newBot.ts",
+    "identity": "ts-node-esm bot/mayaIdentityIndex.ts",
     "update-lambda": "ts-node-esm ./build/update-lambda.ts",
     "update-s3": "ts-node-esm ./build/update-s3.ts",
     "update-env": "ts-node-esm ./build/update-env.ts",

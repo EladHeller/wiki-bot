@@ -124,6 +124,16 @@ export type MayaMarketValue = {
   id: number;
 };
 
+export interface SymbolResult {
+  qValue?: string;
+  title?: string;
+  id: string;
+  symbol?: string;
+  englishSymbol?: string;
+  hebrewName: string;
+  englishName: string;
+}
+
 export async function getMarketValue(
   wikiPage: Partial<WikiPage>,
 ): Promise<MayaMarketValue | undefined> {
@@ -150,6 +160,49 @@ export async function getMarketValue(
       title: wikiPage.title,
       id: result?.data?.CompanyDetails?.CompanyId,
     }));
+}
+
+export async function getSymbol(
+  wikiPage: Partial<WikiPage>,
+): Promise<SymbolResult> {
+  const extLink = wikiPage.extlinks?.find((link) => link['*'].match(mayaLinkRegex))?.['*'];
+  if (!extLink) {
+    throw new Error(`No extlinks: ${wikiPage.title} ${wikiPage.extlinks}`);
+  }
+  const companyAllDetailsUrl = extLink
+    .replace(companyPageLink, jsonAllLink)
+    .replace(companyReportView, '');
+  try {
+    const result = await axios(companyAllDetailsUrl, mayaGetOptions);
+    const enResult = await axios(companyAllDetailsUrl, {
+      ...mayaGetOptions,
+      headers: {
+        ...mayaGetOptions.headers,
+        'accept-language': 'en-US',
+      },
+    });
+    const allDetails: MayaAllDetails = result.data;
+    const enAllDetails: MayaAllDetails = enResult.data;
+    const indice = allDetails.IndicesList.find(({ IndexName }) => IndexName === 'ת"א All-Share');
+    const enIndice = enAllDetails.IndicesList.find(({ IndexName }) => IndexName === 'TA-All-Share');
+
+    return {
+      title: wikiPage.title,
+      qValue: wikiPage.pageprops?.wikibase_item,
+      id: result?.data?.CompanyDetails?.CompanyId,
+      symbol: indice?.Symbol,
+      englishSymbol: enIndice?.Symbol,
+      englishName: enAllDetails.CompanyDetails.CompanyLongName,
+      hebrewName: allDetails.CompanyDetails.CompanyLongName,
+    };
+  } catch (e) {
+    console.error(
+      'companyAllDetailsUrl',
+      wikiPage.title,
+      e?.data || e?.message || e,
+    );
+    throw e;
+  }
 }
 
 export type AllDetailsResponse = {

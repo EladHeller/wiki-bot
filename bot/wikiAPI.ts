@@ -31,6 +31,9 @@ export type WikiPage = {
     '*': string;
   }[];
   title: string;
+  pageprops?: {
+    wikibase_item: string;
+  }
 }
 
 let token: string;
@@ -107,12 +110,14 @@ export async function getCompanies(): Promise<Record<string, WikiPage>> {
 
 export async function getMayaLinks(): Promise<Record<string, WikiPage>> {
   const template = encodeURIComponent('תבנית:מידע בורסאי');
-  const props = encodeURIComponent('extlinks');
+  const props = encodeURIComponent('extlinks|pageprops');
   const mayaLink = encodeURIComponent('maya.tase.co.il/company/');
   const path = `${baseUrl}?action=query&format=json`
   // Pages with תבנית:מידע בורסאי
   + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
   + `&prop=${props}`
+  // wikidata identifier
+  + '&ppprop=wikibase_item&redirects=1'
   // Get maya link
   + `&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
   const result = await client(path);
