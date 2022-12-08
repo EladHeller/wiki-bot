@@ -94,7 +94,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: Market-value-scheduler
-      ScheduleExpression: cron(0 18 ? * SUN-THU *)
+      ScheduleExpression: cron(0 20 ? * SUN-THU *)
       Targets:
         - Id: market-value-function
           Arn: !GetAtt MarketValueLambda.Arn
