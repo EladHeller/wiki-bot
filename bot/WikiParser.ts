@@ -25,12 +25,18 @@ export function nextWikiText(text: string, currIndex: number, str: string): numb
   return index;
 }
 
-export function buildTableRow(fields: string[], style?: string, isHeader = false) {
+export function buildTableRow(fields: string[], style?: string, isHeader = false): string {
   const delimiter = isHeader ? '!' : '|';
   const styleWithDelimiter = style ? (style + delimiter) : '';
-  let rowStr = `\n|-\n${delimiter}${styleWithDelimiter}${fields[0]}`;
+  let rowStr = `\n|-\n${delimiter}${styleWithDelimiter}${fields[0].replace(/\n/g, '')}`;
   for (let i = 1; i < fields.length; i += 1) {
-    rowStr += ` || ${fields[i] === undefined ? '---' : fields[i]}`;
+    rowStr += ` || ${fields[i] === undefined ? '---' : fields[i].replace(/\n/g, '')}`;
   }
   return rowStr;
+}
+
+export function buildTable(headers: string[], rows: string[][]): string {
+  return `{| class="wikitable sortable"
+! ${headers.join(' !! ')}
+${rows.map((row) => buildTableRow(row)).join('')}\n|}`;
 }
