@@ -44,13 +44,14 @@ function objectToFormData(obj: Record<string, any>) {
   return fd;
 }
 
-export async function getToken() {
+async function getToken() {
   const result = await client(`${baseUrl}?action=query&meta=tokens&type=login&format=json`);
   const { logintoken } = result.data.query.tokens;
   return logintoken;
 }
 
-export async function login(logintoken: string) {
+export async function login() {
+  const logintoken = await getToken();
   const url = `${baseUrl}`;
   if (!name || !password) {
     throw new Error('Name and password are required');

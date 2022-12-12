@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import Company from './company';
 import getMayaDetails, { MayaWithWiki } from './mayaAPI';
 import {
-  getCompanies, getCompany, getToken, login, updateArticle, WikiPage,
+  getCompanies, getCompany, login, updateArticle, WikiPage,
 } from './wikiAPI';
 import { buildTableRow } from './WikiParser';
 
@@ -44,8 +44,7 @@ function getRelevantCompanies(companies: Company[]) {
 }
 
 async function main() {
-  const logintoken = await getToken();
-  await login(logintoken);
+  await login();
   console.log('Login success');
 
   const wikiResult = await getCompanies();

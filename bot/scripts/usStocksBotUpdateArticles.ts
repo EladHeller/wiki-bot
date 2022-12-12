@@ -4,14 +4,12 @@ import fs from 'fs/promises';
 import { getCompanyData, googleFinanceRegex } from '../googleFinanceApi';
 import { promiseSequence } from '../utilities';
 import {
-  getGoogleFinanceLinksWithContent,
-  getToken, login, updateArticle, WikiPage,
+  getGoogleFinanceLinksWithContent, login, updateArticle, WikiPage,
 } from '../wikiAPI';
 import WikiTemplateParser from '../WikiTemplateParser';
 
 async function main() {
-  const logintoken = await getToken();
-  await login(logintoken);
+  await login();
   console.log('Login success');
 
   let dataPages: WikiPage[] = [];

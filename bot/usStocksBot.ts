@@ -3,9 +3,7 @@ import 'dotenv/config';
 import { getCompanyData, WikiPageWithGoogleFinance } from './googleFinanceApi';
 import { currencyName, getLocalDate, promiseSequence } from './utilities';
 import {
-  getArticleContent,
-  getGoogleFinanceLinks,
-  getToken, login, updateArticle,
+  getArticleContent, getGoogleFinanceLinks, login, updateArticle,
 } from './wikiAPI';
 import WikiTemplateParser from './WikiTemplateParser';
 
@@ -46,8 +44,7 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
 }
 
 export async function main() {
-  const logintoken = await getToken();
-  await login(logintoken);
+  await login();
   console.log('Login success');
 
   const results = await getGoogleFinanceLinks();

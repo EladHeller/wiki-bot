@@ -2,13 +2,12 @@ import 'dotenv/config';
 import { getMarketValue } from '../mayaAPI';
 import { promiseSequence } from '../utilities';
 import {
-  getToken, login, getMayaLinks, WikiPage, updateArticle,
+  login, getMayaLinks, WikiPage, updateArticle,
 } from '../wikiAPI';
 import WikiTemplateParser from '../WikiTemplateParser';
 
 async function main() {
-  const logintoken = await getToken();
-  await login(logintoken);
+  await login();
   console.log('Login success');
 
   const results = await getMayaLinks(true);
