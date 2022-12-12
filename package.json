@@ -15,6 +15,7 @@
     "us-stocks": "ts-node-esm bot/usStocksBot.ts",
     "us-stocks-articles": "ts-node-esm bot/scripts/usStocksBotUpdateArticles.ts",
     "stocks-articles": "ts-node-esm bot/scripts/stocksBotArticle.ts",
+    "company-details": "ts-node-esm bot/companyDetailsBot.ts",
     "update-lambda": "ts-node-esm ./build/update-lambda.ts",
     "update-s3": "ts-node-esm ./build/update-s3.ts",
     "update-env": "ts-node-esm ./build/update-env.ts",
