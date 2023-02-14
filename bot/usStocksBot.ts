@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import getStockData, { GoogleFinanceData } from './googleFinanceApi';
-import { getLocalDate, prettyNumericValue } from './utilities';
+import { currencyName, getLocalDate } from './utilities';
 import {
   getArticleContent,
   getGoogleFinanceLinks,
@@ -10,11 +10,35 @@ import WikiTemplateParser from './WikiTemplateParser';
 
 const googleFinanceRegex = /^https:\/\/www\.google\.com\/finance\?q=(\w+)$/;
 
-const marketValueTemplate = '(ארצות הברית) תבנית:שווי שוק חברה בורסאית';
+const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
 
 interface WikiPageWithGoogleFinance {
     gf: GoogleFinanceData;
     wiki: WikiPage;
+    ticker: string;
+}
+
+async function getCompanyData(page: WikiPage): Promise<WikiPageWithGoogleFinance | undefined> {
+  const extLink = page.extlinks?.find((link) => link['*'].match(googleFinanceRegex))?.['*'];
+  if (!extLink) {
+    console.log('no extLink', page.title, extLink);
+  } else {
+    try {
+      const res = await getStockData(extLink);
+      if (res) {
+        console.log('after', page.title);
+        return {
+          gf: res,
+          ticker: extLink.split('?q=')[1] ?? '',
+          wiki: page,
+        };
+      }
+      console.log('no results', page.title);
+    } catch (e) {
+      console.error(page.pageid, e);
+    }
+  }
+  return undefined;
 }
 
 async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
@@ -24,11 +48,11 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   }
   const template = new WikiTemplateParser(content, '#switch: {{{ID}}}');
   const oldTemplate = template.templateText;
-  const relevantCompanies = marketValues.filter(({ gf: { marketCap } }) => marketCap);
+  const relevantCompanies = marketValues.filter(({ gf: { marketCap } }) => marketCap.number !== '0');
   const companies = relevantCompanies.map(
     (marketValue) => [
-      marketValue.wiki.pageid,
-      prettyNumericValue(marketValue.gf.marketCap?.toString() || '0'),
+      marketValue.ticker,
+      `${marketValue.gf.marketCap.number} [[${currencyName[marketValue.gf.marketCap.currency] ?? marketValue.gf.marketCap.currency}]]`,
     ],
   );
 
@@ -51,7 +75,7 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   }
 }
 
-export async function main() {
+async function main() {
   const logintoken = await getToken();
   await login(logintoken);
   console.log('Login success');
@@ -59,23 +83,20 @@ export async function main() {
   const results = await getGoogleFinanceLinks();
   console.log('links', Object.keys(results).length);
   const marketValues: WikiPageWithGoogleFinance[] = [];
-  for (const page of Object.values(results)) {
-    const extLink = page.extlinks?.find((link) => link['*'].match(googleFinanceRegex))?.['*'];
-    console.log('extLink', page.title, extLink);
-    if (extLink) {
-      const res = await getStockData(extLink);
-      if (res) {
-        console.log('after', page.title);
-        marketValues.push({
-          gf: res,
-          wiki: page,
-        });
+  const pages = Object.values(results);
+  let pagesBatch = pages.splice(0, 10);
+  while (pagesBatch.length > 0) {
+    await Promise.all(pagesBatch.map(async (page) => {
+      const data = await getCompanyData(page);
+      if (data) {
+        marketValues.push(data);
       }
-    }
+    }));
+    pagesBatch = pages.splice(0, 10);
   }
   await updateTemplate(marketValues);
 }
 
-export default {
-  main,
-};
+main().catch((e) => {
+  console.error(e);
+});

@@ -1,12 +1,22 @@
 const thousandStr = '1000 (מספר)|אלף';
 const millionStr = 'מיליון';
 const milliardStr = 'מיליארד';
-export type CurrencyCode = 'USD' | 'NIS' | 'EUR';
+export type CurrencyCode = 'USD' | 'NIS' | 'EUR' | 'ILS' | 'JPY' | 'AUD' | 'INR' | 'HKD' | 'CNY' | 'IDR' | 'CAD' | 'DKK' | 'KRW';
 
-const currencyNama: Record<CurrencyCode, string> = {
+export const currencyName: Record<CurrencyCode, string> = {
   EUR: 'אירו',
   NIS: 'ש"ח',
   USD: 'דולר אמריקאי|דולר',
+  ILS: 'ש"ח',
+  JPY: 'ין יפני',
+  AUD: 'דולר אוסטרלי',
+  INR: 'רופי הודי',
+  HKD: 'דולר הונג קונגי',
+  CNY: 'רנמינבי',
+  IDR: 'רוּפּיה אינדונזית',
+  CAD: 'דולר קנדי',
+  DKK: 'כתר דני',
+  KRW: 'וון דרום קוריאני',
 };
 
 export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 'NIS'): string {
@@ -29,7 +39,7 @@ export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 
     sumStr = Number(number.substring(0, number.length - 6)).toLocaleString();
   }
 
-  return `${sumStr}${orderOfMagmitude ? ` [[${orderOfMagmitude}]]` : ''} [[${currencyNama[currencyCode]}]]`;
+  return `${sumStr}${orderOfMagmitude ? ` [[${orderOfMagmitude}]]` : ''} [[${currencyName[currencyCode]}]]`;
 }
 
 export function getLocalDate(dateString:string): string {

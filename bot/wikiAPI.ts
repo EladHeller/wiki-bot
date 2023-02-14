@@ -129,7 +129,7 @@ export async function getGoogleFinanceLinks(): Promise<Record<string, WikiPage>>
   const props = encodeURIComponent('extlinks');
   const googleFinanceLink = encodeURIComponent('www.google.com/finance?q=');
   const path = `${baseUrl}?action=query&format=json`
-  // Pages with תבנית:מידע בורסאי
+  // Pages with תבנית:מידע בורסאי (ארצות הברית)'
   + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
   + `&prop=${props}`
   // Get google link
