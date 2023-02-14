@@ -5,27 +5,36 @@ function getValueFromTextNodes(textNodes: Text[], label: string): string | undef
   return node?.parentElement?.parentElement?.parentElement?.lastChild?.textContent ?? undefined;
 }
 
-const powerSignToNumber = {
-  K: 1e3,
-  M: 1e6,
-  B: 1e9,
-  T: 1e12,
+const numberSignToHebrewNumber = {
+  K: '1000 (מספר)|אלף',
+  M: 'מיליון',
+  B: 'מיליארד',
+  T: 'טריליון',
 };
 
-function marketCapTextToNumber(marketCap: string) {
-  const matches = marketCap.match(/(\d{1,3}(?:\.\d{1,2}))(\w)/);
-  if (!matches) {
-    return 0;
-  }
-  const num = Number(matches[1]);
-  if (!num) {
-    return 0;
-  }
-  return num * powerSignToNumber[matches[2]];
+export interface MarketCap {
+  number: string;
+  currency: string;
 }
 
 export interface GoogleFinanceData {
-    marketCap?: number;
+    marketCap: MarketCap;
+}
+
+function marketCapTextToNumber(marketCap: string): MarketCap {
+  const matches = marketCap.match(/(\d{1,3}(?:\.\d{1,2}))(\w) (\w+)/);
+  if (!matches?.[1]) {
+    return {
+      number: '0',
+      currency: 'USD',
+    };
+  }
+  const num = matches[1];
+  const numberName = matches[2];
+  return {
+    number: `${num}${numberName ? ` [[${numberSignToHebrewNumber[matches[2]]}]]` : ''}`,
+    currency: matches[3],
+  };
 }
 
 export default async function getStockData(
@@ -49,6 +58,6 @@ export default async function getStockData(
   const marketCap = getValueFromTextNodes(textNodes, 'MARKET CAP');
 
   return {
-    marketCap: marketCap != null ? marketCapTextToNumber(marketCap) : marketCap,
+    marketCap: marketCapTextToNumber(marketCap ?? ''),
   };
 }

@@ -50,7 +50,8 @@ Resources:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
       Handler: dist/newBot.main
-      Timeout: 360
+      Timeout: 900
+      MemorySize: 2048
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
@@ -117,6 +118,24 @@ Resources:
       Targets:
         - Id: market-value-function
           Arn: !GetAtt MarketValueLambda.Arn
+
+  UsStockLogGroupInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SendEmailLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/US-stocks-function:*'
+
+  UsStockLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/US-stocks-function'
 
   MarketValueInvokePermission:
     DependsOn:
