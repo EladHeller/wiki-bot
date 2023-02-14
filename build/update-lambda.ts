@@ -17,6 +17,11 @@ async function main() {
     S3Key: 'dist.zip',
   }).promise();
   await lambda.updateFunctionCode({
+    FunctionName: 'US-stocks-function',
+    S3Bucket: bucketCodeName,
+    S3Key: 'dist.zip',
+  }).promise();
+  await lambda.updateFunctionCode({
     FunctionName: 'Send-email-function',
     S3Bucket: bucketCodeName,
     S3Key: 'email.zip',
