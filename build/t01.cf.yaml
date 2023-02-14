@@ -36,6 +36,7 @@ Resources:
                   - 'logs:PutLogEvents'
                   - 'ses:SendEmail'
                 Resource: '*'
+
   MarketValueLambda:
     DependsOn:
       - MarketValueLambdaIamRole
@@ -43,12 +44,30 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Market-value-function
-      Runtime: nodejs16.x
+      Runtime: nodejs18.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
       Handler: dist/newBot.main
+      Timeout: 360
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  UsStocksLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: US-stocks-function
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/usStocksBot.main
       Timeout: 360
       Code:
         S3Bucket: !Ref BucketCodeName
@@ -61,7 +80,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Send-email-function
-      Runtime: nodejs16.x
+      Runtime: nodejs18.x
       Environment:
         Variables:
           REGION: !Ref "AWS::Region"
