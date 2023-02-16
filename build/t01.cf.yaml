@@ -56,24 +56,6 @@ Resources:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
 
-  UsStocksLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
-      FunctionName: US-stocks-function
-      Runtime: nodejs18.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
-      Handler: dist/usStocksBot.main
-      Timeout: 360
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-
   SendEmailLambda:
     DependsOn:
       - MarketValueLambdaIamRole
@@ -90,6 +72,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: email.zip
+  
   LogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -119,6 +102,35 @@ Resources:
         - Id: market-value-function
           Arn: !GetAtt MarketValueLambda.Arn
 
+  MarketValueInvokePermission:
+    DependsOn:
+      - MarketValueEventRule
+      - MarketValueLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt MarketValueEventRule.Arn 
+      FunctionName: Market-value-function
+
+  UsStocksLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: US-stocks-function
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/usStocksBot.main
+      Timeout: 360
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
   UsStockLogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -137,16 +149,26 @@ Resources:
       FilterPattern: Invoke Error
       LogGroupName: '/aws/lambda/US-stocks-function'
 
-  MarketValueInvokePermission:
+  UsStocksEventRule:
     DependsOn:
-      - MarketValueEventRule
-      - MarketValueLambda
+      - UsStocksLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: US-stocks-scheduler
+      ScheduleExpression: cron(0 22 ? * MON-THU *)
+      Targets:
+        - Id: US-stocks-function
+          Arn: !GetAtt UsStocksLambda.Arn
+
+  UsStocksInvokePermission:
+    DependsOn:
+      - UsStocksEventRule
+      - UsStocksLambda
     Type: AWS::Lambda::Permission
     Properties: 
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt MarketValueEventRule.Arn 
-      FunctionName: Market-value-function
-
+      SourceArn:  !GetAtt UsStocksEventRule.Arn 
+      FunctionName: US-stocks-function
 
   
