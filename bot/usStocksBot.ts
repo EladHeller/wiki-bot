@@ -18,7 +18,9 @@ interface WikiPageWithGoogleFinance {
     ticker: string;
 }
 
-async function getCompanyData(page: WikiPage): Promise<WikiPageWithGoogleFinance | undefined> {
+export async function getCompanyData(
+  page: WikiPage,
+): Promise<WikiPageWithGoogleFinance | undefined> {
   const extLink = page.extlinks?.find((link) => link['*'].match(googleFinanceRegex))?.['*'];
   if (!extLink) {
     console.log('no extLink', page.title, extLink);
@@ -58,7 +60,7 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
 
   template.updateTamplateFromData({
     ...Object.fromEntries(companies),
-    timestamp: getLocalDate(new Date().toDateString()),
+    timestamp: getLocalDate(relevantCompanies[0].gf.marketCap.date ?? new Date().toDateString()),
     '#default': '',
   });
   const newContent = content.replace(oldTemplate, template.templateText);
@@ -97,6 +99,6 @@ async function main() {
   await updateTemplate(marketValues);
 }
 
-main().catch((e) => {
-  console.error(e);
-});
+export default {
+  main,
+};
