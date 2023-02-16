@@ -1,8 +1,7 @@
 import { JSDOM } from 'jsdom';
 
-function getValueFromTextNodes(textNodes: Text[], label: string): string | undefined {
-  const node = textNodes.find((textNode) => textNode.textContent?.trim().toUpperCase() === label);
-  return node?.parentElement?.parentElement?.parentElement?.lastChild?.textContent ?? undefined;
+function getTextNodeByText(textNodes: Text[], label: string): Text | undefined {
+  return textNodes.find((textNode) => textNode.textContent?.trim().toUpperCase() === label);
 }
 
 const numberSignToHebrewNumber = {
@@ -15,13 +14,14 @@ const numberSignToHebrewNumber = {
 export interface MarketCap {
   number: string;
   currency: string;
+  date?: string;
 }
 
 export interface GoogleFinanceData {
     marketCap: MarketCap;
 }
 
-function marketCapTextToNumber(marketCap: string): MarketCap {
+function textToMarketCao(marketCap: string): MarketCap {
   const matches = marketCap.match(/(\d{1,3}(?:\.\d{1,2}))(\w) (\w+)/);
   if (!matches?.[1]) {
     return {
@@ -55,9 +55,18 @@ export default async function getStockData(
     textNodes.push(textNode as Text);
     textNode = treeWalker.nextNode();
   }
-  const marketCap = getValueFromTextNodes(textNodes, 'MARKET CAP');
+  const marketCapLabel = getTextNodeByText(textNodes, 'MARKET CAP');
+  const marketCap = marketCapLabel
+    ?.parentElement?.parentElement?.parentElement?.lastChild?.textContent ?? undefined;
 
+  const dateString = getTextNodeByText(textNodes, 'CLOSED:')?.nextSibling?.textContent;
+
+  const now = new Date();
+  const date = dateString ? new Date(dateString) : now;
+  if (date > now) {
+    date.setFullYear(date.getFullYear() - 1);
+  }
   return {
-    marketCap: marketCapTextToNumber(marketCap ?? ''),
+    marketCap: { ...textToMarketCao(marketCap ?? ''), date: date.toJSON() },
   };
 }

@@ -1,7 +1,7 @@
 const thousandStr = '1000 (מספר)|אלף';
 const millionStr = 'מיליון';
 const milliardStr = 'מיליארד';
-export type CurrencyCode = 'USD' | 'NIS' | 'EUR' | 'ILS' | 'JPY' | 'AUD' | 'INR' | 'HKD' | 'CNY' | 'IDR' | 'CAD' | 'DKK' | 'KRW';
+export type CurrencyCode = 'USD' | 'NIS' | 'EUR' | 'ILS' | 'JPY' | 'AUD' | 'INR' | 'HKD' | 'CNY' | 'IDR' | 'CAD' | 'DKK' | 'KRW' | 'GBP';
 
 export const currencyName: Record<CurrencyCode, string> = {
   EUR: 'אירו',
@@ -17,6 +17,7 @@ export const currencyName: Record<CurrencyCode, string> = {
   CAD: 'דולר קנדי',
   DKK: 'כתר דני',
   KRW: 'וון דרום קוריאני',
+  GBP: 'לירה שטרלינג',
 };
 
 export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 'NIS'): string {
