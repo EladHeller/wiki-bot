@@ -127,6 +127,7 @@ Resources:
           PASSWORD: !Ref WikiPassword
       Handler: dist/usStocksBot.main
       Timeout: 360
+      MemorySize: 2048
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
