@@ -1,3 +1,4 @@
+/* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import getStockData, { GoogleFinanceData } from './googleFinanceApi';
 import { currencyName, getLocalDate } from './utilities';
@@ -18,7 +19,7 @@ interface WikiPageWithGoogleFinance {
     ticker: string;
 }
 
-export async function getCompanyData(
+async function getCompanyData(
   page: WikiPage,
 ): Promise<WikiPageWithGoogleFinance | undefined> {
   const extLink = page.extlinks?.find((link) => link['*'].match(googleFinanceRegex))?.['*'];
@@ -77,7 +78,7 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   }
 }
 
-async function main() {
+export async function main() {
   const logintoken = await getToken();
   await login(logintoken);
   console.log('Login success');
@@ -98,7 +99,3 @@ async function main() {
   }
   await updateTemplate(marketValues);
 }
-
-export default {
-  main,
-};
