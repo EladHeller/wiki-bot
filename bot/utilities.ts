@@ -47,3 +47,12 @@ export function getLocalDate(dateString:string): string {
   const date = new Date(dateString);
   return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${new Date(date).getFullYear()}`;
 }
+
+export async function promiseSequence(size: number, callbacks: Array<() => Promise<any>>) {
+  let batch = callbacks.splice(0, size);
+
+  while (batch.length > 0) {
+    await Promise.all(batch.map((callback) => callback()));
+    batch = callbacks.splice(0, 10);
+  }
+}

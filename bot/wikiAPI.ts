@@ -124,6 +124,26 @@ export async function getMayaLinks(): Promise<Record<string, WikiPage>> {
   return result.data.query.pages;
 }
 
+export async function getGoogleFinanceLinksWithContent(): Promise<Record<string, WikiPage>> {
+  const template = encodeURIComponent('תבנית:מידע בורסאי (ארצות הברית)');
+  const template2 = encodeURIComponent('תבנית:חברה מסחרית');
+  const props = encodeURIComponent('templates|revisions|extlinks');
+  const googleFinanceLink = encodeURIComponent('www.google.com/finance?q=');
+  const rvprops = encodeURIComponent('content|size');
+  const path = `${baseUrl}?action=query&format=json`
+  // Pages with תבנית:מידע בורסאי (ארצות הברית)'
+  + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
+  + `&prop=${props}`
+    // This page contains תבנית:חברה מסחרית?
+    + `&tltemplates=${template2}&tllimit=500`
+  // Get content of page
+  + `&rvprop=${rvprops}&rvslots=*`
+  // Get google link
+  + `&elprotocol=https&elquery=${googleFinanceLink}&ellimit=5000`;
+  const result = await client(path);
+  return result.data.query.pages;
+}
+
 export async function getGoogleFinanceLinks(): Promise<Record<string, WikiPage>> {
   const template = encodeURIComponent('תבנית:מידע בורסאי (ארצות הברית)');
   const props = encodeURIComponent('extlinks');
