@@ -1,8 +1,11 @@
 import { JSDOM } from 'jsdom';
+import { WikiPage } from './wikiAPI';
 
 function getTextNodeByText(textNodes: Text[], label: string): Text | undefined {
   return textNodes.find((textNode) => textNode.textContent?.trim().toUpperCase() === label);
 }
+
+export const googleFinanceRegex = /^https:\/\/www\.google\.com\/finance\?q=([0-9A-Za-z.-:_]+)$/;
 
 const numberSignToHebrewNumber = {
   K: '1000 (מספר)|אלף',
@@ -19,6 +22,12 @@ export interface MarketCap {
 
 export interface GoogleFinanceData {
     marketCap: MarketCap;
+}
+
+export interface WikiPageWithGoogleFinance {
+  gf: GoogleFinanceData;
+  wiki: WikiPage;
+  ticker: string;
 }
 
 function textToMarketCao(marketCap: string): MarketCap {
@@ -69,4 +78,38 @@ export default async function getStockData(
   return {
     marketCap: { ...textToMarketCao(marketCap ?? ''), date: date.toJSON() },
   };
+}
+
+export async function getCompanyData(
+  page: WikiPage,
+): Promise<WikiPageWithGoogleFinance | undefined> {
+  const extLink = page.extlinks?.find((link) => link['*'].match(googleFinanceRegex))?.['*'];
+  if (!extLink) {
+    console.log('no extLink', page.title, extLink);
+    return undefined;
+  }
+  try {
+    let res = await getStockData(extLink);
+    if (!res || res.marketCap.number === '0') {
+      res = await getStockData(`${extLink}:NASDAQ`);
+    }
+    if (!res || res.marketCap.number === '0') {
+      res = await getStockData(`${extLink}:NYSE`);
+    }
+    if (res?.marketCap.number === '0') {
+      console.log('equal zero', page.title);
+      return undefined;
+    }
+    if (res) {
+      return {
+        gf: res,
+        ticker: extLink.split('?q=')[1] ?? '',
+        wiki: page,
+      };
+    }
+    console.log('no results', page.title);
+  } catch (e) {
+    console.error(page.pageid, e);
+  }
+  return undefined;
 }

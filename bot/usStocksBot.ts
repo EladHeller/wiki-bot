@@ -1,48 +1,15 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import getStockData, { GoogleFinanceData } from './googleFinanceApi';
-import { currencyName, getLocalDate } from './utilities';
+import { getCompanyData, WikiPageWithGoogleFinance } from './googleFinanceApi';
+import { currencyName, getLocalDate, promiseSequence } from './utilities';
 import {
   getArticleContent,
   getGoogleFinanceLinks,
-  getToken, login, updateArticle, WikiPage,
+  getToken, login, updateArticle,
 } from './wikiAPI';
 import WikiTemplateParser from './WikiTemplateParser';
 
-const googleFinanceRegex = /^https:\/\/www\.google\.com\/finance\?q=(\w+)$/;
-
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
-
-interface WikiPageWithGoogleFinance {
-    gf: GoogleFinanceData;
-    wiki: WikiPage;
-    ticker: string;
-}
-
-async function getCompanyData(
-  page: WikiPage,
-): Promise<WikiPageWithGoogleFinance | undefined> {
-  const extLink = page.extlinks?.find((link) => link['*'].match(googleFinanceRegex))?.['*'];
-  if (!extLink) {
-    console.log('no extLink', page.title, extLink);
-  } else {
-    try {
-      const res = await getStockData(extLink);
-      if (res) {
-        console.log('after', page.title);
-        return {
-          gf: res,
-          ticker: extLink.split('?q=')[1] ?? '',
-          wiki: page,
-        };
-      }
-      console.log('no results', page.title);
-    } catch (e) {
-      console.error(page.pageid, e);
-    }
-  }
-  return undefined;
-}
 
 async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   const content = await getArticleContent(marketValueTemplate);
@@ -57,7 +24,7 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
       marketValue.ticker,
       `${marketValue.gf.marketCap.number} [[${currencyName[marketValue.gf.marketCap.currency] ?? marketValue.gf.marketCap.currency}]]`,
     ],
-  );
+  ).sort((a, b) => (a[0] > b[0] ? 1 : -1));
 
   template.updateTamplateFromData({
     ...Object.fromEntries(companies),
@@ -87,15 +54,13 @@ export async function main() {
   console.log('links', Object.keys(results).length);
   const marketValues: WikiPageWithGoogleFinance[] = [];
   const pages = Object.values(results);
-  let pagesBatch = pages.splice(0, 10);
-  while (pagesBatch.length > 0) {
-    await Promise.all(pagesBatch.map(async (page) => {
-      const data = await getCompanyData(page);
-      if (data) {
-        marketValues.push(data);
-      }
-    }));
-    pagesBatch = pages.splice(0, 10);
-  }
+
+  await promiseSequence(10, pages.map((page) => async () => {
+    const data = await getCompanyData(page);
+    if (data) {
+      marketValues.push(data);
+    }
+  }));
+
   await updateTemplate(marketValues);
 }
