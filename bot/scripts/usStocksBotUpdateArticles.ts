@@ -1,46 +1,13 @@
 /* eslint-disable no-loop-func */
 import 'dotenv/config';
 import fs from 'fs/promises';
-import getStockData, { GoogleFinanceData } from '../googleFinanceApi';
+import { getCompanyData, googleFinanceRegex } from '../googleFinanceApi';
 import { promiseSequence } from '../utilities';
 import {
   getGoogleFinanceLinksWithContent,
   getToken, login, updateArticle, WikiPage,
 } from '../wikiAPI';
 import WikiTemplateParser from '../WikiTemplateParser';
-
-const googleFinanceRegex = /^https:\/\/www\.google\.com\/finance\?q=(\w+)$/;
-
-interface WikiPageWithGoogleFinance {
-    gf: GoogleFinanceData;
-    wiki: WikiPage;
-    ticker: string;
-}
-
-async function getCompanyData(
-  page: WikiPage,
-): Promise<WikiPageWithGoogleFinance | undefined> {
-  const extLink = page.extlinks?.find((link) => link['*'].match(googleFinanceRegex))?.['*'];
-  if (!extLink) {
-    console.log('no extLink', page.title, extLink);
-  } else {
-    try {
-      const res = await getStockData(extLink);
-      if (res) {
-        console.log('after', page.title);
-        return {
-          gf: res,
-          ticker: extLink.split('?q=')[1] ?? '',
-          wiki: page,
-        };
-      }
-      console.log('no results', page.title);
-    } catch (e) {
-      console.error(page.pageid, e);
-    }
-  }
-  return undefined;
-}
 
 async function main() {
   const logintoken = await getToken();
