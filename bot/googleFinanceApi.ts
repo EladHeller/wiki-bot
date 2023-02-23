@@ -88,6 +88,7 @@ export async function getCompanyData(
     console.log('no extLink', page.title, extLink);
     return undefined;
   }
+  const [base, ticker] = extLink.split('?q=');
   try {
     let res = await getStockData(extLink);
     if (!res || res.marketCap.number === '0') {
@@ -96,6 +97,12 @@ export async function getCompanyData(
     if (!res || res.marketCap.number === '0') {
       res = await getStockData(`${extLink}:NYSE`);
     }
+    if (!res || res.marketCap.number === '0') {
+      res = await getStockData(`${base}/quote/${ticker}:NASDAQ`);
+    }
+    if (!res || res.marketCap.number === '0') {
+      res = await getStockData(`${base}/quote/${ticker}:NYSE`);
+    }
     if (res?.marketCap.number === '0') {
       console.log('equal zero', page.title);
       return undefined;
@@ -103,13 +110,13 @@ export async function getCompanyData(
     if (res) {
       return {
         gf: res,
-        ticker: extLink.split('?q=')[1] ?? '',
+        ticker,
         wiki: page,
       };
     }
     console.log('no results', page.title);
   } catch (e) {
-    console.error(page.pageid, e);
+    console.error(page.title, e);
   }
   return undefined;
 }
