@@ -55,7 +55,7 @@ export async function main() {
   const marketValues: WikiPageWithGoogleFinance[] = [];
   const pages = Object.values(results);
 
-  await promiseSequence(10, pages.map((page) => async () => {
+  await promiseSequence(25, pages.map((page) => async () => {
     const data = await getCompanyData(page);
     if (data) {
       marketValues.push(data);
