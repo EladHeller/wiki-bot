@@ -156,7 +156,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: US-stocks-scheduler
-      ScheduleExpression: cron(0 22 ? * MON-THU *)
+      ScheduleExpression: cron(0 22 ? * MON-THU, SAT *)
       Targets:
         - Id: US-stocks-function
           Arn: !GetAtt UsStocksLambda.Arn
