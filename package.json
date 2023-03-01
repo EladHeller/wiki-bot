@@ -43,7 +43,7 @@
     "@types/jest": "^29.4.0",
     "@types/node": "^18.14.2",
     "@types/tough-cookie": "^4.0.2",
-    "@typescript-eslint/eslint-plugin": "^5.50.0",
+    "@typescript-eslint/eslint-plugin": "^5.54.0",
     "@typescript-eslint/parser": "^5.50.0",
     "aws-sdk": "^2.1286.0",
     "eslint": "^8.35.0",
