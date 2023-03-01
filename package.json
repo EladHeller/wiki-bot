@@ -14,6 +14,7 @@
     "identity": "ts-node-esm bot/mayaIdentityIndex.ts",
     "us-stocks": "ts-node-esm bot/usStocksBot.ts",
     "us-stocks-articles": "ts-node-esm bot/scripts/usStocksBotUpdateArticles.ts",
+    "stocks-articles": "ts-node-esm bot/scripts/stocksBotArticle.ts",
     "update-lambda": "ts-node-esm ./build/update-lambda.ts",
     "update-s3": "ts-node-esm ./build/update-s3.ts",
     "update-env": "ts-node-esm ./build/update-env.ts",
