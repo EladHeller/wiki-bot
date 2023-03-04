@@ -2,8 +2,7 @@ import 'dotenv/config';
 import { getMarketValue, MayaMarketValue } from './mayaAPI';
 import { getLocalDate, prettyNumericValue } from './utilities';
 import {
-  getArticleContent,
-  getMayaLinks, getToken, login, updateArticle,
+  getArticleContent, getMayaLinks, login, updateArticle,
 } from './wikiAPI';
 import WikiTemplateParser from './WikiTemplateParser';
 
@@ -41,8 +40,7 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
 }
 
 export async function main() {
-  const logintoken = await getToken();
-  await login(logintoken);
+  await login();
   console.log('Login success');
 
   const results = await getMayaLinks();

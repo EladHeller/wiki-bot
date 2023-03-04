@@ -4,14 +4,11 @@ import {
   AllDetailsResponse,
   getAllDetails,
 } from '../mayaAPI';
-import {
-  getCompanies, getToken, login, WikiPage,
-} from '../wikiAPI';
+import { getCompanies, login, WikiPage } from '../wikiAPI';
 import WikiTemplateParser from '../WikiTemplateParser';
 
 async function main() {
-  const logintoken = await getToken();
-  await login(logintoken);
+  await login();
   console.log('Login success');
 
   const wikiResult = await getCompanies();

@@ -44,13 +44,14 @@ function objectToFormData(obj: Record<string, any>) {
   return fd;
 }
 
-export async function getToken() {
+async function getToken() {
   const result = await client(`${baseUrl}?action=query&meta=tokens&type=login&format=json`);
   const { logintoken } = result.data.query.tokens;
   return logintoken;
 }
 
-export async function login(logintoken: string) {
+export async function login() {
+  const logintoken = await getToken();
   const url = `${baseUrl}`;
   if (!name || !password) {
     throw new Error('Name and password are required');
@@ -108,18 +109,21 @@ export async function getCompanies(): Promise<Record<string, WikiPage>> {
   return result.data.query.pages;
 }
 
-export async function getMayaLinks(): Promise<Record<string, WikiPage>> {
+export async function getMayaLinks(withContent = false): Promise<Record<string, WikiPage>> {
   const template = encodeURIComponent('תבנית:מידע בורסאי');
-  const props = encodeURIComponent('extlinks|pageprops');
+  const props = encodeURIComponent(`extlinks|pageprops${withContent ? '|revisions' : ''}`);
   const mayaLink = encodeURIComponent('maya.tase.co.il/company/');
+  const rvprops = encodeURIComponent('content|size');
   const path = `${baseUrl}?action=query&format=json`
   // Pages with תבנית:מידע בורסאי
   + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
   + `&prop=${props}`
   // wikidata identifier
-  + '&ppprop=wikibase_item&redirects=1'
+  + `&ppprop=wikibase_item&redirects=1${
+    // Get content of page
+    withContent ? `&rvprop=${rvprops}&rvslots=*` : ''
   // Get maya link
-  + `&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
+  }&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
   const result = await client(path);
   return result.data.query.pages;
 }

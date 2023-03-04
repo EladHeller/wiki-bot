@@ -3,14 +3,14 @@ import fs from 'fs/promises';
 import Company from './company';
 import getMayaDetails, { MayaWithWiki } from './mayaAPI';
 import {
-  getCompanies, getCompany, getToken, login, updateArticle, WikiPage,
+  getCompanies, getCompany, login, updateArticle, WikiPage,
 } from './wikiAPI';
-import { buildTableRow } from './WikiParser';
+import { buildTable } from './WikiParser';
 
 const year = process.env.YEAR;
 
 async function saveTable(companies: Company[]) {
-  let tableRows = '';
+  const tableRows: string[][] = [];
 
   for (const company of companies) {
     console.log(company.name);
@@ -21,17 +21,15 @@ async function saveTable(companies: Company[]) {
     details.push(company.isContainsTamplate);
     details.push(`[[משתמש:${firstRevision.user}|${firstRevision.user}]]`, firstRevision.size);
     details.push(company.revisionSize);
-    tableRows += buildTableRow(details);
+    tableRows.push(details);
   }
 
-  const tableString = '{| class="wikitable sortable"\n'
-  + `! קישור !! שם החברה !! הכנסות !! רווח תפעולי !! רווח !! הון עצמי !! סך המאזן !! מטבע !! תאריך הנתונים !! מכיל [[תבנית:חברה מסחרית]] !! משתמש יוצר !! גודל ביצירה !! גודל נוכחי${
-    tableRows}\n|}`;
-
+  const headers = ['קישור', 'שם החברה', 'הכנסות', 'רווח תפעולי', 'רווח', 'הון עצמי', 'סך המאזן', 'מטבע', 'תאריך הנתונים', 'מכיל [[תבנית:חברה מסחרית]]', 'משתמש יוצר', 'גודל ביצירה', 'גודל נוכחי'];
+  const tableText = buildTable(headers, tableRows);
   const res = await updateArticle(
     'משתמש:Sapper-bot/tradeBootData',
     'עדכון',
-    tableString,
+    tableText,
   );
   console.log(res);
 }
@@ -44,8 +42,7 @@ function getRelevantCompanies(companies: Company[]) {
 }
 
 async function main() {
-  const logintoken = await getToken();
-  await login(logintoken);
+  await login();
   console.log('Login success');
 
   const wikiResult = await getCompanies();

@@ -108,7 +108,23 @@ export type MayaAllDetails = {
     IndexName: string;
     Weight: number;
     FactorWeight?: number;
-  }]
+  }];
+  ManagementDetails: {
+    UpdateDate: string;
+    ManagementAndSeniorExecutives: [{
+        Id: string;
+        Name: string;
+        RoleType: string;
+        IsManager: boolean;
+        SecurityName: string;
+        EndBalance: string;
+        LastBalanceDate: string;
+        CapitalPercent: string;
+        VoteCapital: string;
+        IsFinancialExpert: number;
+        IsInspectionComitee: number;
+    }];
+  };
 };
 
 export type MayaWithWiki = {
@@ -134,16 +150,20 @@ export interface SymbolResult {
   englishName: string;
 }
 
-export async function getMarketValue(
-  wikiPage: Partial<WikiPage>,
-): Promise<MayaMarketValue | undefined> {
+function getMayaLinkFromWikiPage(wikiPage: Partial<WikiPage>): string {
   const extLink = wikiPage.extlinks?.find((link) => link['*'].match(mayaLinkRegex))?.['*'];
   if (!extLink) {
     throw new Error(`No extlinks: ${wikiPage.title} ${wikiPage.extlinks}`);
   }
-  const companyAllDetailsUrl = extLink
+  return extLink
     .replace(companyPageLink, jsonAllLink)
     .replace(companyReportView, '');
+}
+
+export async function getMarketValue(
+  wikiPage: Partial<WikiPage>,
+): Promise<MayaMarketValue | undefined> {
+  const companyAllDetailsUrl = getMayaLinkFromWikiPage(wikiPage);
 
   return axios(companyAllDetailsUrl, mayaGetOptions)
     .catch((e) => {
@@ -165,13 +185,8 @@ export async function getMarketValue(
 export async function getSymbol(
   wikiPage: Partial<WikiPage>,
 ): Promise<SymbolResult> {
-  const extLink = wikiPage.extlinks?.find((link) => link['*'].match(mayaLinkRegex))?.['*'];
-  if (!extLink) {
-    throw new Error(`No extlinks: ${wikiPage.title} ${wikiPage.extlinks}`);
-  }
-  const companyAllDetailsUrl = extLink
-    .replace(companyPageLink, jsonAllLink)
-    .replace(companyReportView, '');
+  const companyAllDetailsUrl = getMayaLinkFromWikiPage(wikiPage);
+
   try {
     const result = await axios(companyAllDetailsUrl, mayaGetOptions);
     const enResult = await axios(companyAllDetailsUrl, {
@@ -213,15 +228,13 @@ export type AllDetailsResponse = {
 export async function getAllDetails(
   wikiPage: WikiPage,
 ): Promise<AllDetailsResponse | undefined> {
-  const extLink = wikiPage.extlinks?.find((link) => link['*'].match(mayaLinkRegex))?.['*'];
-  if (!extLink) {
-    throw new Error(`No extlinks: ${wikiPage.title} ${wikiPage.extlinks}`);
-  }
-  const companyAllDetailsUrl = extLink
-    .replace(companyPageLink, jsonAllLink)
-    .replace(companyReportView, '');
+  const companyAllDetailsUrl = getMayaLinkFromWikiPage(wikiPage);
 
   return axios(companyAllDetailsUrl, mayaGetOptions)
+    .then((result) => ({
+      allDetails: result?.data,
+      wiki: wikiPage,
+    }))
     .catch((e) => {
       console.error(
         'companyAllDetailsUrl',
@@ -229,11 +242,7 @@ export async function getAllDetails(
         e?.data || e?.message || e,
       );
       throw e;
-    })
-    .then((result) => ({
-      allDetails: result?.data,
-      wiki: wikiPage,
-    }));
+    });
 }
 
 export default async function getMayaDetails(
