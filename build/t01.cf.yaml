@@ -113,6 +113,8 @@ Resources:
       SourceArn:  !GetAtt MarketValueEventRule.Arn 
       FunctionName: Market-value-function
 
+# US stocks
+
   UsStocksLambda:
     DependsOn:
       - MarketValueLambdaIamRole
@@ -170,6 +172,67 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
       SourceArn:  !GetAtt UsStocksEventRule.Arn 
+      FunctionName: US-stocks-function
+
+  
+# Kineret level
+  KineretLevelLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: US-stocks-function
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/kineret/kineretBot.main
+      Timeout: 20
+      MemorySize: 512
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  UsStockLogGroupInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SendEmailLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/US-stocks-function:*'
+
+  UsStockLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/US-stocks-function'
+
+  KineretLevelEventRule:
+    DependsOn:
+      - KineretLevelLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: US-stocks-scheduler
+      ScheduleExpression: cron(0 0,8,10,12 ? * SUN-FRI *)
+      Targets:
+        - Id: US-stocks-function
+          Arn: !GetAtt KineretLevelLambda.Arn
+
+  KineretLevelInvokePermission:
+    DependsOn:
+      - KineretLevelEventRule
+      - KineretLevelLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt KineretLevelEventRule.Arn 
       FunctionName: US-stocks-function
 
   
