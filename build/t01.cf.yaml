@@ -204,35 +204,35 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Kineret-level-function:*'
 
-  KineretLevelLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties: 
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/Kineret-level-function'
+  # KineretLevelLogGroupFailedSubscription:
+  #   DependsOn:
+  #     - SendEmailLambda
+  #   Type: AWS::Logs::SubscriptionFilter
+  #   Properties: 
+  #     DestinationArn: !GetAtt SendEmailLambda.Arn
+  #     FilterPattern: Invoke Error
+  #     LogGroupName: '/aws/lambda/Kineret-level-function'
 
-  KineretLevelEventRule:
-    DependsOn:
-      - KineretLevelLambda
-    Type: 'AWS::Events::Rule'
-    Properties:
-      Name: Kineret-level-scheduler
-      ScheduleExpression: cron(0 0,8,10,12 ? * SUN-FRI *)
-      Targets:
-        - Id: Kineret-level-function
-          Arn: !GetAtt KineretLevelLambda.Arn
+  # KineretLevelEventRule:
+  #   DependsOn:
+  #     - KineretLevelLambda
+  #   Type: 'AWS::Events::Rule'
+  #   Properties:
+  #     Name: Kineret-level-scheduler
+  #     ScheduleExpression: cron(0 0,8,10,12 ? * SUN-FRI *)
+  #     Targets:
+  #       - Id: Kineret-level-function
+  #         Arn: !GetAtt KineretLevelLambda.Arn
 
-  KineretLevelInvokePermission:
-    DependsOn:
-      - KineretLevelEventRule
-      - KineretLevelLambda
-    Type: AWS::Lambda::Permission
-    Properties: 
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn:  !GetAtt KineretLevelEventRule.Arn 
-      FunctionName: Kineret-level-function
+  # KineretLevelInvokePermission:
+  #   DependsOn:
+  #     - KineretLevelEventRule
+  #     - KineretLevelLambda
+  #   Type: AWS::Lambda::Permission
+  #   Properties: 
+  #     Action: lambda:InvokeFunction
+  #     Principal: events.amazonaws.com
+  #     SourceArn:  !GetAtt KineretLevelEventRule.Arn 
+  #     FunctionName: Kineret-level-function
 
   
