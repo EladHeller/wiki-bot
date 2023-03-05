@@ -1,3 +1,5 @@
+[![CI](https://github.com/EladHeller/tradeBoot/actions/workflows/linter.yml/badge.svg)](https://github.com/EladHeller/tradeBoot/actions/workflows/linter.yml) [![CD](https://github.com/EladHeller/tradeBoot/actions/workflows/deploy.yml/badge.svg)](https://github.com/EladHeller/tradeBoot/actions/workflows/deploy.yml)
+
 ## Wiki trade data Bot
 This bot operates in the AWS environment, receives data from [maya](https://maya.tase.co.il/) and updates the Hebrew Wikipedia.
 
