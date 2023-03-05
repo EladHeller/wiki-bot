@@ -195,7 +195,7 @@ Resources:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
 
-  UsStockLogGroupInvokeLambdaPermission:
+  KineretLevelLogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !GetAtt SendEmailLambda.Arn
