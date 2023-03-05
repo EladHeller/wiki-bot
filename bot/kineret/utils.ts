@@ -36,6 +36,7 @@ export async function updateLevel(levelData: LevelData, articleName: string, dat
   const newDate = `${date}${dataSource}`;
   if (template.templateData[DATE_LEVEL_FIELD] === newDate) {
     console.log('No update needed');
+    return;
   }
 
   const newTemplateText = template.updateTamplateFromData({
