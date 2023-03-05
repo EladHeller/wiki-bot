@@ -22,6 +22,11 @@ async function main() {
     S3Key: 'dist.zip',
   }).promise();
   await lambda.updateFunctionCode({
+    FunctionName: 'Kineret-level-function',
+    S3Bucket: bucketCodeName,
+    S3Key: 'dist.zip',
+  }).promise();
+  await lambda.updateFunctionCode({
     FunctionName: 'Send-email-function',
     S3Bucket: bucketCodeName,
     S3Key: 'email.zip',
