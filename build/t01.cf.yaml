@@ -182,7 +182,7 @@ Resources:
     Type: 'AWS::Lambda::Function'
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
-      FunctionName: US-stocks-function
+      FunctionName: Kineret-level-function
       Runtime: nodejs18.x
       Environment:
         Variables:
@@ -202,26 +202,26 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: logs.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/US-stocks-function:*'
+      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Kineret-level-function:*'
 
-  UsStockLogGroupFailedSubscription:
+  KineretLevelLogGroupFailedSubscription:
     DependsOn:
       - SendEmailLambda
     Type: AWS::Logs::SubscriptionFilter
     Properties: 
       DestinationArn: !GetAtt SendEmailLambda.Arn
       FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/US-stocks-function'
+      LogGroupName: '/aws/lambda/Kineret-level-function'
 
   KineretLevelEventRule:
     DependsOn:
       - KineretLevelLambda
     Type: 'AWS::Events::Rule'
     Properties:
-      Name: US-stocks-scheduler
+      Name: Kineret-level-scheduler
       ScheduleExpression: cron(0 0,8,10,12 ? * SUN-FRI *)
       Targets:
-        - Id: US-stocks-function
+        - Id: Kineret-level-function
           Arn: !GetAtt KineretLevelLambda.Arn
 
   KineretLevelInvokePermission:
@@ -233,6 +233,6 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
       SourceArn:  !GetAtt KineretLevelEventRule.Arn 
-      FunctionName: US-stocks-function
+      FunctionName: Kineret-level-function
 
   
