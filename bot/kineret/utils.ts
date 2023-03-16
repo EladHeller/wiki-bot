@@ -20,29 +20,36 @@ const DATE_LEVEL_FIELD = 'תאריך גובה';
 const LEVEL_FIELD = 'גובה';
 const TEMPLATE_NAME = 'גוף מים';
 
-export async function updateLevel(levelData: LevelData, articleName: string, dataSource: string) {
+export async function updateLevel(
+  levelData: LevelData,
+  articleName: string,
+  dataSource: string,
+  templateName:string = TEMPLATE_NAME,
+  dateLevelField:string = DATE_LEVEL_FIELD,
+  levelField:string = LEVEL_FIELD,
+) {
   const { date, level } = levelData;
 
   const content = await getArticleContent(articleName);
   if (!content) {
     throw new Error('Failed to get article content');
   }
-  const template = new WikiTemplateParser(content, TEMPLATE_NAME);
+  const template = new WikiTemplateParser(content, templateName);
   const oldTemplate = template.templateText;
   if (!oldTemplate) {
     throw new Error('Failed to get template text');
   }
 
   const newDate = `${date}${dataSource}`;
-  if (template.templateData[DATE_LEVEL_FIELD] === newDate) {
+  if (template.templateData[dateLevelField] === newDate) {
     console.log('No update needed');
     return;
   }
 
   const newTemplateText = template.updateTamplateFromData({
     ...template.templateData,
-    [DATE_LEVEL_FIELD]: newDate,
-    [LEVEL_FIELD]: level,
+    [dateLevelField]: newDate,
+    [levelField]: level,
   });
   const newContent = content.replace(oldTemplate, newTemplateText);
 
