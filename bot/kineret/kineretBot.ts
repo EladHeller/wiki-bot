@@ -8,8 +8,6 @@ import {
 
 const DATE_REGEX = /(\d{2})\/(\d{2})\/(\d{2})/;
 
-const dataSource = '{{הערה|[http://kineret.org.il רשות ניקוז ונחלים כנרת]}}';
-
 const articleName = 'תבנית:מפלס הכינרת';
 
 async function getKineretLevel() {
@@ -31,7 +29,7 @@ async function getKineretLevel() {
 async function kineret() {
   const { date, level } = await getKineretLevel();
 
-  await updateLevel({ date, level }, articleName, dataSource, '#switch: {{{Property}}}', 'timestamp', 'level');
+  await updateLevel({ date, level }, articleName, '', '#switch: {{{מאפיין}}}');
 }
 
 export async function main() {
