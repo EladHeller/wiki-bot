@@ -10,7 +10,7 @@ const DATE_REGEX = /(\d{2})\/(\d{2})\/(\d{2})/;
 
 const dataSource = '{{הערה|[http://kineret.org.il רשות ניקוז ונחלים כנרת]}}';
 
-const articleName = 'הכנרת';
+const articleName = 'תבנית:מפלס הכינרת';
 
 async function getKineretLevel() {
   const kinneretDocument = await JSDOM.fromURL('https://kineret.org.il/');
@@ -31,7 +31,7 @@ async function getKineretLevel() {
 async function kineret() {
   const { date, level } = await getKineretLevel();
 
-  await updateLevel({ date, level }, articleName, dataSource);
+  await updateLevel({ date, level }, articleName, dataSource, '#switch: {{{Property}}}', 'timestamp', 'level');
 }
 
 export async function main() {
