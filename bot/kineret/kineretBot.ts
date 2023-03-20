@@ -6,11 +6,27 @@ import {
   formatDate, updateLevel,
 } from './utils';
 
+interface KinneretLevelRecord {
+  Survey_Date: string;
+  Kinneret_Level: string;
+  _id: number;
+}
+
 const DATE_REGEX = /(\d{2})\/(\d{2})\/(\d{2})/;
 
 const articleName = 'תבנית:מפלס הכינרת';
+const apiUrl = 'https://data.gov.il/api/3/action/datastore_search?resource_id=2de7b543-e13d-4e7e-b4c8-56071bc4d3c8&limit=1';
 
-async function getKineretLevel() {
+async function getKineretLevel1() {
+  const levelRes = await fetch(apiUrl).then((res) => res.json());
+  const record: KinneretLevelRecord = levelRes.result.records[0];
+  return {
+    date: new Date(record.Survey_Date),
+    level: record.Kinneret_Level.trim(),
+  };
+}
+
+async function getKineretLevel2() {
   const kinneretDocument = await JSDOM.fromURL('https://kineret.org.il/');
   const levelElement = kinneretDocument.window.document.querySelector('#hp_miflas');
   const date = levelElement?.querySelector('.hp_miflas_date')?.textContent?.match(DATE_REGEX);
@@ -19,16 +35,24 @@ async function getKineretLevel() {
     throw new Error('Failed to get kinneret level');
   }
   const [, day, month, year] = date;
-  const dateFormat = formatDate(new Date(`20${year}-${month}-${day}`));
   return {
-    date: dateFormat,
+    date: new Date(`20${year}-${month}-${day}`),
     level,
+  };
+}
+
+async function getKineretLevel() {
+  const promises = [getKineretLevel1(), getKineretLevel2()];
+  const results = await Promise.all(promises);
+  const updatedResult = results[0].date > results[1].date ? results[0] : results[1];
+  return {
+    date: formatDate(updatedResult.date),
+    level: updatedResult.level,
   };
 }
 
 async function kineret() {
   const { date, level } = await getKineretLevel();
-
   await updateLevel({ date, level }, articleName, '', '#switch: {{{מאפיין}}}');
 }
 
