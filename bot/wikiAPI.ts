@@ -184,3 +184,16 @@ export async function getArticleContent(title: string): Promise<string | undefin
 
   return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
 }
+
+export async function externalUrl(link:string) {
+  const props = encodeURIComponent('revisions|extlinks');
+  const rvprops = encodeURIComponent('content');
+  const path = `${baseUrl}?action=query&format=json&`
+  + `generator=exturlusage&geuprotocol=https&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=500`
+  + `&prop=${props}`
+  + `&rvprop=${rvprops}&rvslots=*`;
+  const result = await client(path);
+  const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+
+  return Object.values(res);
+}
