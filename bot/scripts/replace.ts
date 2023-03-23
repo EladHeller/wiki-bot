@@ -1,27 +1,46 @@
 import 'dotenv/config';
-import { promiseSequence } from '../utilities';
-import { login, externalUrl, updateArticle } from '../wikiAPI';
+import {
+  login, updateArticle, search,
+} from '../wikiAPI';
 
-const link = 'no666.wordpress.com';
-const link2 = 'www.no-666.com';
+const link = '%d7%';
 
 async function main() {
   await login();
 
-  const res = await externalUrl(link);
-  console.log(res.length);
-  await promiseSequence(10, res.map((page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    if (content && page.title) {
-      const newContent = content.replace(/no666\.wordpress\.com/g, link2);
-      try {
-        await updateArticle(page.title, 'תיקון קישור לאתר "המולטי-יקום"', newContent);
-      } catch (error) {
-        console.log(error?.data || error?.message || error?.toString());
+  const res = search(link);
+  let curr = await res.next();
+
+  while (curr.done === false) {
+    console.log(curr.value);
+    curr.value?.forEach(async (page) => {
+      const content = page.revisions?.[0].slots.main['*'];
+      if (content && page.title) {
+        const matches = content.match(/(%d7%[a-zA-Z0-9%]+)(?:%20)?/gi);
+        let newContent = content;
+        if (!matches) {
+          return;
+        }
+        matches.forEach((match) => {
+          const decoded = decodeURIComponent(match);
+          if (decoded.match('[^א-ת]')) {
+            return;
+          }
+          newContent = newContent.replace(match, decodeURIComponent(match));
+        });
+        if (newContent === content) {
+          return;
+        }
+        try {
+          await updateArticle(page.title, 'קידוד קישור', newContent);
+        } catch (error) {
+          console.log(error?.data || error?.message || error?.toString());
+        }
+        console.log(page.title);
       }
-      console.log(page.title);
-    }
-  }));
+    });
+    curr = await res.next();
+  }
 }
 
 main().catch(console.error);

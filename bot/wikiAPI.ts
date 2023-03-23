@@ -197,3 +197,23 @@ export async function externalUrl(link:string) {
 
   return Object.values(res);
 }
+
+export async function* search(text:string) {
+  const props = encodeURIComponent('revisions|extlinks');
+  const rvprops = encodeURIComponent('content');
+
+  const path = `${baseUrl}?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=10`
+  + `&prop=${props}`
+  + `&rvprop=${rvprops}&rvslots=*`;
+
+  let result = await client(path);
+  while (result.data.continue) {
+    const path2 = `${path}&gsroffset=${result.data.continue.gsroffset}&continue=${result.data.continue.continue}`;
+    result = await client(path2);
+    const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+    yield Object.values(res);
+  }
+  const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+
+  yield Object.values(res);
+}
