@@ -97,7 +97,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: Market-value-scheduler
-      ScheduleExpression: cron(0 20 ? * SUN-THU *)
+      ScheduleExpression: cron(0 19 ? * SUN-THU *)
       Targets:
         - Id: market-value-function
           Arn: !GetAtt MarketValueLambda.Arn
@@ -219,7 +219,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: Kineret-level-scheduler
-      ScheduleExpression: cron(0 0,6,8,10,12 ? * SUN-FRI *)
+      ScheduleExpression: cron(0,30 0,5,7,9 ? * SUN-FRI *)
       Targets:
         - Id: Kineret-level-function
           Arn: !GetAtt KineretLevelLambda.Arn

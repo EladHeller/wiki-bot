@@ -184,3 +184,38 @@ export async function getArticleContent(title: string): Promise<string | undefin
 
   return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
 }
+
+export async function externalUrl(link:string) {
+  const props = encodeURIComponent('revisions|extlinks');
+  const rvprops = encodeURIComponent('content');
+  const path = `${baseUrl}?action=query&format=json&`
+  + `generator=exturlusage&geuprotocol=https&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=500`
+  + `&prop=${props}`
+  + `&rvprop=${rvprops}&rvslots=*`;
+  const result = await client(path);
+  const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+
+  return Object.values(res);
+}
+
+export async function* search(text:string, max = 2, page = 1) {
+  const props = encodeURIComponent('revisions|extlinks');
+  const rvprops = encodeURIComponent('content');
+
+  const path = `${baseUrl}?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=${page}`
+  + `&prop=${props}`
+  + `&rvprop=${rvprops}&rvslots=*`;
+
+  let result = await client(path);
+  let count = page;
+  while (result.data.continue && count < max) {
+    const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+    yield Object.values(res);
+    const path2 = `${path}&gsroffset=${result.data.continue.gsroffset}&continue=${result.data.continue.continue}`;
+    result = await client(path2);
+    count += page;
+  }
+  const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+
+  return Object.values(res);
+}

@@ -20,7 +20,8 @@
     "update-s3": "ts-node-esm ./build/update-s3.ts",
     "update-env": "ts-node-esm ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
-    "kineret": "ts-node-esm bot/kineret/kineretBot.ts"
+    "kineret": "ts-node-esm bot/kineret/kineretBot.ts",
+    "replace": "ts-node-esm bot/scripts/replace.ts"
   },
   "repository": {
     "type": "git",
