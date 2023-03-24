@@ -198,22 +198,24 @@ export async function externalUrl(link:string) {
   return Object.values(res);
 }
 
-export async function* search(text:string) {
+export async function* search(text:string, max = 2, page = 1) {
   const props = encodeURIComponent('revisions|extlinks');
   const rvprops = encodeURIComponent('content');
 
-  const path = `${baseUrl}?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=10`
+  const path = `${baseUrl}?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=${page}`
   + `&prop=${props}`
   + `&rvprop=${rvprops}&rvslots=*`;
 
   let result = await client(path);
-  while (result.data.continue) {
-    const path2 = `${path}&gsroffset=${result.data.continue.gsroffset}&continue=${result.data.continue.continue}`;
-    result = await client(path2);
+  let count = page;
+  while (result.data.continue && count < max) {
     const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
     yield Object.values(res);
+    const path2 = `${path}&gsroffset=${result.data.continue.gsroffset}&continue=${result.data.continue.continue}`;
+    result = await client(path2);
+    count += page;
   }
   const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
 
-  yield Object.values(res);
+  return Object.values(res);
 }
