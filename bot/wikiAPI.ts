@@ -198,7 +198,7 @@ export async function externalUrl(link:string) {
   return Object.values(res);
 }
 
-export async function* search(text:string, max = 2, page = 1) {
+export async function* search(text:string, max = 100, page = 10) {
   const props = encodeURIComponent('revisions|extlinks');
   const rvprops = encodeURIComponent('content');
 
@@ -208,7 +208,7 @@ export async function* search(text:string, max = 2, page = 1) {
 
   let result = await client(path);
   let count = page;
-  while (result.data.continue && count < max) {
+  while (result.data.continue && count <= max) {
     const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
     yield Object.values(res);
     const path2 = `${path}&gsroffset=${result.data.continue.gsroffset}&continue=${result.data.continue.continue}`;
