@@ -53,7 +53,7 @@ async function getKineretLevel() {
 
 async function kineret() {
   const { date, level } = await getKineretLevel();
-  await updateLevel({ date, level }, articleName, '', '#switch: {{{מאפיין}}}');
+  await updateLevel({ date, level }, articleName, '#switch: {{{מאפיין}}}');
 }
 
 export async function main() {

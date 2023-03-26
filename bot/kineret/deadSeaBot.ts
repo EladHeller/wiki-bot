@@ -10,9 +10,8 @@ interface DeadSeaLevelRecord {
     _id: number;
 }
 
-const articleName = 'ים המלח';
+const articleName = 'תבנית:מפלס ים המלח';
 
-const dataSource = '{{הערה|[https://data.gov.il/dataset/https-www-data-gov-il-dataset-683/resource/823479b4-4771-43d8-9189-6a2a1dcaaf10 מפלס ים המלח משנת 1976], אתר [[ממשל_זמין#אתר_Gov.il|מאגרי המידע הממשלתיים]]}}';
 const DATE_REGEX = /(\d{2})\/(\d{2})\/(\d{4})/;
 
 async function getDeadSeaLevel() {
@@ -33,5 +32,5 @@ async function getDeadSeaLevel() {
 export default async function updateDeadSeaLevel() {
   const { date, level } = await getDeadSeaLevel();
 
-  await updateLevel({ date, level }, articleName, dataSource);
+  await updateLevel({ date, level }, articleName, '#switch: {{{מאפיין}}}');
 }

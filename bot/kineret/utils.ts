@@ -23,7 +23,6 @@ const TEMPLATE_NAME = 'גוף מים';
 export async function updateLevel(
   levelData: LevelData,
   articleName: string,
-  dataSource: string,
   templateName:string = TEMPLATE_NAME,
   dateLevelField:string = DATE_LEVEL_FIELD,
   levelField:string = LEVEL_FIELD,
@@ -40,15 +39,14 @@ export async function updateLevel(
     throw new Error('Failed to get template text');
   }
 
-  const newDate = `${date}${dataSource}`;
-  if (template.templateData[dateLevelField] === newDate) {
+  if (template.templateData[dateLevelField] === date) {
     console.log('No update needed');
     return;
   }
 
   const newTemplateText = template.updateTamplateFromData({
     ...template.templateData,
-    [dateLevelField]: newDate,
+    [dateLevelField]: date,
     [levelField]: level,
   });
   const newContent = content.replace(oldTemplate, newTemplateText);
