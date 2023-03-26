@@ -12,20 +12,15 @@ async function main() {
   let curr = await res.next();
 
   while (curr.done === false) {
-    console.log(curr.value);
     curr.value?.forEach(async (page) => {
       const content = page.revisions?.[0].slots.main['*'];
       if (content && page.title) {
-        const matches = content.match(/(%d7%[a-zA-Z0-9%]+)(?:%20)?/gi);
+        const matches = content.match(/(?:%d7%[9aA][0-9a-fA-F]){3,}/gi);
         let newContent = content;
         if (!matches) {
           return;
         }
         matches.forEach((match) => {
-          const decoded = decodeURIComponent(match);
-          if (decoded.match('[^א-ת]')) {
-            return;
-          }
           newContent = newContent.replace(match, decodeURIComponent(match));
         });
         if (newContent === content) {
