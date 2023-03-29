@@ -14,7 +14,7 @@ interface KinneretLevelRecord {
 
 const DATE_REGEX = /(\d{2})\/(\d{2})\/(\d{2})/;
 
-const articleName = 'תבנית:מפלס הכינרת';
+const articleName = 'תבנית:מפלס הכנרת';
 const apiUrl = 'https://data.gov.il/api/3/action/datastore_search?resource_id=2de7b543-e13d-4e7e-b4c8-56071bc4d3c8&limit=1';
 
 async function getKineretLevel1() {
