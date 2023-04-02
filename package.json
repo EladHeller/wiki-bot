@@ -9,7 +9,7 @@
     "test": "jest",
     "build": "rm -rf dist && tsc",
     "deploy": "sh ./build/deploy.sh",
-    "start": "ts-node-esm bot/index.ts",
+    "yearly-report": "ts-node-esm bot/yearly-report/index.ts",
     "bot": "ts-node-esm bot/newBot.ts",
     "identity": "ts-node-esm bot/mayaIdentityIndex.ts",
     "us-stocks": "ts-node-esm bot/usStocksBot.ts",

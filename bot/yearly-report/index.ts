@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import fs from 'fs/promises';
 import Company from './company';
-import getMayaDetails, { MayaWithWiki } from './mayaAPI';
+import getMayaDetails, { MayaWithWiki } from '../mayaAPI';
 import {
   getCompanies, getCompany, login, updateArticle, WikiPage,
-} from './wikiAPI';
-import { buildTable } from './WikiParser';
+} from '../wikiAPI';
+import { buildTable } from '../WikiParser';
 
 const year = process.env.YEAR;
 
@@ -90,4 +90,5 @@ main().catch((error) => {
   } else {
     console.log(error);
   }
+  console.log(error?.toString());
 });

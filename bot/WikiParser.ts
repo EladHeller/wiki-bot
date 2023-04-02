@@ -25,12 +25,16 @@ export function nextWikiText(text: string, currIndex: number, str: string): numb
   return index;
 }
 
-export function buildTableRow(fields: string[], style?: string, isHeader = false): string {
+export function buildTableRow(
+  fields: (string | number | boolean)[],
+  style?: string,
+  isHeader = false,
+): string {
   const delimiter = isHeader ? '!' : '|';
   const styleWithDelimiter = style ? (style + delimiter) : '';
-  let rowStr = `\n|-\n${delimiter}${styleWithDelimiter}${fields[0].replace(/\n/g, '')}`;
+  let rowStr = `\n|-\n${delimiter}${styleWithDelimiter}${fields[0].toString().replace(/\n/g, '')}`;
   for (let i = 1; i < fields.length; i += 1) {
-    rowStr += ` || ${fields[i] === undefined ? '---' : fields[i].replace(/\n/g, '')}`;
+    rowStr += ` || ${fields[i] == null ? '---' : fields[i].toString().replace(/\n/g, '')}`;
   }
   return rowStr;
 }

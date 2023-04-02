@@ -1,7 +1,7 @@
-import { MayaCompany } from './mayaAPI';
-import { CurrencyCode, prettyNumericValue } from './utilities';
-import { updateArticle, WikiPage } from './wikiAPI';
-import WikiTemplateParser from './WikiTemplateParser';
+import { MayaCompany } from '../mayaAPI';
+import { CurrencyCode, prettyNumericValue } from '../utilities';
+import { updateArticle, WikiPage } from '../wikiAPI';
+import WikiTemplateParser from '../WikiTemplateParser';
 
 const currentYear = process.env.YEAR;
 const TEMPLATE_NAME = 'חברה מסחרית';
@@ -162,7 +162,8 @@ export default class Company {
       this.hasData = this.hasData || !!fieldData;
       this.mayaDataForWiki[field.wikiName] = fieldData;
     });
-
-    this.wikiTemplateData.year = year;
+    if (this.hasData) {
+      this.wikiTemplateData.year = year;
+    }
   }
 }
