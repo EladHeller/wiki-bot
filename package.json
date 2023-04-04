@@ -22,7 +22,8 @@
     "update-env": "ts-node-esm ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "kineret": "ts-node-esm bot/kineret/kineretBot.ts",
-    "replace": "ts-node-esm bot/scripts/replace.ts"
+    "replace": "ts-node-esm bot/scripts/replace.ts",
+    "kipa": "ts-node-esm bot/scripts/kipa.ts"
   },
   "repository": {
     "type": "git",
