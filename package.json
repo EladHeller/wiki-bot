@@ -10,6 +10,7 @@
     "build": "rm -rf dist && tsc",
     "deploy": "sh ./build/deploy.sh",
     "yearly-report": "ts-node-esm bot/yearly-report/index.ts",
+    "stamp": "ts-node-esm bot/scripts/stamp.ts",
     "bot": "ts-node-esm bot/newBot.ts",
     "identity": "ts-node-esm bot/mayaIdentityIndex.ts",
     "us-stocks": "ts-node-esm bot/usStocksBot.ts",
@@ -21,7 +22,8 @@
     "update-env": "ts-node-esm ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "kineret": "ts-node-esm bot/kineret/kineretBot.ts",
-    "replace": "ts-node-esm bot/scripts/replace.ts"
+    "replace": "ts-node-esm bot/scripts/replace.ts",
+    "kipa": "ts-node-esm bot/scripts/kipa.ts"
   },
   "repository": {
     "type": "git",

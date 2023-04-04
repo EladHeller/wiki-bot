@@ -148,6 +148,33 @@ export async function getGoogleFinanceLinksWithContent(): Promise<Record<string,
   return result.data.query.pages;
 }
 
+export async function getArticleWithKipaTemplate(): Promise<WikiPage[]> {
+  const template = encodeURIComponent('תבנית:כיפה');
+  const props = encodeURIComponent('revisions');
+  const rvprops = encodeURIComponent('content');
+  const path = `${baseUrl}?action=query&format=json`
+  // Pages with כיפה'
+  + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
+  + `&prop=${props}`
+  // Get content of page
+  + `&rvprop=${rvprops}&rvslots=*`;
+  let pages: WikiPage[] = [];
+  let result = await client(path);
+  const firstResult = Object.values(result.data.query.pages) satisfies WikiPage[];
+  pages = firstResult;
+  while (result.data.continue) {
+    result = await client(`${path}&elcontinue=${result.data.continue.elcontinue}&rvcontinue=${result.data.continue.rvcontinue}&continue=${result.data.continue.continue}`);
+    pages = pages.concat(Object.values(result.data.query.pages));
+  }
+  const finalResults = pages.filter((page) => page.revisions?.[0]?.slots.main['*'].includes('{{כיפה'));
+  firstResult.forEach((page) => {
+    if (!finalResults.find((p) => p.pageid === page.pageid)) {
+      console.log(page.title);
+    }
+  });
+  return finalResults;
+}
+
 export async function getGoogleFinanceLinks(): Promise<Record<string, WikiPage>> {
   const template = encodeURIComponent('תבנית:מידע בורסאי (ארצות הברית)');
   const props = encodeURIComponent('extlinks');
@@ -185,11 +212,11 @@ export async function getArticleContent(title: string): Promise<string | undefin
   return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
 }
 
-export async function externalUrl(link:string) {
+export async function externalUrl(link:string, protocol:string = 'https') {
   const props = encodeURIComponent('revisions|extlinks');
   const rvprops = encodeURIComponent('content');
   const path = `${baseUrl}?action=query&format=json&`
-  + `generator=exturlusage&geuprotocol=https&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=500`
+  + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=500`
   + `&prop=${props}`
   + `&rvprop=${rvprops}&rvslots=*`;
   const result = await client(path);
