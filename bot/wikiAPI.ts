@@ -246,3 +246,16 @@ export async function* search(text:string, max = 100, page = 10) {
 
   return Object.values(res);
 }
+
+export async function protect(title:string, protections: string, expiry: string, reason: string) {
+  const queryDetails = {
+    method: 'post',
+    data: objectToFormData({
+      title, token, expiry, reason, protections,
+    }),
+    url: `${baseUrl}?action=protect&format=json&assert=bot&bot=true`,
+  };
+  const result = await client(queryDetails);
+
+  return result.data;
+}

@@ -23,7 +23,8 @@
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "kineret": "ts-node-esm bot/kineret/kineretBot.ts",
     "replace": "ts-node-esm bot/scripts/replace.ts",
-    "kipa": "ts-node-esm bot/scripts/kipa.ts"
+    "kipa": "ts-node-esm bot/scripts/kipa.ts",
+    "protect": "ts-node-esm bot/protect/index.ts"
   },
   "repository": {
     "type": "git",
