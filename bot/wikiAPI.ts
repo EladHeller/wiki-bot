@@ -1,81 +1,24 @@
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
+import type { WikiPage } from './types';
+import { objectToFormData, objectToQueryString } from './utilities';
+import { baseLogin } from './wikiLogin';
 
 const jar = new CookieJar();
 const client = wrapper(axios.create({ jar }));
 
-const name = process.env.USER_NAME;
-const password = process.env.PASSWORD;
 const baseUrl = 'https://he.wikipedia.org/w/api.php';
-
-export type WikiPage = {
-  pageid: number;
-  ns: number;
-  templates?: {
-    ns: number;
-    title: string;
-  }[];
-  revisions: {
-    user: string;
-    size: number;
-    slots: {
-      main: {
-        contentmodel: string;
-        contentformat: string;
-        '*': string;
-      }
-    }
-  }[],
-  extlinks: {
-    '*': string;
-  }[];
-  title: string;
-  pageprops?: {
-    wikibase_item: string;
-  }
-}
 
 let token: string;
 
-function objectToFormData(obj: Record<string, any>) {
-  const fd = new URLSearchParams();
-  Object.entries(obj).forEach(([key, val]) => fd.append(key, val));
-  return fd;
-}
-
-async function getToken() {
-  const result = await client(`${baseUrl}?action=query&meta=tokens&type=login&format=json`);
-  const { logintoken } = result.data.query.tokens;
-  return logintoken;
-}
-
 export async function login() {
-  const logintoken = await getToken();
-  const url = `${baseUrl}`;
+  const name = process.env.USER_NAME;
+  const password = process.env.PASSWORD;
   if (!name || !password) {
     throw new Error('Name and password are required');
   }
-
-  const result = await client({
-    method: 'post',
-    url,
-    data: objectToFormData({
-      lgname: name,
-      lgtoken: logintoken,
-      lgpassword: password,
-      action: 'login',
-      format: 'json',
-    }),
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
-  if (result.data.login.result !== 'Success') {
-    console.error(result.data.login);
-    throw new Error('Failed to login');
-  }
-
-  const tokenResult = await client(`${baseUrl}?action=query&meta=tokens&format=json&assert=bot`);
-  token = tokenResult.data.query.tokens.csrftoken;
+  token = await baseLogin(name, password, client, baseUrl);
 }
 
 export async function getCompany(title: string): Promise<Record<string, WikiPage>> {
@@ -247,6 +190,21 @@ export async function* search(text:string, max = 100, page = 10) {
   return Object.values(res);
 }
 
+export async function* getRedirects(namespace = 0, linkNamespace = 0) {
+  const path = `${baseUrl}?action=query&format=json&generator=allpages&gaplimit=100&gapfilterredir=redirects&gapnamespace=${namespace}`
+  + `&prop=links&plnamespace=${linkNamespace}`;
+  let result = await client(path);
+  while (result.data.continue) {
+    const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+    yield Object.values(res);
+    const continueQuery = objectToQueryString(result.data.continue);
+    const path2 = `${path}&${continueQuery}`;
+    result = await client(path2);
+  }
+  const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+  return Object.values(res);
+}
+
 export async function protect(title:string, protections: string, expiry: string, reason: string) {
   const queryDetails = {
     method: 'post',
@@ -254,6 +212,19 @@ export async function protect(title:string, protections: string, expiry: string,
       title, token, expiry, reason, protections,
     }),
     url: `${baseUrl}?action=protect&format=json&assert=bot&bot=true`,
+  };
+  const result = await client(queryDetails);
+
+  return result.data;
+}
+
+export async function deletePage(title:string, reason: string) {
+  const queryDetails = {
+    method: 'post',
+    data: objectToFormData({
+      title, token, reason,
+    }),
+    url: `${baseUrl}?action=delete&format=json&assert=bot&bot=true`,
   };
   const result = await client(queryDetails);
 

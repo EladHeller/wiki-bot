@@ -9,9 +9,9 @@ async function main() {
   await login();
 
   const res = search(link);
-  let curr = await res.next();
-
-  while (curr.done === false) {
+  let curr;
+  do {
+    curr = await res.next();
     curr.value?.forEach(async (page) => {
       const content = page.revisions?.[0].slots.main['*'];
       if (content && page.title) {
@@ -34,8 +34,7 @@ async function main() {
         console.log(page.title);
       }
     });
-    curr = await res.next();
-  }
+  } while (!curr.done);
 }
 
 main().catch(console.error);

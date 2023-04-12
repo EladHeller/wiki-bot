@@ -56,3 +56,13 @@ export async function promiseSequence(size: number, callbacks: Array<() => Promi
     batch = callbacks.splice(0, 10);
   }
 }
+
+export function objectToFormData(obj: Record<string, any>) {
+  const fd = new URLSearchParams();
+  Object.entries(obj).forEach(([key, val]) => fd.append(key, val));
+  return fd;
+}
+
+export function objectToQueryString(obj: Record<string, any>): string {
+  return Object.entries(obj).map(([key, val]) => `${key}=${val}`).join('&');
+}
