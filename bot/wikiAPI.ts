@@ -191,17 +191,17 @@ export async function* search(text:string, max = 100, page = 10) {
 }
 
 export async function* getRedirects(namespace = 0, linkNamespace = 0) {
-  const path = `${baseUrl}?action=query&format=json&generator=allpages&gaplimit=100&gapfilterredir=redirects&gapnamespace=${namespace}`
+  const path = `${baseUrl}?action=query&format=json&generator=allpages&gaplimit=500&gapfilterredir=redirects&gapnamespace=${namespace}`
   + `&prop=links&plnamespace=${linkNamespace}`;
   let result = await client(path);
   while (result.data.continue) {
-    const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+    const res:Record<string, Partial<WikiPage>> = result.data.query?.pages ?? {};
     yield Object.values(res);
     const continueQuery = objectToQueryString(result.data.continue);
     const path2 = `${path}&${continueQuery}`;
     result = await client(path2);
   }
-  const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
+  const res:Record<string, Partial<WikiPage>> = result.data.query?.pages ?? {};
   return Object.values(res);
 }
 

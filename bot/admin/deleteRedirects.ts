@@ -19,7 +19,8 @@ async function deleteRedirects(from: number, to: number, title: string) {
   } catch (error) {
     console.log(error?.data || error?.message || error?.toString());
   }
-  await updateArticle(title, 'רשימה', `* ${all.map((x) => `[[${x.title}]]`).join('\n* ')}`);
+  const unique = all.filter((v, i, a) => a.findIndex((t) => t.title === v.title) === i);
+  await updateArticle(title, 'רשימה', `* ${unique.map((x) => `[[${x.title}]]`).join('\n* ')}`);
 }
 
 async function main() {

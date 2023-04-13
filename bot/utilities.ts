@@ -45,7 +45,7 @@ export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 
 
 export function getLocalDate(dateString:string): string {
   const date = new Date(dateString);
-  return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${new Date(date).getFullYear()}`;
+  return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${date.getFullYear()}`;
 }
 
 export async function promiseSequence(size: number, callbacks: Array<() => Promise<any>>) {
