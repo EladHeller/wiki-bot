@@ -2,8 +2,8 @@ import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import type { WikiPage } from './types';
-import { objectToFormData, objectToQueryString } from './utilities';
-import { baseLogin } from './wikiLogin';
+import { objectToFormData, objectToQueryString, promiseSequence } from './utilities';
+import { baseLogin, getToken } from './wikiLogin';
 
 const jar = new CookieJar();
 const client = wrapper(axios.create({ jar }));
@@ -43,14 +43,14 @@ async function request(path: string, method?: string, data?: Record<string, any>
   return result.data;
 }
 
-// async function* continueQuery(path: string) {
-//   let result = await request(path);
-//   while (result.continue) {
-//     yield result;
-//     result = await request(`${path}&${objectToQueryString(result.continue)}`);
-//   }
-//   return result;
-// }
+async function* continueQuery(path: string) {
+  let result = await request(path);
+  while (result.continue) {
+    yield result;
+    result = await request(`${path}&${objectToQueryString(result.continue)}`);
+  }
+  yield result;
+}
 
 export async function getCompany(title: string): Promise<Record<string, WikiPage>> {
   const rvprops = encodeURIComponent('user|size');
@@ -59,8 +59,8 @@ export async function getCompany(title: string): Promise<Record<string, WikiPage
   }&rvslots=*&rvlimit=1&prop=revisions&titles=${
     encodeURIComponent(title)
   }&rvdir=newer`;
-  const result = await client(path);
-  return result.data.query.pages;
+  const result = await request(path);
+  return result.query.pages;
 }
 
 export async function getCompanies(): Promise<Record<string, WikiPage>> {
@@ -79,8 +79,8 @@ export async function getCompanies(): Promise<Record<string, WikiPage>> {
   + `&rvprop=${rvprops}&rvslots=*`
   // Get maya link
   + `&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
-  const result = await client(path);
-  return result.data.query.pages;
+  const result = await request(path);
+  return result.query.pages;
 }
 
 export async function getMayaLinks(withContent = false): Promise<Record<string, WikiPage>> {
@@ -98,8 +98,8 @@ export async function getMayaLinks(withContent = false): Promise<Record<string, 
     withContent ? `&rvprop=${rvprops}&rvslots=*` : ''
   // Get maya link
   }&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
-  const result = await client(path);
-  return result.data.query.pages;
+  const result = await request(path);
+  return result.query.pages;
 }
 
 export async function getGoogleFinanceLinksWithContent(): Promise<Record<string, WikiPage>> {
@@ -164,24 +164,17 @@ export async function getGoogleFinanceLinks(): Promise<Record<string, WikiPage>>
 }
 
 export async function updateArticle(articleTitle: string, summary:string, content: string) {
-  const queryDetails = {
-    method: 'post',
-    data: objectToFormData({
-      title: articleTitle, text: content, token, summary,
-    }),
-    url: `${baseUrl}?action=edit&format=json&assert=bot&bot=true`,
-  };
-  const result = await client(queryDetails);
-
-  return result.data;
+  return request(`${baseUrl}?action=edit&format=json&assert=bot&bot=true`, 'post', objectToFormData({
+    title: articleTitle, text: content, token, summary,
+  }));
 }
 
 export async function getArticleContent(title: string): Promise<string | undefined> {
   const path = `${baseUrl}?action=query&format=json&rvprop=content&rvslots=*&prop=revisions&titles=${
     encodeURIComponent(title)
   }`;
-  const result = await client(path);
-  const wikiPages:Record<string, Partial<WikiPage>> = result.data.query.pages;
+  const result = await request(path);
+  const wikiPages:Record<string, Partial<WikiPage>> = result.query.pages;
 
   return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
 }
@@ -221,19 +214,10 @@ export async function* search(text:string, max = 100, page = 10) {
   return Object.values(res);
 }
 
-export async function* getRedirects(namespace = 0, linkNamespace = 0) {
+export async function* getRedirects(namespace = 0, linkNamespace = [0]) {
   const path = `${baseUrl}?action=query&format=json&generator=allpages&gaplimit=500&gapfilterredir=redirects&gapnamespace=${namespace}`
-  + `&prop=links&plnamespace=${linkNamespace}`;
-  let result = await client(path);
-  while (result.data.continue) {
-    const res:Record<string, Partial<WikiPage>> = result.data.query?.pages ?? {};
-    yield Object.values(res);
-    const continueQuery = objectToQueryString(result.data.continue);
-    const path2 = `${path}&${continueQuery}`;
-    result = await client(path2);
-  }
-  const res:Record<string, Partial<WikiPage>> = result.data.query?.pages ?? {};
-  return Object.values(res);
+  + `&prop=links&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}`;
+  yield* continueQuery(path);
 }
 
 export async function info(titles:string[]) {
@@ -254,6 +238,59 @@ export async function purge(titles: string[]) {
   }
   return request(`${baseUrl}?action=purge&format=json`, 'post', objectToFormData({
     titles: titles.join('|'),
+  }));
+}
+
+export async function rollback(title: string, user: string, summary: string) {
+  const { rollbacktoken } = await getToken(client, baseUrl, 'rollback');
+  const path = `${baseUrl}?action=rollback&format=json`;
+
+  return request(path, 'post', objectToFormData({
+    token: rollbacktoken,
+    summary,
+    user,
+    title,
+    markbot: true,
+  }));
+}
+
+export async function undo(title: string, summary: string, revision: number) {
+  const path = `${baseUrl}?action=edit&format=json`;
+
+  return request(path, 'post', objectToFormData({
+    token,
+    summary,
+    title,
+    undo: revision,
+    bot: true,
+  }));
+}
+
+export async function* userContributes(user:string, limit = 500) {
+  const props = encodeURIComponent('title|ids');
+  const path = `${baseUrl}?action=query&format=json&list=usercontribs&ucuser=${encodeURIComponent(user)}&uclimit=${limit}&ucprop=${props}`;
+  yield* continueQuery(path);
+}
+
+export async function rollbackUserContributions(user:string, summary: string, count = 5) {
+  if (count > 500) {
+    throw new Error('Too many titles');
+  }
+  const { value } = await userContributes(user, count).next();
+  const contributes = value.query.usercontribs;
+  await promiseSequence(30, contributes.map((contribute) => async () => {
+    await rollback(contribute.title, user, summary);
+  }));
+}
+
+export async function undoContributions(user:string, summary: string, count = 5) {
+  if (count > 500) {
+    throw new Error('Too many titles');
+  }
+  const { value } = await userContributes(user, count).next();
+  const contributes = value.query.usercontribs;
+  await promiseSequence(30, contributes.map((contribute) => async () => {
+    await undo(contribute.title, summary, contribute.revid);
   }));
 }
 

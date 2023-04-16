@@ -15,6 +15,14 @@ Parameters:
   WikiBasePassword:
     Description: The password of wiki user.
     Type: String
+  WikiDeleteUserName:
+    Description: The name of wiki user.
+    Type: String
+  WikiDeletePassword:
+    Description: The password of wiki user.
+    Type: String
+
+
 
 Resources:
   MarketValueLambdaIamRole:
@@ -307,7 +315,7 @@ Resources:
           USER_NAME: !Ref WikiBaseUserName
           PASSWORD: !Ref WikiBasePassword
       Handler: dist/admin/protect.main
-      Timeout: 20
+      Timeout: 300
       MemorySize: 512
       Code:
         S3Bucket: !Ref BucketCodeName
@@ -322,4 +330,41 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/protect-templates-function:*'
 
+  ProtectTemplatesLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/protect-templates-function'
+
+# delete redirects
+  DeleteRedirectsLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: delete-redirects-function
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiDeleteUserName
+          PASSWORD: !Ref WikiDeletePassword
+      Handler: dist/admin/deleteRedirects.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  DeleteRedirectsLogGroupInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SendEmailLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/delete-redirects-function:*'
 

@@ -40,5 +40,8 @@ jobs:
           export PASSWORD=${{ secrets.WIKI_USER_PASSWORD }}
           export BASE_USER_NAME=${{ secrets.WIKI_BASE_USER_NAME }}
           export BASE_PASSWORD=${{ secrets.WIKI_BASE_USER_PASSWORD }}
+          export DELETE_USER_NAME=${{ secrets.WIKI_DELETE_USER_NAME }}
+          export DELETE_PASSWORD=${{ secrets.WIKI_DELETE_USER_PASSWORD }}
+
           npm run update-env
           npm run update-lambda
