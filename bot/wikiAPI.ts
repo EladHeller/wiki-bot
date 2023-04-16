@@ -1,82 +1,56 @@
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
+import type { WikiPage } from './types';
+import { objectToFormData, objectToQueryString } from './utilities';
+import { baseLogin } from './wikiLogin';
 
 const jar = new CookieJar();
 const client = wrapper(axios.create({ jar }));
 
-const name = process.env.USER_NAME;
-const password = process.env.PASSWORD;
 const baseUrl = 'https://he.wikipedia.org/w/api.php';
-
-export type WikiPage = {
-  pageid: number;
-  ns: number;
-  templates?: {
-    ns: number;
-    title: string;
-  }[];
-  revisions: {
-    user: string;
-    size: number;
-    slots: {
-      main: {
-        contentmodel: string;
-        contentformat: string;
-        '*': string;
-      }
-    }
-  }[],
-  extlinks: {
-    '*': string;
-  }[];
-  title: string;
-  pageprops?: {
-    wikibase_item: string;
-  }
-}
 
 let token: string;
 
-function objectToFormData(obj: Record<string, any>) {
-  const fd = new URLSearchParams();
-  Object.entries(obj).forEach(([key, val]) => fd.append(key, val));
-  return fd;
-}
-
-async function getToken() {
-  const result = await client(`${baseUrl}?action=query&meta=tokens&type=login&format=json`);
-  const { logintoken } = result.data.query.tokens;
-  return logintoken;
-}
-
 export async function login() {
-  const logintoken = await getToken();
-  const url = `${baseUrl}`;
+  const name = process.env.USER_NAME;
+  const password = process.env.PASSWORD;
   if (!name || !password) {
     throw new Error('Name and password are required');
   }
-
-  const result = await client({
-    method: 'post',
-    url,
-    data: objectToFormData({
-      lgname: name,
-      lgtoken: logintoken,
-      lgpassword: password,
-      action: 'login',
-      format: 'json',
-    }),
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
-  if (result.data.login.result !== 'Success') {
-    console.error(result.data.login);
-    throw new Error('Failed to login');
-  }
-
-  const tokenResult = await client(`${baseUrl}?action=query&meta=tokens&format=json&assert=bot`);
-  token = tokenResult.data.query.tokens.csrftoken;
+  token = await baseLogin(name, password, client, baseUrl);
 }
+
+async function request(path: string, method?: string, data?: Record<string, any>): Promise<any> {
+  if (!token) {
+    await login();
+  }
+  const queryDetails: Record<string, any> = {
+    url: path,
+    method: method ?? 'GET',
+  };
+  if (data) {
+    queryDetails.data = data;
+  }
+  const result = await client(queryDetails);
+
+  if (result.data.error) {
+    console.error(result.data.error);
+    throw new Error(`Failed to ${method?.toUpperCase() === 'GET' ? 'get data' : 'perform action'}`);
+  } else if (result.data.warnings) {
+    console.warn(result.data.warnings);
+  }
+  return result.data;
+}
+
+// async function* continueQuery(path: string) {
+//   let result = await request(path);
+//   while (result.continue) {
+//     yield result;
+//     result = await request(`${path}&${objectToQueryString(result.continue)}`);
+//   }
+//   return result;
+// }
 
 export async function getCompany(title: string): Promise<Record<string, WikiPage>> {
   const rvprops = encodeURIComponent('user|size');
@@ -245,4 +219,50 @@ export async function* search(text:string, max = 100, page = 10) {
   const res:Record<string, Partial<WikiPage>> = result.data.query.pages;
 
   return Object.values(res);
+}
+
+export async function* getRedirects(namespace = 0, linkNamespace = 0) {
+  const path = `${baseUrl}?action=query&format=json&generator=allpages&gaplimit=500&gapfilterredir=redirects&gapnamespace=${namespace}`
+  + `&prop=links&plnamespace=${linkNamespace}`;
+  let result = await client(path);
+  while (result.data.continue) {
+    const res:Record<string, Partial<WikiPage>> = result.data.query?.pages ?? {};
+    yield Object.values(res);
+    const continueQuery = objectToQueryString(result.data.continue);
+    const path2 = `${path}&${continueQuery}`;
+    result = await client(path2);
+  }
+  const res:Record<string, Partial<WikiPage>> = result.data.query?.pages ?? {};
+  return Object.values(res);
+}
+
+export async function info(titles:string[]) {
+  if (titles.length > 500) {
+    throw new Error('Too many titles');
+  }
+  const props = encodeURIComponent('protection');
+  const encodedTitles = encodeURIComponent(titles.join('|'));
+  const path = `${baseUrl}?action=query&format=json&prop=info&inprop=${props}&titles=${encodedTitles}`;
+  const result = await request(path);
+  const res:Record<string, Partial<WikiPage>> = result.query?.pages;
+  return Object.values(res);
+}
+
+export async function protect(title:string, protections: string, expiry: string, reason: string) {
+  return request(`${baseUrl}?action=protect&format=json&assert=bot`, 'post', objectToFormData({
+    title, token, expiry, reason, protections,
+  }));
+}
+
+export async function deletePage(title:string, reason: string) {
+  const queryDetails = {
+    method: 'post',
+    data: objectToFormData({
+      title, token, reason,
+    }),
+    url: `${baseUrl}?action=delete&format=json&assert=bot`,
+  };
+  const result = await client(queryDetails);
+
+  return result.data;
 }

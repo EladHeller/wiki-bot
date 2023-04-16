@@ -23,7 +23,9 @@
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "kineret": "ts-node-esm bot/kineret/kineretBot.ts",
     "replace": "ts-node-esm bot/scripts/replace.ts",
-    "kipa": "ts-node-esm bot/scripts/kipa.ts"
+    "kipa": "ts-node-esm bot/scripts/kipa.ts",
+    "delete-redirects": "ts-node-esm bot/admin/deleteRedirects.ts",
+    "protect": "ts-node-esm bot/admin/protect.ts"
   },
   "repository": {
     "type": "git",
@@ -40,13 +42,15 @@
     "axios-cookiejar-support": "^4.0.6",
     "dotenv": "^16.0.3",
     "jsdom": "^21.1.1",
+    "playwright": "^1.32.3",
+    "readline": "^1.3.0",
     "tough-cookie": "^4.1.2"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.20.2",
-    "@types/jsdom": "^21.1.1",
     "@babel/preset-typescript": "^7.21.0",
     "@types/jest": "^29.4.0",
+    "@types/jsdom": "^21.1.1",
     "@types/node": "^18.15.11",
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.54.0",

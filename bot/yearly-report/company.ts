@@ -1,6 +1,7 @@
 import { MayaCompany } from '../mayaAPI';
+import { WikiPage } from '../types';
 import { CurrencyCode, prettyNumericValue } from '../utilities';
-import { updateArticle, WikiPage } from '../wikiAPI';
+import { updateArticle } from '../wikiAPI';
 import WikiTemplateParser from '../WikiTemplateParser';
 
 const currentYear = process.env.YEAR;

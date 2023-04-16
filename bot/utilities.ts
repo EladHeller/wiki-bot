@@ -45,7 +45,7 @@ export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 
 
 export function getLocalDate(dateString:string): string {
   const date = new Date(dateString);
-  return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${new Date(date).getFullYear()}`;
+  return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${date.getFullYear()}`;
 }
 
 export async function promiseSequence(size: number, callbacks: Array<() => Promise<any>>) {
@@ -55,4 +55,14 @@ export async function promiseSequence(size: number, callbacks: Array<() => Promi
     await Promise.all(batch.map((callback) => callback()));
     batch = callbacks.splice(0, 10);
   }
+}
+
+export function objectToFormData(obj: Record<string, any>) {
+  const fd = new URLSearchParams();
+  Object.entries(obj).forEach(([key, val]) => fd.append(key, val));
+  return fd;
+}
+
+export function objectToQueryString(obj: Record<string, any>): string {
+  return Object.entries(obj).map(([key, val]) => `${key}=${val}`).join('&');
 }
