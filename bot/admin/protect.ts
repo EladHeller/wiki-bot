@@ -1,24 +1,8 @@
+/* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import { info, login } from '../wikiAPI';
 import { getLocalDate } from '../utilities';
 import { closePlaywright, loginWithPlaywright, protectWithPlaywrihgt } from './protectPlaywright';
-
-// תבנית:ציטוט יומי 13 באפריל 2023
-// קטגוריה:תבניות ציטוט יומי
-
-// תבנית:תמונה מומלצת 13 באפריל 2023
-// קטגוריה:תבניות תמונה מומלצת
-
-// תבנית:הידעת? 13 באפריל 2023
-// קטגוריה:הפניות יומיות לקטעי הידעת?
-
-// קטגוריה:ויקיפדיה: תקצירי ערכים מומלצים: 2023
-// תבנית:ערך מומלץ 13 באפריל 2023
-
-// קטגוריה:תבניות הידעת?
-
-// תבנית:התמונה המומלצת
-//
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
@@ -37,9 +21,10 @@ const templates = [
   'תבנית:הידעת?',
   'תבנית:ערך מומלץ',
 ];
+
 const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-async function main() {
+export async function main() {
   await login();
   const needToProtect: string[] = [];
   const currMonth = new Date().getMonth() + 1;
@@ -80,8 +65,3 @@ async function main() {
   }
   await closePlaywright();
 }
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});

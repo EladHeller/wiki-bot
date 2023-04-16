@@ -7,7 +7,7 @@
         "strictNullChecks": true,
         "outDir": "dist"
     },
-    "include": ["bot", "bot/admin"],
+    "include": ["bot"],
     "exclude": [
         "node_modules"
     ]

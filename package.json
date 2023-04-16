@@ -24,8 +24,7 @@
     "kineret": "ts-node-esm bot/kineret/kineretBot.ts",
     "replace": "ts-node-esm bot/scripts/replace.ts",
     "kipa": "ts-node-esm bot/scripts/kipa.ts",
-    "delete-redirects": "ts-node-esm bot/admin/deleteRedirects.ts",
-    "protect": "ts-node-esm bot/admin/protect.ts"
+    "delete-redirects": "ts-node-esm bot/admin/deleteRedirects.ts"
   },
   "repository": {
     "type": "git",
