@@ -1,6 +1,7 @@
 import 'dotenv/config';
-import { login, protect } from '../wikiAPI';
+import { info, login } from '../wikiAPI';
 import { getLocalDate } from '../utilities';
+import { closePlaywright, loginWithPlaywright, protectWithPlaywrihgt } from './protectPlaywright';
 
 // תבנית:ציטוט יומי 13 באפריל 2023
 // קטגוריה:תבניות ציטוט יומי
@@ -27,17 +28,49 @@ function getMonthTemplates(month: number, year: number) {
   return dates;
 }
 
+const templates = [
+  'תבנית:ציטוט יומי',
+  'תבנית:תמונה מומלצת',
+  'תבנית:הידעת?',
+  'תבנית:ערך מומלץ',
+];
+const months = [4];
+
 async function main() {
+  process.env.USER_NAME = process.env.PROTECT_USER_NAME;
+  process.env.PASSWORD = process.env.PROTECT_PASSWORD;
   await login();
-  getMonthTemplates(5, 2023).forEach((date) => {
-    console.log(`תבנית:ציטוט יומי ${date}`);
-    console.log(`תבנית:תמונה מומלצת ${date}`);
-    console.log(`תבנית:הידעת? ${date}`);
-    console.log(`תבנית:ערך מומלץ ${date}`);
-  });
-  const nextWeekTimeStamp = new Date().getTime() + 7 * 24 * 60 * 60 * 1000;
-  const res = await protect('user:test/test', 'edit=autopatrol|move=autopatrol', nextWeekTimeStamp.toString(), 'בדיקה');
-  console.log(res);
+  const needToProtect: string[] = [];
+
+  await Promise.all(months.map(async (month) => {
+    const monthDates = getMonthTemplates(month, 2023);
+    await Promise.all(templates.map(async (template) => {
+      const templatesInfo = await info(monthDates.map((date) => `${template} ${date}`));
+      templatesInfo.forEach((templateInfo) => {
+        if (('missing' in templateInfo) || !templateInfo.title) {
+          console.log(`Missing ${templateInfo.title}`);
+          return;
+        }
+        const editProtect = templateInfo.protection?.some((protection) => protection.type === 'edit');
+        const moveProtect = templateInfo.protection?.some((protection) => protection.type === 'move');
+        if (!editProtect || !moveProtect) {
+          needToProtect.push(templateInfo.title);
+        }
+      });
+    }));
+  }));
+  if (needToProtect.length === 0) {
+    console.log('No need to protect');
+    return;
+  }
+
+  await loginWithPlaywright(process.env.BASE_USER_NAME || '');
+
+  for (const title of needToProtect) {
+    console.log(`Protecting ${title}`);
+    await protectWithPlaywrihgt(title);
+  }
+  await closePlaywright();
 }
 
 main().catch((e) => {

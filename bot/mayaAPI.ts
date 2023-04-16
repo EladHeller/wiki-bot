@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { WikiPage } from './wikiAPI';
+import { WikiPage } from './types';
 
 const mayaLinkRegex = /^http:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/;
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';

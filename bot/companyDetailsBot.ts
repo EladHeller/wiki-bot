@@ -2,9 +2,10 @@ import 'dotenv/config';
 import fs from 'node:fs/promises';
 import { AllDetailsResponse, getAllDetails } from './mayaAPI';
 import {
-  getMayaLinks, login, updateArticle, WikiPage,
+  getMayaLinks, login, updateArticle,
 } from './wikiAPI';
 import { buildTable } from './WikiParser';
+import { WikiPage } from './types';
 
 interface ManagementDetails {
   chairman?: string;

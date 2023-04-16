@@ -3,9 +3,10 @@ import fs from 'fs/promises';
 import Company from './company';
 import getMayaDetails, { MayaWithWiki } from '../mayaAPI';
 import {
-  getCompanies, getCompany, login, updateArticle, WikiPage,
+  getCompanies, getCompany, login, updateArticle,
 } from '../wikiAPI';
 import { buildTable } from '../WikiParser';
+import { WikiPage } from '../types';
 
 const year = process.env.YEAR;
 

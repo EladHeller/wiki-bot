@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import { WikiPage } from './wikiAPI';
+import { WikiPage } from './types';
 
 function getTextNodeByText(textNodes: Text[], label: string): Text | undefined {
   return textNodes.find((textNode) => textNode.textContent?.trim().toUpperCase() === label);

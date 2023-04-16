@@ -19,6 +19,7 @@ export type WikiPage = {
     extlinks: {
       '*': string;
     }[];
+    protection?: {type: string, level: string, expiry: string}[]
     links?: {ns: number, title: string}[];
     title: string;
     pageprops?: {
