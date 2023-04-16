@@ -93,6 +93,13 @@ async function main() {
     }, {
       ParameterKey: 'WikiBasePassword',
       ParameterValue: process.env.BASE_PASSWORD,
+    },
+    {
+      ParameterKey: 'WikiDELETEUserName',
+      ParameterValue: process.env.DELETE_USER_NAME,
+    }, {
+      ParameterKey: 'WikiDELETEPassword',
+      ParameterValue: process.env.DELETE_PASSWORD,
     }],
     ['CAPABILITY_NAMED_IAM'],
   );
