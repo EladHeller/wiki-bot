@@ -307,7 +307,7 @@ Resources:
           USER_NAME: !Ref WikiBaseUserName
           PASSWORD: !Ref WikiBasePassword
       Handler: dist/admin/protect.main
-      Timeout: 20
+      Timeout: 300
       MemorySize: 512
       Code:
         S3Bucket: !Ref BucketCodeName
@@ -322,4 +322,12 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/protect-templates-function:*'
 
+  ProtectTemplatesLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/protect-templates-function'
 
