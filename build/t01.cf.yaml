@@ -271,15 +271,6 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/purge-birthday-function:*'
 
-  PurgeBirthdayLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties: 
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/purge-birthday-function'
-
   PurgeBirthdayEventRule:
     DependsOn:
       - PurgeBirthdayLambda
@@ -331,12 +322,4 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/protect-templates-function:*'
 
-  ProtectTemplatesLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties: 
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/protect-templates-function'
 
