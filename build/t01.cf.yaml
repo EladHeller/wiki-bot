@@ -315,8 +315,8 @@ Resources:
           USER_NAME: !Ref WikiBaseUserName
           PASSWORD: !Ref WikiBasePassword
       Handler: dist/admin/protect.main
-      Timeout: 300
-      MemorySize: 512
+      Timeout: 900
+      MemorySize: 1024
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip

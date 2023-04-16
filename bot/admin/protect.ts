@@ -16,7 +16,6 @@ function getMonthTemplates(month: number, year: number, startWithDay = 1) {
 }
 
 const templates = [
-  'תבנית:תמונה מומלצת',
   'תבנית:הידעת?',
   'תבנית:ערך מומלץ',
 ];
@@ -88,6 +87,8 @@ export async function main() {
   needToProtect = needToProtect.concat(portalTemplates.filter((template) => template.startsWith('פורטל:')));
   const quoteTemplates = await getTemplatesByCategory('תבניות ציטוט יומי');
   needToProtect = needToProtect.concat(quoteTemplates.filter((template) => template.startsWith('תבנית:ציטוט יומי')));
+  const imageTemplates = await getTemplatesByCategory('תבניות תמונה מומלצת');
+  needToProtect = needToProtect.concat(imageTemplates.filter((template) => template.startsWith('תבנית:תמונה מומלצת')));
   needToProtect = needToProtect.concat(await getTemplatesByDate());
 
   if (needToProtect.length === 0) {
@@ -103,3 +104,4 @@ export async function main() {
   }
   await closePlaywright();
 }
+main();
