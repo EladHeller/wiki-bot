@@ -2,14 +2,14 @@ import 'dotenv/config';
 import { getRedirects, login, updateArticle } from '../wikiAPI';
 import { WikiPage } from '../types';
 
-async function deleteRedirects(from: number, to: number, title: string) {
+async function deleteRedirects(from: number, to: number[], title: string) {
   const generator = getRedirects(from, to);
   const all: WikiPage[] = [];
   let res;
   try {
     do {
       res = await generator.next();
-      const batch: WikiPage[] = res.value;
+      const batch: WikiPage[] = Object.values(res.value?.query?.pages ?? {});
       const relevent = batch.filter((x) => x.links != null);
       all.push(...relevent);
     // await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
@@ -20,14 +20,16 @@ async function deleteRedirects(from: number, to: number, title: string) {
     console.log(error?.data || error?.message || error?.toString());
   }
   const unique = all.filter((v, i, a) => a.findIndex((t) => t.title === v.title) === i);
-  await updateArticle(title, 'רשימה', `* ${unique.map((x) => `[[${x.title}]]`).join('\n* ')}`);
+  await updateArticle(title, 'רשימה', `* ${unique.map((x) => `[[${x.title}]] ${x.links?.length === 1 ? ` {{כ}}← [[${x.links?.[0].title}]]` : 'לא ברור'}`).join('\n* ')}`);
 }
 
 async function main() {
   await login();
-  await deleteRedirects(0, 118, 'user:Sapper-bot/הפניות ראשי לטיוטה');
-  await deleteRedirects(119, 1, 'user:Sapper-bot/הפניות שיחה טיוטה לשיחה ');
-  await deleteRedirects(118, 0, 'user:Sapper-bot/הפניות טיוטה לראשי');
+  await deleteRedirects(119, [1], 'user:Sapper-bot/הפניות שיחה טיוטה לשיחה ');
+  await deleteRedirects(118, [0], 'user:Sapper-bot/הפניות טיוטה לראשי');
+  await deleteRedirects(3, [1], 'user:Sapper-bot/הפניות שיחת משתמש לשיחה');
+  await deleteRedirects(2, [0], 'user:Sapper-bot/הפניות משתמש לראשי');
+  await deleteRedirects(0, [2, 118], 'user:Sapper-bot/הפניות ראשי למשתמש או טיוטה');
 }
 
 main().catch(console.error);
