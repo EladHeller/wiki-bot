@@ -57,7 +57,7 @@ export async function main() {
     return;
   }
 
-  await loginWithPlaywright(process.env.BASE_USER_NAME || '', process.env.BASE_PASSWORD || '');
+  await loginWithPlaywright(process.env.USER_NAME || '', process.env.PASSWORD || '');
 
   for (const title of needToProtect) {
     console.log(`Protecting ${title}`);
