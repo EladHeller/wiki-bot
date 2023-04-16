@@ -374,7 +374,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: delete-redirects-scheduler
-      ScheduleExpression: cron(0 0 ? * * *)
+      ScheduleExpression: cron(0 8 ? * * *)
       Targets:
         - Id: delete-redirects-function
           Arn: !GetAtt DeleteRedirectsLambda.Arn
