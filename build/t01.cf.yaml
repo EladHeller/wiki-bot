@@ -368,3 +368,24 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/delete-redirects-function:*'
 
+  DeleteRedirectsEventRule:
+    DependsOn:
+      - DeleteRedirectsLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: delete-redirects-scheduler
+      ScheduleExpression: cron(0 0 ? * * *)
+      Targets:
+        - Id: delete-redirects-function
+          Arn: !GetAtt DeleteRedirectsLambda.Arn
+
+  DeleteRedirectsInvokePermission:
+    DependsOn:
+      - DeleteRedirectsEventRule
+      - DeleteRedirectsLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt DeleteRedirectsEventRule.Arn 
+      FunctionName: delete-redirects-function
