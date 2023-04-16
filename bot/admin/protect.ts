@@ -20,10 +20,13 @@ import { closePlaywright, loginWithPlaywright, protectWithPlaywrihgt } from './p
 // תבנית:התמונה המומלצת
 //
 
-function getMonthTemplates(month: number, year: number) {
+function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
-  for (let i = 1; i <= 31; i += 1) {
-    dates.push(getLocalDate(`${year}-${month}-${i}`));
+  for (let i = startWithDay; i <= 31; i += 1) {
+    const date = getLocalDate(`${year}-${month}-${i}`);
+    if (date.startsWith(i.toString())) {
+      dates.push(getLocalDate(`${year}-${month}-${i}`));
+    }
   }
   return dates;
 }
@@ -34,21 +37,26 @@ const templates = [
   'תבנית:הידעת?',
   'תבנית:ערך מומלץ',
 ];
-const months = [4];
+const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 async function main() {
-  process.env.USER_NAME = process.env.PROTECT_USER_NAME;
-  process.env.PASSWORD = process.env.PROTECT_PASSWORD;
   await login();
   const needToProtect: string[] = [];
+  const currMonth = new Date().getMonth() + 1;
+  const currDay = new Date().getDate();
+  const currYear = new Date().getFullYear();
+  const nextYear = currYear + 1;
 
   await Promise.all(months.map(async (month) => {
-    const monthDates = getMonthTemplates(month, 2023);
+    const monthDates = getMonthTemplates(
+      month,
+      month < currMonth ? nextYear : currYear,
+      month === currMonth ? currDay : 1,
+    );
     await Promise.all(templates.map(async (template) => {
       const templatesInfo = await info(monthDates.map((date) => `${template} ${date}`));
       templatesInfo.forEach((templateInfo) => {
         if (('missing' in templateInfo) || !templateInfo.title) {
-          console.log(`Missing ${templateInfo.title}`);
           return;
         }
         const editProtect = templateInfo.protection?.some((protection) => protection.type === 'edit');
@@ -64,11 +72,11 @@ async function main() {
     return;
   }
 
-  await loginWithPlaywright(process.env.BASE_USER_NAME || '');
+  await loginWithPlaywright(process.env.BASE_USER_NAME || '', process.env.BASE_PASSWORD || '');
 
   for (const title of needToProtect) {
     console.log(`Protecting ${title}`);
-    await protectWithPlaywrihgt(title);
+    await protectWithPlaywrihgt(title, 'מופיע בעמוד הראשי');
   }
   await closePlaywright();
 }
