@@ -2,8 +2,8 @@ import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import type { WikiPage } from './types';
-import { objectToFormData, objectToQueryString } from './utilities';
-import { baseLogin } from './wikiLogin';
+import { objectToFormData, objectToQueryString, promiseSequence } from './utilities';
+import { baseLogin, getToken } from './wikiLogin';
 
 const jar = new CookieJar();
 const client = wrapper(axios.create({ jar }));
@@ -238,6 +238,59 @@ export async function purge(titles: string[]) {
   }
   return request(`${baseUrl}?action=purge&format=json`, 'post', objectToFormData({
     titles: titles.join('|'),
+  }));
+}
+
+export async function rollback(title: string, user: string, summary: string) {
+  const { rollbacktoken } = await getToken(client, baseUrl, 'rollback');
+  const path = `${baseUrl}?action=rollback&format=json`;
+
+  return request(path, 'post', objectToFormData({
+    token: rollbacktoken,
+    summary,
+    user,
+    title,
+    markbot: true,
+  }));
+}
+
+export async function undo(title: string, summary: string, revision: number) {
+  const path = `${baseUrl}?action=edit&format=json`;
+
+  return request(path, 'post', objectToFormData({
+    token,
+    summary,
+    title,
+    undo: revision,
+    bot: true,
+  }));
+}
+
+export async function* userContributes(user:string, limit = 500) {
+  const props = encodeURIComponent('title|ids');
+  const path = `${baseUrl}?action=query&format=json&list=usercontribs&ucuser=${encodeURIComponent(user)}&uclimit=${limit}&ucprop=${props}`;
+  yield* continueQuery(path);
+}
+
+export async function rollbackUserContributions(user:string, summary: string, count = 5) {
+  if (count > 500) {
+    throw new Error('Too many titles');
+  }
+  const { value } = await userContributes(user, count).next();
+  const contributes = value.query.usercontribs;
+  await promiseSequence(30, contributes.map((contribute) => async () => {
+    await rollback(contribute.title, user, summary);
+  }));
+}
+
+export async function undoContributions(user:string, summary: string, count = 5) {
+  if (count > 500) {
+    throw new Error('Too many titles');
+  }
+  const { value } = await userContributes(user, count).next();
+  const contributes = value.query.usercontribs;
+  await promiseSequence(30, contributes.map((contribute) => async () => {
+    await undo(contribute.title, summary, contribute.revid);
   }));
 }
 

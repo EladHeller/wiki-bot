@@ -1,10 +1,13 @@
 import { AxiosInstance } from 'axios';
 import { objectToFormData } from './utilities';
 
-export async function getToken(axiosClient: AxiosInstance, wikiBaseUrl: string): Promise<string> {
-  const result = await axiosClient(`${wikiBaseUrl}?action=query&meta=tokens&type=login&format=json`);
-  const { logintoken } = result.data.query.tokens;
-  return logintoken;
+export async function getToken(
+  axiosClient: AxiosInstance,
+  wikiBaseUrl: string,
+  tokenType = 'login',
+): Promise<Record<string, string>> {
+  const result = await axiosClient(`${wikiBaseUrl}?action=query&meta=tokens&type=${tokenType}&format=json`);
+  return result.data.query.tokens;
 }
 
 export async function baseLogin(
@@ -16,7 +19,7 @@ export async function baseLogin(
   if (!userName || !userPassword) {
     throw new Error('Name and password are required');
   }
-  const logintoken = await getToken(axiosClient, wikiBaseUrl);
+  const { logintoken } = await getToken(axiosClient, wikiBaseUrl);
 
   const result = await axiosClient({
     method: 'post',
