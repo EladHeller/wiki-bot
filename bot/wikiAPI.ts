@@ -283,6 +283,12 @@ export async function rollbackUserContributions(user:string, summary: string, co
   }));
 }
 
+export async function* listCategory(category: string, limit = 500) {
+  const props = encodeURIComponent('title|sortkeyprefix');
+  const path = `${baseUrl}?action=query&format=json&list=categorymembers&cmtitle=Category:${encodeURIComponent(category)}&cmlimit=${limit}&cmprop=${props}`;
+  yield* continueQuery(path);
+}
+
 export async function undoContributions(user:string, summary: string, count = 5) {
   if (count > 500) {
     throw new Error('Too many titles');

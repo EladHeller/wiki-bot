@@ -1,6 +1,6 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import { info, login } from '../wikiAPI';
+import { info, listCategory, login } from '../wikiAPI';
 import { getLocalDate } from '../utilities';
 import { closePlaywright, loginWithPlaywright, protectWithPlaywrihgt } from './protectPlaywright';
 
@@ -16,7 +16,6 @@ function getMonthTemplates(month: number, year: number, startWithDay = 1) {
 }
 
 const templates = [
-  'תבנית:ציטוט יומי',
   'תבנית:תמונה מומלצת',
   'תבנית:הידעת?',
   'תבנית:ערך מומלץ',
@@ -24,8 +23,7 @@ const templates = [
 
 const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-export async function main() {
-  await login();
+async function getTemplatesByDate() {
   const needToProtect: string[] = [];
   const currMonth = new Date().getMonth() + 1;
   const currDay = new Date().getDate();
@@ -52,6 +50,46 @@ export async function main() {
       });
     }));
   }));
+  return needToProtect;
+}
+
+async function getTemplatesByCategory(category: string) {
+  const generator = listCategory(category);
+  let res: IteratorResult<any, void>;
+  const needToProtect: string[] = [];
+  do {
+    res = await generator.next();
+    const relevent = res.value?.query?.categorymembers.filter((page: any) => !page.sortkeyprefix.startsWith('*')) ?? [];
+    const batches: any[] = [];
+    for (let i = 0; i < relevent.length; i += 30) {
+      batches.push(relevent.slice(i, i + 30));
+    }
+    await Promise.all(batches.map(async (batch) => {
+      const templatesInfo = await info(batch.map((page: any) => page.title));
+      templatesInfo.forEach((templateInfo) => {
+        if (('missing' in templateInfo) || !templateInfo.title) {
+          return;
+        }
+        const editProtect = templateInfo.protection?.some((protection) => protection.type === 'edit');
+        const moveProtect = templateInfo.protection?.some((protection) => protection.type === 'move');
+        if (!editProtect || !moveProtect) {
+          needToProtect.push(templateInfo.title);
+        }
+      });
+    }));
+  } while (!res?.done);
+  return needToProtect;
+}
+
+export async function main() {
+  await login();
+  let needToProtect = await getTemplatesByCategory('תבניות הידעת?');
+  const portalTemplates = await getTemplatesByCategory('פורטלים: קטעי "ערך מומלץ"');
+  needToProtect = needToProtect.concat(portalTemplates.filter((template) => template.startsWith('פורטל:')));
+  const quoteTemplates = await getTemplatesByCategory('תבניות ציטוט יומי');
+  needToProtect = needToProtect.concat(quoteTemplates.filter((template) => template.startsWith('תבנית:ציטוט יומי')));
+  needToProtect = needToProtect.concat(await getTemplatesByDate());
+
   if (needToProtect.length === 0) {
     console.log('No need to protect');
     return;
