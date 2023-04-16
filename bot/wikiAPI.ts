@@ -248,6 +248,15 @@ export async function info(titles:string[]) {
   return Object.values(res);
 }
 
+export async function purge(titles: string[]) {
+  if (titles.length > 500) {
+    throw new Error('Too many titles');
+  }
+  return request(`${baseUrl}?action=purge&format=json`, 'post', objectToFormData({
+    titles: titles.join('|'),
+  }));
+}
+
 export async function protect(title:string, protections: string, expiry: string, reason: string) {
   return request(`${baseUrl}?action=protect&format=json&assert=bot`, 'post', objectToFormData({
     title, token, expiry, reason, protections,
