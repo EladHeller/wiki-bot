@@ -38,5 +38,7 @@ jobs:
           export CODE_BUCKET=${{ secrets.CODE_BUCKET_NAME }}
           export USER_NAME=${{ secrets.WIKI_USER_NAME }}
           export PASSWORD=${{ secrets.WIKI_USER_PASSWORD }}
+          export BASE_USER_NAME=${{ secrets.WIKI_BASE_USER_NAME }}
+          export BASE_PASSWORD=${{ secrets.WIKI_BASE_USER_PASSWORD }}
           npm run update-env
           npm run update-lambda

@@ -1,11 +1,11 @@
-import playwright from 'playwright';
-import readline from 'readline';
+import * as playwright from 'playwright-aws-lambda';
+import { ChromiumBrowser, Page } from 'playwright-core';
 
-let page: playwright.Page;
-let browser: playwright.Browser;
+let page: Page;
+let browser: ChromiumBrowser;
 
-export async function loginWithPlaywright(userName: string) {
-  browser = await playwright.chromium.launch({
+export async function loginWithPlaywright(userName: string, password: string) {
+  browser = await playwright.launchChromium({
     headless: false,
     timeout: 10 * 1000,
   });
@@ -15,23 +15,12 @@ export async function loginWithPlaywright(userName: string) {
   await page.getByPlaceholder('יש להקליד את שם המשתמש').click();
   await page.getByPlaceholder('יש להקליד את שם המשתמש').fill(userName);
   await page.getByPlaceholder('יש להקליד את הסיסמה').click();
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  const password: string = await new Promise((resolve) => {
-    rl.question('Enter password: ', (answer) => {
-      rl.close();
-      resolve(answer);
-    });
-  });
   await page.getByPlaceholder('יש להקליד את הסיסמה').fill(password);
   await page.getByRole('button', { name: 'כניסה לחשבון' }).click();
   await page.waitForLoadState();
-  rl.close();
 }
 
-export async function protectWithPlaywrihgt(pageName: string) {
+export async function protectWithPlaywrihgt(pageName: string, reason: string) {
   await page.goto(`https://he.wikipedia.org/w/index.php?title=${pageName.replace(/ /g, '_')}&action=protect`);
   const isChecked = await page.getByRole('checkbox', { name: 'שינוי אפשרויות הגנה נוספות' }).isChecked();
   if (isChecked) {
@@ -42,7 +31,7 @@ export async function protectWithPlaywrihgt(pageName: string) {
     await page.getByRole('option', { name: 'רק בדוקי עריכות אוטומטית מורשים' }).getByText('רק בדוקי עריכות אוטומטית מורשים').click();
   }
   await page.getByLabel('סיבה אחרת/נוספת:').click();
-  await page.getByLabel('סיבה אחרת/נוספת:').fill('מופיע בעמוד הראשי');
+  await page.getByLabel('סיבה אחרת/נוספת:').fill(reason);
   await page.getByRole('button', { name: 'אישור' }).click();
 }
 

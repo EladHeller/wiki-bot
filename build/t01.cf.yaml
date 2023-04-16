@@ -9,6 +9,12 @@ Parameters:
   WikiPassword:
     Description: The password of wiki user.
     Type: String
+  WikiBaseUserName:
+    Description: The name of wiki user.
+    Type: String
+  WikiBasePassword:
+    Description: The password of wiki user.
+    Type: String
 
 Resources:
   MarketValueLambdaIamRole:
@@ -236,3 +242,101 @@ Resources:
       FunctionName: Kineret-level-function
 
   
+# purge birthday
+  PurgeBirthdayLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: purge-birthday-function
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/purge.main
+      Timeout: 20
+      MemorySize: 512
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  PurgeBirthdayLogGroupInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SendEmailLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/purge-birthday-function:*'
+
+  PurgeBirthdayLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/purge-birthday-function'
+
+  PurgeBirthdayEventRule:
+    DependsOn:
+      - PurgeBirthdayLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: purge-birthday-scheduler
+      ScheduleExpression: cron(0 0 ? * * *)
+      Targets:
+        - Id: purge-birthday-function
+          Arn: !GetAtt PurgeBirthdayLambda.Arn
+
+  PurgeBirthdayInvokePermission:
+    DependsOn:
+      - PurgeBirthdayEventRule
+      - PurgeBirthdayLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt PurgeBirthdayEventRule.Arn 
+      FunctionName: purge-birthday-function
+
+# protect templates
+  ProtectTemplatesLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: protect-templates-function
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiBaseUserName
+          PASSWORD: !Ref WikiBasePassword
+      Handler: dist/admin/protect.main
+      Timeout: 20
+      MemorySize: 512
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  ProtectTemplatesLogGroupInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SendEmailLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/protect-templates-function:*'
+
+  ProtectTemplatesLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/protect-templates-function'
+
