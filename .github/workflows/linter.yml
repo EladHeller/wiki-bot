@@ -28,7 +28,7 @@ jobs:
             ${{ runner.os }}-build-
 
       - name: Install modules
-        run: npm i
+        run: npm ci
 
       - name: Type check
         run: npm run type-check
