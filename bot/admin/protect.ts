@@ -104,4 +104,3 @@ export async function main() {
   }
   await closePlaywright();
 }
-main();
