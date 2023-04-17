@@ -339,6 +339,28 @@ Resources:
       FilterPattern: Invoke Error
       LogGroupName: '/aws/lambda/protect-templates-function'
 
+  ProtectTemplatesEventRule:
+    DependsOn:
+      - ProtectTemplatesLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: protect-templates-scheduler
+      ScheduleExpression: cron(0 8 ? * * *)
+      Targets:
+        - Id: protect-templates-function
+          Arn: !GetAtt ProtectTemplatesLambda.Arn
+
+  ProtectTemplatesInvokePermission:
+    DependsOn:
+      - ProtectTemplatesEventRule
+      - ProtectTemplatesLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt ProtectTemplatesEventRule.Arn 
+      FunctionName: protect-templates-function
+
 # delete redirects
   DeleteRedirectsLambda:
     DependsOn:
@@ -367,6 +389,15 @@ Resources:
       Principal: logs.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/delete-redirects-function:*'
+
+  DeleteRedirectsLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/delete-redirects-function'
 
   DeleteRedirectsEventRule:
     DependsOn:
