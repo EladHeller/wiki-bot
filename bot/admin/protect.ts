@@ -87,7 +87,7 @@ export async function main() {
   let needToProtect = await getTemplatesByCategory('תבניות הידעת?');
   const portalTemplates = await getTemplatesByCategory('פורטלים: קטעי "ערך מומלץ"');
   needToProtect = needToProtect.concat(portalTemplates.filter((template) => template.startsWith('פורטל:')));
-  const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים לחגים עבריים');
+  const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים');
   needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
   const articleGroupsIsrael = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים לחגים עבריים');
   needToProtect = needToProtect.concat(articleGroupsIsrael.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
