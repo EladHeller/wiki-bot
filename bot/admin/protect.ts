@@ -18,6 +18,8 @@ function getMonthTemplates(month: number, year: number, startWithDay = 1) {
 const templates = [
   'תבנית:הידעת?',
   'תבנית:ערך מומלץ',
+  'תבנית:ציטוט יומי',
+  'תבנית:תמונה מומלצת',
 ];
 
 const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -85,10 +87,11 @@ export async function main() {
   let needToProtect = await getTemplatesByCategory('תבניות הידעת?');
   const portalTemplates = await getTemplatesByCategory('פורטלים: קטעי "ערך מומלץ"');
   needToProtect = needToProtect.concat(portalTemplates.filter((template) => template.startsWith('פורטל:')));
-  const quoteTemplates = await getTemplatesByCategory('תבניות ציטוט יומי');
-  needToProtect = needToProtect.concat(quoteTemplates.filter((template) => template.startsWith('תבנית:ציטוט יומי')));
-  const imageTemplates = await getTemplatesByCategory('תבניות תמונה מומלצת');
-  needToProtect = needToProtect.concat(imageTemplates.filter((template) => template.startsWith('תבנית:תמונה מומלצת')));
+  const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים לחגים עבריים');
+  needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
+  const articleGroupsIsrael = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים לחגים עבריים');
+  needToProtect = needToProtect.concat(articleGroupsIsrael.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
+
   needToProtect = needToProtect.concat(await getTemplatesByDate());
 
   if (needToProtect.length === 0) {
