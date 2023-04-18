@@ -88,9 +88,9 @@ export async function main() {
   const portalTemplates = await getTemplatesByCategory('פורטלים: קטעי "ערך מומלץ"');
   needToProtect = needToProtect.concat(portalTemplates.filter((template) => template.startsWith('פורטל:')));
   const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים');
-  needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
+  needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:')));
   const articleGroupsIsrael = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים לחגים עבריים');
-  needToProtect = needToProtect.concat(articleGroupsIsrael.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
+  needToProtect = needToProtect.concat(articleGroupsIsrael.filter((template) => template.startsWith('תבנית:')));
 
   needToProtect = needToProtect.concat(await getTemplatesByDate());
 
@@ -107,3 +107,4 @@ export async function main() {
   }
   await closePlaywright();
 }
+main();
