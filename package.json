@@ -26,7 +26,8 @@
     "kipa": "ts-node-esm bot/scripts/kipa.ts",
     "rollback": "ts-node-esm bot/scripts/rollback.ts",
     "delete-redirects": "ts-node-esm bot/admin/deleteRedirects.ts",
-    "protect": "ts-node-esm bot/admin/protect.ts"
+    "protect": "ts-node-esm bot/admin/protect.ts",
+    "yadVashem": "ts-node-esm bot/scripts/yadVashem.ts"
   },
   "repository": {
     "type": "git",

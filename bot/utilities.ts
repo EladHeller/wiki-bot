@@ -64,5 +64,5 @@ export function objectToFormData(obj: Record<string, any>) {
 }
 
 export function objectToQueryString(obj: Record<string, any>): string {
-  return Object.entries(obj).map(([key, val]) => `${key}=${val}`).join('&');
+  return Object.entries(obj).map(([key, val]) => `${key}=${encodeURIComponent(val)}`).join('&');
 }
