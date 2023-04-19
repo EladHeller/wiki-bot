@@ -24,10 +24,28 @@ export async function protectWithPlaywrihgt(pageName: string, reason: string) {
   await page.goto(`https://he.wikipedia.org/w/index.php?title=${pageName.replace(/ /g, '_')}&action=protect`);
   const isChecked = await page.getByRole('checkbox', { name: 'שינוי אפשרויות הגנה נוספות' }).isChecked();
   if (isChecked) {
-    await page.getByRole('group', { name: 'העברה' }).getByRole('combobox', { name: 'כל המשתמשים מורשים' }).click();
+    try {
+      page.getByRole('group', { name: 'העברה' }).getByRole('combobox', { name: 'כל המשתמשים מורשים' }).click({
+        timeout: 2 * 1000,
+      });
+    } catch (e) {
+      console.log('try semiprotect');
+    }
+    page.getByRole('group', { name: 'העברה' }).getByRole('combobox', { name: 'רק משתמשים ותיקים מורשים' }).click({
+      timeout: 2 * 1000,
+    });
     await page.getByRole('option', { name: 'רק בדוקי עריכות אוטומטית מורשים' }).getByText('רק בדוקי עריכות אוטומטית מורשים').click();
   } else {
-    await page.getByRole('group', { name: 'עריכה' }).getByRole('combobox', { name: 'כל המשתמשים מורשים' }).click();
+    try {
+      page.getByRole('group', { name: 'עריכה' }).getByRole('combobox', { name: 'כל המשתמשים מורשים' }).click({
+        timeout: 2 * 1000,
+      });
+    } catch (e) {
+      console.log('try semiprotect');
+    }
+    page.getByRole('group', { name: 'עריכה' }).getByRole('combobox', { name: 'רק משתמשים ותיקים מורשים' }).click({
+      timeout: 2 * 1000,
+    });
     await page.getByRole('option', { name: 'רק בדוקי עריכות אוטומטית מורשים' }).getByText('רק בדוקי עריכות אוטומטית מורשים').click();
   }
   await page.getByLabel('סיבה אחרת/נוספת:').click();

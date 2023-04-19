@@ -24,6 +24,20 @@ const templates = [
 
 const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
+async function needProtectFromTitles(titles :string[]): Promise<string[]> {
+  const templatesInfo = await info(titles);
+  return templatesInfo
+    .filter((templateInfo) => {
+      if (('missing' in templateInfo) || !templateInfo.title) {
+        return false;
+      }
+      const editProtect = templateInfo.protection?.some(({ level, type, expiry }) => type === 'edit' && level !== 'autoconfirmed' && expiry === 'infinity');
+      const moveProtect = templateInfo.protection?.some(({ level, type, expiry }) => type === 'edit' && level !== 'autoconfirmed' && expiry === 'infinity');
+      return (!editProtect || !moveProtect);
+    })
+    .map<string>(({ title }) => title || '');
+}
+
 async function getTemplatesByDate() {
   const needToProtect: string[] = [];
   const currMonth = new Date().getMonth() + 1;
@@ -38,17 +52,8 @@ async function getTemplatesByDate() {
       month === currMonth ? currDay : 1,
     );
     await Promise.all(templates.map(async (template) => {
-      const templatesInfo = await info(monthDates.map((date) => `${template} ${date}`));
-      templatesInfo.forEach((templateInfo) => {
-        if (('missing' in templateInfo) || !templateInfo.title) {
-          return;
-        }
-        const editProtect = templateInfo.protection?.some((protection) => protection.type === 'edit');
-        const moveProtect = templateInfo.protection?.some((protection) => protection.type === 'move');
-        if (!editProtect || !moveProtect) {
-          needToProtect.push(templateInfo.title);
-        }
-      });
+      const needProtection = await needProtectFromTitles(monthDates.map((date) => `${template} ${date}`));
+      needToProtect.push(...needProtection);
     }));
   }));
   return needToProtect;
@@ -66,17 +71,8 @@ async function getTemplatesByCategory(category: string) {
       batches.push(relevent.slice(i, i + 30));
     }
     await Promise.all(batches.map(async (batch) => {
-      const templatesInfo = await info(batch.map((page: any) => page.title));
-      templatesInfo.forEach((templateInfo) => {
-        if (('missing' in templateInfo) || !templateInfo.title) {
-          return;
-        }
-        const editProtect = templateInfo.protection?.some((protection) => protection.type === 'edit');
-        const moveProtect = templateInfo.protection?.some((protection) => protection.type === 'move');
-        if (!editProtect || !moveProtect) {
-          needToProtect.push(templateInfo.title);
-        }
-      });
+      const needProtection = await needProtectFromTitles(batch.map((page: any) => page.title));
+      needToProtect.push(...needProtection);
     }));
   } while (!res?.done);
   return needToProtect;
@@ -107,4 +103,3 @@ export async function main() {
   }
   await closePlaywright();
 }
-main();
