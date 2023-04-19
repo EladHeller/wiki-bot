@@ -31,8 +31,8 @@ async function needProtectFromTitles(titles :string[]): Promise<string[]> {
       if (('missing' in templateInfo) || !templateInfo.title) {
         return false;
       }
-      const editProtect = templateInfo.protection?.some(({ level, type, expiry }) => type === 'edit' && level !== 'autoconfirmed' && expiry === 'never');
-      const moveProtect = templateInfo.protection?.find((protection) => protection.type === 'move');
+      const editProtect = templateInfo.protection?.some(({ level, type, expiry }) => type === 'edit' && level !== 'autoconfirmed' && expiry === 'infinity');
+      const moveProtect = templateInfo.protection?.some(({ level, type, expiry }) => type === 'edit' && level !== 'autoconfirmed' && expiry === 'infinity');
       return (!editProtect || !moveProtect);
     })
     .map<string>(({ title }) => title || '');
