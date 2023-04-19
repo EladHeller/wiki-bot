@@ -30,10 +30,11 @@ export async function protectWithPlaywrihgt(pageName: string, reason: string) {
       });
     } catch (e) {
       console.log('try semiprotect');
+      await page.getByRole('group', { name: 'העברה' }).getByRole('combobox', { name: 'רק משתמשים ותיקים מורשים' }).click({
+        timeout: 10 * 1000,
+      });
     }
-    await page.getByRole('group', { name: 'העברה' }).getByRole('combobox', { name: 'רק משתמשים ותיקים מורשים' }).click({
-      timeout: 10 * 1000,
-    });
+
     await page.getByRole('option', { name: 'רק בדוקי עריכות אוטומטית מורשים' }).getByText('רק בדוקי עריכות אוטומטית מורשים').click();
   } else {
     try {
@@ -42,10 +43,11 @@ export async function protectWithPlaywrihgt(pageName: string, reason: string) {
       });
     } catch (e) {
       console.log('try semiprotect');
+      await page.getByRole('group', { name: 'עריכה' }).getByRole('combobox', { name: 'רק משתמשים ותיקים מורשים' }).click({
+        timeout: 10 * 1000,
+      });
     }
-    await page.getByRole('group', { name: 'עריכה' }).getByRole('combobox', { name: 'רק משתמשים ותיקים מורשים' }).click({
-      timeout: 10 * 1000,
-    });
+
     await page.getByRole('option', { name: 'רק בדוקי עריכות אוטומטית מורשים' }).getByText('רק בדוקי עריכות אוטומטית מורשים').click();
   }
   await page.getByLabel('סיבה אחרת/נוספת:').click();
