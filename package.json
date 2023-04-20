@@ -25,8 +25,9 @@
     "replace": "ts-node-esm bot/scripts/replace.ts",
     "kipa": "ts-node-esm bot/scripts/kipa.ts",
     "rollback": "ts-node-esm bot/scripts/rollback.ts",
-    "delete-redirects": "ts-node-esm bot/admin/deleteRedirects.ts",
-    "protect": "ts-node-esm bot/admin/protect.ts",
+    "delete-redirects": "ts-node-esm bot/admin/runDelete.ts",
+    "protect": "ts-node-esm bot/admin/runProtect.ts",
+    "patrol": "ts-node-esm bot/patrolBot.ts",
     "yadVashem": "ts-node-esm bot/scripts/yadVashem.ts"
   },
   "repository": {
