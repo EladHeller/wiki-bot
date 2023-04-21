@@ -1,7 +1,7 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import { info, listCategory, login } from '../wikiAPI';
-import { getLocalDate } from '../utilities';
+import { getLocalDate, promiseSequence } from '../utilities';
 import { closePlaywright, loginWithPlaywright, protectWithPlaywrihgt } from './protectPlaywright';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
@@ -59,34 +59,44 @@ async function getTemplatesByDate() {
   return needToProtect;
 }
 
-async function getTemplatesByCategory(category: string) {
+async function getTemplatesByCategory(category: string, exceptCategryFormat?: string) {
   const generator = listCategory(category);
   let res: IteratorResult<any, void>;
   const needToProtect: string[] = [];
   do {
     res = await generator.next();
-    const relevent = res.value?.query?.categorymembers.filter((page: any) => !page.sortkeyprefix.startsWith('*')) ?? [];
+    const pages = res.value?.query?.categorymembers ?? [];
+    const relevent = pages.filter((page: any) => !page.sortkeyprefix.startsWith('*')) ?? [];
+
     const batches: any[] = [];
-    for (let i = 0; i < relevent.length; i += 30) {
-      batches.push(relevent.slice(i, i + 30));
+    for (let i = 0; i < relevent.length; i += 25) {
+      batches.push(relevent.slice(i, i + 25));
     }
-    await Promise.all(batches.map(async (batch) => {
+    await promiseSequence(10, batches.map((batch) => async () => {
       const needProtection = await needProtectFromTitles(batch.map((page: any) => page.title));
       needToProtect.push(...needProtection);
     }));
+    const categories = relevent
+      .filter((page: any) => page.title.startsWith('קטגוריה:') && (!exceptCategryFormat || !page.title.includes(exceptCategryFormat)))
+      .map(({ title }) => title.replace('קטגוריה:', ''));
+    for (const cat of categories) {
+      console.log(`Getting ${cat}`);
+      const categoryNeedToProtect = await getTemplatesByCategory(cat);
+      needToProtect.push(...categoryNeedToProtect);
+    }
   } while (!res?.done);
   return needToProtect;
 }
 
 export async function main() {
   await login();
-  let needToProtect = await getTemplatesByCategory('תבניות הידעת?');
+  let needToProtect = (await getTemplatesByCategory('תבניות הידעת?')).filter((template) => template.startsWith('תבנית:הידעת?'));
   const portalTemplates = await getTemplatesByCategory('פורטלים: קטעי "ערך מומלץ"');
-  needToProtect = needToProtect.concat(portalTemplates.filter((template) => template.startsWith('פורטל:')));
+  needToProtect = needToProtect.concat(portalTemplates.filter(
+    (template) => template.startsWith('פורטל:ערכים מומלצים/ערכים') || template.startsWith('תבנית:ערך מומלץ'),
+  ));
   const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים');
-  needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:')));
-  const articleGroupsIsrael = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים לחגים עבריים');
-  needToProtect = needToProtect.concat(articleGroupsIsrael.filter((template) => template.startsWith('תבנית:')));
+  needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
 
   needToProtect = needToProtect.concat(await getTemplatesByDate());
 
