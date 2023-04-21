@@ -51,7 +51,7 @@ async function deleteInCategory(category: string) {
 export async function main() {
   await login();
   console.log('logged in');
-  await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה');
+  // await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה');
   await deleteRedirects(119, [1], 'user:Sapper-bot/הפניות שיחה טיוטה לשיחה', 'הפניה ממרחב שיחת טיוטה למרחב השיחה');
   await deleteRedirects(118, [0], 'user:Sapper-bot/הפניות טיוטה לראשי', 'הפניה ממרחב הטיוטה למרחב הערכים');
   await deleteRedirects(3, [1], 'user:Sapper-bot/הפניות שיחת משתמש לשיחה', 'הפניה ממרחב שיחת משתמש למרחב שיחה');

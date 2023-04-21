@@ -285,7 +285,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: purge-birthday-scheduler
-      ScheduleExpression: cron(0 0 ? * * *)
+      ScheduleExpression: cron(0 0 ? * SUN-FRI *)
       Targets:
         - Id: purge-birthday-function
           Arn: !GetAtt PurgeBirthdayLambda.Arn
@@ -345,7 +345,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: protect-templates-scheduler
-      ScheduleExpression: cron(0 8 ? * * *)
+      ScheduleExpression: cron(0 8 ? * SUN-FRI *)
       Targets:
         - Id: protect-templates-function
           Arn: !GetAtt ProtectTemplatesLambda.Arn
@@ -405,7 +405,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: delete-redirects-scheduler
-      ScheduleExpression: cron(0 8 ? * * *)
+      ScheduleExpression: cron(0 8 ? * SUN-FRI *)
       Targets:
         - Id: delete-redirects-function
           Arn: !GetAtt DeleteRedirectsLambda.Arn
