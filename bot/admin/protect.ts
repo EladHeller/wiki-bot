@@ -97,7 +97,23 @@ export async function main() {
   ));
   const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים');
   needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
-
+  const convertPages = await getTemplatesByCategory('ויקיפדיה/בוט/בוט ההסבה/דפי מפרט', 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט');
+  needToProtect = needToProtect.concat(
+    convertPages.filter((template) => !template.startsWith('שיחת תבנית:')
+      || template.startsWith('שיחת קטגוריה:')
+      || template.includes('הסבה')
+      || template.includes('הסרה')
+      || template.includes('הסרת')
+      || template.includes('תיקון')
+      || template.includes('דפים')
+      || template.includes('הסבת')
+      || template.includes('פרמטר')
+      || template.includes('ניקיון')
+      || template.includes('שאילתות')
+     || template.startsWith('משתמש:בורה בורה/')
+     || template.startsWith('משתמש:עמד/')
+     || template.includes('משתמש:Kotz/')),
+  );
   needToProtect = needToProtect.concat(await getTemplatesByDate());
 
   if (needToProtect.length === 0) {
