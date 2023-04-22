@@ -97,9 +97,10 @@ export async function main() {
   ));
   const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים');
   needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
-  const convertPages = await getTemplatesByCategory('ויקיפדיה/בוט/בוט ההסבה/דפי מפרט', 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט');
-  needToProtect = needToProtect.concat(
-    convertPages.filter((template) => !template.startsWith('שיחת תבנית:')
+  needToProtect = needToProtect.concat(await getTemplatesByDate());
+
+  const convertPages = (await getTemplatesByCategory('ויקיפדיה/בוט/בוט ההסבה/דפי מפרט', 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט'))
+    .filter((template) => template.startsWith('שיחת תבנית:')
       || template.startsWith('שיחת קטגוריה:')
       || template.includes('הסבה')
       || template.includes('הסרה')
@@ -110,13 +111,11 @@ export async function main() {
       || template.includes('פרמטר')
       || template.includes('ניקיון')
       || template.includes('שאילתות')
-     || template.startsWith('משתמש:בורה בורה/')
-     || template.startsWith('משתמש:עמד/')
-     || template.includes('משתמש:Kotz/')),
-  );
-  needToProtect = needToProtect.concat(await getTemplatesByDate());
+    || template.startsWith('משתמש:בורה בורה/')
+    || template.startsWith('משתמש:עמד/')
+    || template.includes('משתמש:Kotz/'));
 
-  if (needToProtect.length === 0) {
+  if (needToProtect.length === 0 && convertPages.length === 0) {
     console.log('No need to protect');
     return;
   }
@@ -126,6 +125,10 @@ export async function main() {
   for (const title of needToProtect) {
     console.log(`Protecting ${title}`);
     await protectWithPlaywrihgt(title, 'מופיע בעמוד הראשי');
+  }
+  for (const title of convertPages) {
+    console.log(`Protecting ${title}`);
+    await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
   }
   await closePlaywright();
 }
