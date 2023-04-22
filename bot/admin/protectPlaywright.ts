@@ -21,7 +21,7 @@ export async function loginWithPlaywright(userName: string, password: string) {
 }
 
 export async function protectWithPlaywrihgt(pageName: string, reason: string) {
-  await page.goto(`https://he.wikipedia.org/w/index.php?title=${pageName.replace(/ /g, '_')}&action=protect`);
+  await page.goto(`https://he.wikipedia.org/w/index.php?title=${encodeURIComponent(pageName.replace(/ /g, '_'))}&action=protect`);
   const isChecked = await page.getByRole('checkbox', { name: 'שינוי אפשרויות הגנה נוספות' }).isChecked();
   if (isChecked) {
     try {
