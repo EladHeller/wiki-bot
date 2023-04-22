@@ -122,13 +122,31 @@ export async function main() {
 
   await loginWithPlaywright(process.env.USER_NAME || '', process.env.PASSWORD || '');
 
+  const errors: string[] = [];
   for (const title of needToProtect) {
-    console.log(`Protecting ${title}`);
-    await protectWithPlaywrihgt(title, 'מופיע בעמוד הראשי');
+    try {
+      console.log(`Protecting ${title}`);
+      await protectWithPlaywrihgt(title, 'מופיע בעמוד הראשי');
+    } catch (e) {
+      console.log(`Failed to protect ${title}`);
+      console.error(e);
+      errors.push(title);
+    }
   }
   for (const title of convertPages) {
-    console.log(`Protecting ${title}`);
-    await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
+    try {
+      console.log(`Protecting ${title}`);
+      await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
+    } catch (e) {
+      console.log(`Failed to protect ${title}`);
+      console.error(e);
+      errors.push(title);
+    }
   }
   await closePlaywright();
+  if (errors.length > 0) {
+    console.error('Failed to protect:');
+    console.error(errors.join('\n'));
+    throw new Error('Failed to protect');
+  }
 }
