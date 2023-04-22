@@ -1,7 +1,7 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import {
-  deletePage, getRedirects, login,
+  deletePage, getRedirects, listCategory, login,
 } from '../wikiAPI';
 import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
@@ -27,9 +27,27 @@ async function deleteRedirects(from: number, to: number[], title: string, reason
   console.log(unique.map((x) => `[[${x.title}]] ${x.links?.length === 1 ? ` {{כ}}← [[${x.links?.[0].title}]]` : 'לא ברור'}`).join('\n'));
 }
 
+async function deleteInCategory(category: string, reason: string, match?: RegExp) {
+  const generator = listCategory(category);
+  let res;
+  try {
+    do {
+      res = await generator.next();
+      const batch: WikiPage[] = res.value?.query.categorymembers ?? [];
+      await promiseSequence(10, batch.map((p: WikiPage) => async () => {
+        if (match && !p.title.match(match)) return;
+        await deletePage(p.title, reason);
+      }));
+    } while (!res.done);
+  } catch (error) {
+    console.log(error?.data || error?.message || error?.toString());
+  }
+}
+
 export async function main() {
   await login();
   console.log('logged in');
+  await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'מחיקת דף פלט', /\/דוגמאות|\/פלט/);
   await deleteRedirects(119, [1], 'user:Sapper-bot/הפניות שיחה טיוטה לשיחה', 'הפניה ממרחב שיחת טיוטה למרחב השיחה');
   await deleteRedirects(118, [0], 'user:Sapper-bot/הפניות טיוטה לראשי', 'הפניה ממרחב הטיוטה למרחב הערכים');
   await deleteRedirects(3, [1], 'user:Sapper-bot/הפניות שיחת משתמש לשיחה', 'הפניה ממרחב שיחת משתמש למרחב שיחה');
