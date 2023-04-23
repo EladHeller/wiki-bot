@@ -135,8 +135,8 @@ export async function main() {
   }
   for (const title of convertPages) {
     try {
-      console.log(`Protecting ${title}`);
-      await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
+      console.log(`Not protecting ${title} for now`);
+      // await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
     } catch (e) {
       console.log(`Failed to protect ${title}`);
       console.error(e);
