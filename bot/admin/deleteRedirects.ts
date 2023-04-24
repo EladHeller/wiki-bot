@@ -36,7 +36,9 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
       const batch: WikiPage[] = res.value?.query.categorymembers ?? [];
       await promiseSequence(10, batch.map((p: WikiPage) => async () => {
         if (match && !p.title.match(match)) return;
-        await deletePage(p.title, reason);
+        if (p.title === 'TODO: waiting for finnal approval') {
+          await deletePage(p.title, reason);
+        }
       }));
     } while (!res.done);
   } catch (error) {
