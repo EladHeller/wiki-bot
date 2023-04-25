@@ -1,10 +1,11 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import {
-  info, listCategory, login, updateArticle,
+  info, listCategory, login,
 } from '../wikiAPI';
 import { getLocalDate, promiseSequence } from '../utilities';
 import { closePlaywright, loginWithPlaywright, protectWithPlaywrihgt } from './protectPlaywright';
+import writeAdminBotLogs, { ArticleLog } from './log';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
@@ -92,16 +93,19 @@ async function getTemplatesByCategory(category: string, exceptCategryFormat?: st
 
 export async function main() {
   await login();
-  let needToProtect = (await getTemplatesByCategory('תבניות הידעת?')).filter((template) => template.startsWith('תבנית:הידעת?'));
+  const didYouKnowTemplates = await getTemplatesByCategory('תבניות הידעת?');
+  let needToProtect = didYouKnowTemplates.filter((template) => template.startsWith('תבנית:הידעת?'));
   const portalTemplates = await getTemplatesByCategory('פורטלים: קטעי "ערך מומלץ"');
   needToProtect = needToProtect.concat(portalTemplates.filter(
     (template) => template.startsWith('פורטל:ערכים מומלצים/ערכים') || template.startsWith('תבנית:ערך מומלץ'),
   ));
   const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים');
   needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
-  needToProtect = needToProtect.concat(await getTemplatesByDate());
+  const templatesByDate = await getTemplatesByDate();
+  needToProtect = needToProtect.concat(templatesByDate);
 
-  const convertPages = (await getTemplatesByCategory('ויקיפדיה/בוט/בוט ההסבה/דפי מפרט', 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט'))
+  const allConvertPages = await getTemplatesByCategory('ויקיפדיה:בוט/בוט ההסבה/דפי מפרט', 'ויקיפדיה:בוט/בוט ההסבה/דפי פלט');
+  const convertPages = allConvertPages
     .filter((template) => template.startsWith('שיחת תבנית:')
       || template.startsWith('שיחת קטגוריה:')
       || template.includes('הסבה')
@@ -135,31 +139,39 @@ export async function main() {
       errors.push(title);
     }
   }
-  if (convertPages.length) {
-    const convertErrors: string[] = [];
-    for (const title of convertPages) {
-      try {
-        console.log(`Protecting ${title}`);
-        await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
-      } catch (e) {
-        console.log(`Failed to protect ${title}`);
-        console.error(e);
-        convertErrors.push(title);
-      }
+  const convertErrors: string[] = [];
+  for (const title of convertPages) {
+    try {
+      console.log(`Protecting ${title}`);
+      await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
+    } catch (e) {
+      console.log(`Failed to protect ${title}`);
+      console.error(e);
+      convertErrors.push(title);
     }
-    const successPages = convertPages.filter((x) => !convertErrors.includes(x));
-    const summaryAndTitle = `לוג ריצה ${getLocalDate(new Date().toLocaleString())}`;
-    const successContent = successPages.length ? `* ${successPages.map((x) => `[[${x}]]`).join('\n* ')}` : '';
-    const errorContent = convertErrors.length ? `* ${convertErrors.map((x) => `[[${x}]]`).join('\n* ')}` : '';
-
-    const content = `${successContent}${errorContent ? `\n===דפים שהבוט נכשל להגן עליהם===\n${errorContent}` : ''}\n[[משתמש:בורה בורה]], [[משתמש:מקף]] לידיעתכם. ~~~~`;
-    await updateArticle('משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה', summaryAndTitle, content, summaryAndTitle);
-    errors.push(...convertErrors);
   }
   await closePlaywright();
-  if (errors.length > 0) {
-    console.error('Failed to protect:');
-    console.error(errors.join('\n'));
-    throw new Error('Failed to protect');
+
+  if (allConvertPages.length) {
+    const logs: ArticleLog[] = allConvertPages.map((title) => {
+      const skipped = !convertPages.includes(title);
+      const error = convertErrors.includes(title);
+      return {
+        text: `[[${title}]]`,
+        skipped,
+        error,
+      };
+    });
+    await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה', ['[[משתמש:בורה בורה]]']);
+  }
+  if (needToProtect.length) {
+    const logs: ArticleLog[] = needToProtect.map((title) => {
+      const error = errors.includes(title);
+      return {
+        text: `[[${title}]]`,
+        error,
+      };
+    });
+    await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
   }
 }
