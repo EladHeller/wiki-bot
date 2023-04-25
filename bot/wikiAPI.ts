@@ -163,10 +163,21 @@ export async function getGoogleFinanceLinks(): Promise<Record<string, WikiPage>>
   return result.data.query.pages;
 }
 
-export async function updateArticle(articleTitle: string, summary:string, content: string) {
-  return request(`${baseUrl}?action=edit&format=json&assert=bot&bot=true`, 'post', objectToFormData({
+export async function updateArticle(
+  articleTitle: string,
+  summary:string,
+  content: string,
+  newSectionTitle?: string,
+) {
+  const data: Record<string, string> = {
     title: articleTitle, text: content, token, summary,
-  }));
+  };
+  if (newSectionTitle) {
+    data.sectiontitle = newSectionTitle;
+    data.section = 'new';
+  }
+
+  return request(`${baseUrl}?action=edit&format=json&assert=bot&bot=true`, 'post', objectToFormData(data));
 }
 
 export async function getArticleContent(title: string): Promise<string | undefined> {
