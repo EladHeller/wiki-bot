@@ -152,7 +152,7 @@ export async function main() {
     const successContent = successPages.length ? `* ${successPages.map((x) => `[[${x}]]`).join('\n* ')}` : '';
     const errorContent = convertErrors.length ? `* ${convertErrors.map((x) => `[[${x}]]`).join('\n* ')}` : '';
 
-    const content = `${successContent}${errorContent ? `\n===דפים שהבוט נכשל להגן עליהם===\n${errorContent}` : ''}\n[[משתמש:בורה בורה]], לידיעתך. ~~~~`;
+    const content = `${successContent}${errorContent ? `\n===דפים שהבוט נכשל להגן עליהם===\n${errorContent}` : ''}\n[[משתמש:בורה בורה]], [[משתמש:מקף]] לידיעתכם. ~~~~`;
     await updateArticle('משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה', summaryAndTitle, content, summaryAndTitle);
     errors.push(...convertErrors);
   }
