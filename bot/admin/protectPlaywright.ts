@@ -4,6 +4,10 @@ import { ChromiumBrowser, Page } from 'playwright-core';
 let page: Page;
 let browser: ChromiumBrowser;
 
+const timeoutConfig = {
+  timeout: 10 * 1000,
+};
+
 export async function loginWithPlaywright(userName: string, password: string) {
   browser = await playwright.launchChromium({
     headless: false,
@@ -23,33 +27,15 @@ export async function loginWithPlaywright(userName: string, password: string) {
 export async function protectWithPlaywrihgt(pageName: string, reason: string) {
   await page.goto(`https://he.wikipedia.org/w/index.php?title=${encodeURIComponent(pageName.replace(/ /g, '_'))}&action=protect`);
   const isChecked = await page.getByRole('checkbox', { name: 'שינוי אפשרויות הגנה נוספות' }).isChecked();
-  if (isChecked) {
-    try {
-      await page.getByRole('group', { name: 'העברה' }).getByRole('combobox', { name: 'כל המשתמשים מורשים' }).click({
-        timeout: 10 * 1000,
-      });
-    } catch (e) {
-      console.log('try semiprotect');
-      await page.getByRole('group', { name: 'העברה' }).getByRole('combobox', { name: 'רק משתמשים ותיקים מורשים' }).click({
-        timeout: 10 * 1000,
-      });
-    }
+  const editCombo = page.getByRole('group', { name: 'עריכה' }).getByRole('combobox').first();
+  const editComboText = await editCombo.textContent();
+  const isSemiprotcted = editComboText === 'רק משתמשים ותיקים מורשים';
 
-    await page.getByRole('option', { name: 'רק בדוקי עריכות אוטומטית מורשים' }).getByText('רק בדוקי עריכות אוטומטית מורשים').click();
-  } else {
-    try {
-      await page.getByRole('group', { name: 'עריכה' }).getByRole('combobox', { name: 'כל המשתמשים מורשים' }).click({
-        timeout: 10 * 1000,
-      });
-    } catch (e) {
-      console.log('try semiprotect');
-      await page.getByRole('group', { name: 'עריכה' }).getByRole('combobox', { name: 'רק משתמשים ותיקים מורשים' }).click({
-        timeout: 10 * 1000,
-      });
-    }
+  const comboboxName = isSemiprotcted ? 'רק משתמשים ותיקים מורשים' : 'כל המשתמשים מורשים';
+  const groupLabel = (isChecked && !isSemiprotcted) ? 'העברה' : 'עריכה';
+  await page.getByRole('group', { name: groupLabel }).getByRole('combobox', { name: comboboxName }).click(timeoutConfig);
+  await page.getByRole('option', { name: 'רק בדוקי עריכות אוטומטית מורשים' }).getByText('רק בדוקי עריכות אוטומטית מורשים').click();
 
-    await page.getByRole('option', { name: 'רק בדוקי עריכות אוטומטית מורשים' }).getByText('רק בדוקי עריכות אוטומטית מורשים').click();
-  }
   await page.getByLabel('סיבה אחרת/נוספת:').click();
   await page.getByLabel('סיבה אחרת/נוספת:').fill(reason);
   await page.getByRole('button', { name: 'אישור' }).click();

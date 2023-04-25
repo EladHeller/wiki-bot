@@ -1,6 +1,8 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import { info, listCategory, login } from '../wikiAPI';
+import {
+  info, listCategory, login, updateArticle,
+} from '../wikiAPI';
 import { getLocalDate, promiseSequence } from '../utilities';
 import { closePlaywright, loginWithPlaywright, protectWithPlaywrihgt } from './protectPlaywright';
 
@@ -67,10 +69,10 @@ async function getTemplatesByCategory(category: string, exceptCategryFormat?: st
     res = await generator.next();
     const pages = res.value?.query?.categorymembers ?? [];
     const relevent = pages.filter((page: any) => !page.sortkeyprefix.startsWith('*')) ?? [];
-
+    const releventToProtect = relevent.filter((page) => !page.title.startsWith('קטגוריה:'));
     const batches: any[] = [];
-    for (let i = 0; i < relevent.length; i += 25) {
-      batches.push(relevent.slice(i, i + 25));
+    for (let i = 0; i < releventToProtect.length; i += 25) {
+      batches.push(releventToProtect.slice(i, i + 25));
     }
     await promiseSequence(10, batches.map((batch) => async () => {
       const needProtection = await needProtectFromTitles(batch.map((page: any) => page.title));
@@ -133,15 +135,26 @@ export async function main() {
       errors.push(title);
     }
   }
-  for (const title of convertPages) {
-    try {
-      console.log(`Not protecting ${title} for now`);
-      // await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
-    } catch (e) {
-      console.log(`Failed to protect ${title}`);
-      console.error(e);
-      errors.push(title);
+  if (convertPages.length) {
+    const convertErrors: string[] = [];
+    for (const title of convertPages) {
+      try {
+        console.log(`Protecting ${title}`);
+        await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
+      } catch (e) {
+        console.log(`Failed to protect ${title}`);
+        console.error(e);
+        convertErrors.push(title);
+      }
     }
+    const successPages = convertPages.filter((x) => !convertErrors.includes(x));
+    const summaryAndTitle = `לוג ריצה ${getLocalDate(new Date().toLocaleString())}`;
+    const successContent = successPages.length ? `* ${successPages.map((x) => `[[${x}]]`).join('\n* ')}` : '';
+    const errorContent = convertErrors.length ? `* ${convertErrors.map((x) => `[[${x}]]`).join('\n* ')}` : '';
+
+    const content = `${successContent}${errorContent ? `\n===דפים שהבוט נכשל להגן עליהם===\n${errorContent}` : ''}\n[[משתמש:בורה בורה]], לידיעתך. ~~~~`;
+    await updateArticle('משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה', summaryAndTitle, content, summaryAndTitle);
+    errors.push(...convertErrors);
   }
   await closePlaywright();
   if (errors.length > 0) {
