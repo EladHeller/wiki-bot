@@ -36,9 +36,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
       const batch: WikiPage[] = res.value?.query.categorymembers ?? [];
       await promiseSequence(10, batch.map((p: WikiPage) => async () => {
         if (match && !p.title.match(match)) return;
-        if (p.title === 'TODO: waiting for finnal approval') {
-          await deletePage(p.title, reason);
-        }
+        await deletePage(p.title, reason);
       }));
     } while (!res.done);
   } catch (error) {
@@ -49,7 +47,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
 export async function main() {
   await login();
   console.log('logged in');
-  await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'מחיקת דף פלט', /\/דוגמאות|\/פלט/);
+  await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט/);
   await deleteRedirects(119, [1], 'user:Sapper-bot/הפניות שיחה טיוטה לשיחה', 'הפניה ממרחב שיחת טיוטה למרחב השיחה');
   await deleteRedirects(118, [0], 'user:Sapper-bot/הפניות טיוטה לראשי', 'הפניה ממרחב הטיוטה למרחב הערכים');
   await deleteRedirects(3, [1], 'user:Sapper-bot/הפניות שיחת משתמש לשיחה', 'הפניה ממרחב שיחת משתמש למרחב שיחה');
