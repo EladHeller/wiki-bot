@@ -25,7 +25,7 @@ function sendMail(to, subject, html) {
 const baseCloudWatchLink = 'https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/';
 
 export async function handler(event) {
-  console.log('Received event:', JSON.stringify(event));
+  console.log('Received event:', JSON.stringify(event), 'upload success');
   let log;
   if (event.awslogs && event.awslogs.data) {
     try {

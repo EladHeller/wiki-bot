@@ -1,4 +1,4 @@
-import { S3 } from 'aws-sdk'; // eslint-disable-line import/no-extraneous-dependencies
+import { S3 } from '@aws-sdk/client-s3'; // eslint-disable-line import/no-extraneous-dependencies
 import 'dotenv/config';
 import fs from 'fs/promises';
 import crypto from 'crypto';
@@ -30,7 +30,7 @@ async function upload(bucket: string, key: string, filePath: string) {
   const s3Object = await s3.headObject({
     Bucket: bucket,
     Key: key,
-  }).promise();
+  });
   const file = await fs.readFile(filePath);
   console.log(file.length, s3Object.ContentLength);
   const etag = await getEtagOfFile(file);
@@ -40,11 +40,11 @@ async function upload(bucket: string, key: string, filePath: string) {
     return;
   }
 
-  await s3.upload({
+  await s3.putObject({
     Bucket: bucket,
     Key: key,
     Body: file,
-  }).promise();
+  });
   console.log(`${key} updated`);
 }
 
