@@ -1,6 +1,6 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import { getArticleContent, login, purge } from './wikiAPI';
+import { getArticleContent, login, purge } from './wiki/wikiAPI';
 
 export async function main() {
   await login();

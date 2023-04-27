@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
-import type { WikiPage } from './types';
-import { objectToFormData, objectToQueryString, promiseSequence } from './utilities';
+import type { WikiPage } from '../types';
+import { objectToFormData, objectToQueryString, promiseSequence } from '../utilities';
 import { baseLogin, getToken } from './wikiLogin';
 
 const jar = new CookieJar();

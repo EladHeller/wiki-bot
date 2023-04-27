@@ -1,5 +1,5 @@
 import { AxiosInstance } from 'axios';
-import { objectToFormData } from './utilities';
+import { objectToFormData } from '../utilities';
 
 export async function getToken(
   axiosClient: AxiosInstance,

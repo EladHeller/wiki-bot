@@ -1,9 +1,9 @@
 import 'dotenv/config';
 import {
   getArticleWithKipaTemplate, login, updateArticle,
-} from '../wikiAPI';
+} from '../wiki/wikiAPI';
 import { promiseSequence } from '../utilities';
-import { findTemplates } from '../newTemplateParser';
+import { findTemplates } from '../wiki/newTemplateParser';
 
 const TEMPLATE_NAME = 'כיפה';
 const url = 'https://www.kipa.co.il/';

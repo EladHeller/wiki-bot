@@ -1,8 +1,8 @@
 import { MayaCompany } from '../mayaAPI';
 import { WikiPage } from '../types';
 import { CurrencyCode, prettyNumericValue } from '../utilities';
-import { updateArticle } from '../wikiAPI';
-import WikiTemplateParser from '../WikiTemplateParser';
+import { updateArticle } from '../wiki/wikiAPI';
+import WikiTemplateParser from '../wiki/WikiTemplateParser';
 
 const currentYear = process.env.YEAR;
 const TEMPLATE_NAME = 'חברה מסחרית';

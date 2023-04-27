@@ -1,5 +1,5 @@
 import { getLocalDate } from '../utilities';
-import { getArticleContent, updateArticle } from '../wikiAPI';
+import { getArticleContent, updateArticle } from '../wiki/wikiAPI';
 
 export interface ArticleLog {
     text: string;

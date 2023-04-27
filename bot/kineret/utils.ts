@@ -1,6 +1,6 @@
 import { parseLocalDate } from '../utilities';
-import { getArticleContent, updateArticle } from '../wikiAPI';
-import WikiTemplateParser from '../WikiTemplateParser';
+import { getArticleContent, updateArticle } from '../wiki/wikiAPI';
+import WikiTemplateParser from '../wiki/WikiTemplateParser';
 
 const dateFormater = new Intl.DateTimeFormat('he-IL', {
   year: 'numeric',
