@@ -1,12 +1,11 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
+/* eslint-disable import/no-extraneous-dependencies */
 import {
   CloudFormation, Parameter, Capability,
   waitUntilStackUpdateComplete, waitUntilStackCreateComplete,
 } from '@aws-sdk/client-cloudformation';
 import 'dotenv/config';
 import fs from 'fs/promises';
-
-import { exec } from 'child_process';
+import { $ } from 'zx';
 
 const region = process.env.REGION;
 const bucketCodeName = process.env.CODE_BUCKET;
@@ -65,16 +64,21 @@ async function main() {
     ParameterValue: bucketCodeName,
   }]);
 
-  await new Promise((resolve, reject) => {
-    exec('sh ./build/deploy.sh', (error, stdout, stderr) => {
-      console.log(error, stdout, stderr);
-      if (error) {
-        reject(stderr);
-      } else {
-        resolve(stdout);
-      }
-    });
-  });
+  await $`npm run build`;
+  await $`cp ./package.json ./dist/package.json`;
+  await $`cd ./dist`;
+  await $`npm --quiet i --only=prod --no-bin-links`;
+  await $`rm -rf ./__tests__ ./package-lock.json`;
+  await $`cd -`;
+  await $`rm -f dist.zip`;
+  await $`zip -rq9 dist.zip ./dist`;
+  await $`cd ./send-email`;
+  await $`npm --quiet i --only=prod`;
+  await $`cd -`;
+  await $`rm -f email.zip`;
+  await $`zip -rq9 email.zip ./send-email`;
+  await $`npm run update-s3`;
+  console.log('finnish deploy!');
 
   await runTemplate(
     './build/t01.cf.yaml',
