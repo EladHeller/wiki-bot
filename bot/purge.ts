@@ -18,9 +18,5 @@ export async function main() {
   const lines = birthContent.split('\n');
   const relevent = lines.filter((line) => line.startsWith('* [[') && !line.includes('נפטר'));
   const articles = relevent.map((line) => line.match(/\* \[\[\d{4}\]\] – \[\[([^\]]+)\]\]/)?.[1]).filter((x) => x != null) as string[];
-  if (articles.length > 0) {
-    throw new Error(JSON.stringify(articles));
-  } else {
-    await purge(articles);
-  }
+  await purge(articles);
 }
