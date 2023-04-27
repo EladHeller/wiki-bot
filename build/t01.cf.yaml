@@ -56,7 +56,7 @@ Resources:
       - MarketValueLambdaIamRole
     Type: 'AWS::Lambda::Function'
     Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.BBBrn
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Market-value-function
       Runtime: nodejs18.x
       Environment:
