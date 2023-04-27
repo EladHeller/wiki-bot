@@ -48,6 +48,27 @@ export function getLocalDate(dateString:string): string {
   return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${date.getFullYear()}`;
 }
 
+const monthToNumber: Record<string, number> = {
+  ינואר: 1,
+  פברואר: 2,
+  מרץ: 3,
+  אפריל: 4,
+  מאי: 5,
+  יוני: 6,
+  יולי: 7,
+  אוגוסט: 8,
+  ספטמבר: 9,
+  אוקטובר: 10,
+  נובמבר: 11,
+  דצמבר: 12,
+};
+
+export function parseLocalDate(dateString:string): Date {
+  const [day, month, year] = dateString.split(' ');
+  const monthNumber = monthToNumber[month.replace('ב', '')];
+  return new Date(`${year}-${monthNumber}-${day}`);
+}
+
 export async function promiseSequence(size: number, callbacks: Array<() => Promise<any>>) {
   let batch = callbacks.splice(0, size);
 

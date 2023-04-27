@@ -1,5 +1,5 @@
 /* eslint-disable jest/prefer-expect-assertions */
-import { getLocalDate, prettyNumericValue } from '../utilities';
+import { getLocalDate, parseLocalDate, prettyNumericValue } from '../utilities';
 
 describe('prettyNumericValue', () => {
   it('should return 0 for zero', () => {
@@ -68,5 +68,13 @@ describe('getLocalDate', () => {
     const localDate = getLocalDate('2027-01-13');
 
     expect(localDate).toBe('13 בינואר 2027');
+  });
+});
+
+describe('parseLocalDate', () => {
+  it('should parse local date', () => {
+    const date = parseLocalDate('13 בינואר 2027');
+
+    expect(date).toStrictEqual(new Date('2027-01-13'));
   });
 });
