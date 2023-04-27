@@ -264,7 +264,7 @@ Resources:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
       Handler: dist/purge.main
-      Timeout: 20
+      Timeout: 21
       MemorySize: 512
       Code:
         S3Bucket: !Ref BucketCodeName

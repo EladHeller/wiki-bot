@@ -48,7 +48,7 @@ async function upload(bucket: string, key: string, filePath: string) {
   console.log(`${key} updated`);
 }
 
-async function main() {
+export default async function updateS3() {
   if (!bucketCodeName) {
     throw new Error('Bucket code variable is empty!');
   }
@@ -56,5 +56,3 @@ async function main() {
   await upload(bucketCodeName, 'dist.zip', './dist.zip');
   await upload(bucketCodeName, 'email.zip', './email.zip');
 }
-
-main().catch(console.error);

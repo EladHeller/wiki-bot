@@ -6,6 +6,7 @@ import {
 import 'dotenv/config';
 import fs from 'fs/promises';
 import { $ } from 'zx';
+import updateS3 from './update-s3';
 
 const region = process.env.REGION;
 const bucketCodeName = process.env.CODE_BUCKET;
@@ -77,8 +78,8 @@ async function main() {
   await $`cd ..`;
   await $`rm -f email.zip`;
   await $`zip -rq9 email.zip ./send-email`;
-  await $`npm i -g tsx`;
   await $`npm run update-s3`;
+  await updateS3();
   console.log('finnish deploy!');
 
   await runTemplate(
