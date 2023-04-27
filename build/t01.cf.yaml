@@ -301,6 +301,15 @@ Resources:
       SourceArn:  !GetAtt PurgeBirthdayEventRule.Arn 
       FunctionName: purge-birthday-function
 
+  ProtectTemplatesLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/purge-birthday-function'
+
 # protect templates
   ProtectTemplatesLambda:
     DependsOn:
