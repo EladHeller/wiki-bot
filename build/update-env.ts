@@ -7,6 +7,7 @@ import 'dotenv/config';
 import fs from 'fs/promises';
 import { $ } from 'zx';
 import updateS3 from './update-s3';
+import updateLambda from './update-lambda';
 
 const region = process.env.REGION;
 const bucketCodeName = process.env.CODE_BUCKET;
@@ -109,6 +110,8 @@ async function main() {
     }],
     ['CAPABILITY_NAMED_IAM'],
   );
+
+  await updateLambda();
 }
 
 main().then(() => {
