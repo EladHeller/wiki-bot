@@ -77,7 +77,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Send-email-function
-      Runtime: nodejs16.x
+      Runtime: nodejs18.x
       Environment:
         Variables:
           REGION: !Ref "AWS::Region"
