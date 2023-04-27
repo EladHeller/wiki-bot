@@ -67,16 +67,17 @@ async function main() {
   await $`npm run build`;
   await $`cp ./package.json ./dist/package.json`;
   await $`cd ./dist`;
-  await $`npm --quiet i --only=prod --no-bin-links`;
+  await $`npm --quiet i --omit=dev --no-bin-links`;
   await $`rm -rf ./__tests__ ./package-lock.json`;
   await $`cd ..`;
   await $`rm -f dist.zip`;
   await $`zip -rq9 dist.zip ./dist`;
   await $`cd ./send-email`;
-  await $`npm --quiet i --only=prod`;
+  await $`npm --quiet i --omit=dev`;
   await $`cd ..`;
   await $`rm -f email.zip`;
   await $`zip -rq9 email.zip ./send-email`;
+  await $`npm i -g tsx`;
   await $`npm run update-s3`;
   console.log('finnish deploy!');
 
