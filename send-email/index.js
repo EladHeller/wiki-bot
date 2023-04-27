@@ -29,6 +29,7 @@ function sendMail(to, subject, html) {
 const cloudWatchLink = 'https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Faws$252Flambda$252FMarket-value-function';
 
 exports.handler = async (event) => {
+  console.log('Received event:', JSON.stringify(event, null, 2));
   let logevents;
   if (event.awslogs && event.awslogs.data) {
     try {
