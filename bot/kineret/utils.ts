@@ -1,3 +1,4 @@
+import { parseLocalDate } from '../utilities';
 import { getArticleContent, updateArticle } from '../wikiAPI';
 import WikiTemplateParser from '../WikiTemplateParser';
 
@@ -28,16 +29,23 @@ function getChangeData(change: number) {
       icon: '[[File:Steady2.svg|11px]]',
     };
   }
+  const number = Math.round(Math.abs(change * 1000)) / 10;
+
   if (change > 0) {
     return {
-      text: 'עלייה',
+      text: `עלייה של ${number} ס"מ`,
       icon: '[[File:Increase2.svg|11px]]',
     };
   }
   return {
-    text: 'ירידה',
+    text: `ירידה של ${number} ס"מ`,
     icon: '[[File:Decrease2.svg|11px]]',
   };
+}
+
+function datesDiffereceInDays(date1: Date, date2: Date) {
+  // {{הפרש תאריכים|יום1|חודש1|שנה1|יום2|חודש2|שנה2}}
+  return `{{הפרש תאריכים|${date1.getDate()}|${date1.getMonth() + 1}|${date1.getFullYear()}|${date2.getDate()}|${date2.getMonth() + 1}|${date2.getFullYear()}}}`;
 }
 
 export async function updateLevel(
@@ -67,12 +75,14 @@ export async function updateLevel(
   const change = Number(level) - Number(template.templateData[LEVEL_FIELD]);
   const changeData = getChangeData(change);
   const oldDate = template.templateData[DATE_LEVEL_FIELD];
+  const parsedOldDate = parseLocalDate(oldDate);
+  const parsedDate = parseLocalDate(levelData.date);
 
   const newTemplateText = template.updateTamplateFromData({
     ...template.templateData,
     [dateLevelField]: date,
     [levelField]: level,
-    [CAHNGE_FIELD]: `${changeData.text} של ${Math.abs(change * 100)} ס"מ ${changeData.icon} מ-${oldDate}`,
+    [CAHNGE_FIELD]: `${changeData.text} ${changeData.icon} מלפני ${datesDiffereceInDays(parsedOldDate, parsedDate)}`,
   });
   const newContent = content.replace(oldTemplate, newTemplateText);
 
