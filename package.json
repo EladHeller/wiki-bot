@@ -4,7 +4,7 @@
   "description": "tradeBoot",
   "main": "dist/index.js",
   "scripts": {
-    "lint:test": "eslint ./**/*.ts ./send-email/**/*.js --max-warnings 0",
+    "lint:test": "eslint ./**/*.ts ./send-email/**/*.mjs --max-warnings 0",
     "type-check": "tsc --noEmit",
     "test": "jest",
     "build": "rm -rf dist && tsc",

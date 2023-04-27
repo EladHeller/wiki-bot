@@ -1,6 +1,6 @@
 /* eslint-disable import/no-extraneous-dependencies, import/prefer-default-export */
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
-import parseLogs from './parseLog';
+import parseLogs from './parseLog.mjs';
 
 const region = process.env.REGION;
 const ses = new SESClient({ region });
