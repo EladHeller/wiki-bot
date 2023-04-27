@@ -1,4 +1,8 @@
-import { CloudFormation } from 'aws-sdk'; // eslint-disable-line import/no-extraneous-dependencies
+// eslint-disable-next-line import/no-extraneous-dependencies
+import {
+  CloudFormation, Parameter, Capability,
+  waitUntilStackUpdateComplete, waitUntilStackCreateComplete,
+} from '@aws-sdk/client-cloudformation';
 import 'dotenv/config';
 import fs from 'fs/promises';
 
@@ -12,12 +16,12 @@ const cf = new CloudFormation({ region });
 async function runTemplate(
   templatePath: string,
   name: string,
-  parameters?: CloudFormation.Parameters,
-  capabilities?: CloudFormation.Capabilities,
-) {
+  parameters?: Parameter[],
+  capabilities?: Capability[],
+): Promise<void> {
   const stack = await cf.describeStacks({
     StackName: name,
-  }).promise();
+  });
   const template = await fs.readFile(templatePath, 'utf-8');
   const newStack = stack.Stacks != null && stack.Stacks.length < 1;
   if (newStack) {
@@ -26,7 +30,7 @@ async function runTemplate(
       TemplateBody: template,
       Capabilities: capabilities,
       Parameters: parameters,
-    }).promise();
+    });
   } else {
     try {
       await cf.updateStack({
@@ -34,28 +38,25 @@ async function runTemplate(
         TemplateBody: template,
         Capabilities: capabilities,
         Parameters: parameters,
-      }).promise();
+      });
     } catch (e) {
       if (e.message === 'No updates are to be performed.') {
         console.log(`template ${name} No updates are to be performed.`);
-        return null;
+        return;
       }
       throw e;
     }
   }
 
-  const { $response: { data, error } } = await Promise.race([
-    cf.waitFor('stackCreateComplete', { StackName: name }).promise(),
-    cf.waitFor('stackUpdateComplete', { StackName: name }).promise(),
-    cf.waitFor('stackRollbackComplete', { StackName: name }).promise(),
+  const { state, reason } = await Promise.race([
+    waitUntilStackCreateComplete({ client: cf, maxWaitTime: 1000 * 60 * 30 }, { StackName: name }),
+    waitUntilStackUpdateComplete({ client: cf, maxWaitTime: 1000 * 60 * 30 }, { StackName: name }),
   ]);
-  if (error || !data
-     || !['CREATE_COMPLETE', 'UPDATE_COMPLETE'].includes(data.Stacks?.[0]?.StackStatus ?? '')) {
-    console.log(error, data);
+  if (['ABORTED', 'FAILURE', 'TIMEOUT'].includes(state)) {
+    console.log(state, reason);
     throw new Error('Creation failed');
   }
   console.log(`template ${name} ${newStack ? 'created' : 'updated'}.`);
-  return data.Stacks?.[0].Outputs;
 }
 
 async function main() {
