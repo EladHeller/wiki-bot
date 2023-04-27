@@ -51,6 +51,7 @@
     "tough-cookie": "^4.1.2"
   },
   "devDependencies": {
+    "@aws-sdk/client-ses": "^3.321.1",
     "@babel/preset-env": "^7.20.2",
     "@babel/preset-typescript": "^7.21.0",
     "@types/jest": "^29.4.0",
@@ -59,7 +60,7 @@
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.54.0",
     "@typescript-eslint/parser": "^5.57.0",
-    "aws-sdk": "^2.1354.0",
+    "aws-sdk": "^2.1366.0",
     "eslint": "^8.37.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.27.5",
