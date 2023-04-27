@@ -17,8 +17,6 @@
     "us-stocks-articles": "tsx bot/scripts/usStocksBotUpdateArticles.ts",
     "stocks-articles": "tsx bot/scripts/stocksBotArticle.ts",
     "company-details": "tsx bot/companyDetailsBot.ts",
-    "update-lambda": "tsx ./build/update-lambda.ts",
-    "update-s3": "tsx ./build/update-s3.ts",
     "update-env": "tsx ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "kineret": "tsx bot/kineret/kineretBot.ts",

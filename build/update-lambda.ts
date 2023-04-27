@@ -6,7 +6,7 @@ const bucketCodeName = process.env.CODE_BUCKET;
 
 const lambda = new LambdaClient({ region });
 
-async function main() {
+export default async function updateLambda() {
   if (!bucketCodeName) {
     throw new Error('Bucket code variable is empty!');
   }
@@ -48,5 +48,3 @@ async function main() {
     S3Key: 'email.zip',
   }));
 }
-
-main().catch(console.error);

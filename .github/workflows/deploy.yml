@@ -44,4 +44,3 @@ jobs:
           export DELETE_PASSWORD=${{ secrets.WIKI_DELETE_USER_PASSWORD }}
 
           npm run update-env
-          npm run update-lambda
