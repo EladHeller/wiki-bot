@@ -69,12 +69,12 @@ async function main() {
   await $`cd ./dist`;
   await $`npm --quiet i --only=prod --no-bin-links`;
   await $`rm -rf ./__tests__ ./package-lock.json`;
-  await $`cd -`;
+  await $`cd ..`;
   await $`rm -f dist.zip`;
   await $`zip -rq9 dist.zip ./dist`;
   await $`cd ./send-email`;
   await $`npm --quiet i --only=prod`;
-  await $`cd -`;
+  await $`cd ..`;
   await $`rm -f email.zip`;
   await $`zip -rq9 email.zip ./send-email`;
   await $`npm run update-s3`;
