@@ -78,7 +78,6 @@ async function main() {
   await $`cd ..`;
   await $`rm -f email.zip`;
   await $`zip -rq9 email.zip ./send-email`;
-  await $`npm run update-s3`;
   await updateS3();
   console.log('finnish deploy!');
 
