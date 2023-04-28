@@ -354,7 +354,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: protect-templates-scheduler
-      ScheduleExpression: cron(0 8 ? * SUN-FRI *)
+      ScheduleExpression: cron(0 6 ? * SUN-FRI *)
       Targets:
         - Id: protect-templates-function
           Arn: !GetAtt ProtectTemplatesLambda.Arn
@@ -414,7 +414,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: delete-redirects-scheduler
-      ScheduleExpression: cron(0 8 ? * SUN-FRI *)
+      ScheduleExpression: cron(0 6 ? * SUN-FRI *)
       Targets:
         - Id: delete-redirects-function
           Arn: !GetAtt DeleteRedirectsLambda.Arn
