@@ -5,8 +5,8 @@ import { getCompanyData, googleFinanceRegex } from '../googleFinanceApi';
 import { promiseSequence } from '../utilities';
 import {
   getGoogleFinanceLinksWithContent, login, updateArticle,
-} from '../wikiAPI';
-import WikiTemplateParser from '../WikiTemplateParser';
+} from '../wiki/wikiAPI';
+import WikiTemplateParser from '../wiki/WikiTemplateParser';
 import { WikiPage } from '../types';
 
 async function main() {

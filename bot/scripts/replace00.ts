@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { promiseSequence } from '../utilities';
-import { login, externalUrl, updateArticle } from '../wikiAPI';
+import { login, externalUrl, updateArticle } from '../wiki/wikiAPI';
 
 const link = 'no666.wordpress.com';
 const link2 = 'www.no-666.com';

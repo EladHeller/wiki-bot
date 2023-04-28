@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import { AllDetailsResponse, getAllDetails } from './mayaAPI';
 import {
   getMayaLinks, login, updateArticle,
-} from './wikiAPI';
-import { buildTable } from './WikiParser';
+} from './wiki/wikiAPI';
+import { buildTable } from './wiki/WikiParser';
 import { WikiPage } from './types';
 
 interface ManagementDetails {

@@ -3,8 +3,8 @@ import { getMarketValue } from '../mayaAPI';
 import { promiseSequence } from '../utilities';
 import {
   login, getMayaLinks, updateArticle,
-} from '../wikiAPI';
-import WikiTemplateParser from '../WikiTemplateParser';
+} from '../wiki/wikiAPI';
+import WikiTemplateParser from '../wiki/WikiTemplateParser';
 import { WikiPage } from '../types';
 
 async function main() {

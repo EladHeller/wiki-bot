@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { rollbackUserContributions, undoContributions } from '../wikiAPI';
+import { rollbackUserContributions, undoContributions } from '../wiki/wikiAPI';
 
 const undo = false;
 export default async function main() {

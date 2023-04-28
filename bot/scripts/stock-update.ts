@@ -4,8 +4,8 @@ import {
   AllDetailsResponse,
   getAllDetails,
 } from '../mayaAPI';
-import { getCompanies, login } from '../wikiAPI';
-import WikiTemplateParser from '../WikiTemplateParser';
+import { getCompanies, login } from '../wiki/wikiAPI';
+import WikiTemplateParser from '../wiki/WikiTemplateParser';
 import { WikiPage } from '../types';
 
 async function main() {

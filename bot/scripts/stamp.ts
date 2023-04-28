@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { promiseSequence } from '../utilities';
-import { login, externalUrl, updateArticle } from '../wikiAPI';
+import { login, externalUrl, updateArticle } from '../wiki/wikiAPI';
 
 const link = 'israelphilately.org.il/he/catalog/articles';
 

@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import {
   deletePage, getRedirects, listCategory, login,
-} from '../wikiAPI';
+} from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
 import writeAdminBotLogs, { ArticleLog } from './log';

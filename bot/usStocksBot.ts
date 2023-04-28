@@ -4,8 +4,8 @@ import { getCompanyData, WikiPageWithGoogleFinance } from './googleFinanceApi';
 import { currencyName, getLocalDate, promiseSequence } from './utilities';
 import {
   getArticleContent, getGoogleFinanceLinks, login, updateArticle,
-} from './wikiAPI';
-import WikiTemplateParser from './WikiTemplateParser';
+} from './wiki/wikiAPI';
+import WikiTemplateParser from './wiki/WikiTemplateParser';
 
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
 

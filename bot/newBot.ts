@@ -3,8 +3,8 @@ import { getMarketValue, MayaMarketValue } from './mayaAPI';
 import { getLocalDate, prettyNumericValue } from './utilities';
 import {
   getArticleContent, getMayaLinks, login, updateArticle,
-} from './wikiAPI';
-import WikiTemplateParser from './WikiTemplateParser';
+} from './wiki/wikiAPI';
+import WikiTemplateParser from './wiki/WikiTemplateParser';
 
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 

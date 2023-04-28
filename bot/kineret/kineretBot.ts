@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { JSDOM } from 'jsdom';
-import { login } from '../wikiAPI';
+import { login } from '../wiki/wikiAPI';
 import updateDeadSeaLevel from './deadSeaBot';
 import {
   formatDate, updateLevel,

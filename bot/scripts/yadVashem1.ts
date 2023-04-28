@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { login, externalUrl, updateArticle } from '../wikiAPI';
+import { login, externalUrl, updateArticle } from '../wiki/wikiAPI';
 import { promiseSequence } from '../utilities';
 
 const oldLink = 'db.yadvashem.org/righteous/';

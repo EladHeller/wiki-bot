@@ -1,4 +1,4 @@
-import { findTemplates } from '../newTemplateParser';
+import { findTemplates } from '../wiki/newTemplateParser';
 
 describe('findTemplates', () => {
   it('should return empty array if no templates found', () => {

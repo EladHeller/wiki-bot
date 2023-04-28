@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import {
   info, listCategory, login,
-} from '../wikiAPI';
+} from '../wiki/wikiAPI';
 import { getLocalDate, promiseSequence } from '../utilities';
 import { closePlaywright, loginWithPlaywright, protectWithPlaywrihgt } from './protectPlaywright';
 import writeAdminBotLogs, { ArticleLog } from './log';

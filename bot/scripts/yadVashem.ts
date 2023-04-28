@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import {
   login, updateArticle, externalUrl,
-} from '../wikiAPI';
+} from '../wiki/wikiAPI';
 import { promiseSequence } from '../utilities';
 
 const oldLink = 'righteous.yadvashem.org/?searchType=righteous_only&language=en';
