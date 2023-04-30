@@ -119,7 +119,7 @@ export async function main() {
       || template.includes('שאילתות')
     || template.startsWith('משתמש:בורה בורה/')
     || template.startsWith('משתמש:עמד/')
-    || template.includes('משתמש:Kotz/'));
+    || template.startsWith('משתמש:Kotz/'));
 
   if (needToProtect.length === 0 && convertPages.length === 0) {
     console.log('No need to protect');
