@@ -104,7 +104,7 @@ export async function main() {
   const templatesByDate = await getTemplatesByDate();
   needToProtect = needToProtect.concat(templatesByDate);
 
-  const allConvertPages = await getTemplatesByCategory('ויקיפדיה:בוט/בוט ההסבה/דפי מפרט', 'ויקיפדיה:בוט/בוט ההסבה/דפי פלט');
+  const allConvertPages = await getTemplatesByCategory('ויקיפדיה/בוט/בוט ההסבה/דפי מפרט', 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט');
   const convertPages = allConvertPages
     .filter((template) => template.startsWith('שיחת תבנית:')
       || template.startsWith('שיחת קטגוריה:')
