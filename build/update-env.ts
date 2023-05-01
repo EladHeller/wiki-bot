@@ -95,11 +95,11 @@ async function main() {
       ParameterKey: 'WikiPassword',
       ParameterValue: process.env.PASSWORD,
     }, {
-      ParameterKey: 'WikiBaseUserName',
-      ParameterValue: process.env.BASE_USER_NAME,
+      ParameterKey: 'WikiProtectUserName',
+      ParameterValue: process.env.PROTECT_USER_NAME,
     }, {
-      ParameterKey: 'WikiBasePassword',
-      ParameterValue: process.env.BASE_PASSWORD,
+      ParameterKey: 'WikiProtectPassword',
+      ParameterValue: process.env.PROTECT_PASSWORD,
     },
     {
       ParameterKey: 'WikiDeleteUserName',

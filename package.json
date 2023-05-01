@@ -25,7 +25,7 @@
     "rollback": "tsx bot/scripts/rollback.ts",
     "delete-redirects": "tsx bot/admin/runDelete.ts",
     "protect": "tsx bot/admin/runProtect.ts",
-    "patrol": "tsx bot/patrolBot.ts",
+    "experiments": "tsx bot/experiments/index.ts",
     "yadVashem": "tsx bot/scripts/yadVashem.ts"
   },
   "repository": {
@@ -44,8 +44,6 @@
     "dotenv": "^16.0.3",
     "jsdom": "^21.1.1",
     "playwright": "^1.32.3",
-    "playwright-aws-lambda": "^0.10.0",
-    "playwright-core": "^1.32.3",
     "tough-cookie": "^4.1.2"
   },
   "devDependencies": {
