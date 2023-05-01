@@ -1,3 +1,4 @@
+/* eslint-disable no-loop-func */
 const { parseStringPromise } = require('xml2js');
 const fs = require('fs');
 
@@ -36,14 +37,21 @@ function readLargeFile(path) {
 
 async function main() {
   // await readLargeFile('hewiki-20230420-pages-articles.xml');
-
+  let botEdits = 0;
+  let userEdits = 0;
   for (let i = 0; i <= 9; i += 1) {
     const chunk = fs.readFileSync(`./data${i}.xml`, 'utf-8');
     const xml = await parseStringPromise(`<xml>${chunk}</xml>`);
-    console.log(xml.xml.page[0]);
+    xml.xml.page.forEach((page) => {
+      if (page.revision?.[0]?.contributor?.[0]?.username?.[0] === 'Sapper-bot') {
+        botEdits += 1;
+      } else if (page.revision?.[0]?.contributor?.[0]?.username?.[0] === 'החבלן') {
+        userEdits += 1;
+      }
+    });
+    console.log('chunk', i, 'done');
   }
-
-  console.log('success');
+  console.log({ botEdits, userEdits });
 }
 
 main();
