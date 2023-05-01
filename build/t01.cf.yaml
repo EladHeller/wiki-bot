@@ -9,10 +9,10 @@ Parameters:
   WikiPassword:
     Description: The password of wiki user.
     Type: String
-  WikiBaseUserName:
+  WikiProtectUserName:
     Description: The name of wiki user.
     Type: String
-  WikiBasePassword:
+  WikiProtectPassword:
     Description: The password of wiki user.
     Type: String
   WikiDeleteUserName:
@@ -321,8 +321,8 @@ Resources:
       Runtime: nodejs18.x
       Environment:
         Variables:
-          USER_NAME: !Ref WikiBaseUserName
-          PASSWORD: !Ref WikiBasePassword
+          USER_NAME: !Ref WikiProtectUserName
+          PASSWORD: !Ref WikiProtectPassword
       Handler: dist/admin/protect.main
       Timeout: 900
       MemorySize: 1024

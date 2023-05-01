@@ -1,10 +1,9 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import {
-  info, listCategory, login,
+  info, listCategory, login, protect,
 } from '../wiki/wikiAPI';
 import { getLocalDate, promiseSequence } from '../utilities';
-import { closePlaywright, loginWithPlaywright, protectWithPlaywrihgt } from './protectPlaywright';
 import writeAdminBotLogs, { ArticleLog } from './log';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
@@ -119,20 +118,18 @@ export async function main() {
       || template.includes('שאילתות')
     || template.startsWith('משתמש:בורה בורה/')
     || template.startsWith('משתמש:עמד/')
-    || template.includes('משתמש:Kotz/'));
+    || template.startsWith('משתמש:Kotz/'));
 
   if (needToProtect.length === 0 && convertPages.length === 0) {
     console.log('No need to protect');
     return;
   }
 
-  await loginWithPlaywright(process.env.USER_NAME || '', process.env.PASSWORD || '');
-
   const errors: string[] = [];
   for (const title of needToProtect) {
     try {
       console.log(`Protecting ${title}`);
-      await protectWithPlaywrihgt(title, 'מופיע בעמוד הראשי');
+      await protect(title, 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'מופיע בעמוד הראשי');
     } catch (e) {
       console.log(`Failed to protect ${title}`);
       console.error(e);
@@ -143,14 +140,13 @@ export async function main() {
   for (const title of convertPages) {
     try {
       console.log(`Protecting ${title}`);
-      await protectWithPlaywrihgt(title, 'דפי מפרט של בוט ההסבה');
+      await protect(title, 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'דפי מפרט של בוט ההסבה');
     } catch (e) {
       console.log(`Failed to protect ${title}`);
       console.error(e);
       convertErrors.push(title);
     }
   }
-  await closePlaywright();
 
   if (allConvertPages.length) {
     const logs: ArticleLog[] = allConvertPages.map((title) => {
