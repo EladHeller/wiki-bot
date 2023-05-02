@@ -41,7 +41,7 @@ function textToMarketCao(marketCap: string): MarketCap {
   const num = matches[1];
   const numberName = matches[2];
   return {
-    number: `${num}${numberName ? ` [[${numberSignToHebrewNumber[matches[2]]}]]` : ''}`,
+    number: `${num}${(numberName && numberSignToHebrewNumber[numberName]) ? ` [[${numberSignToHebrewNumber[numberName]}]]` : ''}`,
     currency: matches[3],
   };
 }
