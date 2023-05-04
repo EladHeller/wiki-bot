@@ -12,7 +12,7 @@ const fieldsForWiki = [
   { mayaName: ['סה"כ הכנסות'], wikiName: 'הכנסה' },
   { mayaName: ['רווח תפעולי'], wikiName: 'רווח תפעולי' },
   { mayaName: ['רווח נקי', 'רווח נקי מיוחס לבעלי המניות'], wikiName: 'רווח' },
-  { mayaName: ['הון עצמי', 'הון עצמי מיוחס לבעלי המניות'], wikiName: 'הון עצמי' },
+  { mayaName: ['הון עצמי', 'הון עצמי מיוחס לבעלי המניות', 'סה"כ הון'], wikiName: 'הון עצמי' },
   { mayaName: ['סך מאזן'], wikiName: 'סך המאזן' },
 ];
 const NAME_FIELD = 'שם';
