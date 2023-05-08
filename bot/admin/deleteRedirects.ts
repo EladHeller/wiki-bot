@@ -7,7 +7,7 @@ import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
 import writeAdminBotLogs, { ArticleLog } from './log';
 
-async function deleteRedirects(from: number, to: number[], title: string, reason: string) {
+async function deleteRedirects(from: number, to: number[], reasons: string[]) {
   const generator = getRedirects(from, to);
   const all: WikiPage[] = [];
   const errors: string[] = [];
@@ -20,6 +20,7 @@ async function deleteRedirects(from: number, to: number[], title: string, reason
       all.push(...relevent);
       await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
         try {
+          const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
           await deletePage(p.title, reason);
         } catch (error) {
           errors.push(p.title);
@@ -84,10 +85,10 @@ export async function main() {
   console.log('logged in');
   const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט/);
   const logs: ArticleLog[] = [];
-  logs.push(...(await deleteRedirects(119, [1], 'user:Sapper-bot/הפניות שיחה טיוטה לשיחה', 'הפניה ממרחב שיחת טיוטה למרחב השיחה')));
-  logs.push(...(await deleteRedirects(118, [0], 'user:Sapper-bot/הפניות טיוטה לראשי', 'הפניה ממרחב הטיוטה למרחב הערכים')));
-  logs.push(...(await deleteRedirects(3, [1], 'user:Sapper-bot/הפניות שיחת משתמש לשיחה', 'הפניה ממרחב שיחת משתמש למרחב שיחה')));
-  logs.push(...(await deleteRedirects(0, [2, 118], 'user:Sapper-bot/הפניות ראשי למשתמש או טיוטה', 'הפניה ממרחב ראשי למרחב טיוטה')));
+  logs.push(...(await deleteRedirects(119, [1], ['הפניה ממרחב שיחת טיוטה למרחב השיחה'])));
+  logs.push(...(await deleteRedirects(118, [0], ['הפניה ממרחב הטיוטה למרחב הערכים'])));
+  logs.push(...(await deleteRedirects(3, [1], ['הפניה ממרחב שיחת משתמש למרחב שיחה'])));
+  logs.push(...(await deleteRedirects(0, [2, 118], ['הפניה ממרחב ראשי למרחב משתמש', 'הפניה ממרחב ראשי למרחב טיוטה'])));
   await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
   await writeAdminBotLogs(convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
 }
