@@ -5,6 +5,7 @@ import updateDeadSeaLevel from './deadSeaBot';
 import {
   formatDate, updateLevel,
 } from './utils';
+import shabathProtectorDecorator from '../decorators/shabathProtector';
 
 interface KinneretLevelRecord {
   Survey_Date: string;
@@ -56,11 +57,11 @@ async function kineret() {
   await updateLevel({ date, level }, articleName, '#switch: {{{מאפיין}}}');
 }
 
-export async function main() {
+export const main = shabathProtectorDecorator(async () => {
   await login();
   await kineret();
   await updateDeadSeaLevel();
-}
+});
 
 export default {
   main,

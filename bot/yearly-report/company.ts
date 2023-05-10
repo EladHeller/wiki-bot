@@ -1,6 +1,7 @@
 import { MayaCompany } from '../mayaAPI';
 import { WikiPage } from '../types';
 import { CurrencyCode, prettyNumericValue } from '../utilities';
+import { getTemplateKeyValueData, findTemplates } from '../wiki/newTemplateParser';
 import { updateArticle } from '../wiki/wikiAPI';
 import WikiTemplateParser from '../wiki/WikiTemplateParser';
 
@@ -12,7 +13,7 @@ const fieldsForWiki = [
   { mayaName: ['סה"כ הכנסות'], wikiName: 'הכנסה' },
   { mayaName: ['רווח תפעולי'], wikiName: 'רווח תפעולי' },
   { mayaName: ['רווח נקי', 'רווח נקי מיוחס לבעלי המניות'], wikiName: 'רווח' },
-  { mayaName: ['הון עצמי', 'הון עצמי מיוחס לבעלי המניות'], wikiName: 'הון עצמי' },
+  { mayaName: ['הון עצמי', 'הון עצמי מיוחס לבעלי המניות', 'סה"כ הון'], wikiName: 'הון עצמי' },
   { mayaName: ['סך מאזן'], wikiName: 'סך המאזן' },
 ];
 const NAME_FIELD = 'שם';
@@ -114,7 +115,17 @@ export default class Company {
   }
 
   updateCompanyArticle() {
-    return updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', this.newArticleText);
+    let finalContent = this.newArticleText;
+    const references = findTemplates(finalContent, 'הערה', this.name);
+    references.forEach((reference) => {
+      const referenceData = getTemplateKeyValueData(reference);
+      const referenceKey = referenceData.שם;
+      const previousYear = Number(currentYear) - 1;
+      if (referenceKey && referenceKey.startsWith(`דוח${previousYear}`)) {
+        finalContent = finalContent.replace(reference, '');
+      }
+    });
+    return updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', finalContent);
   }
 
   updateWikiTamplate() {
