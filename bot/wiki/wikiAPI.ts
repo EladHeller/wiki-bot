@@ -300,6 +300,14 @@ export async function undoContributions(user:string, summary: string, count = 5)
   }));
 }
 
+export async function* fileUsage(pageIds: string[], limit = 500) {
+  const props = encodeURIComponent('title|ids');
+  const pageIdsString = encodeURIComponent(pageIds.join('|'));
+  const path = `${baseUrl}?action=query&format=json&list=fileusage&fuprop=${props}&fulimit=${limit}&pageids=${pageIdsString}`;
+
+  yield* continueQuery(path);
+}
+
 export async function protect(title:string, protections: string, expiry: string, reason: string) {
   return request(`${baseUrl}?action=protect&format=json&assert=bot`, 'post', objectToFormData({
     title, token, expiry, reason, protections,
