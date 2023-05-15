@@ -91,7 +91,7 @@ export async function getMayaLinks(withContent = false): Promise<Record<string, 
   const path = `${baseUrl}?action=query&format=json`
   // Pages with תבנית:מידע בורסאי
   + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
-  + `&prop=${props}`
+  + `&prop=${props}&ellimit=5000`
   // wikidata identifier
   + `&ppprop=wikibase_item&redirects=1${
     // Get content of page

@@ -12,7 +12,6 @@
     "yearly-report": "tsx bot/yearly-report/index.ts",
     "stamp": "tsx bot/scripts/stamp.ts",
     "bot": "tsx bot/newBot.ts",
-    "identity": "tsx bot/mayaIdentityIndex.ts",
     "us-stocks": "tsx bot/usStocksBot.ts",
     "us-stocks-articles": "tsx bot/scripts/usStocksBotUpdateArticles.ts",
     "stocks-articles": "tsx bot/scripts/stocksBotArticle.ts",
