@@ -1,6 +1,6 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import { getCompanyData, WikiPageWithGoogleFinance } from './googleFinanceApi';
+import { getCompanyData, WikiPageWithGoogleFinance } from './API/googleFinanceApi';
 import { currencyName, getLocalDate, promiseSequence } from './utilities';
 import {
   getArticleContent, getGoogleFinanceLinks, login, updateArticle,

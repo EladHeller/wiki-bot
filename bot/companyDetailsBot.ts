@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import { AllDetailsResponse, getAllDetails } from './mayaAPI';
 import {
   getArticleContent,
   getMayaLinks, login, updateArticle,
@@ -11,6 +10,7 @@ import {
 import { WikiPage } from './types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from './wiki/newTemplateParser';
 import parseTableText from './wiki/wikiTableParser';
+import { AllDetailsResponse, getAllDetails } from './API/mayaAPI';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
 
