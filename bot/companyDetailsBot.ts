@@ -101,20 +101,37 @@ function getCompanyDetails(
     manualApproval: tableRow?.manualApproval,
   };
 }
-function getRowStyle(ceuEqual?: JobChange, chairmanEqual?: JobChange) {
-  if (ceuEqual === 'כן' && chairmanEqual === 'כן') {
+function getRowStyle(ceoEqual?: JobChange, chairmanEqual?: JobChange) {
+  if (ceoEqual === 'כן' && chairmanEqual === 'כן') {
     return 'bgcolor="#ccffcc"';
   }
 
   const possibleStatuses: JobChange[] = ['כן', 'כנראה שכן'];
 
-  if (possibleStatuses.includes(ceuEqual ?? '-') && possibleStatuses.includes(chairmanEqual ?? '-')) {
+  if (possibleStatuses.includes(ceoEqual ?? '-') && possibleStatuses.includes(chairmanEqual ?? '-')) {
     return 'bgcolor="ffffcc"';
   }
   return undefined;
 }
 
-function getManualApprovalText(manualApproval?: boolean): string {
+function getManualApprovalText(
+  manualApproval?: boolean,
+  ceoEqual?: JobChange,
+  chairmanEqual?: JobChange,
+): string {
+  if (ceoEqual === 'כן' && chairmanEqual === 'כן') {
+    return 'Y';
+  }
+  const notApplicapble = ['לא קיים בערך', 'לא קיים במאי״ה', 'לא ידוע', '-'];
+  if (notApplicapble.includes(ceoEqual ?? '-') && notApplicapble.includes(chairmanEqual ?? '-')) {
+    return 'N/A';
+  }
+  const needApprovalStauses = ['כנראה שלא', 'כנראה שכן'];
+  const isApprovalNeeded = needApprovalStauses.includes(chairmanEqual ?? '')
+     || needApprovalStauses.includes(ceoEqual ?? '');
+  if (!isApprovalNeeded) {
+    return 'N/A';
+  }
   if (manualApproval == null) {
     return '';
   }
@@ -122,10 +139,13 @@ function getManualApprovalText(manualApproval?: boolean): string {
 }
 
 function getManualApprovalValue(manualApproval?: string) {
-  if (!manualApproval) {
-    return undefined;
+  if (manualApproval === 'V' || manualApproval === 'v') {
+    return true;
   }
-  return manualApproval === 'V' || manualApproval === 'v';
+  if (manualApproval === 'X' || manualApproval === 'x') {
+    return false;
+  }
+  return undefined;
 }
 
 async function saveCompanyDetails(details:ManagementDetails[]) {
@@ -133,9 +153,6 @@ async function saveCompanyDetails(details:ManagementDetails[]) {
     chairman, articleChairman, CEO, articleCEO, title,
     chairmanEqual, CEOEqual, manualApproval,
   }): TableRow => {
-    const needApprovalStauses = ['כנראה שלא', 'כנראה שכן'];
-    const isApprovalNeeded = needApprovalStauses.includes(chairmanEqual ?? '')
-     || needApprovalStauses.includes(CEOEqual ?? '');
     const row = [
       `[[${title}]]`,
       chairman ?? '',
@@ -144,7 +161,7 @@ async function saveCompanyDetails(details:ManagementDetails[]) {
       CEO ?? '',
       articleCEO ?? '',
       CEOEqual ?? '',
-      isApprovalNeeded ? getManualApprovalText(manualApproval) : '-',
+      getManualApprovalText(manualApproval, CEOEqual, chairmanEqual) ?? '-',
     ];
     const fields = row.map((x) => x ?? '').map((x) => x.replace(/,(\S)/g, ', $1'));
     return {
@@ -156,7 +173,14 @@ async function saveCompanyDetails(details:ManagementDetails[]) {
     ['שם החברה', 'יושב ראש', 'יושב ראש בערך', 'יושב ראש זהה?', 'מנכל', 'מנכל בערך', 'מנכל זהה?', 'אישור ידני'],
     rows,
   );
-  const explanation = 'בעמודת אישור ידני יש לסמן V אם רוצים שהבוט יעדכן את הערך ו-X אם רוצים שהבוט לא יעדכן את הערך. בשורות שבהן אין צורך באישור יופיע -\nֿ\n';
+  const explanation = `עמודת אישור ידני:
+{{ש}}'''Y''' - שני הערכים זהים.
+{{ש}}'''N/A''' - לא נרשת שום פעולה.
+{{ש}}בתאים הריקים צריך לסמן אחד משתי האפשרויות:
+{{ש}}'''X''' - לסמן לבוט לא לעדכן את הערך.
+{{ש}}'''V''' - לסמן לבוט לעדכן את הערך.
+
+`;
   await updateArticle(LOG_ARTICLE_NAME, 'פרטי חברה', explanation + tableText);
 }
 
