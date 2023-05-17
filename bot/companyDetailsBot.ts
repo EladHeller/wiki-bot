@@ -11,6 +11,8 @@ import { WikiPage } from './types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from './wiki/newTemplateParser';
 import parseTableText from './wiki/wikiTableParser';
 import { AllDetailsResponse, getAllDetails } from './API/mayaAPI';
+import { getUsersFromTagParagraph } from './wiki/paragraphParser';
+import { getLocalDate } from './utilities';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
 
@@ -181,7 +183,7 @@ async function saveCompanyDetails(details:ManagementDetails[]) {
 {{ש}}'''V''' - לסמן לבוט לעדכן את הערך.
 
 `;
-  await updateArticle(LOG_ARTICLE_NAME, 'פרטי חברה', explanation + tableText);
+  return updateArticle(LOG_ARTICLE_NAME, 'פרטי חברה', explanation + tableText);
 }
 
 async function getTableData() : Promise<ManagementDetails[]> {
@@ -239,14 +241,28 @@ async function updateIfNeeded(
   }
 }
 
+async function tagUsers() {
+  const page = 'שיחת משתמש:Sapper-bot/פרטי חברה';
+  const paragraphName = 'פסקת תיוג';
+  const content = await getArticleContent(page);
+  if (!content) {
+    throw new Error(`No content: ${page}`);
+  }
+  const users = getUsersFromTagParagraph(content, paragraphName);
+  const localDate = getLocalDate(new Date().toDateString());
+  console.log(await updateArticle(
+    page,
+    'תיוג משתמשים',
+    `${users.join(',')}, הטבלה עודכנה. ~~~~`,
+    `ריצה בתאריך - ${localDate}`,
+  ));
+}
+
 async function main() {
   await login();
   console.log('Login success');
-
   const tableData = await getTableData();
-
   const results = await getMayaLinks(true);
-  // await fs.writeFile('./maya-links.json', JSON.stringify(results, null, 2));
   const managementDetails:ManagementDetails[] = [];
   try {
     for (const page of Object.values(results)) {
@@ -273,8 +289,11 @@ async function main() {
     console.log(error?.data ?? error?.message ?? error);
   }
 
-  // await fs.writeFile('./res-management.json', JSON.stringify(managementDetails, null, 2));
-  await saveCompanyDetails(managementDetails);
+  const updateResult = await saveCompanyDetails(managementDetails);
+  const isChanged = !('nochange' in updateResult.edit);
+  if (isChanged) {
+    await tagUsers();
+  }
 }
 
 main().catch((error) => {
