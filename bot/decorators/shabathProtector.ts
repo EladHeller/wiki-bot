@@ -1,7 +1,7 @@
 export default function shabathProtectorDecorator(cb: (...args: any[]) => any) {
   return async function shabathProtector(...args: any[]) {
     const currentDateUTC = new Date(); // Lambda is in UTC
-    const day = currentDateUTC.getDate();
+    const day = currentDateUTC.getDay();
     const hour = currentDateUTC.getHours();
     /**
        * The earliar Shabath starts in Israel, is about 16:00 on Friday in winter (14 because
