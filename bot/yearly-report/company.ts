@@ -1,4 +1,4 @@
-import { MayaCompany } from '../mayaAPI';
+import { MayaCompany } from '../API/mayaAPI';
 import { WikiPage } from '../types';
 import { CurrencyCode, prettyNumericValue } from '../utilities';
 import { getTemplateKeyValueData, findTemplates } from '../wiki/newTemplateParser';

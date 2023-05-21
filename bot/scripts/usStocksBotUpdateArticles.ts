@@ -1,7 +1,7 @@
 /* eslint-disable no-loop-func */
 import 'dotenv/config';
 import fs from 'fs/promises';
-import { getCompanyData, googleFinanceRegex } from '../googleFinanceApi';
+import { getCompanyData, googleFinanceRegex } from '../API/googleFinanceApi';
 import { promiseSequence } from '../utilities';
 import {
   getGoogleFinanceLinksWithContent, login, updateArticle,

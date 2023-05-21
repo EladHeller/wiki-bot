@@ -91,7 +91,7 @@ export async function getMayaLinks(withContent = false): Promise<Record<string, 
   const path = `${baseUrl}?action=query&format=json`
   // Pages with תבנית:מידע בורסאי
   + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
-  + `&prop=${props}`
+  + `&prop=${props}&ellimit=5000`
   // wikidata identifier
   + `&ppprop=wikibase_item&redirects=1${
     // Get content of page
@@ -298,6 +298,14 @@ export async function undoContributions(user:string, summary: string, count = 5)
   await promiseSequence(30, contributes.map((contribute) => async () => {
     await undo(contribute.title, summary, contribute.revid);
   }));
+}
+
+export async function* fileUsage(pageIds: string[], limit = 500) {
+  const props = encodeURIComponent('title|ids');
+  const pageIdsString = encodeURIComponent(pageIds.join('|'));
+  const path = `${baseUrl}?action=query&format=json&list=fileusage&fuprop=${props}&fulimit=${limit}&pageids=${pageIdsString}`;
+
+  yield* continueQuery(path);
 }
 
 export async function protect(title:string, protections: string, expiry: string, reason: string) {

@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import { getMarketValue, MayaMarketValue } from './mayaAPI';
 import { getLocalDate, prettyNumericValue } from './utilities';
 import {
   getArticleContent, getMayaLinks, login, updateArticle,
 } from './wiki/wikiAPI';
 import WikiTemplateParser from './wiki/WikiTemplateParser';
+import { MayaMarketValue, getMarketValue } from './API/mayaAPI';
 
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 

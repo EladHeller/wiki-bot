@@ -5,3 +5,5 @@
 *.zip
 *.log
 *.xml
+res*.json
+maya*.json
