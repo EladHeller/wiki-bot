@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { getMarketValue } from '../mayaAPI';
+import { getMarketValue } from '../API/mayaAPI';
 import { promiseSequence } from '../utilities';
 import {
   login, getMayaLinks, updateArticle,
