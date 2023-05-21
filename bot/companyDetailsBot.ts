@@ -169,14 +169,18 @@ async function saveCompanyDetails(details:ManagementDetails[]) {
         CEO ?? '',
         articleCEO ?? '',
         CEOEqual ?? '',
-        getManualApprovalText(manualApproval, CEOEqual, chairmanEqual),
+        manualApprovalText,
       ];
       const fields = row.map((x) => x ?? '').map((x) => x.replace(/,(\S)/g, ', $1'));
       return {
         fields,
         style: getRowStyle(CEOEqual, chairmanEqual),
       };
-    }).filter((x) : x is TableRow => x != null);
+    }).filter((x) : x is TableRow => x != null).sort((a, b) => {
+      const aManualApproval = a.fields.at(-1) ?? '';
+      const bManualApproval = b.fields.at(-1) ?? '';
+      return aManualApproval.toString().localeCompare(bManualApproval.toString());
+    });
 
   const tableText = buildTableWithStyle(
     ['שם החברה', 'יושב ראש', 'יושב ראש בערך', 'יושב ראש זהה?', 'מנכל', 'מנכל בערך', 'מנכל זהה?', 'אישור ידני'],
