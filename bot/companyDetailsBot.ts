@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 import 'dotenv/config';
 import {
   getArticleContent,
@@ -15,6 +16,7 @@ import { getUsersFromTagParagraph } from './wiki/paragraphParser';
 import { getLocalDate } from './utilities';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
+const notApplicapble: JobChange[] = ['לא קיים בערך', 'לא קיים במאי״ה', 'לא ידוע', '-'];
 
 const LOG_ARTICLE_NAME = 'user:sapper-bot/פרטי חברה';
 const TEMPLATE_NAME = 'חברה מסחרית';
@@ -124,7 +126,6 @@ function getManualApprovalText(
   if (ceoEqual === 'כן' && chairmanEqual === 'כן') {
     return 'Y';
   }
-  const notApplicapble = ['לא קיים בערך', 'לא קיים במאי״ה', 'לא ידוע', '-'];
   if (notApplicapble.includes(ceoEqual ?? '-') && notApplicapble.includes(chairmanEqual ?? '-')) {
     return 'N/A';
   }
@@ -151,33 +152,39 @@ function getManualApprovalValue(manualApproval?: string) {
 }
 
 async function saveCompanyDetails(details:ManagementDetails[]) {
-  const rows = details.map(({
-    chairman, articleChairman, CEO, articleCEO, title,
-    chairmanEqual, CEOEqual, manualApproval,
-  }): TableRow => {
-    const row = [
-      `[[${title}]]`,
-      chairman ?? '',
-      articleChairman ?? '',
-      chairmanEqual ?? '',
-      CEO ?? '',
-      articleCEO ?? '',
-      CEOEqual ?? '',
-      getManualApprovalText(manualApproval, CEOEqual, chairmanEqual) ?? '-',
-    ];
-    const fields = row.map((x) => x ?? '').map((x) => x.replace(/,(\S)/g, ', $1'));
-    return {
-      fields,
-      style: getRowStyle(CEOEqual, chairmanEqual),
-    };
-  });
+  const rows = details
+    .map(({
+      chairman, articleChairman, CEO, articleCEO, title,
+      chairmanEqual, CEOEqual, manualApproval,
+    }): TableRow | undefined => {
+      const manualApprovalText = getManualApprovalText(manualApproval, CEOEqual, chairmanEqual);
+      if (['Y', 'N/A'].includes(manualApprovalText)) {
+        return undefined;
+      }
+      const row = [
+        `[[${title}]]`,
+        chairman ?? '',
+        articleChairman ?? '',
+        chairmanEqual ?? '',
+        CEO ?? '',
+        articleCEO ?? '',
+        CEOEqual ?? '',
+        getManualApprovalText(manualApproval, CEOEqual, chairmanEqual),
+      ];
+      const fields = row.map((x) => x ?? '').map((x) => x.replace(/,(\S)/g, ', $1'));
+      return {
+        fields,
+        style: getRowStyle(CEOEqual, chairmanEqual),
+      };
+    }).filter((x) : x is TableRow => x != null);
+
   const tableText = buildTableWithStyle(
     ['שם החברה', 'יושב ראש', 'יושב ראש בערך', 'יושב ראש זהה?', 'מנכל', 'מנכל בערך', 'מנכל זהה?', 'אישור ידני'],
     rows,
   );
   const explanation = `עמודת אישור ידני:
 {{ש}}'''Y''' - שני הערכים זהים.
-{{ש}}'''N/A''' - לא נרשת שום פעולה.
+{{ש}}'''N/A''' - לא נדרשת שום פעולה.
 {{ש}}בתאים הריקים צריך לסמן אחד משתי האפשרויות:
 {{ש}}'''X''' - לסמן לבוט לא לעדכן את הערך.
 {{ש}}'''V''' - לסמן לבוט לעדכן את הערך.
@@ -222,13 +229,22 @@ async function updateIfNeeded(
   const content = page.revisions?.[0].slots.main['*'];
   const cloneTemplate = { ...template };
   let needUpdate = false;
-  if (companyDetails.CEOEqual === 'לא קיים בערך' && companyDetails.CEO) {
+
+  const subjectToChangeStatsuses: JobChange[] = ['כנראה שכן', 'כנראה שלא'];
+
+  const needToUpdateCEO = companyDetails.CEOEqual === 'לא קיים בערך' || (companyDetails.manualApproval && subjectToChangeStatsuses.includes(companyDetails.CEOEqual ?? '-'));
+  if (needToUpdateCEO && companyDetails.CEO) {
     needUpdate = true;
     cloneTemplate['מנכ"ל'] = companyDetails.CEO;
+    companyDetails.articleCEO = companyDetails.CEO;
+    companyDetails.CEOEqual = 'כן';
   }
-  if (companyDetails.chairmanEqual === 'לא קיים בערך' && companyDetails.chairman) {
+  const needToUpdateChairman = companyDetails.chairmanEqual === 'לא קיים בערך' || (companyDetails.manualApproval && subjectToChangeStatsuses.includes(companyDetails.chairmanEqual ?? '-'));
+  if (needToUpdateChairman && companyDetails.chairman) {
     needUpdate = true;
     cloneTemplate['יו"ר'] = companyDetails.chairman;
+    companyDetails.articleChairman = companyDetails.chairman;
+    companyDetails.chairmanEqual = 'כן';
   }
 
   if (needUpdate && content) {
@@ -249,6 +265,9 @@ async function tagUsers() {
     throw new Error(`No content: ${page}`);
   }
   const users = getUsersFromTagParagraph(content, paragraphName);
+  if (users.length === 0) {
+    return;
+  }
   const localDate = getLocalDate(new Date().toDateString());
   console.log(await updateArticle(
     page,
@@ -258,14 +277,13 @@ async function tagUsers() {
   ));
 }
 
-async function main() {
-  await login();
-  console.log('Login success');
-  const tableData = await getTableData();
-  const results = await getMayaLinks(true);
+async function getManamentDetails(
+  tableData: ManagementDetails[],
+  results: Record<string, WikiPage>,
+) {
   const managementDetails:ManagementDetails[] = [];
-  try {
-    for (const page of Object.values(results)) {
+  for (const page of Object.values(results)) {
+    try {
       const res = await getAllDetails(page);
       const isDeleted = res?.allDetails?.CompanyDetails?.CompanyIndicators.some(({ Key, Value }) => Key === 'DELETED' && Value === true);
       const content = page.revisions?.[0].slots.main['*'];
@@ -284,10 +302,20 @@ async function main() {
       } else {
         console.log(`${page.title} has no data`);
       }
+    } catch (error) {
+      console.log(error?.data ?? error?.message ?? error);
     }
-  } catch (error) {
-    console.log(error?.data ?? error?.message ?? error);
   }
+
+  return managementDetails;
+}
+
+async function main() {
+  await login();
+  console.log('Login success');
+  const tableData = await getTableData();
+  const results = await getMayaLinks(true);
+  const managementDetails = await getManamentDetails(tableData, results);
 
   const updateResult = await saveCompanyDetails(managementDetails);
   const isChanged = !('nochange' in updateResult.edit);
