@@ -1,11 +1,8 @@
 import 'dotenv/config';
-import { login, protect } from '../wiki/wikiAPI';
+import { chatWithTerminal } from '../API/openai';
 
 async function main() {
-  await login();
-  // const res = await protect('user:החבלן/test', 'edit=autopatrolled', 'never', 'בדיקת הבוט');
-  const res = await protect('user:החבלן/test', 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'בדיקת הבוט');
-  console.log(JSON.stringify(res, null, 2));
+  console.log(await chatWithTerminal('curl http://example.com'));
 }
 
 main();

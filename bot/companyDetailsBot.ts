@@ -14,9 +14,10 @@ import parseTableText from './wiki/wikiTableParser';
 import { AllDetailsResponse, getAllDetails } from './API/mayaAPI';
 import { getUsersFromTagParagraph } from './wiki/paragraphParser';
 import { getLocalDate } from './utilities';
+import { isTwoWordsIsTheSamePerson } from './API/openai';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
-const notApplicapble: JobChange[] = ['לא קיים בערך', 'לא קיים במאי״ה', 'לא ידוע', '-'];
+const notApplicapble: JobChange[] = ['לא קיים במאי״ה', 'לא ידוע', '-'];
 
 const LOG_ARTICLE_NAME = 'user:sapper-bot/פרטי חברה';
 const TEMPLATE_NAME = 'חברה מסחרית';
@@ -40,7 +41,7 @@ function getWordsEquals(articleJob: string, mayaJob: string) : boolean {
   return jobWords.filter((word) => articleJob.includes(word)).length >= 2;
 }
 
-function getJobChange(articleJob: string, mayaJob: string): JobChange {
+async function getJobChange(articleJob: string, mayaJob: string): Promise<JobChange> {
   if (!articleJob && !mayaJob) {
     return '-';
   }
@@ -53,7 +54,8 @@ function getJobChange(articleJob: string, mayaJob: string): JobChange {
   if (
     articleJob.localeCompare(mayaJob) === 0
    || articleJob.includes(mayaJob)
-    || mayaJob.includes(articleJob)) {
+    || mayaJob.includes(articleJob)
+    || await isTwoWordsIsTheSamePerson(articleJob, mayaJob)) {
     return 'כן';
   }
   if (getWordsEquals(articleJob, mayaJob)) {
@@ -62,12 +64,12 @@ function getJobChange(articleJob: string, mayaJob: string): JobChange {
   return 'כנראה שלא';
 }
 
-function getCompanyDetails(
+async function getCompanyDetails(
   allDetails: AllDetailsResponse,
   page: WikiPage,
   template: Record<string, string>,
   tableRow?: ManagementDetails,
-): ManagementDetails {
+): Promise<Promise<ManagementDetails>> {
   const chairman = allDetails.allDetails.ManagementDetails.ManagementAndSeniorExecutives
     .filter(({ RoleType }) => RoleType === 'יו"ר דירקטוריון'
      || RoleType.match(/^יו"ר דירקטוריון\sו/)
@@ -76,7 +78,9 @@ function getCompanyDetails(
       || RoleType.endsWith('ויו"ר דירקטוריון'))
     .map(({ Name }) => Name)
     .filter((name, i, arr) => arr.indexOf(name) === i)
-    .join(', ');
+    .join(', ')
+    .trim()
+    .replace(/\n/g, '');
   const CEO = allDetails.allDetails.ManagementDetails.ManagementAndSeniorExecutives
     .filter(({ RoleType }) => RoleType === 'מנהל כללי'
     || RoleType === 'מנכ"ל'
@@ -86,23 +90,29 @@ function getCompanyDetails(
      || RoleType.endsWith('ומנכ"ל'))
     .map(({ Name }) => Name)
     .filter((name, i, arr) => arr.indexOf(name) === i)
-    .join(', ');
+    .join(', ')
+    .trim()
+    .replace(/\n/g, '');
   const address = `${allDetails.allDetails.CompanyDetails.Address}, ${allDetails.allDetails.CompanyDetails.City}`;
-  const articleChairman = template['יו"ר'];
-  const articleCEO = template['מנכ"ל'];
+  const articleChairman = template['יו"ר']?.trim().replace(/\n/g, '');
+  const articleCEO = template['מנכ"ל']?.trim().replace(/\n/g, '');
+  const chairmenChanged = chairman !== tableRow?.chairman
+   || articleChairman !== tableRow?.articleChairman;
+  const CEOChanged = CEO !== tableRow?.CEO || articleCEO !== tableRow?.articleCEO;
   return {
     chairman,
     articleChairman,
-    chairmanEqual: getJobChange(articleChairman, chairman),
+    chairmanEqual: !chairmenChanged
+      ? tableRow.chairmanEqual : await getJobChange(articleChairman, chairman),
     CEO,
     articleCEO,
-    CEOEqual: getJobChange(articleCEO, CEO),
+    CEOEqual: !CEOChanged ? tableRow.CEOEqual : await getJobChange(articleCEO, CEO),
     address,
     title: page.title,
     id: page.pageid,
     isCrosslisted: allDetails.allDetails.CompanyDetails.CompanyIndicators
       .find(({ Key }) => Key === 'DUALI')?.Value ?? false,
-    manualApproval: tableRow?.manualApproval,
+    manualApproval: (chairmenChanged || CEOChanged) ? undefined : tableRow?.manualApproval,
   };
 }
 function getRowStyle(ceoEqual?: JobChange, chairmanEqual?: JobChange) {
@@ -129,9 +139,9 @@ function getManualApprovalText(
   if (notApplicapble.includes(ceoEqual ?? '-') && notApplicapble.includes(chairmanEqual ?? '-')) {
     return 'N/A';
   }
-  const needApprovalStauses = ['כנראה שלא', 'כנראה שכן'];
-  const isApprovalNeeded = needApprovalStauses.includes(chairmanEqual ?? '')
-     || needApprovalStauses.includes(ceoEqual ?? '');
+  const needApprovalStauses: JobChange[] = ['כנראה שלא', 'כנראה שכן', 'לא קיים בערך'];
+  const isApprovalNeeded = needApprovalStauses.includes(chairmanEqual ?? '-')
+     || needApprovalStauses.includes(ceoEqual ?? '-');
   if (!isApprovalNeeded) {
     return 'N/A';
   }
@@ -169,14 +179,18 @@ async function saveCompanyDetails(details:ManagementDetails[]) {
         CEO ?? '',
         articleCEO ?? '',
         CEOEqual ?? '',
-        getManualApprovalText(manualApproval, CEOEqual, chairmanEqual),
+        manualApprovalText,
       ];
       const fields = row.map((x) => x ?? '').map((x) => x.replace(/,(\S)/g, ', $1'));
       return {
         fields,
         style: getRowStyle(CEOEqual, chairmanEqual),
       };
-    }).filter((x) : x is TableRow => x != null);
+    }).filter((x) : x is TableRow => x != null).sort((a, b) => {
+      const aManualApproval = a.fields.at(-1) ?? '';
+      const bManualApproval = b.fields.at(-1) ?? '';
+      return aManualApproval.toString().localeCompare(bManualApproval.toString());
+    });
 
   const tableText = buildTableWithStyle(
     ['שם החברה', 'יושב ראש', 'יושב ראש בערך', 'יושב ראש זהה?', 'מנכל', 'מנכל בערך', 'מנכל זהה?', 'אישור ידני'],
@@ -188,6 +202,7 @@ async function saveCompanyDetails(details:ManagementDetails[]) {
 {{ש}}בתאים הריקים צריך לסמן אחד משתי האפשרויות:
 {{ש}}'''X''' - לסמן לבוט לא לעדכן את הערך.
 {{ש}}'''V''' - לסמן לבוט לעדכן את הערך.
+{{ש}}אישור ידני משפיע רק על ערכים שאינם זהים (כנראה שכן, כנראה שלא ולא קיים בערך)
 
 `;
   return updateArticle(LOG_ARTICLE_NAME, 'פרטי חברה', explanation + tableText);
@@ -230,16 +245,16 @@ async function updateIfNeeded(
   const cloneTemplate = { ...template };
   let needUpdate = false;
 
-  const subjectToChangeStatsuses: JobChange[] = ['כנראה שכן', 'כנראה שלא'];
+  const subjectToChangeStatsuses: JobChange[] = ['כנראה שכן', 'כנראה שלא', 'לא קיים בערך'];
 
-  const needToUpdateCEO = companyDetails.CEOEqual === 'לא קיים בערך' || (companyDetails.manualApproval && subjectToChangeStatsuses.includes(companyDetails.CEOEqual ?? '-'));
+  const needToUpdateCEO = (companyDetails.manualApproval && subjectToChangeStatsuses.includes(companyDetails.CEOEqual ?? '-'));
   if (needToUpdateCEO && companyDetails.CEO) {
     needUpdate = true;
     cloneTemplate['מנכ"ל'] = companyDetails.CEO;
     companyDetails.articleCEO = companyDetails.CEO;
     companyDetails.CEOEqual = 'כן';
   }
-  const needToUpdateChairman = companyDetails.chairmanEqual === 'לא קיים בערך' || (companyDetails.manualApproval && subjectToChangeStatsuses.includes(companyDetails.chairmanEqual ?? '-'));
+  const needToUpdateChairman = (companyDetails.manualApproval && subjectToChangeStatsuses.includes(companyDetails.chairmanEqual ?? '-'));
   if (needToUpdateChairman && companyDetails.chairman) {
     needUpdate = true;
     cloneTemplate['יו"ר'] = companyDetails.chairman;
@@ -292,7 +307,7 @@ async function getManamentDetails(
 
       if (res && !isDeleted && template) {
         const tableRow = tableData.find(({ title }) => title === page.title);
-        const companyDetails = getCompanyDetails(res, page, template, tableRow);
+        const companyDetails = await getCompanyDetails(res, page, template, tableRow);
         await updateIfNeeded(page, template, templateText, companyDetails);
         managementDetails.push(companyDetails);
       } else if (isDeleted) {
