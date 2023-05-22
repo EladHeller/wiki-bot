@@ -17,7 +17,7 @@ import { getLocalDate } from './utilities';
 import { isTwoWordsIsTheSamePerson } from './API/openai';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
-const notApplicapble: JobChange[] = ['לא קיים בערך', 'לא קיים במאי״ה', 'לא ידוע', '-'];
+const notApplicapble: JobChange[] = ['לא קיים במאי״ה', 'לא ידוע', '-'];
 
 const LOG_ARTICLE_NAME = 'user:sapper-bot/פרטי חברה';
 const TEMPLATE_NAME = 'חברה מסחרית';
@@ -139,9 +139,9 @@ function getManualApprovalText(
   if (notApplicapble.includes(ceoEqual ?? '-') && notApplicapble.includes(chairmanEqual ?? '-')) {
     return 'N/A';
   }
-  const needApprovalStauses = ['כנראה שלא', 'כנראה שכן'];
-  const isApprovalNeeded = needApprovalStauses.includes(chairmanEqual ?? '')
-     || needApprovalStauses.includes(ceoEqual ?? '');
+  const needApprovalStauses: JobChange[] = ['כנראה שלא', 'כנראה שכן', 'לא קיים בערך'];
+  const isApprovalNeeded = needApprovalStauses.includes(chairmanEqual ?? '-')
+     || needApprovalStauses.includes(ceoEqual ?? '-');
   if (!isApprovalNeeded) {
     return 'N/A';
   }
@@ -202,6 +202,7 @@ async function saveCompanyDetails(details:ManagementDetails[]) {
 {{ש}}בתאים הריקים צריך לסמן אחד משתי האפשרויות:
 {{ש}}'''X''' - לסמן לבוט לא לעדכן את הערך.
 {{ש}}'''V''' - לסמן לבוט לעדכן את הערך.
+{{ש}}אישור ידני משפיע רק על ערכים שאינם זהים (כנראה שכן, כנראה שלא ולא קיים בערך)
 
 `;
   return updateArticle(LOG_ARTICLE_NAME, 'פרטי חברה', explanation + tableText);
@@ -244,7 +245,7 @@ async function updateIfNeeded(
   const cloneTemplate = { ...template };
   let needUpdate = false;
 
-  const subjectToChangeStatsuses: JobChange[] = ['כנראה שכן', 'כנראה שלא'];
+  const subjectToChangeStatsuses: JobChange[] = ['כנראה שכן', 'כנראה שלא', 'לא קיים בערך'];
 
   const needToUpdateCEO = (companyDetails.manualApproval && subjectToChangeStatsuses.includes(companyDetails.CEOEqual ?? '-'));
   if (needToUpdateCEO && companyDetails.CEO) {
