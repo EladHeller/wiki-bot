@@ -289,6 +289,21 @@ export async function* listCategory(category: string, limit = 500) {
   yield* continueQuery(path);
 }
 
+export async function categroyPages(category: string, limit = 500): Promise<WikiPage[]> {
+  const rvprops = encodeURIComponent('content|size');
+  const props = encodeURIComponent('title|sortkeyprefix');
+  const path = `${baseUrl}?action=query&format=json&generator=categorymembers&gcmtitle=Category:${encodeURIComponent(category)}&gcmlimit=${limit}&gcmprop=${props}`
+  + `&prop=revisions&rvprop=${rvprops}&rvslots=*`;
+
+  const pagesObject = await request(path);
+  return Object.values(pagesObject?.query?.pages ?? []);
+}
+
+export async function* categoriesStartsWith(prefix: string) {
+  const path = `${baseUrl}?action=query&format=json&list=allcategories&acprop=size&acprefix=${encodeURIComponent(prefix)}&aclimit=5000`;
+  yield* continueQuery(path);
+}
+
 export async function undoContributions(user:string, summary: string, count = 5) {
   if (count > 500) {
     throw new Error('Too many titles');
@@ -322,7 +337,5 @@ export async function deletePage(title:string, reason: string) {
     }),
     url: `${baseUrl}?action=delete&format=json&assert=bot`,
   };
-  const result = await client(queryDetails);
-
-  return result.data;
+  return request(queryDetails.url, queryDetails.method, queryDetails.data);
 }

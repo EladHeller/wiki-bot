@@ -10,7 +10,6 @@
     "build": "rm -rf dist && tsc",
     "deploy": "sh ./build/deploy.sh",
     "yearly-report": "tsx bot/yearly-report/index.ts",
-    "stamp": "tsx bot/scripts/stamp.ts",
     "bot": "tsx bot/newBot.ts",
     "us-stocks": "tsx bot/usStocksBot.ts",
     "us-stocks-articles": "tsx bot/scripts/usStocksBotUpdateArticles.ts",
@@ -19,13 +18,11 @@
     "update-env": "tsx ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "kineret": "tsx bot/kineret/kineretBot.ts",
-    "replace": "tsx bot/scripts/replace.ts",
-    "kipa": "tsx bot/scripts/kipa.ts",
     "rollback": "tsx bot/scripts/rollback.ts",
     "delete-redirects": "tsx bot/admin/runDelete.ts",
     "protect": "tsx bot/admin/runProtect.ts",
     "experiments": "tsx bot/experiments/index.ts",
-    "yadVashem": "tsx bot/scripts/yadVashem.ts"
+    "sport-categories": "tsx bot/scripts/sportCategories.ts"
   },
   "repository": {
     "type": "git",
