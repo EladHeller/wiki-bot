@@ -18,7 +18,7 @@ export function getParagraphContent(
   return content.replace(/^=*\n*/, '').replace(/\n*$/, '').trim();
 }
 
-export function getUsersFromTagParagraph(articleContent: string, paragraphName: string) {
+export function getUsersFromTagParagraph(articleContent: string, paragraphName: string) : string[] {
   const tagParagraph = getParagraphContent(articleContent, paragraphName);
   const users: string[] = [];
   if (!tagParagraph) {

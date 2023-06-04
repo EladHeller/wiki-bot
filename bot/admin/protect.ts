@@ -158,7 +158,7 @@ export async function main() {
         error,
       };
     });
-    await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה', ['[[משתמש:בורה בורה]]']);
+    await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה');
   }
   if (needToProtect.length) {
     const logs: ArticleLog[] = needToProtect.map((title) => {
