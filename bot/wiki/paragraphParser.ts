@@ -5,10 +5,14 @@ export function getParagraphContent(
   articleText: string,
   paragraphName: string,
 ): string | null {
-  const paragraphStartText = `==${paragraphName}==`;
-  const startIndex = articleText.indexOf(paragraphStartText);
+  let paragraphStartText = `==${paragraphName}==`;
+  let startIndex = articleText.indexOf(paragraphStartText);
   if (startIndex === -1) {
-    return null;
+    paragraphStartText = `== ${paragraphName} ==`;
+    startIndex = articleText.indexOf(paragraphStartText);
+    if (startIndex === -1) {
+      return null;
+    }
   }
   let endIndex = nextWikiText(articleText, startIndex + paragraphStartText.length, '==');
   if (endIndex === -1) {
