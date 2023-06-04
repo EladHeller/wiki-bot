@@ -43,13 +43,13 @@ async function request(path: string, method?: string, data?: Record<string, any>
   return result.data;
 }
 
-async function* continueQuery(path: string) {
+async function* continueQuery(path: string, resultConverterCallback?: (result: any) => any) {
   let result = await request(path);
   while (result.continue) {
-    yield result;
+    yield resultConverterCallback ? resultConverterCallback(result) : result;
     result = await request(`${path}&${objectToQueryString(result.continue)}`);
   }
-  yield result;
+  yield resultConverterCallback ? resultConverterCallback(result) : result;
 }
 
 export async function getCompany(title: string): Promise<Record<string, WikiPage>> {
@@ -120,6 +120,21 @@ export async function getGoogleFinanceLinksWithContent(): Promise<Record<string,
   + `&elprotocol=https&elquery=${googleFinanceLink}&ellimit=5000`;
   const result = await client(path);
   return result.data.query.pages;
+}
+
+export async function* getArticlesWithTemplate(
+  templateName: string,
+): AsyncGenerator<WikiPage[], void, WikiPage[]> {
+  const template = encodeURIComponent(templateName);
+  const props = encodeURIComponent('revisions');
+  const rvprops = encodeURIComponent('content');
+  const path = `${baseUrl}?action=query&format=json`
+  // Pages with template
+  + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
+  + `&prop=${props}`
+  // Get content of page
+  + `&rvprop=${rvprops}&rvslots=*`;
+  yield* continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
 }
 
 export async function getArticleWithKipaTemplate(): Promise<WikiPage[]> {

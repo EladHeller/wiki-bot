@@ -87,3 +87,38 @@ export function objectToFormData(obj: Record<string, any>) {
 export function objectToQueryString(obj: Record<string, any>): string {
   return Object.entries(obj).map(([key, val]) => `${key}=${encodeURIComponent(val)}`).join('&');
 }
+
+export async function asyncGeneratorMap<T>(
+  generator: AsyncGenerator<T[], void, T[]>,
+  callback: (value: T) => Promise<any>,
+) {
+  let res: IteratorResult<T[], void>;
+  try {
+    do {
+      res = await generator.next();
+      if (res.value) {
+        await Promise.all(res.value.map(callback));
+      }
+    } while (!res.done);
+  } catch (error) {
+    console.log(error?.data || error?.message || error?.toString());
+  }
+}
+
+export async function asyncGeneratorMapWithSequence<T>(
+  sequenceSize: number,
+  generator: AsyncGenerator<T[], void, T[]>,
+  callback: (value: T) => () => Promise<any>,
+) {
+  let res: IteratorResult<T[], void>;
+  try {
+    do {
+      res = await generator.next();
+      if (res.value) {
+        await promiseSequence(sequenceSize, res.value.map(callback));
+      }
+    } while (!res.done);
+  } catch (error) {
+    console.log(error?.data || error?.message || error?.toString());
+  }
+}
