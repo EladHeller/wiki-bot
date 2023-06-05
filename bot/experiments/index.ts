@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import { chatWithTerminal } from '../API/openai';
+import jewishBooks from '../scripts/jewishBooksTemplate';
 
 async function main() {
-  console.log(await chatWithTerminal('curl http://example.com'));
+  await jewishBooks();
 }
 
 main();
