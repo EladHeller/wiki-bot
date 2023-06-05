@@ -5,9 +5,9 @@ export type CurrencyCode = 'USD' | 'NIS' | 'EUR' | 'ILS' | 'JPY' | 'AUD' | 'INR'
 
 export const currencyName: Record<CurrencyCode, string> = {
   EUR: 'אירו',
-  NIS: 'ש"ח',
+  NIS: 'שקל חדש|ש"ח',
   USD: 'דולר אמריקאי|דולר',
-  ILS: 'ש"ח',
+  ILS: 'שקל חדש|ש"ח',
   JPY: 'ין יפני',
   AUD: 'דולר אוסטרלי',
   INR: 'רופי הודי',
