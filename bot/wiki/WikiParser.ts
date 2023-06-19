@@ -7,15 +7,30 @@ export function noWikiEndTagIndex(text: string, startIndex: number): number {
 
 export function nextWikiText(text: string, currIndex: number, str: string): number {
   let index = currIndex;
-  while (text.substring(index, index + str.length) !== str && index < text.length) {
+  while (text.substring(index, index + str.length) !== str && index < text.length && index !== -1) {
     if (text.substring(index, index + nowiki.length) === nowiki) {
       index = noWikiEndTagIndex(text, index);
     } else if (text.substring(index, index + 2) === '{{') {
-      index = nextWikiText(text, index + 2, '}}') + 2;
+      index = nextWikiText(text, index + 2, '}}');
+      if (index === -1) {
+        console.warn('{{ without }}');
+        return -1;
+      }
+      index += 2;
     } else if (text[index] === '{') {
-      index = nextWikiText(text, index + 1, '}') + 1;
+      index = nextWikiText(text, index + 1, '}');
+      if (index === -1) {
+        console.warn('{ without }');
+        return -1;
+      }
+      index += 1;
     } else if (text[index] === '[') {
-      index = nextWikiText(text, index + 1, ']') + 1;
+      index = nextWikiText(text, index + 1, ']');
+      if (index === -1) {
+        console.warn('[ without ]');
+        return -1;
+      }
+      index += 1;
     } else {
       index += 1;
     }
