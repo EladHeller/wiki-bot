@@ -33,14 +33,13 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Build code
-        run: |
-          export REGION=${{ secrets.AWS_REGION }}
-          export CODE_BUCKET=${{ secrets.CODE_BUCKET_NAME }}
-          export USER_NAME=${{ secrets.WIKI_USER_NAME }}
-          export PASSWORD=${{ secrets.WIKI_USER_PASSWORD }}
-          export PROTECT_USER_NAME=${{ secrets.WIKI_PROTECT_USER_NAME }}
-          export PROTECT_PASSWORD=${{ secrets.WIKI_PROTECT_USER_PASSWORD }}
-          export DELETE_USER_NAME=${{ secrets.WIKI_DELETE_USER_NAME }}
-          export DELETE_PASSWORD=${{ secrets.WIKI_DELETE_USER_PASSWORD }}
-
-          npm run update-env
+        env:
+          REGION: ${{ secrets.AWS_REGION }}
+          CODE_BUCKET: ${{ secrets.CODE_BUCKET_NAME }}
+          USER_NAME: ${{ secrets.WIKI_USER_NAME }}
+          PASSWORD: ${{ secrets.WIKI_USER_PASSWORD }}
+          PROTECT_USER_NAME: ${{ secrets.WIKI_PROTECT_USER_NAME }}
+          PROTECT_PASSWORD: ${{ secrets.WIKI_PROTECT_USER_PASSWORD }}
+          DELETE_USER_NAME: ${{ secrets.WIKI_DELETE_USER_NAME }}
+          DELETE_PASSWORD: ${{ secrets.WIKI_DELETE_USER_PASSWORD }}
+        run: npm run update-env

@@ -19,10 +19,15 @@ async function main() {
   let res: IteratorResult<any, void>;
   const pages: Category[] = [];
   const parents: Category[] = [];
+  const allcategories: Category[] = [];
   do {
     res = await generator.next();
     res?.value.query.allcategories.forEach((page) => {
       const name:string = page['*'];
+      allcategories.push({
+        name,
+        size: page.size,
+      });
       if (name.match(/^ספורטאים ([^() ]+ )+ב[^() ]+( [^() ]+)*$/)
        && !name.match(/ספורטאים ש[^ו]/)
         && !name.match(/אולימפ|להט"ב| זרים /)) {
@@ -43,7 +48,6 @@ async function main() {
     content: string,
     categories: string[]
   }> = {};
-  // eslint-disable-next-line no-unreachable-loop
   for (const page of pages) {
     if (page.size < 3) {
       const sportPages = await categroyPages(page.name, 5000);
@@ -92,6 +96,13 @@ async function main() {
         }
       }),
   );
+
+  for (const page of allcategories) {
+    if (page.size === 0) {
+      console.log(`deleting: https://he.wikipedia.org/wiki/קטגוריה:${page.name.replace(/ /g, '_')}`);
+      await deletePage(`קטגוריה:${page.name}`, 'קטגוריה ריקה');
+    }
+  }
 
   const text = [...pages, ...parents].map((p) => `* [[:קטגוריה:${p.name}]] - ${p.size} דפים וקטגוריות משנה`).join('\n');
   await updateArticle('user:sapper-bot/קטגוריות ספורטאים לפי מדינות', 'רשימה', text);
