@@ -23,12 +23,12 @@ export default function shabathProtectorDecorator(cb: (...args: any[]) => any) {
        || (dayNumber === 6 && isBeforeEnd);
 
     let isYomTovInIsrael = false;
-    holidays.forEach((holiday) => {
+    holidays?.forEach((holiday) => {
       if (((holiday.mask & flags.CHAG) && isBeforeEnd)) {
         isYomTovInIsrael = true;
       }
     });
-    tomorowHolidays.forEach((tomorowHoliday) => {
+    tomorowHolidays?.forEach((tomorowHoliday) => {
       if (((tomorowHoliday.mask & flags.CHAG) && isAfterStart)) {
         isYomTovInIsrael = true;
       }
