@@ -5,6 +5,7 @@ import {
 } from '../wiki/wikiAPI';
 import { getLocalDate, promiseSequence } from '../utilities';
 import writeAdminBotLogs, { ArticleLog } from './log';
+import shabathProtectorDecorator from '../decorators/shabathProtector';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
@@ -90,7 +91,7 @@ async function getTemplatesByCategory(category: string, exceptCategryFormat?: st
   return needToProtect;
 }
 
-export async function main() {
+export const main = shabathProtectorDecorator(async () => {
   await login();
   const didYouKnowTemplates = await getTemplatesByCategory('תבניות הידעת?');
   let needToProtect = didYouKnowTemplates.filter((template) => template.startsWith('תבנית:הידעת?'));
@@ -170,4 +171,4 @@ export async function main() {
     });
     await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
   }
-}
+});

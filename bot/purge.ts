@@ -1,8 +1,9 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import { getArticleContent, login, purge } from './wiki/wikiAPI';
+import shabathProtectorDecorator from './decorators/shabathProtector';
 
-export async function main() {
+export const main = shabathProtectorDecorator(async () => {
   await login();
   console.log('Login success');
   const today = new Date().toLocaleString('he', { month: 'long', day: 'numeric' });
@@ -19,4 +20,4 @@ export async function main() {
   const relevent = lines.filter((line) => line.startsWith('* [[') && !line.includes('נפטר'));
   const articles = relevent.map((line) => line.match(/\* \[\[\d{4}\]\] – \[\[([^\]]+)\]\]/)?.[1]).filter((x) => x != null) as string[];
   await purge(articles);
-}
+});

@@ -6,6 +6,7 @@ import {
 import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
 import writeAdminBotLogs, { ArticleLog } from './log';
+import shabathProtectorDecorator from '../decorators/shabathProtector';
 
 async function deleteRedirects(from: number, to: number[], reasons: string[]) {
   const generator = getRedirects(from, to);
@@ -80,7 +81,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
   return logs;
 }
 
-export async function main() {
+export const main = shabathProtectorDecorator(async () => {
   await login();
   console.log('logged in');
   const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט/);
@@ -91,4 +92,4 @@ export async function main() {
   logs.push(...(await deleteRedirects(0, [2, 118], ['הפניה ממרחב ראשי למרחב משתמש', 'הפניה ממרחב ראשי למרחב טיוטה'])));
   await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
   await writeAdminBotLogs(convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
-}
+});
