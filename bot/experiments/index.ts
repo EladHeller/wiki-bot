@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import jewishBooks from '../scripts/jewishBooksTemplate';
+import ynet from '../scripts/ynet';
 
 async function main() {
-  await jewishBooks();
+  await ynet();
 }
 
 main();
