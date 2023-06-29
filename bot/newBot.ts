@@ -5,6 +5,7 @@ import {
 } from './wiki/wikiAPI';
 import WikiTemplateParser from './wiki/WikiTemplateParser';
 import { MayaMarketValue, getMarketValue } from './API/mayaAPI';
+import shabathProtectorDecorator from './decorators/shabathProtector';
 
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 
@@ -39,7 +40,7 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
   }
 }
 
-export async function main() {
+export const main = shabathProtectorDecorator(async () => {
   await login();
   console.log('Login success');
 
@@ -53,7 +54,7 @@ export async function main() {
     }
   }
   await updateTemplate(marketValues);
-}
+});
 
 export default {
   main,

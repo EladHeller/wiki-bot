@@ -6,6 +6,7 @@ import {
   getArticleContent, getGoogleFinanceLinks, login, updateArticle,
 } from './wiki/wikiAPI';
 import WikiTemplateParser from './wiki/WikiTemplateParser';
+import shabathProtectorDecorator from './decorators/shabathProtector';
 
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
 
@@ -43,7 +44,7 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   }
 }
 
-export async function main() {
+export const main = shabathProtectorDecorator(async () => {
   await login();
   console.log('Login success');
 
@@ -60,4 +61,4 @@ export async function main() {
   }));
 
   await updateTemplate(marketValues);
-}
+});

@@ -111,7 +111,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: Market-value-scheduler
-      ScheduleExpression: cron(0 19 ? * SUN-THU *)
+      ScheduleExpression: cron(0 19 ? * * *)
       Targets:
         - Id: market-value-function
           Arn: !GetAtt MarketValueLambda.Arn
@@ -172,7 +172,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: US-stocks-scheduler
-      ScheduleExpression: cron(0 22 ? * MON-THU,SAT *)
+      ScheduleExpression: cron(0 22 ? * * *)
       Targets:
         - Id: US-stocks-function
           Arn: !GetAtt UsStocksLambda.Arn
@@ -285,7 +285,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: purge-birthday-scheduler
-      ScheduleExpression: cron(0 0 ? * SUN-FRI *)
+      ScheduleExpression: cron(0 0 ? * * *)
       Targets:
         - Id: purge-birthday-function
           Arn: !GetAtt PurgeBirthdayLambda.Arn
@@ -354,7 +354,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: protect-templates-scheduler
-      ScheduleExpression: cron(0 6 ? * SUN-FRI *)
+      ScheduleExpression: cron(0 6,18 ? * * *)
       Targets:
         - Id: protect-templates-function
           Arn: !GetAtt ProtectTemplatesLambda.Arn
@@ -414,7 +414,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: delete-redirects-scheduler
-      ScheduleExpression: cron(0 6 ? * SUN-FRI *)
+      ScheduleExpression: cron(0 6,18 ? * * *)
       Targets:
         - Id: delete-redirects-function
           Arn: !GetAtt DeleteRedirectsLambda.Arn
