@@ -37,7 +37,7 @@
   "dependencies": {
     "@hebcal/core": "^4.0.3",
     "axios": "^1.4.0",
-    "axios-cookiejar-support": "^4.0.6",
+    "axios-cookiejar-support": "^4.0.7",
     "dotenv": "^16.0.3",
     "jsdom": "^21.1.1",
     "openai": "^3.2.1",
