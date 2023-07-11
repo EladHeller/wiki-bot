@@ -230,8 +230,11 @@ export async function* search(text:string) {
 }
 
 export async function* getRedirects(namespace = 0, linkNamespace = [0]) {
+  const props = encodeURIComponent('links|templates|categories');
+  const template = encodeURIComponent('תבנית:הפניה לא למחוק');
+  const category = encodeURIComponent('קטגוריה:הפניות לא למחוק');
   const path = `${baseUrl}?action=query&format=json&generator=allpages&gaplimit=500&gapfilterredir=redirects&gapnamespace=${namespace}`
-  + `&prop=links&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}`;
+  + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}&tltemplates=${template}&clcategories=${category}`;
   yield* continueQuery(path);
 }
 

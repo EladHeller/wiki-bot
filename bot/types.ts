@@ -15,14 +15,18 @@ export type WikiPage = {
           '*': string;
         }
       }
-    }[],
+    }[];
     extlinks: {
       '*': string;
     }[];
-    protection?: {type: string, level: string, expiry: string}[]
+    protection?: {type: string, level: string, expiry: string}[];
     links?: {ns: number, title: string}[];
     title: string;
     pageprops?: {
       wikibase_item: string;
-    }
+    };
+    categories?: {
+      ns: number;
+      title: string;
+    }[];
   }
