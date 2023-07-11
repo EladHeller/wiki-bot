@@ -1,6 +1,7 @@
 import { getLocalDate } from '../utilities';
 import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getArticleContent, updateArticle } from '../wiki/wikiAPI';
+import { getInnerLinks } from '../wiki/wikiLinkParser';
 
 export interface ArticleLog {
     text: string;
@@ -23,11 +24,19 @@ async function getAdminUsersToTag(users: string[] = []): Promise<string[]> {
   if (tagsPageContent == null) {
     tagsPageContent = await getArticleContent(tagsPage);
   }
-  const dynamicTagUsers = tagsPageContent?.split('\n').map((line) => line.replace('*', '').trim()) ?? [];
+  if (!tagsPageContent) {
+    return [];
+  }
+  const dynamicTagUsers = getInnerLinks(tagsPageContent);
   if (!dynamicTagUsers.length && !users.length) {
     return [];
   }
-  return dynamicTagUsers;
+  return dynamicTagUsers.map(({ link, text }) => {
+    if (link === text || !text) {
+      return `[[${link}]]`;
+    }
+    return `[[${link}|${text}]]`;
+  });
 }
 
 async function getUsersToTagFromSpecialPage(page: string): Promise<string[]> {
