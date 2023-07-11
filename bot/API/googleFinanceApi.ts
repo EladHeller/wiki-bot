@@ -5,7 +5,7 @@ function getTextNodeByText(textNodes: Text[], label: string): Text | undefined {
   return textNodes.find((textNode) => textNode.textContent?.trim().toUpperCase() === label);
 }
 
-export const googleFinanceRegex = /^https:\/\/www\.google\.com\/finance\?q=([0-9A-Za-z.-:_]+)$/;
+export const googleFinanceRegex = /^https:\/\/www\.google\.com\/finance\?q=([0-9A-Za-z.\-:_]+)$/;
 
 const numberSignToHebrewNumber = {
   K: '1000 (מספר)|אלף',
