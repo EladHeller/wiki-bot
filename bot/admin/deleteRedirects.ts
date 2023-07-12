@@ -86,6 +86,7 @@ export const main = shabathProtectorDecorator(async () => {
   await login();
   console.log('logged in');
   const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט/);
+  const jewishEncyclopdia = await deleteInCategory('ויקיפדיה - ערכים למחיקה ממיזם האנציקלופדיה היהודית', 'דף למחיקה - מיזם האנציקלופדיה היהודית', /^ויקיפדיה:מיזמי ויקיפדיה\/אתר האנציקלופדיה היהודית\/מיון נושאים: לוויקי\//);
   const logs: ArticleLog[] = [];
   logs.push(...(await deleteRedirects(119, [1], ['הפניה ממרחב שיחת טיוטה למרחב השיחה'])));
   logs.push(...(await deleteRedirects(118, [0], ['הפניה ממרחב הטיוטה למרחב הערכים'])));
@@ -93,4 +94,5 @@ export const main = shabathProtectorDecorator(async () => {
   logs.push(...(await deleteRedirects(0, [2, 118], ['הפניה ממרחב ראשי למרחב משתמש', 'הפניה ממרחב ראשי למרחב טיוטה'])));
   await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
   await writeAdminBotLogs(convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
+  await writeAdminBotLogs(jewishEncyclopdia, 'משתמש:Sapper-bot/מחיקת דפים מיותרים במיזם האנציקלופדיה היהודית');
 });
