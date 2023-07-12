@@ -18,7 +18,7 @@ async function deleteRedirects(from: number, to: number[], reasons: string[]) {
       res = await generator.next();
       const batch: WikiPage[] = Object.values(res.value?.query?.pages ?? {});
       const relevent = batch.filter((x) => x.links?.length === 1
-       && x.templates?.length === 0 && x.categories?.length === 0);
+       && x.templates == null && x.categories == null);
       all.push(...relevent);
       await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
         try {
