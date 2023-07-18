@@ -15,6 +15,7 @@ export async function baseLogin(
   userPassword: string,
   axiosClient: AxiosInstance,
   wikiBaseUrl: string,
+  assertBot = true,
 ): Promise<string> {
   if (!userName || !userPassword) {
     throw new Error('Name and password are required');
@@ -38,6 +39,10 @@ export async function baseLogin(
     throw new Error('Failed to login');
   }
 
-  const tokenResult = await axiosClient(`${wikiBaseUrl}?action=query&meta=tokens&format=json&assert=bot`);
+  const tokenResult = await axiosClient(`${wikiBaseUrl}?action=query&meta=tokens&format=json&assert=${assertBot ? 'bot' : 'user'}`);
+  if (tokenResult.data.error) {
+    console.error(tokenResult.data.error);
+    throw new Error('Failed to get token');
+  }
   return tokenResult.data.query.tokens.csrftoken;
 }
