@@ -29,4 +29,11 @@ export type WikiPage = {
       ns: number;
       title: string;
     }[];
-  }
+}
+
+export interface WikiApiConfig {
+    baseUrl: string;
+    userName: string;
+    password: string;
+    assertBot?: boolean;
+}
