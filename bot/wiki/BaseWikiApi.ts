@@ -5,13 +5,13 @@ import { objectToQueryString } from '../utilities';
 import { baseLogin, getToken as getWikiToken } from './wikiLogin';
 import { WikiApiConfig } from '../types';
 
-const defaultConfig: Partial<WikiApiConfig> = {
+export const defaultConfig: Partial<WikiApiConfig> = {
   baseUrl: 'https://he.wikipedia.org/w/api.php',
   userName: process.env.USER_NAME,
   password: process.env.PASSWORD,
 };
 
-function validateConfig(config: Partial<WikiApiConfig>): config is WikiApiConfig {
+function validateConfig(config: Partial<WikiApiConfig> = defaultConfig): config is WikiApiConfig {
   if (config.userName == null || config.password == null
         || config.baseUrl == null) {
     return false;

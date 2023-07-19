@@ -1,8 +1,8 @@
 import { WikiApiConfig, WikiPage } from '../types';
 import { objectToFormData, promiseSequence } from '../utilities';
-import BaseWikiApi from './BaseWikiApi';
+import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
 
-export default function NewWikiApi(apiConfig: Partial<WikiApiConfig>) {
+export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultConfig) {
   const baseApi = BaseWikiApi(apiConfig);
   let token: string;
 
