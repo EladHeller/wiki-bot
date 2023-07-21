@@ -13,21 +13,21 @@ export function nextWikiText(text: string, currIndex: number, str: string): numb
     } else if (text.substring(index, index + 2) === '{{') {
       index = nextWikiText(text, index + 2, '}}');
       if (index === -1) {
-        console.warn('{{ without }}');
+        console.warn('"{{" without "}}"');
         return -1;
       }
       index += 2;
     } else if (text[index] === '{') {
       index = nextWikiText(text, index + 1, '}');
       if (index === -1) {
-        console.warn('{ without }');
+        console.warn('"{" without "}"');
         return -1;
       }
       index += 1;
     } else if (text[index] === '[') {
       index = nextWikiText(text, index + 1, ']');
       if (index === -1) {
-        console.warn('[ without ]');
+        console.warn('"[" without "]"');
         return -1;
       }
       index += 1;

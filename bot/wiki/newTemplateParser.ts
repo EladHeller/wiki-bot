@@ -57,11 +57,13 @@ export function getTemplateKeyValueData(templateText: string): Record<string, st
 export function templateFromKeyValueData(
   data: Record<string, string>,
   templateName: string,
+  newLines = true,
 ): string {
-  let tamplateStr = `{{${templateName}\n`;
+  const endOfValue = newLines ? '\n' : '';
+  let tamplateStr = `{{${templateName}${endOfValue}`;
 
   Object.entries(data).forEach(([key, value]) => {
-    tamplateStr += `|${key}=${value}\n`;
+    tamplateStr += `|${key}=${value}${endOfValue}`;
   });
   tamplateStr += '}}';
 

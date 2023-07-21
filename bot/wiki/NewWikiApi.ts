@@ -11,6 +11,10 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   }
   const tokenPromise = init();
 
+  function login() {
+    return tokenPromise;
+  }
+
   async function request(path: string, method?: string, data?: Record<string, any>): Promise<any> {
     await tokenPromise;
     return baseApi.request(path, method, data);
@@ -102,7 +106,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     const rvprops = encodeURIComponent('content');
     const path = '?action=query&format=json'
     // Pages with template
-    + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
+    + `&generator=embeddedin&geinamespace=0&geilimit=50&geititle=${template}`
     + `&prop=${props}`
     // Get content of page
     + `&rvprop=${rvprops}&rvslots=*`;
@@ -331,6 +335,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   }
 
   return {
+    login,
     getCompany,
     getCompanies,
     getMayaLinks,
