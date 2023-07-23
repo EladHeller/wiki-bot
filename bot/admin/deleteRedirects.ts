@@ -23,7 +23,8 @@ async function deleteRedirects(from: number, to: number[], reasons: string[]) {
       await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
         try {
           const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
-          await deletePage(p.title, reason);
+          const target = p.links?.[0].title;
+          await deletePage(p.title, reason + target ? ` - [[${target}]]` : '');
         } catch (error) {
           errors.push(p.title);
           console.log(error?.data || error?.message || error?.toString());
