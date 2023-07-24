@@ -24,7 +24,7 @@ async function deleteRedirects(from: number, to: number[], reasons: string[]) {
         try {
           const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
           const target = p.links?.[0].title;
-          await deletePage(p.title, reason + target ? ` - [[${target}]]` : '');
+          await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
         } catch (error) {
           errors.push(p.title);
           console.log(error?.data || error?.message || error?.toString());
