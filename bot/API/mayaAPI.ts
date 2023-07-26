@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { WikiPage } from '../types';
 
-const mayaLinkRegex = /^http:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/;
+const mayaLinkRegex = /^https?:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/;
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';
 const jsonAllLink = 'https://mayaapi.tase.co.il/api/company/alldetails?companyId=';
-const companyPageLink = 'http://maya.tase.co.il/company/';
+const companyPageLink = /https?:\/\/maya.tase.co.il\/company\//;
 const companyReportView = '?view=reports';
 const mayaGetOptions = {
   method: 'get',
