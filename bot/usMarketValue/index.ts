@@ -1,12 +1,12 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import { getCompanyData, WikiPageWithGoogleFinance } from './API/googleFinanceApi';
-import { currencyName, getLocalDate, promiseSequence } from './utilities';
+import { getCompanyData, WikiPageWithGoogleFinance } from '../API/googleFinanceApi';
+import { currencyName, getLocalDate, promiseSequence } from '../utilities';
 import {
   getArticleContent, getGoogleFinanceLinks, login, updateArticle,
-} from './wiki/wikiAPI';
-import WikiTemplateParser from './wiki/WikiTemplateParser';
-import shabathProtectorDecorator from './decorators/shabathProtector';
+} from '../wiki/wikiAPI';
+import WikiTemplateParser from '../wiki/WikiTemplateParser';
+import shabathProtectorDecorator from '../decorators/shabathProtector';
 
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
 
