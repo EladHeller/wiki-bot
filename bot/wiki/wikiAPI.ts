@@ -78,7 +78,7 @@ export async function getCompanies(): Promise<Record<string, WikiPage>> {
   // Get content of page
   + `&rvprop=${rvprops}&rvslots=*`
   // Get maya link
-  + `&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
+  + `&elprotocol=https&elquery=${mayaLink}&ellimit=5000`;
   const result = await request(path);
   return result.query.pages;
 }
