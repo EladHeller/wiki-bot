@@ -97,7 +97,7 @@ export async function getMayaLinks(withContent = false): Promise<Record<string, 
     // Get content of page
     withContent ? `&rvprop=${rvprops}&rvslots=*` : ''
   // Get maya link
-  }&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
+  }&elprotocol=https&elquery=${mayaLink}&ellimit=5000`;
   const result = await request(path);
   return result.query.pages;
 }
