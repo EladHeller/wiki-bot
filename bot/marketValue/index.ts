@@ -1,11 +1,11 @@
 import 'dotenv/config';
-import { getLocalDate, prettyNumericValue } from './utilities';
+import { getLocalDate, prettyNumericValue } from '../utilities';
 import {
   getArticleContent, getMayaLinks, login, updateArticle,
-} from './wiki/wikiAPI';
-import WikiTemplateParser from './wiki/WikiTemplateParser';
-import { MayaMarketValue, getMarketValue } from './API/mayaAPI';
-import shabathProtectorDecorator from './decorators/shabathProtector';
+} from '../wiki/wikiAPI';
+import WikiTemplateParser from '../wiki/WikiTemplateParser';
+import { MayaMarketValue, getMarketValue } from '../API/mayaAPI';
+import shabathProtectorDecorator from '../decorators/shabathProtector';
 
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 

@@ -63,7 +63,7 @@ Resources:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
-      Handler: dist/newBot.main
+      Handler: dist/marketValue/index.main
       Timeout: 900
       MemorySize: 2048
       Code:
@@ -141,7 +141,7 @@ Resources:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
-      Handler: dist/usStocksBot.main
+      Handler: dist/usMarketValue/index.main
       Timeout: 360
       MemorySize: 2048
       Code:
