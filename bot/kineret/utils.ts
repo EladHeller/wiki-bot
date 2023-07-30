@@ -1,5 +1,5 @@
 import { parseLocalDate } from '../utilities';
-import { getArticleContent, updateArticle } from '../wiki/wikiAPI';
+import NewWikiApi from '../wiki/NewWikiApi';
 import WikiTemplateParser from '../wiki/WikiTemplateParser';
 
 const dateFormater = new Intl.DateTimeFormat('he-IL', {
@@ -48,6 +48,8 @@ function datesDiffereceInDays(date1: Date, date2: Date) {
   return `{{הפרש תאריכים|${date1.getDate()}|${date1.getMonth() + 1}|${date1.getFullYear()}|${date2.getDate()}|${date2.getMonth() + 1}|${date2.getFullYear()}}}`;
 }
 
+const api = NewWikiApi();
+
 export async function updateLevel(
   levelData: LevelData,
   articleName: string,
@@ -55,9 +57,10 @@ export async function updateLevel(
   dateLevelField:string = DATE_LEVEL_FIELD,
   levelField:string = LEVEL_FIELD,
 ) {
+  await api.login();
   const { date, level } = levelData;
 
-  const content = await getArticleContent(articleName);
+  const content = await api.getArticleContent(articleName);
   if (!content) {
     throw new Error('Failed to get article content');
   }
@@ -86,5 +89,5 @@ export async function updateLevel(
   });
   const newContent = content.replace(oldTemplate, newTemplateText);
 
-  await updateArticle(articleName, 'עדכון מפלס', newContent);
+  await api.updateArticle(articleName, 'עדכון מפלס', newContent);
 }

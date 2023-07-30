@@ -31,6 +31,9 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>) {
   const config = actualConfig; // Just for typescript
 
   async function login() {
+    if (token) {
+      return token;
+    }
     token = await baseLogin(
       config.userName,
       config.password,
