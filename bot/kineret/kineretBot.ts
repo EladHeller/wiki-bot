@@ -9,7 +9,7 @@ import shabathProtectorDecorator from '../decorators/shabathProtector';
 
 interface KinneretLevelRecord {
   Survey_Date: string;
-  Kinneret_Level: string;
+  Kinneret_Level: number;
   _id: number;
 }
 
@@ -23,7 +23,7 @@ async function getKineretLevel1() {
   const record: KinneretLevelRecord = levelRes.result.records[0];
   return {
     date: new Date(record.Survey_Date),
-    level: record.Kinneret_Level.trim(),
+    level: record.Kinneret_Level,
   };
 }
 
@@ -48,7 +48,7 @@ async function getKineretLevel() {
   const updatedResult = results[0].date > results[1].date ? results[0] : results[1];
   return {
     date: formatDate(updatedResult.date),
-    level: updatedResult.level,
+    level: updatedResult.level.toString().trim(),
   };
 }
 

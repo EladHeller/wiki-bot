@@ -6,7 +6,7 @@ const apiUrl = 'https://data.gov.il/api/3/action/datastore_search?resource_id=82
 
 interface DeadSeaLevelRecord {
     'תאריך מדידה': string;
-    'מפלס' : string;
+    'מפלס' : number;
     _id: number;
 }
 
@@ -25,7 +25,7 @@ async function getDeadSeaLevel() {
   const dateFormat = formatDate(new Date(`${year}-${month}-${day}`));
   return {
     date: dateFormat,
-    level: record['מפלס'],
+    level: record['מפלס'].toString().trim(),
   };
 }
 
