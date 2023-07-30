@@ -3,7 +3,7 @@ import NewWikiApi from '../wiki/NewWikiApi';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
 const TEMPLATE_NAME = 'סינגל';
-const CHROMOLOGU_TEMPLATE_NAME = 'כרונולוגיה';
+const CHRONOLOGY_TEMPLATE_NAME = 'כרונולוגיה';
 
 export default async function chronologyTemplate() {
   const api = NewWikiApi();
@@ -25,7 +25,7 @@ export default async function chronologyTemplate() {
       const templates = findTemplates(content, TEMPLATE_NAME, page.title);
       let changed = false;
       templates.forEach((template) => {
-        const chronolgyTemplates = findTemplates(template, CHROMOLOGU_TEMPLATE_NAME, page.title);
+        const chronolgyTemplates = findTemplates(template, CHRONOLOGY_TEMPLATE_NAME, page.title);
         chronolgyTemplates.forEach((chronolgyTemplate) => {
           const data = getTemplateKeyValueData(chronolgyTemplate);
           const entries = Object.entries(data).map(([key, value]) => {

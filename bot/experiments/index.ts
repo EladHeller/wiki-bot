@@ -1,8 +1,10 @@
 import 'dotenv/config';
-import ynetEncyclopedia from '../scripts/ynetEncyclopedia';
+import { first, second, third } from '../scripts/singleAlbumDesign';
 
 async function main() {
-  await ynetEncyclopedia();
+  await first();
+  await second();
+  await third();
 }
 
 main();
