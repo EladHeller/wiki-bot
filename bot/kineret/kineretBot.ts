@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { JSDOM } from 'jsdom';
-import { login } from '../wiki/wikiAPI';
 import updateDeadSeaLevel from './deadSeaBot';
 import {
   formatDate, updateLevel,
@@ -58,7 +57,6 @@ async function kineret() {
 }
 
 export const main = shabathProtectorDecorator(async () => {
-  await login();
   await kineret();
   await updateDeadSeaLevel();
 });
