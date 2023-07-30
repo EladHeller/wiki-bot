@@ -13,6 +13,9 @@ const baseUrl = 'https://he.wikipedia.org/w/api.php';
 let token: string;
 
 export async function login() {
+  if (token) {
+    return;
+  }
   const name = process.env.USER_NAME;
   const password = process.env.PASSWORD;
   if (!name || !password) {
