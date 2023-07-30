@@ -12,7 +12,6 @@
     "yearly-report": "tsx bot/yearly-report/index.ts",
     "us-stocks-articles": "tsx bot/scripts/usStocksBotUpdateArticles.ts",
     "stocks-articles": "tsx bot/scripts/stocksBotArticle.ts",
-    "company-details": "tsx bot/companyDetailsBot.ts",
     "update-env": "tsx ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "rollback": "tsx bot/scripts/rollback.ts",

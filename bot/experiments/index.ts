@@ -1,10 +1,8 @@
 import 'dotenv/config';
-import { first, second, third } from '../scripts/singleAlbumDesign';
+import { companyDetailsBot } from '../scripts/companyDetailsBot';
 
 async function main() {
-  await first();
-  await second();
-  await third();
+  await companyDetailsBot();
 }
 
 main();
