@@ -14,7 +14,7 @@ function replaceValueWithDesignTemplate(
   pageTitle: string,
   regex: RegExp,
   text: string,
-  doubleCheckRegex: RegExp,
+  doubleCheckRegex?: RegExp,
 ) {
   let newValue = text.replace(regex, '$1');
 
@@ -32,9 +32,12 @@ function replaceValueWithDesignTemplate(
       }
     });
   });
-  const doubleCheckMatches = newValue.match(doubleCheckRegex);
-  if (doubleCheckMatches && doubleCheckMatches.length > 1) {
-    return text;
+  if (doubleCheckRegex) {
+    const doubleCheckMatches = newValue.match(doubleCheckRegex);
+    if (doubleCheckMatches && doubleCheckMatches.length > 1) {
+      console.log(`* [[${pageTitle}]]`);
+      return text;
+    }
   }
   return newValue;
 }
@@ -89,7 +92,6 @@ export async function first(templateName = 'סינגלי אלבום') {
               page.title,
               quoteRegex,
               value as string,
-              doubleCheckQuoteRegex,
             );
             if (newValue !== value) {
               newData[key] = newValue;
