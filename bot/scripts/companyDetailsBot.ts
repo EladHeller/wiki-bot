@@ -3,18 +3,18 @@ import 'dotenv/config';
 import {
   getArticleContent,
   getMayaLinks, login, updateArticle,
-} from './wiki/wikiAPI';
+} from '../wiki/wikiAPI';
 import {
   TableRow,
   buildTableWithStyle,
-} from './wiki/WikiParser';
-import { WikiPage } from './types';
-import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from './wiki/newTemplateParser';
-import parseTableText from './wiki/wikiTableParser';
-import { AllDetailsResponse, getAllDetails } from './API/mayaAPI';
-import { getUsersFromTagParagraph } from './wiki/paragraphParser';
-import { getLocalDate } from './utilities';
-import { isTwoWordsIsTheSamePerson } from './API/openai';
+} from '../wiki/WikiParser';
+import { WikiPage } from '../types';
+import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import parseTableText from '../wiki/wikiTableParser';
+import { AllDetailsResponse, getAllDetails } from '../API/mayaAPI';
+import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
+import { getLocalDate } from '../utilities';
+import { isTwoWordsIsTheSamePerson } from '../API/openai';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
 const notApplicapble: JobChange[] = ['לא קיים במאי״ה', 'לא ידוע', '-'];
@@ -325,7 +325,7 @@ async function getManamentDetails(
   return managementDetails;
 }
 
-async function main() {
+export async function companyDetailsBot() {
   await login();
   console.log('Login success');
   const tableData = await getTableData();
@@ -339,6 +339,6 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.log(error?.data ?? error?.message ?? error);
-});
+export default {
+  companyDetailsBot,
+};

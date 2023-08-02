@@ -1,10 +1,8 @@
 import 'dotenv/config';
-import { first, second, third } from '../scripts/singleAlbumDesign';
+import { main as kineret } from '../kineret/kineretBot';
 
 async function main() {
-  await first();
-  await second();
-  await third();
+  await kineret();
 }
 
 main();

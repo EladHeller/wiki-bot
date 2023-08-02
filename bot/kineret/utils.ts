@@ -44,6 +44,13 @@ function getChangeData(change: number) {
 }
 
 function datesDiffereceInDays(date1: Date, date2: Date) {
+  if (date1 > date2) {
+    console.error('date1 must be before date2', {
+      date1,
+      date2,
+    });
+    throw new Error('date1 must be before date2');
+  }
   // {{הפרש תאריכים|יום1|חודש1|שנה1|יום2|חודש2|שנה2}}
   return `{{הפרש תאריכים|${date1.getDate()}|${date1.getMonth() + 1}|${date1.getFullYear()}|${date2.getDate()}|${date2.getMonth() + 1}|${date2.getFullYear()}}}`;
 }
@@ -70,16 +77,16 @@ export async function updateLevel(
     throw new Error('Failed to get template text');
   }
 
-  if (template.templateData[dateLevelField] === date) {
-    console.log('No update needed');
-    return;
-  }
-
   const change = Number(level) - Number(template.templateData[LEVEL_FIELD]);
   const changeData = getChangeData(change);
   const oldDate = template.templateData[DATE_LEVEL_FIELD];
   const parsedOldDate = parseLocalDate(oldDate);
   const parsedDate = parseLocalDate(levelData.date);
+
+  if (template.templateData[dateLevelField] === date || parsedOldDate > parsedDate) {
+    console.log(`No update needed for ${articleName}`);
+    return;
+  }
 
   const newTemplateText = template.updateTamplateFromData({
     ...template.templateData,

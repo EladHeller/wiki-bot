@@ -19,7 +19,7 @@ export async function isTwoWordsIsTheSamePerson(
   const res = await openai.createCompletion({
     model: 'text-davinci-003',
     prompt: `${prePrompt}\nFirst name: "${nameFromWiki}", Second name: "${name2}".`,
-    temperature: 0.3,
+    temperature: 0,
   });
   const isEqual = res.data.choices[0].text?.trim().replace(/["\n]/g, '') === 'Yes';
   console.log(`isTwoWordsIsTheSamePerson: ${nameFromWiki}, ${name2} ${isEqual}`);
