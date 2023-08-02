@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import { companyDetailsBot } from '../scripts/companyDetailsBot';
+import { main as kineret } from '../kineret/kineretBot';
 
 async function main() {
-  await companyDetailsBot();
+  await kineret();
 }
 
 main();
