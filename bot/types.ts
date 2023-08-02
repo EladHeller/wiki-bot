@@ -36,3 +36,11 @@ export interface WikiApiConfig {
     password: string;
     assertBot?: boolean;
 }
+
+export interface WikidataClaim {
+  entity: string;
+  property: string;
+  value: string;
+  summary: string;
+}
+// {"id":"Q4115189$5627445f-43cb-ed6d-3adb-760e85bd17ee","type":"claim","mainsnak":{"snaktype":"value","property":"P1","datavalue":{"value":"City","type":"string"}}} [open in sandbox]

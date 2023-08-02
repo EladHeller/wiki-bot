@@ -1,6 +1,7 @@
 import { parseLocalDate } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import WikidataAPI from '../wiki/WikidataAPI';
 
 const dateFormater = new Intl.DateTimeFormat('he-IL', {
   year: 'numeric',
@@ -56,6 +57,7 @@ function datesDiffereceInDays(date1: Date, date2: Date) {
 }
 
 const api = NewWikiApi();
+const wikidataApi = WikidataAPI();
 
 export async function updateLevel(
   levelData: LevelData,
@@ -104,4 +106,10 @@ export async function updateLevel(
   const newContent = content.replace(oldTemplate, newTemplateText);
 
   await api.updateArticle(articleName, 'עדכון מפלס', newContent);
+}
+
+export async function updateWikidata(
+  levelData: LevelData,
+) {
+  await wikidataApi.login();
 }
