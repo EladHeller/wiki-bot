@@ -82,6 +82,12 @@ export async function updateLevel(
   const oldDate = template.templateData[DATE_LEVEL_FIELD];
   const parsedOldDate = parseLocalDate(oldDate);
   const parsedDate = parseLocalDate(levelData.date);
+  const today = new Date();
+
+  if (today < parsedDate) {
+    console.warn(`Date ${date} is in the future`);
+    return;
+  }
 
   if (template.templateData[dateLevelField] === date || parsedOldDate > parsedDate) {
     console.log(`No update needed for ${articleName}`);
