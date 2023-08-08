@@ -8,7 +8,7 @@ import { promiseSequence } from '../utilities';
 import writeAdminBotLogs, { ArticleLog } from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 
-async function deleteRedirects(from: number, to: number[], reasons: string[]) {
+export async function deleteRedirects(from: number, to: number[], reasons: string[]) {
   const generator = getRedirects(from, to);
   const all: WikiPage[] = [];
   const errors: string[] = [];
@@ -94,10 +94,11 @@ export const main = shabathProtectorDecorator(async () => {
   // /(מיון נושאים: לוויקי|ערכים שנוצרו באנציקלופדיה היהודית)\//,
   // );
   const logs: ArticleLog[] = [];
-  logs.push(...(await deleteRedirects(119, [1], ['הפניה ממרחב שיחת טיוטה למרחב השיחה'])));
-  logs.push(...(await deleteRedirects(118, [0], ['הפניה ממרחב הטיוטה למרחב הערכים'])));
-  logs.push(...(await deleteRedirects(3, [1], ['הפניה ממרחב שיחת משתמש למרחב שיחה'])));
-  logs.push(...(await deleteRedirects(0, [2, 118], ['הפניה ממרחב ראשי למרחב משתמש', 'הפניה ממרחב ראשי למרחב טיוטה'])));
+  // logs.push(...(await deleteRedirects(119, [1], ['הפניה ממרחב שיחת טיוטה למרחב השיחה'])));
+  // logs.push(...(await deleteRedirects(118, [0], ['הפניה ממרחב הטיוטה למרחב הערכים'])));
+  // logs.push(...(await deleteRedirects(3, [1], ['הפניה ממרחב שיחת משתמש למרחב שיחה'])));
+  // logs.push(...(await deleteRedirects(0, [2, 118], [
+  //  'הפניה ממרחב ראשי למרחב משתמש', 'הפניה ממרחב ראשי למרחב טיוטה'])));
   await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
   await writeAdminBotLogs(convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
   // await writeAdminBotLogs(jewishEncyclopdia,
