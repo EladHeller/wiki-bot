@@ -15,16 +15,16 @@ interface KinneretLevelRecord {
 const DATE_REGEX = /(\d{2})\/(\d{2})\/(\d{2})/;
 
 const articleName = 'תבנית:מפלס הכנרת';
-const apiUrl = 'https://data.gov.il/api/3/action/datastore_search?resource_id=2de7b543-e13d-4e7e-b4c8-56071bc4d3c8&limit=1';
+// const apiUrl = 'https://data.gov.il/api/3/action/datastore_search?resource_id=2de7b543-e13d-4e7e-b4c8-56071bc4d3c8&limit=1';
 
-async function getKineretLevel1() {
-  const levelRes = await fetch(apiUrl).then((res) => res.json());
-  const record: KinneretLevelRecord = levelRes.result.records[0];
-  return {
-    date: new Date(record.Survey_Date),
-    level: record.Kinneret_Level,
-  };
-}
+// async function getKineretLevel1() {
+//   const levelRes = await fetch(apiUrl).then((res) => res.json());
+//   const record: KinneretLevelRecord = levelRes.result.records[0];
+//   return {
+//     date: new Date(record.Survey_Date),
+//     level: record.Kinneret_Level,
+//   };
+// }
 
 async function getKineretLevel2() {
   const kinneretDocument = await JSDOM.fromURL('https://kineret.org.il/');
@@ -42,9 +42,10 @@ async function getKineretLevel2() {
 }
 
 async function getKineretLevel() {
-  const promises = [getKineretLevel1(), getKineretLevel2()];
-  const results = await Promise.all(promises);
-  const updatedResult = results[0].date > results[1].date ? results[0] : results[1];
+  // const promises = [getKineretLevel1(), getKineretLevel2()];
+  // const results = await Promise.all(promises);
+  // const updatedResult = results[0].date > results[1].date ? results[0] : results[1];
+  const updatedResult = await getKineretLevel2();
   return {
     date: formatDate(updatedResult.date),
     level: updatedResult.level.toString().trim(),
