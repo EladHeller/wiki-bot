@@ -5,19 +5,24 @@ export function noWikiEndTagIndex(text: string, startIndex: number): number {
   return text.indexOf(nowikiEnd, startIndex) + nowikiEnd.length;
 }
 
-export function nextWikiText(text: string, currIndex: number, str: string): number {
+export function nextWikiText(
+  text: string,
+  currIndex: number,
+  str: string,
+  ignoreTemplates = false,
+): number {
   let index = currIndex;
   while (text.substring(index, index + str.length) !== str && index < text.length && index !== -1) {
     if (text.substring(index, index + nowiki.length) === nowiki) {
       index = noWikiEndTagIndex(text, index);
-    } else if (text.substring(index, index + 2) === '{{') {
+    } else if (text.substring(index, index + 2) === '{{' && !ignoreTemplates) {
       index = nextWikiText(text, index + 2, '}}');
       if (index === -1) {
         console.warn('"{{" without "}}"');
         return -1;
       }
       index += 2;
-    } else if (text[index] === '{') {
+    } else if (text[index] === '{' && !ignoreTemplates) {
       index = nextWikiText(text, index + 1, '}');
       if (index === -1) {
         console.warn('"{" without "}"');
