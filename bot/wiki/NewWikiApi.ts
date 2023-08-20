@@ -140,6 +140,12 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     return finalResults;
   }
 
+  async function* backlinksTo(target: string, namespace = 0) {
+    const path = `?action=query&format=json&generator=backlinks&gblnamespace=${namespace}&gbltitle=${encodeURIComponent(target)}&gbllimit=500`
+    + '&gblfilterredir=nonredirects&prop=revisions&rvprop=content&rvslots=*';
+    yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
+  }
+
   async function getGoogleFinanceLinks(): Promise<Record<string, WikiPage>> {
     const template = encodeURIComponent('תבנית:מידע בורסאי (ארצות הברית)');
     const props = encodeURIComponent('extlinks');
@@ -336,6 +342,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
 
   return {
     login,
+    backlinksTo,
     getCompany,
     getCompanies,
     getMayaLinks,
