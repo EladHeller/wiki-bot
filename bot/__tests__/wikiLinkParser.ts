@@ -40,4 +40,13 @@ describe('getInnerLink', () => {
 
     expect(result).toBeUndefined();
   });
+
+  it('should get links even they are in template text', () => {
+    const mockText = '{{תבנית|שם=שם|שם בשפת המקור=[[שם בשפת המקור]]|אלבום=אלבום}}';
+    const expectedLink = { link: 'שם בשפת המקור', text: 'שם בשפת המקור' };
+
+    const result = getInnerLink(mockText);
+
+    expect(result).toStrictEqual(expectedLink);
+  });
 });
