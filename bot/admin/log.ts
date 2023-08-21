@@ -1,5 +1,5 @@
 import { getLocalDate } from '../utilities';
-import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
+import { getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getArticleContent, updateArticle } from '../wiki/wikiAPI';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 
@@ -39,12 +39,22 @@ async function getAdminUsersToTag(users: string[] = []): Promise<string[]> {
   });
 }
 
-async function getUsersToTagFromSpecialPage(page: string): Promise<string[]> {
-  const content = await getArticleContent(page);
+async function getUsersToTagFromSpecialPage(content?: string): Promise<string[]> {
   if (!content) {
     return [];
   }
   return getUsersFromTagParagraph(content, 'פסקת תיוג');
+}
+
+function isNightRun(titleAndSummary: string, content?: string): boolean {
+  if (!content) {
+    return false;
+  }
+  const paragraph = getParagraphContent(content, titleAndSummary);
+  if (!paragraph) {
+    return false;
+  }
+  return true;
 }
 
 export default async function writeAdminBotLogs(
@@ -55,20 +65,27 @@ export default async function writeAdminBotLogs(
     return;
   }
 
+  const logPageContent = await getArticleContent(logPageTitle);
+  const titleAndSummary = `לוג ריצה ${getLocalDate(new Date().toLocaleString())}`;
+  const nightRun = isNightRun(titleAndSummary, logPageContent);
+  const title = nightRun ? '===ריצת ערב===' : `==${titleAndSummary}==`;
+
+  const subParagraphCode = nightRun ? '====' : '===';
+
   const success = logs.filter((log) => !log.error && !log.skipped);
   const errors = logs.filter((log) => log.error);
   const skipped = logs.filter((log) => log.skipped);
   const successContent = getContentFromLogs(success);
-  const errorContent = `${errors.length ? '===שגיאות===\n' : ''}${getContentFromLogs(errors)}`;
-  const skippedContent = `${skipped.length ? '===דפים שדולגו===\n' : ''}${getContentFromLogs(skipped)}`;
+  const errorContent = `${errors.length ? `${subParagraphCode}שגיאות${subParagraphCode}\n` : ''}${getContentFromLogs(errors)}`;
+  const skippedContent = `${skipped.length ? `${subParagraphCode}דפים שדולגו${subParagraphCode}\n` : ''}${getContentFromLogs(skipped)}`;
+
   const adminUsersToTag = await getAdminUsersToTag();
-  const specificUsersToTag = await getUsersToTagFromSpecialPage(logPageTitle);
+  const specificUsersToTag = await getUsersToTagFromSpecialPage(logPageContent);
+
   const usersToTag = `${[...new Set([...adminUsersToTag, ...specificUsersToTag])].join(', ')} לידיעתכם. ~~~~`;
-  const titleAndSummary = `לוג ריצה ${getLocalDate(new Date().toLocaleString())}`;
   await updateArticle(
     logPageTitle,
     titleAndSummary,
-    `${successContent}${errorContent}${skippedContent}\n${usersToTag}`,
-    titleAndSummary,
+    `${logPageContent}ֿ\n${title}\n${successContent}${errorContent}${skippedContent}\n${usersToTag}`,
   );
 }
