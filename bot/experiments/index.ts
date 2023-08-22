@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import { main as kineret } from '../kineret/kineretBot';
+import chronologyTemplate from '../scripts/chronolgyTemplate';
 
 async function main() {
-  await kineret();
+  await chronologyTemplate();
 }
 
 main();

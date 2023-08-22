@@ -10,7 +10,7 @@ const designTemplates = [
   'שי',
 ];
 
-function replaceValueWithDesignTemplate(
+export function replaceValueWithDesignTemplate(
   pageTitle: string,
   regex: RegExp,
   text: string,
