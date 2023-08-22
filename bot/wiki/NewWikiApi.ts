@@ -187,17 +187,17 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
   }
 
-  async function externalUrl(link:string, protocol:string = 'https') {
-    const props = encodeURIComponent('revisions|extlinks');
+  async function* externalUrl(link:string, protocol:string = 'https') {
+    const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content');
     const path = '?action=query&format=json&'
-    + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=500`
+    + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=50`
     + `&prop=${props}`
     + `&rvprop=${rvprops}&rvslots=*`;
-    const result = await request(path);
-    const res:Record<string, Partial<WikiPage>> = result.query?.pages ?? {};
-
-    return Object.values(res);
+    yield* baseApi.continueQuery(
+      path,
+      (result) => Object.values(result?.query?.pages ?? {}),
+    );
   }
 
   async function* search(text:string) {
