@@ -1,7 +1,7 @@
 import { asyncGeneratorMapWithSequence } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
-import { replaceValueWithDesignTemplate } from './singleAlbumDesign';
+import { replaceValueWithDesignTemplate } from './utils';
 
 // const TEMPLATE_NAME = 'סינגל';
 const TEMPLATE_NAME = 'אלבום';
