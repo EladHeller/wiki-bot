@@ -4,7 +4,7 @@ import { linksToTemplates } from './utils';
 // https://www.ynet.co.il/articles/0,7340,L-2918510,00.html
 const articleRegex = /https?:\/\/www.ynet\.co\.il\/articles\/\d,\d+,\w-(\d+),\d+\.html/;
 // https://www.ynet.co.il/digital/article/r1AIJ48pH
-const generalRegex = /https?:\/\/www.ynet\.co\.il\/(.*)/;
+const generalRegex = /https?:\/\/www.ynet\.co\.il\/([^?]+)/;
 
 function generalLinkConverter(generalLink: GeneralLinkTemplateData) {
   const url = generalLink['כתובת'];
