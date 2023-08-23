@@ -191,7 +191,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content');
     const path = '?action=query&format=json&'
-    + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=50`
+    + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=100`
     + `&prop=${props}`
     + `&rvprop=${rvprops}&rvslots=*`;
     yield* baseApi.continueQuery(

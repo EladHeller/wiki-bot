@@ -5,20 +5,25 @@ import NewWikiApi from '../wiki/NewWikiApi';
 import { WikiPage } from '../types';
 import { findTemplates, getTemplateKeyValueData } from '../wiki/newTemplateParser';
 import type { GeneralLinkTemplateData } from './types';
+import { getParagraphContent } from '../wiki/paragraphParser';
 
 type GeneralLinkToTemplateCallback = (generalLink: GeneralLinkTemplateData) => string;
+type ConvertionConfig = {
+  generalLinkConverter: GeneralLinkToTemplateCallback
+}
 
 async function linksToTemplatesLogic(
   url: string,
   protocol: string,
   api: ReturnType<typeof NewWikiApi>,
-  generalLinkConverter: GeneralLinkToTemplateCallback,
+  config: ConvertionConfig,
 ) {
   const generator = api.externalUrl(url, protocol);
   const all: string[] = [];
   const missingLink: string[] = [];
   const generalLinks = new Set<string>();
   await asyncGeneratorMapWithSequence<WikiPage>(25, generator, (page) => async () => {
+    if (all.length % 1000 === 0) console.log(all.length);
     const content = page.revisions?.[0].slots.main['*'];
     if (!content) {
       console.log('Missing content', page.title);
@@ -40,11 +45,22 @@ async function linksToTemplatesLogic(
       ) as GeneralLinkTemplateData;
       if (templateData['כתובת'].includes(url)) {
         generalLinks.add(page.title);
-        const newTemplateText = generalLinkConverter(templateData);
+        const newTemplateText = config.generalLinkConverter(templateData);
         if (newTemplateText) {
           newContent = newContent.replace(externalUrlTemplate, newTemplateText);
         }
       }
+    });
+
+    const externalLinksParagraph = getParagraphContent(content, 'קישורים חיצוניים');
+    externalLinksParagraph?.split('\n').forEach((externalLink) => {
+      if (!externalLink.includes(url)) return;
+
+      if (!externalLink.match(/^\s*\*\s*\[https?:\/\/www\.ynet/)) {
+        console.log('possible externalLink', externalLink);
+        return;
+      }
+      console.log('externalLink', externalLink);
     });
 
     if (newContent !== content) {
@@ -61,10 +77,10 @@ async function linksToTemplatesLogic(
 
 export default async function linksToTemplates(
   url: string,
-  generalLinkConverter: GeneralLinkToTemplateCallback,
+  config: ConvertionConfig,
 ) {
   const api = NewWikiApi();
   await api.login();
-  await linksToTemplatesLogic(url, 'https', api, generalLinkConverter);
-  await linksToTemplatesLogic(url, 'http', api, generalLinkConverter);
+  await linksToTemplatesLogic(url, 'https', api, config);
+  await linksToTemplatesLogic(url, 'http', api, config);
 }
