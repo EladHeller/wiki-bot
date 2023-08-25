@@ -1,12 +1,12 @@
 import { nextWikiText } from './WikiParser';
 
-type Link = {
+export type WikiLink = {
   link: string;
   text: string;
 }
 
-export function getInnerLinks(text: string): Link[] {
-  const links: Link[] = [];
+export function getInnerLinks(text: string): WikiLink[] {
+  const links: WikiLink[] = [];
   let currIndex = 0;
   let nextLinkIndex = nextWikiText(text, currIndex, '[[', true);
   while (nextLinkIndex !== -1 && currIndex < text.length) {
@@ -24,13 +24,13 @@ export function getInnerLinks(text: string): Link[] {
   return links;
 }
 
-export function getInnerLink(text: string): Link | undefined {
+export function getInnerLink(text: string): WikiLink | undefined {
   const [link] = getInnerLinks(text);
   return link;
 }
 
-export function getExteranlLinks(text: string): Link[] {
-  const links: Link[] = [];
+export function getExteranlLinks(text: string): WikiLink[] {
+  const links: WikiLink[] = [];
   let currIndex = 0;
   let nextLinkIndex = nextWikiText(text, currIndex, '[', true);
   while (nextLinkIndex !== -1 && currIndex < text.length) {
@@ -54,7 +54,7 @@ export function getExteranlLinks(text: string): Link[] {
   return links;
 }
 
-export function getExteranlLink(text: string): Link | undefined {
+export function getExteranlLink(text: string): WikiLink | undefined {
   const [link] = getExteranlLinks(text);
   return link;
 }

@@ -9,7 +9,8 @@ export function nextWikiText(
   text: string,
   currIndex: number,
   str: string,
-  ignoreTemplates = false,
+  ignoreTemplates?: boolean,
+  title?: string,
 ): number {
   let index = currIndex;
   while (text.substring(index, index + str.length) !== str && index < text.length && index !== -1) {
@@ -18,21 +19,21 @@ export function nextWikiText(
     } else if (text.substring(index, index + 2) === '{{' && !ignoreTemplates) {
       index = nextWikiText(text, index + 2, '}}');
       if (index === -1) {
-        console.warn('"{{" without "}}"');
+        console.warn('"{{" without "}}"', title);
         return -1;
       }
       index += 2;
     } else if (text[index] === '{' && !ignoreTemplates) {
       index = nextWikiText(text, index + 1, '}');
       if (index === -1) {
-        console.warn('"{" without "}"');
+        console.warn('"{" without "}"', title);
         return -1;
       }
       index += 1;
     } else if (text[index] === '[') {
       index = nextWikiText(text, index + 1, ']');
       if (index === -1) {
-        console.warn('"[" without "]"');
+        console.warn('"[" without "]"', title);
         return -1;
       }
       index += 1;

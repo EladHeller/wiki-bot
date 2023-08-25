@@ -1,27 +1,36 @@
 import 'dotenv/config';
 import { writeFile } from 'fs/promises';
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
 import { WikiPage } from '../types';
 import { findTemplates, getTemplateKeyValueData } from '../wiki/newTemplateParser';
 import type { GeneralLinkTemplateData } from './types';
 import { getParagraphContent } from '../wiki/paragraphParser';
+import { WikiLink, getExteranlLinks } from '../wiki/wikiLinkParser';
 
 type GeneralLinkToTemplateCallback = (generalLink: GeneralLinkTemplateData) => string;
+type ExternalLinkToTemplateCallback = (
+  originalText: string, wikiLink: WikiLink
+) => Promise<string | null>;
 type ConvertionConfig = {
-  generalLinkConverter: GeneralLinkToTemplateCallback
+  generalLinkConverter: GeneralLinkToTemplateCallback;
+  externalLinkConverter: ExternalLinkToTemplateCallback;
+  url: string;
+  description?: string;
 }
 
 async function linksToTemplatesLogic(
-  url: string,
   protocol: string,
   api: ReturnType<typeof NewWikiApi>,
   config: ConvertionConfig,
 ) {
-  const generator = api.externalUrl(url, protocol);
+  const generator = api.externalUrl(config.url, protocol);
   const all: string[] = [];
-  const missingLink: string[] = [];
-  const generalLinks = new Set<string>();
+  const externalLinksFixes: Array<{
+    title: string;
+    originalText: string;
+    newTemplateText: string;
+  }> = [];
   await asyncGeneratorMapWithSequence<WikiPage>(25, generator, (page) => async () => {
     if (all.length % 1000 === 0) console.log(all.length);
     const content = page.revisions?.[0].slots.main['*'];
@@ -30,9 +39,8 @@ async function linksToTemplatesLogic(
       return;
     }
     all.push(page.title);
-    const isContentContains = content.includes(url);
+    const isContentContains = content.includes(config.url);
     if (!isContentContains) {
-      missingLink.push(page.title);
       return;
     }
 
@@ -43,8 +51,7 @@ async function linksToTemplatesLogic(
       const templateData = getTemplateKeyValueData(
         externalUrlTemplate,
       ) as GeneralLinkTemplateData;
-      if (templateData['כתובת'].includes(url)) {
-        generalLinks.add(page.title);
+      if (templateData['כתובת'].includes(config.url)) {
         const newTemplateText = config.generalLinkConverter(templateData);
         if (newTemplateText) {
           newContent = newContent.replace(externalUrlTemplate, newTemplateText);
@@ -52,35 +59,53 @@ async function linksToTemplatesLogic(
       }
     });
 
-    const externalLinksParagraph = getParagraphContent(content, 'קישורים חיצוניים');
-    externalLinksParagraph?.split('\n').forEach((externalLink) => {
-      if (!externalLink.includes(url)) return;
+    const externalLinksParagraph = getParagraphContent(content, 'קישורים חיצוניים', page.title);
+    if (externalLinksParagraph !== null && externalLinksParagraph.includes(config.url)) {
+      const rows = externalLinksParagraph?.split('\n');
+      await promiseSequence(10, rows.map((externalLinkRow: string) => async () => {
+        if (!externalLinkRow.includes(config.url)) {
+          return;
+        }
 
-      if (!externalLink.match(/^\s*\*\s*\[https?:\/\/www\.ynet/)) {
-        console.log('possible externalLink', externalLink);
-        return;
-      }
-      console.log('externalLink', externalLink);
-    });
+        if (!externalLinkRow.match(/\s*\*/)) {
+          console.log('extrnal links: possible problem: no *', page.title, externalLinkRow);
+          return;
+        }
+
+        const externalLinks = getExteranlLinks(externalLinkRow);
+        if (externalLinks.length !== 1) {
+          console.log('extrnal links: possible problem: zero or many', page.title, externalLinks);
+          return;
+        }
+        const newRow = await config.externalLinkConverter(externalLinkRow, externalLinks[0]);
+        if (newRow == null) {
+          return;
+        }
+        externalLinksFixes.push({
+          title: page.title,
+          originalText: externalLinkRow,
+          newTemplateText: newRow,
+        });
+        if (newRow) {
+          newContent = newContent.replace(externalLinkRow, newRow);
+        }
+      }));
+    }
 
     if (newContent !== content) {
-      await api.updateArticle(page.title, 'הסבה לתבנית', newContent);
+      await api.updateArticle(page.title, config.description || 'הסבה לתבנית', newContent);
       console.log('success update', page.title);
     }
   });
-
-  console.log(all.length, generalLinks.size);
-  await writeFile(`${protocol}linksToTemplates.json`, JSON.stringify(all, null, 2));
-  await writeFile(`${protocol}linksToTemplatesGeneralLink.json`, JSON.stringify(Array.from(generalLinks), null, 2));
-  await writeFile(`${protocol}linksToTemplatesMissingLinks.json`, JSON.stringify(missingLink, null, 2));
+  const log = externalLinksFixes.map((x) => `*[[${x.title}]]\n*${x.originalText}\n*${x.newTemplateText || '* ----'}`).join('\n');
+  await writeFile(`${protocol}ExternalLinks.log`, JSON.stringify(log, null, 2));
 }
 
 export default async function linksToTemplates(
-  url: string,
   config: ConvertionConfig,
 ) {
   const api = NewWikiApi();
   await api.login();
-  await linksToTemplatesLogic(url, 'https', api, config);
-  await linksToTemplatesLogic(url, 'http', api, config);
+  await linksToTemplatesLogic('https', api, config);
+  await linksToTemplatesLogic('http', api, config);
 }

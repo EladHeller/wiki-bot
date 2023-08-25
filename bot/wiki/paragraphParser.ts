@@ -4,6 +4,7 @@ import { getInnerLinks } from './wikiLinkParser';
 export function getParagraphContent(
   articleText: string,
   paragraphName: string,
+  title?: string,
 ): string | null {
   let paragraphStartText = `==${paragraphName}==`;
   let startIndex = articleText.indexOf(paragraphStartText);
@@ -14,7 +15,7 @@ export function getParagraphContent(
       return null;
     }
   }
-  let endIndex = nextWikiText(articleText, startIndex + paragraphStartText.length, '==');
+  let endIndex = nextWikiText(articleText, startIndex + paragraphStartText.length, '==', false, title);
   if (endIndex === -1) {
     endIndex = articleText.length;
   }

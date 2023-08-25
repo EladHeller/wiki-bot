@@ -45,6 +45,9 @@ export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 
 
 export function getLocalDate(dateString:string): string {
   const date = new Date(dateString);
+  if (Number.isNaN(+date)) {
+    return '';
+  }
   return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${date.getFullYear()}`;
 }
 
