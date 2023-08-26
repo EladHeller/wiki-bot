@@ -100,6 +100,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
 
   async function* getArticlesWithTemplate(
     templateName: string,
+    continueObject?: Record<string, string>,
   ): AsyncGenerator<WikiPage[], void, WikiPage[]> {
     const template = encodeURIComponent(templateName);
     const props = encodeURIComponent('revisions');
@@ -110,7 +111,11 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     + `&prop=${props}`
     // Get content of page
     + `&rvprop=${rvprops}&rvslots=*`;
-    yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
+    yield* baseApi.continueQuery(
+      path,
+      (result) => Object.values(result?.query?.pages ?? {}),
+      continueObject,
+    );
   }
 
   async function getArticleWithKipaTemplate(): Promise<WikiPage[]> {
