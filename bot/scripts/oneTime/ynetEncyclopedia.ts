@@ -1,7 +1,7 @@
 import 'dotenv/config';
-import { promiseSequence } from '../utilities';
-import NewWikiApi from '../wiki/NewWikiApi';
-import { WikiPage } from '../types';
+import { promiseSequence } from '../../utilities';
+import NewWikiApi from '../../wiki/NewWikiApi';
+import { WikiPage } from '../../types';
 
 // const oldLink = 'www.ynet.co.il/yaan/';
 async function ynetEncyclopedia() {

@@ -1,5 +1,5 @@
-import { asyncGeneratorMapWithSequence } from '../utilities';
-import { getArticlesWithTemplate, updateArticle } from '../wiki/wikiAPI';
+import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { getArticlesWithTemplate, updateArticle } from '../../wiki/wikiAPI';
 
 const TEMPLATE_NAME = 'אוצר הספרים היהודי';
 

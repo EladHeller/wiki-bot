@@ -1,6 +1,6 @@
-import { asyncGeneratorMapWithSequence } from '../utilities';
-import NewWikiApi from '../wiki/NewWikiApi';
-import { findTemplates, getTemplateArrayData } from '../wiki/newTemplateParser';
+import { asyncGeneratorMapWithSequence } from '../../utilities';
+import NewWikiApi from '../../wiki/NewWikiApi';
+import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
 
 const TEMPLATE_NAME = 'ynet';
 

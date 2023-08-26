@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import {
   categoriesStartsWith, categroyPages, deletePage, updateArticle,
-} from '../wiki/wikiAPI';
-import { promiseSequence } from '../utilities';
+} from '../../wiki/wikiAPI';
+import { promiseSequence } from '../../utilities';
 /**
  * [[קטגוריה:ספורטאים זרים בישראל לפי ארץ מוצא|איווארים]]
 [[קטגוריה:ספורטאים איווארים זרים לפי מדינה|ישראל]]
