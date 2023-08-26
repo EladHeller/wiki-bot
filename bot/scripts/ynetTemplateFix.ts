@@ -19,7 +19,7 @@ export default async function ynetTemplateFix() {
 
     const ynetTemplates = findTemplates(content, TEMPLATE_NAME, page.title);
     ynetTemplates.forEach((ynetTemplate) => {
-      const templateData = getTemplateArrayData(ynetTemplate, TEMPLATE_NAME);
+      const templateData = getTemplateArrayData(ynetTemplate, TEMPLATE_NAME, page.title);
       const id = templateData[2];
       const newId = id.replace(/articles\/\d,\d+,\w-(\d+),\d+\.html/, '$1');
       if (id !== newId) {

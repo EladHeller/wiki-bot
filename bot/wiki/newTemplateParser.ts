@@ -70,19 +70,23 @@ export function templateFromKeyValueData(
   return tamplateStr;
 }
 
-export function getTemplateArrayData(templateText: string, templateName: string): string[] {
-  const templateContent = templateText.replace(`{{${templateName}|`, '').replace(/}}$/, '');
-  let currIndex = 0;
+export function getTemplateArrayData(
+  templateText: string,
+  templateName: string,
+  title?: string,
+): string[] {
+  const templateContent = templateText.replace(`{{${templateName}`, '').replace(/}}$/, '');
+  let currIndex = nextWikiText(templateContent, 0, '|', false, title);
   const data: string[] = [];
   while (currIndex !== -1 && templateContent.length > 0) {
-    const nextIndex = nextWikiText(templateContent, currIndex, '|');
+    currIndex += 1;
+    const nextIndex = nextWikiText(templateContent, currIndex, '|', false, title);
     if (nextIndex === -1) {
       data.push(templateContent.substring(currIndex).trim());
-      currIndex = nextIndex;
     } else {
       data.push(templateContent.substring(currIndex, nextIndex).trim());
-      currIndex = nextIndex + 1;
     }
+    currIndex = nextIndex;
   }
 
   return data;

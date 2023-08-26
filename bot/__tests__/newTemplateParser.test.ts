@@ -54,7 +54,7 @@ describe('getTemplateArrayData', () => {
   });
 
   it('should return array of template data with multiple values and new lines', () => {
-    const result = getTemplateArrayData('{{test|text=hello|test=world\n}}', 'test');
+    const result = getTemplateArrayData('{{test\n|text=hello|test=world\n}}', 'test');
 
     expect(result).toStrictEqual(['text=hello', 'test=world']);
   });
