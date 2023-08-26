@@ -107,6 +107,9 @@ export async function asyncGeneratorMapWithSequence<T>(
       }
     } catch (error) {
       console.log(error?.data || error?.message || error?.toString());
+      if (global.continueObject) {
+        console.log('continue', global.continueObject);
+      }
     }
   } while (!res.done);
 }
