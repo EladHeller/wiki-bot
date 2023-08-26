@@ -31,7 +31,7 @@ export function findTemplate(text: string, templateName: string, title: string):
 export function getTemplateKeyValueData(templateText: string): Record<string, string> {
   const obj = {};
   if (templateText) {
-    let currIndex = templateText.indexOf('|') + 1;
+    let currIndex = nextWikiText(templateText, 0, '|') + 1;
 
     let isTemplateEnd = false;
     while (!isTemplateEnd) {
@@ -71,7 +71,21 @@ export function templateFromKeyValueData(
 }
 
 export function getTemplateArrayData(templateText: string, templateName: string): string[] {
-  return templateText.replace(`{{${templateName}|`, '').replace('}}', '').split('|');
+  const templateContent = templateText.replace(`{{${templateName}|`, '').replace(/}}$/, '');
+  let currIndex = 0;
+  const data: string[] = [];
+  while (currIndex !== -1 && templateContent.length > 0) {
+    const nextIndex = nextWikiText(templateContent, currIndex, '|');
+    if (nextIndex === -1) {
+      data.push(templateContent.substring(currIndex).trim());
+      currIndex = nextIndex;
+    } else {
+      data.push(templateContent.substring(currIndex, nextIndex).trim());
+      currIndex = nextIndex + 1;
+    }
+  }
+
+  return data;
 }
 
 export function templateFromArrayData(data: string[], templateName: string): string {
