@@ -84,12 +84,12 @@ export async function externalLinkConverter(originalText: string, { link, text }
     remainText = remainText.replace(authorRegex, '').replace(withoutDegreee, '');
   }
   remainText = remainText.replace(/[ֿ[\]|().,\-:"\sֿֿֿ*']/g, '');
-  if (remainText.length > 10) {
+  if (remainText.length > 8) {
     console.log({ remainText, originalText });
     return '';
   }
 
-  return `* {{ynet|${author.trim()}|${title.trim()}|${articleId}${date ? `|${date}` : ''}${link.includes('/premium') ? '|פלוס=כן' : ''}}}`;
+  return `{{ynet|${author.trim()}|${title.trim()}|${articleId}${date ? `|${date}` : ''}${link.includes('/premium') ? '|פלוס=כן' : ''}}}`;
 }
 
 export default async function ynetLinkToTemplate() {
@@ -97,6 +97,6 @@ export default async function ynetLinkToTemplate() {
     url: 'www.ynet.co.il',
     generalLinkConverter,
     externalLinkConverter,
-    description: 'הסבה ל-{{תב|ynet}}',
+    description: 'הסבה לתבנית ynet',
   });
 }

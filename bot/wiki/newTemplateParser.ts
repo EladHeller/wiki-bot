@@ -31,7 +31,7 @@ export function findTemplate(text: string, templateName: string, title: string):
 export function getTemplateKeyValueData(templateText: string): Record<string, string> {
   const obj = {};
   if (templateText) {
-    let currIndex = nextWikiText(templateText, 0, '|') + 1;
+    let currIndex = templateText.indexOf('|') + 1;
 
     let isTemplateEnd = false;
     while (!isTemplateEnd) {

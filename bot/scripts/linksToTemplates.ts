@@ -3,10 +3,11 @@ import { writeFile } from 'fs/promises';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
 import { WikiPage } from '../types';
-import { findTemplates, getTemplateKeyValueData } from '../wiki/newTemplateParser';
+import { findTemplates, getTemplateArrayData, getTemplateKeyValueData } from '../wiki/newTemplateParser';
 import type { GeneralLinkTemplateData } from './types';
 import { getParagraphContent } from '../wiki/paragraphParser';
 import { WikiLink, getExteranlLinks } from '../wiki/wikiLinkParser';
+import { nextWikiText } from '../wiki/WikiParser';
 
 type GeneralLinkToTemplateCallback = (generalLink: GeneralLinkTemplateData) => string;
 type ExternalLinkToTemplateCallback = (
@@ -31,6 +32,11 @@ async function linksToTemplatesLogic(
     originalText: string;
     newTemplateText: string;
   }> = [];
+  const referenceFixes: Array<{
+    title: string;
+    originalText: string;
+    newTemplateText: string;
+  }> = [];
   await asyncGeneratorMapWithSequence<WikiPage>(25, generator, (page) => async () => {
     if (all.length % 1000 === 0) console.log(all.length);
     const content = page.revisions?.[0].slots.main['*'];
@@ -46,7 +52,7 @@ async function linksToTemplatesLogic(
 
     let newContent = content;
 
-    const externalUrlTemplates = findTemplates(content, 'קישור כללי', page.title);
+    const externalUrlTemplates = findTemplates(newContent, 'קישור כללי', page.title);
     externalUrlTemplates.forEach((externalUrlTemplate) => {
       const templateData = getTemplateKeyValueData(
         externalUrlTemplate,
@@ -59,7 +65,7 @@ async function linksToTemplatesLogic(
       }
     });
 
-    const externalLinksParagraph = getParagraphContent(content, 'קישורים חיצוניים', page.title);
+    const externalLinksParagraph = getParagraphContent(newContent, 'קישורים חיצוניים', page.title);
     if (externalLinksParagraph !== null && externalLinksParagraph.includes(config.url)) {
       const rows = externalLinksParagraph?.split('\n');
       await promiseSequence(10, rows.map((externalLinkRow: string) => async () => {
@@ -87,11 +93,42 @@ async function linksToTemplatesLogic(
           newTemplateText: newRow,
         });
         if (newRow) {
-          newContent = newContent.replace(externalLinkRow, newRow);
+          newContent = newContent.replace(externalLinkRow, `* ${newRow}`);
         }
       }));
     }
 
+    const references = findTemplates(newContent, 'הערה', page.title);
+    references.forEach(async (reference) => {
+      if (!reference.includes(config.url)) {
+        return;
+      }
+      const referenceData = getTemplateArrayData(reference, 'הערה', page.title);
+      const referenceContent = referenceData.find((v) => v.startsWith('1=') || nextWikiText(v, 0, '=') === -1);
+      if (!referenceContent) {
+        return;
+      }
+      const externalLinks = getExteranlLinks(referenceContent);
+      if (externalLinks.length !== 1) {
+        console.log('extrnal links: possible problem: zero or many', page.title, externalLinks);
+        return;
+      }
+      const newReferenceContent = await config.externalLinkConverter(
+        referenceContent,
+        externalLinks[0],
+      );
+      if (newReferenceContent == null) {
+        return;
+      }
+      referenceFixes.push({
+        title: page.title,
+        originalText: referenceContent,
+        newTemplateText: newReferenceContent,
+      });
+      if (newReferenceContent) {
+        newContent.replace(referenceContent, newReferenceContent);
+      }
+    });
     if (newContent !== content) {
       await api.updateArticle(page.title, config.description || 'הסבה לתבנית', newContent);
       console.log('success update', page.title);
@@ -99,6 +136,8 @@ async function linksToTemplatesLogic(
   });
   const log = externalLinksFixes.map((x) => `*[[${x.title}]]\n*${x.originalText}\n*${x.newTemplateText || '* ----'}`).join('\n');
   await writeFile(`${protocol}ExternalLinks.log`, JSON.stringify(log, null, 2));
+  const referenceLog = referenceFixes.map((x) => `*[[${x.title}]]\n*${x.originalText}\n*${x.newTemplateText || '* ----'}`).join('\n');
+  await writeFile(`${protocol}References.log`, JSON.stringify(referenceLog, null, 2));
 }
 
 export default async function linksToTemplates(
