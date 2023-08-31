@@ -41,10 +41,22 @@ export async function externalLinkConverter(originalText: string, { link, text }
      || getMetaValue(document, 'property="vr:title"')
      || text
      || '';
-  const author = newsSchema?.author?.name?.toString()
+  let author = newsSchema?.author?.name?.toString()
    || getMetaValue(document, 'property="vr:author"')
    || getAttr(document, '.authoranddate a', 'title')
    || '';
+
+  // Flash news
+  if (author === 'חדשות') {
+    const description = newsSchema?.description?.toString();
+    const articleBody = newsSchema?.articleBody?.toString();
+    const flashNewAuthor = description?.match(/(\([^)]+\))$/);
+    if (description && articleBody && description === articleBody && flashNewAuthor?.[1]) {
+      [author] = flashNewAuthor;
+    } else {
+      author = '';
+    }
+  }
 
   const displayDate = getAttr(document, 'time.DateDisplay', 'datetime');
 
@@ -59,7 +71,7 @@ export async function externalLinkConverter(originalText: string, { link, text }
     .replace(dateModified, '')
     .replace(author.trim(), '')
     .replace(/(?:\[\[)?ynet(?:\]\])?/g, '')
-    .replace(/(?:\[\[)?ידיעות(?:\]\])?/g, '')
+    .replace(/(?:\[\[)?ידיעות(?: אחרונות)?(?:\]\])?/g, '')
     .replace(/ב?אתר/g, '')
     .replace(/ב-/g, '')
     .replace(/ ב /g, '')

@@ -4,7 +4,7 @@ import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
 import { WikiPage } from '../types';
 import { findTemplates, getTemplateArrayData, getTemplateKeyValueData } from '../wiki/newTemplateParser';
-import type { GeneralLinkTemplateData } from './types';
+import type { CiteNewsTemplate, GeneralLinkTemplateData } from './types';
 import { getParagraphContent } from '../wiki/paragraphParser';
 import { WikiLink, getExteranlLinks } from '../wiki/wikiLinkParser';
 import { nextWikiText } from '../wiki/WikiParser';
@@ -61,6 +61,19 @@ async function linksToTemplatesLogic(
         const newTemplateText = config.generalLinkConverter(templateData);
         if (newTemplateText) {
           newContent = newContent.replace(externalUrlTemplate, newTemplateText);
+        }
+      }
+    });
+
+    const citeNewsTemplates = findTemplates(newContent, 'Cite news', page.title);
+    citeNewsTemplates.forEach((citeNewsTemplate) => {
+      const templateData = getTemplateKeyValueData(
+        citeNewsTemplate,
+      ) as CiteNewsTemplate;
+      if (templateData.url?.includes(config.url)) {
+        const newTemplateText = config.generalLinkConverter(templateData as any); // WIP
+        if (newTemplateText) {
+          newContent = newContent.replace(citeNewsTemplate, newTemplateText);
         }
       }
     });
@@ -129,10 +142,10 @@ async function linksToTemplatesLogic(
         newContent.replace(referenceContent, newReferenceContent);
       }
     });
-    if (newContent !== content) {
-      await api.updateArticle(page.title, config.description || 'הסבה לתבנית', newContent);
-      console.log('success update', page.title);
-    }
+    // if (newContent !== content) {
+    //   await api.updateArticle(page.title, config.description || 'הסבה לתבנית', newContent);
+    //   console.log('success update', page.title);
+    // }
   });
   const log = externalLinksFixes.map((x) => `*[[${x.title}]]\n*${x.originalText}\n*${x.newTemplateText || '* ----'}`).join('\n');
   await writeFile(`${protocol}ExternalLinks.log`, JSON.stringify(log, null, 2));

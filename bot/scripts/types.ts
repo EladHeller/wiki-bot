@@ -8,3 +8,11 @@ export type GeneralLinkTemplateData = {
     תאריך?: string;
     שפה?: string;
 };
+
+export type CiteNewsTemplate = {
+    title: string;
+    url?: string;
+    date?: string;
+    last?: string;
+    first?: string;
+}
