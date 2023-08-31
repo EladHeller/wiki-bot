@@ -32,6 +32,7 @@ describe('findTemplates', () => {
     const result = findTemplates(text, templateName, title);
     expect(result).toStrictEqual(['{{test|text=hello}}', '{{test|text=world}}']);
   });
+
   it('should not return templates that starts with template name', () => {
     const text = 'hello world {{template1| test}}';
     const templateName = 'template';

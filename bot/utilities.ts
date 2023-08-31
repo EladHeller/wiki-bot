@@ -66,8 +66,14 @@ const monthToNumber: Record<string, number> = {
   דצמבר: 12,
 };
 
-export function parseLocalDate(dateString:string): Date {
+export function parseLocalDate(dateString:string, throwError = true): Date {
   const [day, month, year] = dateString.split(' ');
+  if (!day || !month || !year) {
+    if (throwError) {
+      throw new Error('Invalid date');
+    }
+    return new Date('Error date');
+  }
   const monthNumber = monthToNumber[month.replace('ב', '')];
   return new Date(`${year}-${monthNumber}-${day}`);
 }

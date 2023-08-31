@@ -294,14 +294,13 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     yield* baseApi.continueQuery(path);
   }
 
-  async function categroyPages(category: string, limit = 500): Promise<WikiPage[]> {
+  async function* categroyPages(category: string, limit = 50) {
     const rvprops = encodeURIComponent('content|size');
     const props = encodeURIComponent('title|sortkeyprefix');
     const path = `?action=query&format=json&generator=categorymembers&gcmtitle=Category:${encodeURIComponent(category)}&gcmlimit=${limit}&gcmprop=${props}`
     + `&prop=revisions&rvprop=${rvprops}&rvslots=*`;
 
-    const pagesObject = await request(path);
-    return Object.values(pagesObject?.query?.pages ?? []);
+    yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
   async function* categoriesStartsWith(prefix: string) {

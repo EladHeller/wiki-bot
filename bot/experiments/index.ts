@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import ynetLinkToTemplate from '../scripts/ynetLinkToTemplate';
+import haaretzDates from '../scripts/oneTime/haaretzDates';
 
 async function main() {
-  await ynetLinkToTemplate();
+  await haaretzDates();
 }
 
 main();
