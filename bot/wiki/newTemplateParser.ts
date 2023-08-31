@@ -17,7 +17,12 @@ export function findTemplates(text: string, templateName: string, title: string)
       console.log('Error: template end not found', title);
       break;
     }
-    templates.push(text.substring(templateStartIndex, templateEndIndex + 2));
+    const templateText = text.substring(templateStartIndex, templateEndIndex + 2);
+
+    // prevent templates that starts with the same template name like הארץ and הארץ1
+    if (templateText.match(new RegExp(`{{${templateName}\\s*\\|`))) {
+      templates.push(text.substring(templateStartIndex, templateEndIndex + 2));
+    }
     currIndex = templateEndIndex + 2;
   }
   return templates;
@@ -74,6 +79,7 @@ export function getTemplateArrayData(
   templateText: string,
   templateName: string,
   title?: string,
+  ignoreNamedParams = false,
 ): string[] {
   const templateContent = templateText.replace(`{{${templateName}`, '').replace(/}}$/, '');
   let currIndex = nextWikiText(templateContent, 0, '|', false, title);
@@ -81,10 +87,14 @@ export function getTemplateArrayData(
   while (currIndex !== -1 && templateContent.length > 0) {
     currIndex += 1;
     const nextIndex = nextWikiText(templateContent, currIndex, '|', false, title);
+    let value: string;
     if (nextIndex === -1) {
-      data.push(templateContent.substring(currIndex).trim());
+      value = templateContent.substring(currIndex).trim();
     } else {
-      data.push(templateContent.substring(currIndex, nextIndex).trim());
+      value = templateContent.substring(currIndex, nextIndex).trim();
+    }
+    if (value && (!ignoreNamedParams || nextWikiText(value, 0, '=', false, title) === -1)) {
+      data.push(value);
     }
     currIndex = nextIndex;
   }

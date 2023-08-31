@@ -32,6 +32,13 @@ describe('findTemplates', () => {
     const result = findTemplates(text, templateName, title);
     expect(result).toStrictEqual(['{{test|text=hello}}', '{{test|text=world}}']);
   });
+  it('should not return templates that starts with template name', () => {
+    const text = 'hello world {{template1| test}}';
+    const templateName = 'template';
+    const title = 'test';
+    const result = findTemplates(text, templateName, title);
+    expect(result).toStrictEqual([]);
+  });
 });
 
 describe('getTemplateArrayData', () => {
@@ -63,5 +70,11 @@ describe('getTemplateArrayData', () => {
     const result = getTemplateArrayData('{{test|[[text|hello]]|{{other|wor}}|ld}}', 'test');
 
     expect(result).toStrictEqual(['[[text|hello]]', '{{other|wor}}', 'ld']);
+  });
+
+  it('should ignore named params if parameter passed', () => {
+    const result = getTemplateArrayData('{{test|text|text=hello|test=world|other}}', 'test', 'text', true);
+
+    expect(result).toStrictEqual(['text', 'other']);
   });
 });
