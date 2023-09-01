@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-cloudformation": "^3.398.0",
-    "@aws-sdk/client-lambda": "^3.322.0",
+    "@aws-sdk/client-lambda": "^3.398.0",
     "@aws-sdk/client-s3": "^3.400.0",
     "@aws-sdk/client-ses": "^3.398.0",
     "@babel/preset-env": "^7.22.4",
