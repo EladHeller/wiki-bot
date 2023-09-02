@@ -23,18 +23,26 @@ export default async function haaretzDates() {
       if (!date) {
         return;
       }
-      const justDate = date.replace('{{כ}}', '').replace('פורסם ב-', '');
+      let justDate = date.replace('{{כ}}', '').replace('פורסם ב-', '');
+      const justDateMatch = justDate.match(/^(\d{1,2} [א-ת]{4,10}) (\d{1,2})$/);
+      if (justDateMatch) {
+        console.log('ShortDate', date, page.title);
+        justDate = `${justDateMatch[1]} 20${justDateMatch[2]}`;
+        const newTemplateText = haaretzTemplate.replace(date, justDate);
+        newContent = newContent.replace(haaretzTemplate, newTemplateText);
+      }
       const parsedDate = parseLocalDate(justDate, false);
       if (!Number.isNaN(+parsedDate)) {
         return;
       }
       const [day, month, year] = justDate.split(/[ /,.-]/);
       if (!day || !month || !year) {
-        console.log('Invalid date', date);
+        console.log('Invalid date', date, page.title);
         return;
       }
       const localDate = getLocalDate(`${year.padStart(4, '20')}-${month}-${day}`);
       if (!localDate) {
+        console.log('Invalid date', date, page.title);
         return;
       }
       const newTemplateText = haaretzTemplate.replace(date, localDate);

@@ -93,7 +93,7 @@ export function getTemplateArrayData(
     } else {
       value = templateContent.substring(currIndex, nextIndex).trim();
     }
-    if (value && (!ignoreNamedParams || nextWikiText(value, 0, '=', false, title) === -1)) {
+    if (!ignoreNamedParams || nextWikiText(value, 0, '=', false, title) === -1) {
       data.push(value);
     }
     currIndex = nextIndex;

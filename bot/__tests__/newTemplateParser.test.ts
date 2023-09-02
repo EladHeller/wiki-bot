@@ -78,4 +78,10 @@ describe('getTemplateArrayData', () => {
 
     expect(result).toStrictEqual(['text', 'other']);
   });
+
+  it('should not ignore empty parameters', () => {
+    const result = getTemplateArrayData('{{test||other}}', 'test', 'text');
+
+    expect(result).toStrictEqual(['', 'other']);
+  });
 });
