@@ -79,6 +79,18 @@ describe('getTemplateArrayData', () => {
     expect(result).toStrictEqual(['text', 'other']);
   });
 
+  it('should not ignore number parameters', () => {
+    const result = getTemplateArrayData('{{test|1=hello|2=world}}', 'test', 'text', true);
+
+    expect(result).toStrictEqual(['hello', 'world']);
+  });
+
+  it('should mix number and regular parameters', () => {
+    const result = getTemplateArrayData('{{test|boo|1=hello|2=world|baz|bar|3=win}}', 'test', 'text', true);
+
+    expect(result).toStrictEqual(['hello', 'baz', 'win']);
+  });
+
   it('should not ignore empty parameters', () => {
     const result = getTemplateArrayData('{{test||other}}', 'test', 'text');
 

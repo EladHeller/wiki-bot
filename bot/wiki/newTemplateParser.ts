@@ -83,6 +83,7 @@ export function getTemplateArrayData(
 ): string[] {
   const templateContent = templateText.replace(`{{${templateName}`, '').replace(/}}$/, '');
   let currIndex = nextWikiText(templateContent, 0, '|', false, title);
+  let dataIndex = 0;
   const data: string[] = [];
   while (currIndex !== -1 && templateContent.length > 0) {
     currIndex += 1;
@@ -93,8 +94,15 @@ export function getTemplateArrayData(
     } else {
       value = templateContent.substring(currIndex, nextIndex).trim();
     }
-    if (!ignoreNamedParams || nextWikiText(value, 0, '=', false, title) === -1) {
-      data.push(value);
+    const equalSignIndex = nextWikiText(value, 0, '=', false, title);
+    if (!ignoreNamedParams || equalSignIndex === -1) {
+      data[dataIndex] = value;
+      dataIndex += 1;
+    } else {
+      const key = value.substring(0, equalSignIndex).trim();
+      if (key.match('^[0-9]+$')) {
+        data[Number(key) - 1] = value.substring(equalSignIndex + 1).trim();
+      }
     }
     currIndex = nextIndex;
   }
