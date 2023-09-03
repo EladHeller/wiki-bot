@@ -51,6 +51,17 @@ export function getLocalDate(dateString:string): string {
   return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${date.getFullYear()}`;
 }
 
+export function getFullYear(year: string): string {
+  if (year.length === 2) {
+    const yearNumber = +year;
+    if (yearNumber > 25) {
+      return `19${year}`;
+    }
+    return `20${year}`;
+  }
+  return year;
+}
+
 const monthToNumber: Record<string, number> = {
   ינואר: 1,
   פברואר: 2,
