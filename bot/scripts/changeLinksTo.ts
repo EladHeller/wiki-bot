@@ -11,7 +11,7 @@ export default async function changeLinksTo(
 ) {
   const api = NewWikiApi();
   await api.login();
-  const generator = api.backlinksTo(currentTarget);
+  const generator = api.backlinksTo(currentTarget, '0|2|100|118');
 
   await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];

@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { login, externalUrl, updateArticle } from '../wiki/wikiAPI';
-import { promiseSequence } from '../utilities';
+import { login, externalUrl, updateArticle } from '../../wiki/wikiAPI';
+import { promiseSequence } from '../../utilities';
 
 const oldLink = 'db.yadvashem.org/righteous/';
 const regex = /http:\/\/db\.yadvashem\.org\/righteous\/(?:righteousName|family|facebookFamily)\.html\?language=en&itemId=(\d+)/g;

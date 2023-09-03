@@ -86,7 +86,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
 export const main = shabathProtectorDecorator(async () => {
   await login();
   console.log('logged in');
-  const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט/);
+  const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקיפדיה:בוט\/בוט ההסבה\//);
   // const jewishEncyclopdia = await deleteInCategory(
   //   'ויקיפדיה - ערכים למחיקה ממיזם האנציקלופדיה היהודית',
   //   'דף למחיקה - מיזם האנציקלופדיה היהודית',

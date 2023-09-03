@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import { main as kineret } from '../kineret/kineretBot';
+import haaretzDates from '../scripts/oneTime/haaretzDates';
 
 async function main() {
-  await kineret();
+  await haaretzDates();
 }
 
 main();

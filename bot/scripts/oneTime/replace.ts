@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import {
   login, updateArticle, search,
-} from '../wiki/wikiAPI';
+} from '../../wiki/wikiAPI';
 
 const link = '%d7%';
 

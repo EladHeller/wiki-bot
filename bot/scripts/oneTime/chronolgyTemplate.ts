@@ -1,9 +1,16 @@
-import { asyncGeneratorMapWithSequence } from '../utilities';
-import NewWikiApi from '../wiki/NewWikiApi';
-import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import { asyncGeneratorMapWithSequence } from '../../utilities';
+import NewWikiApi from '../../wiki/NewWikiApi';
+import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../../wiki/newTemplateParser';
+import { replaceValueWithDesignTemplate } from '../utils';
 
-const TEMPLATE_NAME = 'סינגל';
+// const TEMPLATE_NAME = 'סינגל';
+const TEMPLATE_NAME = 'אלבום';
 const CHRONOLOGY_TEMPLATE_NAME = 'כרונולוגיה';
+
+const designTextRegex = /^\s*''([^'].*[^'])''\s*$/;
+const doubleCheckDesignRegex = /''/g;
+const quoteRegex = /^\s*"(.*)"\s*$/;
+const doubleCheckQuoteRegex = /"/g;
 
 export default async function chronologyTemplate() {
   const api = NewWikiApi();
@@ -11,7 +18,7 @@ export default async function chronologyTemplate() {
   await api.login();
   const generator = api.getArticlesWithTemplate(`תבנית:${TEMPLATE_NAME}`);
   const titles = new Set<string>();
-  await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
+  await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
     try {
       const content = page.revisions?.[0].slots.main['*'];
       if (!content) {
@@ -29,21 +36,29 @@ export default async function chronologyTemplate() {
         chronolgyTemplates.forEach((chronolgyTemplate) => {
           const data = getTemplateKeyValueData(chronolgyTemplate);
           const entries = Object.entries(data).map(([key, value]) => {
-            const newValue = value.replace(/^\s*''([^'].*[^'])''\s*$/, '$1');
+            let newValue = replaceValueWithDesignTemplate(
+              page.title,
+              quoteRegex,
+              value,
+              doubleCheckQuoteRegex,
+            );
+            newValue = replaceValueWithDesignTemplate(
+              page.title,
+              designTextRegex,
+              value,
+              doubleCheckDesignRegex,
+            );
             if (newValue !== value) changed = true;
             return [key, newValue];
           });
           const newData = Object.fromEntries(entries);
-          const text = templateFromKeyValueData(newData, 'כרונולוגיה', false);
+          const text = templateFromKeyValueData(newData, CHRONOLOGY_TEMPLATE_NAME, false);
           newContent = newContent.replace(chronolgyTemplate, text);
         });
       });
       if (newContent !== content && changed) {
         await api.updateArticle(page.title, 'הסרת טקסט נטוי מתבנית כרונולוגיה', newContent);
-        // console.log(page.title, 'success');
         number += 1;
-        //   } else {
-        //     console.log(page.title, 'skipped');
       }
     } catch (error) {
       console.log(error, page.title);

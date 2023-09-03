@@ -1,13 +1,16 @@
 import 'dotenv/config';
-import { promiseSequence } from '../utilities';
-import NewWikiApi from '../wiki/NewWikiApi';
+import { promiseSequence } from '../../utilities';
+import NewWikiApi from '../../wiki/NewWikiApi';
+import { WikiPage } from '../../types';
 
-const oldLink = 'www.ynet.co.il/yaan/';
+// const oldLink = 'www.ynet.co.il/yaan/';
 async function ynetEncyclopedia() {
   const api = NewWikiApi();
-  const httpPages = await api.externalUrl(oldLink, 'http');
-  const httpsPages = await api.externalUrl(oldLink, 'https');
-  const pages = [...httpPages, ...httpsPages];
+  // old api
+  // const httpPages = await api.externalUrl(oldLink, 'http');
+  // const httpsPages = await api.externalUrl(oldLink, 'https');
+  // const pages = [...httpPages, ...httpsPages];
+  const pages: WikiPage[] = [];
   await promiseSequence(1, pages.map((page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
     if (content && page.title) {

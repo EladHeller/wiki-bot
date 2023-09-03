@@ -17,7 +17,12 @@ export function findTemplates(text: string, templateName: string, title: string)
       console.log('Error: template end not found', title);
       break;
     }
-    templates.push(text.substring(templateStartIndex, templateEndIndex + 2));
+    const templateText = text.substring(templateStartIndex, templateEndIndex + 2);
+
+    // prevent templates that starts with the same template name like הארץ and הארץ1
+    if (templateText.match(new RegExp(`{{${templateName}\\s*\\|`))) {
+      templates.push(text.substring(templateStartIndex, templateEndIndex + 2));
+    }
     currIndex = templateEndIndex + 2;
   }
   return templates;
@@ -70,8 +75,39 @@ export function templateFromKeyValueData(
   return tamplateStr;
 }
 
-export function getTemplateArrayData(templateText: string, templateName: string): string[] {
-  return templateText.replace(`{{${templateName}|`, '').replace('}}', '').split('|');
+export function getTemplateArrayData(
+  templateText: string,
+  templateName: string,
+  title?: string,
+  ignoreNamedParams = false,
+): string[] {
+  const templateContent = templateText.replace(`{{${templateName}`, '').replace(/}}$/, '');
+  let currIndex = nextWikiText(templateContent, 0, '|', false, title);
+  let dataIndex = 0;
+  const data: string[] = [];
+  while (currIndex !== -1 && templateContent.length > 0) {
+    currIndex += 1;
+    const nextIndex = nextWikiText(templateContent, currIndex, '|', false, title);
+    let value: string;
+    if (nextIndex === -1) {
+      value = templateContent.substring(currIndex).trim();
+    } else {
+      value = templateContent.substring(currIndex, nextIndex).trim();
+    }
+    const equalSignIndex = nextWikiText(value, 0, '=', false, title);
+    if (!ignoreNamedParams || equalSignIndex === -1) {
+      data[dataIndex] = value;
+      dataIndex += 1;
+    } else {
+      const key = value.substring(0, equalSignIndex).trim();
+      if (key.match('^[0-9]+$')) {
+        data[Number(key) - 1] = value.substring(equalSignIndex + 1).trim();
+      }
+    }
+    currIndex = nextIndex;
+  }
+
+  return data;
 }
 
 export function templateFromArrayData(data: string[], templateName: string): string {

@@ -70,10 +70,15 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>) {
     return result.data;
   }
 
-  async function* continueQuery(path: string, resultConverterCallback?: (result: any) => any) {
-    let result = await request(path);
+  async function* continueQuery(
+    path: string,
+    resultConverterCallback?: (result: any) => any,
+    baseContinue?: Record<string, any>,
+  ) {
+    let result = await request(path + (baseContinue ? `&${objectToQueryString(baseContinue)}` : ''));
     while (result.continue) {
       yield resultConverterCallback ? resultConverterCallback(result) : result;
+      global.continueObject = result.continue;
       result = await request(`${path}&${objectToQueryString(result.continue)}`);
     }
     yield resultConverterCallback ? resultConverterCallback(result) : result;

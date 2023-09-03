@@ -100,6 +100,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
 
   async function* getArticlesWithTemplate(
     templateName: string,
+    continueObject?: Record<string, string>,
   ): AsyncGenerator<WikiPage[], void, WikiPage[]> {
     const template = encodeURIComponent(templateName);
     const props = encodeURIComponent('revisions');
@@ -110,7 +111,11 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     + `&prop=${props}`
     // Get content of page
     + `&rvprop=${rvprops}&rvslots=*`;
-    yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
+    yield* baseApi.continueQuery(
+      path,
+      (result) => Object.values(result?.query?.pages ?? {}),
+      continueObject,
+    );
   }
 
   async function getArticleWithKipaTemplate(): Promise<WikiPage[]> {
@@ -140,7 +145,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     return finalResults;
   }
 
-  async function* backlinksTo(target: string, namespace = 0) {
+  async function* backlinksTo(target: string, namespace = '0') {
     const path = `?action=query&format=json&generator=backlinks&gblnamespace=${namespace}&gbltitle=${encodeURIComponent(target)}&gbllimit=500`
     + '&gblfilterredir=nonredirects&prop=revisions&rvprop=content&rvslots=*';
     yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
@@ -187,17 +192,17 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
   }
 
-  async function externalUrl(link:string, protocol:string = 'https') {
-    const props = encodeURIComponent('revisions|extlinks');
+  async function* externalUrl(link:string, protocol:string = 'https') {
+    const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content');
     const path = '?action=query&format=json&'
-    + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=500`
+    + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=100`
     + `&prop=${props}`
     + `&rvprop=${rvprops}&rvslots=*`;
-    const result = await request(path);
-    const res:Record<string, Partial<WikiPage>> = result.query?.pages ?? {};
-
-    return Object.values(res);
+    yield* baseApi.continueQuery(
+      path,
+      (result) => Object.values(result?.query?.pages ?? {}),
+    );
   }
 
   async function* search(text:string) {
@@ -289,14 +294,13 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     yield* baseApi.continueQuery(path);
   }
 
-  async function categroyPages(category: string, limit = 500): Promise<WikiPage[]> {
+  async function* categroyPages(category: string, limit = 50) {
     const rvprops = encodeURIComponent('content|size');
     const props = encodeURIComponent('title|sortkeyprefix');
     const path = `?action=query&format=json&generator=categorymembers&gcmtitle=Category:${encodeURIComponent(category)}&gcmlimit=${limit}&gcmprop=${props}`
     + `&prop=revisions&rvprop=${rvprops}&rvslots=*`;
 
-    const pagesObject = await request(path);
-    return Object.values(pagesObject?.query?.pages ?? []);
+    yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
   async function* categoriesStartsWith(prefix: string) {

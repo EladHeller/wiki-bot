@@ -45,7 +45,21 @@ export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 
 
 export function getLocalDate(dateString:string): string {
   const date = new Date(dateString);
+  if (Number.isNaN(+date)) {
+    return '';
+  }
   return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${date.getFullYear()}`;
+}
+
+export function getFullYear(year: string): string {
+  if (year.length === 2) {
+    const yearNumber = +year;
+    if (yearNumber > 25) {
+      return `19${year}`;
+    }
+    return `20${year}`;
+  }
+  return year;
 }
 
 const monthToNumber: Record<string, number> = {
@@ -63,8 +77,14 @@ const monthToNumber: Record<string, number> = {
   דצמבר: 12,
 };
 
-export function parseLocalDate(dateString:string): Date {
+export function parseLocalDate(dateString:string, throwError = true): Date {
   const [day, month, year] = dateString.split(' ');
+  if (!day || !month || !year) {
+    if (throwError) {
+      throw new Error('Invalid date');
+    }
+    return new Date('Error date');
+  }
   const monthNumber = monthToNumber[month.replace('ב', '')];
   return new Date(`${year}-${monthNumber}-${day}`);
 }
@@ -73,8 +93,10 @@ export async function promiseSequence(size: number, callbacks: Array<() => Promi
   let batch = callbacks.splice(0, size);
 
   while (batch.length > 0) {
-    await Promise.all(batch.map((callback) => callback()));
-    batch = callbacks.splice(0, 10);
+    await Promise.all(batch.map((callback) => callback().catch(
+      (error) => console.log(error?.data || error?.message || error?.toString()),
+    )));
+    batch = callbacks.splice(0, size);
   }
 }
 
@@ -88,37 +110,23 @@ export function objectToQueryString(obj: Record<string, any>): string {
   return Object.entries(obj).map(([key, val]) => `${key}=${encodeURIComponent(val)}`).join('&');
 }
 
-export async function asyncGeneratorMap<T>(
-  generator: AsyncGenerator<T[], void, T[]>,
-  callback: (value: T) => Promise<any>,
-) {
-  let res: IteratorResult<T[], void>;
-  try {
-    do {
-      res = await generator.next();
-      if (res.value) {
-        await Promise.all(res.value.map(callback));
-      }
-    } while (!res.done);
-  } catch (error) {
-    console.log(error?.data || error?.message || error?.toString());
-  }
-}
-
 export async function asyncGeneratorMapWithSequence<T>(
   sequenceSize: number,
   generator: AsyncGenerator<T[], void, T[]>,
   callback: (value: T) => () => Promise<any>,
 ) {
-  let res: IteratorResult<T[], void>;
-  try {
-    do {
+  let res: IteratorResult<T[], void> = { done: false, value: [] };
+  do {
+    try {
       res = await generator.next();
       if (res.value) {
         await promiseSequence(sequenceSize, res.value.map(callback));
       }
-    } while (!res.done);
-  } catch (error) {
-    console.log(error?.data || error?.message || error?.toString());
-  }
+    } catch (error) {
+      console.log(error?.data || error?.message || error?.toString());
+      if (global.continueObject) {
+        console.log('continue', global.continueObject);
+      }
+    }
+  } while (!res.done);
 }

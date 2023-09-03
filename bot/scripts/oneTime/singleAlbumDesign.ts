@@ -1,8 +1,8 @@
-import { asyncGeneratorMapWithSequence } from '../utilities';
-import NewWikiApi from '../wiki/NewWikiApi';
+import { asyncGeneratorMapWithSequence } from '../../utilities';
+import NewWikiApi from '../../wiki/NewWikiApi';
 import {
   findTemplates, getTemplateArrayData, getTemplateKeyValueData, templateFromKeyValueData,
-} from '../wiki/newTemplateParser';
+} from '../../wiki/newTemplateParser';
 
 const designTemplates = [
   'משמאל לימין',
@@ -10,7 +10,7 @@ const designTemplates = [
   'שי',
 ];
 
-function replaceValueWithDesignTemplate(
+export function replaceValueWithDesignTemplate(
   pageTitle: string,
   regex: RegExp,
   text: string,
