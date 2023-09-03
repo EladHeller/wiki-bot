@@ -17,23 +17,26 @@ export function nextWikiText(
     if (text.substring(index, index + nowiki.length) === nowiki) {
       index = noWikiEndTagIndex(text, index);
     } else if (text.substring(index, index + 2) === '{{' && !ignoreTemplates) {
+      const before = index;
       index = nextWikiText(text, index + 2, '}}');
       if (index === -1) {
-        console.warn('"{{" without "}}"', title);
+        console.warn('"{{" without "}}"', title, console.log(text.substring(before, before + 100)));
         return -1;
       }
       index += 2;
     } else if (text[index] === '{' && !ignoreTemplates) {
+      const before = index;
       index = nextWikiText(text, index + 1, '}');
       if (index === -1) {
-        console.warn('"{" without "}"', title);
+        console.warn('"{" without "}"', title, console.log(text.substring(before, before + 100)));
         return -1;
       }
       index += 1;
     } else if (text[index] === '[') {
+      const before = index;
       index = nextWikiText(text, index + 1, ']');
       if (index === -1) {
-        console.warn('"[" without "]"', title);
+        console.warn('"[" without "]"', title, console.log(text.substring(before, before + 100)));
         return -1;
       }
       index += 1;
