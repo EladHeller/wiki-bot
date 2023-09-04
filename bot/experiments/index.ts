@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import wallaDates from '../scripts/oneTime/templatesDates/wallaDates';
+import beshevaToInn from '../scripts/oneTime/beshevaToInn';
 
 async function main() {
-  await wallaDates();
+  await beshevaToInn();
 }
 
 main();
