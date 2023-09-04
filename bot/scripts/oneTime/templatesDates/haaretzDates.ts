@@ -1,7 +1,7 @@
-import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence, getLocalDate, parseLocalDate } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
-import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
+import { WikiPage } from '../../../types';
+import { asyncGeneratorMapWithSequence, getLocalDate, parseLocalDate } from '../../../utilities';
+import NewWikiApi from '../../../wiki/NewWikiApi';
+import { findTemplates, getTemplateArrayData } from '../../../wiki/newTemplateParser';
 
 const TEMPLATE_NAME = 'הארץ';
 

@@ -43,7 +43,7 @@ export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 
   return `${sumStr}${orderOfMagmitude ? ` [[${orderOfMagmitude}]]` : ''} [[${currencyName[currencyCode]}]]`;
 }
 
-export function getLocalDate(dateString:string): string {
+export function getLocalDate(dateString: string): string {
   const date = new Date(dateString);
   if (Number.isNaN(+date)) {
     return '';

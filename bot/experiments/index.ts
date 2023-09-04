@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import haaretzDates from '../scripts/oneTime/haaretzDates';
+import globesDates from '../scripts/oneTime/templatesDates/globesDates';
 
 async function main() {
-  await haaretzDates();
+  await globesDates();
 }
 
 main();
