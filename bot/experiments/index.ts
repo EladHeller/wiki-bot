@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import globesDates from '../scripts/oneTime/templatesDates/globesDates';
+import wallaDates from '../scripts/oneTime/templatesDates/wallaDates';
 
 async function main() {
-  await globesDates();
+  await wallaDates();
 }
 
 main();

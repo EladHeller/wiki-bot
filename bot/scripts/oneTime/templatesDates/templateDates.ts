@@ -8,12 +8,27 @@ import { findTemplates, getTemplateArrayData } from '../../../wiki/newTemplatePa
 const hebrewDateRegex = /^\s*(?:[א-ת]'|[א-ת]"[א-ת] )?[א-ת]{3,10}(?: [אב])? (?:ה'?)?[א-ת]{2,3}(?:"[א-ת])? ?[.,/]?\s*$/;
 
 type DateFromPageCallback = (id: string, title: string, section?: string) => Promise<string>;
+type TemplateData = {
+    id: string;
+    date: string;
+    section?: string;
+}
+
+function defaultGetTemplateData(data: string[]): TemplateData {
+  const [,, id, date, section] = data;
+  return {
+    id,
+    date,
+    section,
+  };
+}
 
 export default async function templateDates(
   templateName: string,
   getDataFromPage: DateFromPageCallback,
   uniqueFilters: RegExp[] = [],
   templateNameVersion = templateName,
+  getTemplateData: (data: string[]) => TemplateData = defaultGetTemplateData,
 ) {
   const api = NewWikiApi();
   await api.login();
@@ -32,7 +47,7 @@ export default async function templateDates(
     }
     await promiseSequence(1, templates.map((template) => async () => {
       const arrayData = getTemplateArrayData(template, templateNameVersion, page.title, true);
-      const [,, id, date, section] = arrayData;
+      const { id, date, section } = getTemplateData(arrayData);
       if (!date) {
         return;
       }
@@ -88,7 +103,7 @@ export default async function templateDates(
 
       const parsedDate = parseLocalDate(justDate, false);
       if (!Number.isNaN(+parsedDate)) {
-        console.log('ParsedDate passed', date);
+        console.log('ParsedDate passed', date, page.title);
         return;
       }
 
@@ -106,6 +121,7 @@ export default async function templateDates(
       const fullYear = getFullYear(year);
       const localDate = getLocalDate(`${fullYear}-${month}-${day}`);
       if (!localDate) {
+        console.log('Invalid local date', `* [[${page.title}]]: ${date}`);
         return;
       }
       const newTemplateText = template.replace(date, localDate);

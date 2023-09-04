@@ -29,5 +29,7 @@ async function getDateFromWallaPage(id: string, title: string, section?: string)
 const TEMPLATE_NAME = 'וואלה!';
 
 export default async function wallaDates() {
-  await templateDates(TEMPLATE_NAME, getDateFromWallaPage, [/\[?\[?וואלה!?\]?\]?/, /\[?\[?הארץ\]?\]?/]);
+  // await templateDates(
+  //  TEMPLATE_NAME, getDateFromWallaPage, [/\[?\[?וואלה!?\]?\]?/, /\[?\[?הארץ\]?\]?/], 'וואלה');
+  await templateDates(TEMPLATE_NAME, getDateFromWallaPage, [/\[?\[?וואלה!?\]?\]?/, /\[?\[?הארץ\]?\]?/], TEMPLATE_NAME);
 }
