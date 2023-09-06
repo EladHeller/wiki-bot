@@ -101,13 +101,14 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   async function* getArticlesWithTemplate(
     templateName: string,
     continueObject?: Record<string, string>,
+    namespace = '0',
   ): AsyncGenerator<WikiPage[], void, WikiPage[]> {
     const template = encodeURIComponent(templateName);
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content');
     const path = '?action=query&format=json'
     // Pages with template
-    + `&generator=embeddedin&geinamespace=0&geilimit=50&geititle=${template}`
+    + `&generator=embeddedin&geinamespace=${namespace}&geilimit=50&geititle=${template}`
     + `&prop=${props}`
     // Get content of page
     + `&rvprop=${rvprops}&rvslots=*`;

@@ -48,34 +48,3 @@ export function nextWikiText(
 
   return index;
 }
-
-export function buildTableRow(
-  fields: (string | number | boolean)[],
-  style?: string,
-  isHeader = false,
-): string {
-  const delimiter = isHeader ? '!' : '|';
-  let rowStr = `\n|-${style ?? ''}\n${delimiter}${fields[0].toString().replace(/\n/g, '')}`;
-  for (let i = 1; i < fields.length; i += 1) {
-    rowStr += ` || ${fields[i] == null ? '---' : fields[i].toString().replace(/\n/g, '')}`;
-  }
-  return rowStr;
-}
-
-export function buildTable(headers: string[], rows: string[][]): string {
-  return `{| class="wikitable sortable"
-! ${headers.join(' !! ')}
-${rows.map((row) => buildTableRow(row)).join('')}\n|}`;
-}
-
-export type TableRow = {
-  fields: (string | number | boolean)[];
-  style?: string;
-  isHeader?: boolean;
-}
-
-export function buildTableWithStyle(headers: string[], rows: TableRow[]): string {
-  return `{| class="wikitable sortable"
-! ${headers.join(' !! ')}
-${rows.map((row) => buildTableRow(row.fields, row.style, row.isHeader)).join('')}\n|}`;
-}

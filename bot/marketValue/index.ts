@@ -3,9 +3,9 @@ import { getLocalDate, prettyNumericValue } from '../utilities';
 import {
   getArticleContent, getMayaLinks, login, updateArticle,
 } from '../wiki/wikiAPI';
-import WikiTemplateParser from '../wiki/WikiTemplateParser';
 import { MayaMarketValue, getMarketValue } from '../API/mayaAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
+import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 
@@ -14,19 +14,17 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
   if (!content) {
     throw new Error('Failed to get template content');
   }
-  const template = new WikiTemplateParser(content, '#switch: {{{ID}}}');
-  const oldTemplate = template.templateText;
+  const oldTemplate = findTemplate(content, '#switch: {{{ID}}}', marketValueTemplate);
   const relevantCompanies = marketValues.filter(({ marketValue }) => marketValue > 0);
   const companies = relevantCompanies.map(
     (marketValue) => [marketValue.id, prettyNumericValue(marketValue.marketValue.toString())],
   );
-
-  template.updateTamplateFromData({
+  const newTemplate = templateFromKeyValueData({
     ...Object.fromEntries(companies),
     timestamp: getLocalDate(relevantCompanies[0].correctionDate),
     '#default': '',
-  });
-  const newContent = content.replace(oldTemplate, template.templateText);
+  }, '#switch: {{{ID}}}');
+  const newContent = content.replace(oldTemplate, newTemplate);
   const res = await updateArticle(
     marketValueTemplate,
     'עדכון',

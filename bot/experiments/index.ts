@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import haaretzDates from '../scripts/oneTime/haaretzDates';
+import beshevaToInn from '../scripts/oneTime/beshevaToInn';
 
 async function main() {
-  await haaretzDates();
+  await beshevaToInn();
 }
 
 main();
