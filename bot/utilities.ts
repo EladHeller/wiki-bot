@@ -62,19 +62,19 @@ export function getFullYear(year: string): string {
   return year;
 }
 
-const monthToNumber: Record<string, number> = {
-  ינואר: 1,
-  פברואר: 2,
-  מרץ: 3,
-  אפריל: 4,
-  מאי: 5,
-  יוני: 6,
-  יולי: 7,
-  אוגוסט: 8,
-  ספטמבר: 9,
-  אוקטובר: 10,
-  נובמבר: 11,
-  דצמבר: 12,
+const monthToNumber: Record<string, string> = {
+  ינואר: '01',
+  פברואר: '02',
+  מרץ: '03',
+  אפריל: '04',
+  מאי: '05',
+  יוני: '06',
+  יולי: '07',
+  אוגוסט: '08',
+  ספטמבר: '09',
+  אוקטובר: '10',
+  נובמבר: '11',
+  דצמבר: '12',
 };
 
 export function parseLocalDate(dateString:string, throwError = true): Date {
@@ -86,7 +86,7 @@ export function parseLocalDate(dateString:string, throwError = true): Date {
     return new Date('Error date');
   }
   const monthNumber = monthToNumber[month.replace('ב', '')];
-  return new Date(`${year}-${monthNumber}-${day}`);
+  return new Date(`${year}-${monthNumber}-${day.padStart(2, '0')}`);
 }
 
 export async function promiseSequence(size: number, callbacks: Array<() => Promise<any>>) {
