@@ -9,14 +9,10 @@
     "test": "jest",
     "build": "rm -rf dist && tsc",
     "deploy": "sh ./build/deploy.sh",
-    "yearly-report": "tsx bot/yearly-report/index.ts",
-    "us-stocks-articles": "tsx bot/scripts/usStocksBotUpdateArticles.ts",
-    "stocks-articles": "tsx bot/scripts/stocksBotArticle.ts",
     "update-env": "tsx ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "rollback": "tsx bot/scripts/rollback.ts",
-    "experiments": "tsx bot/experiments/index.ts",
-    "sport-categories": "tsx bot/scripts/sportCategories.ts"
+    "experiments": "tsx bot/experiments/index.ts"
   },
   "repository": {
     "type": "git",
