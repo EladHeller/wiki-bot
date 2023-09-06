@@ -68,6 +68,7 @@ export default async function templateDates(
         if (dateFromDoc) {
           const newTemplateText = template.replace(date, dateFromDoc);
           newContent = newContent.replace(template, newTemplateText);
+          console.log('DateFromDoc', date, dateFromDoc, page.title);
           return;
         }
         console.log('Failed to get date from page', id, page.title, section);

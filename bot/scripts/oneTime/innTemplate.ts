@@ -23,31 +23,38 @@ export default async function innTemplate() {
     const templates = findTemplates(content, TEMPLATE_NAME, page.title);
     let newContent = content;
     await promiseSequence(5, templates.map((template) => async () => {
-      const [,, id,, section] = getTemplateArrayData(template, TEMPLATE_NAME, page.title, true);
+      const [author, title, id,, section] = getTemplateArrayData(
+        template,
+        TEMPLATE_NAME,
+        page.title,
+        true,
+      );
       if (!id) {
         console.log(`No id for page ${page.title}`);
         return;
       }
-      if (section === 'News/News') {
-        const newTemplate = template.replace('News/News', '');
+      if (section === 'News/Flash') {
+        const newTemplate = template.replace('News/Flash', 'flashes');
         newContent = newContent.replace(template, newTemplate);
+        return;
       }
-      if (section) {
+
+      if (section && section.toLocaleLowerCase() !== 'news' && section !== 'flashes') {
         const url = `https://www.inn.co.il/${section}.aspx/${id}`;
         try {
           const result = await fetch(url);
           if (result.status !== 200) {
-            console.log(`Error fetching ${url}`, result.status, `[[${page.title}]]`);
+            console.log(`Error fetching ${url}`, result.status, `[[${page.title}]]`, author, title);
           } else {
-            console.log(`Success fetching ${url}`, `[[${page.title}]]`);
+            console.log(`Success fetching ${url}`, result.url, `[[${page.title}]]`, author, title);
           }
         } catch (e) {
-          console.log(`Error fetching ${url}`, `[[${page.title}]]`);
+          console.log(`Error fetching ${url}`, `[[${page.title}]]`, author, title);
         }
       }
     }));
     if (newContent !== content) {
-      await api.updateArticle(page.title, 'ערוץ7: הסרת פרמטר מיותר', newContent);
+      await api.updateArticle(page.title, 'ערוץ7: פורמט חדש של פרמטר מדור', newContent);
       console.log(`Updated page ${page.title}`);
     }
   });
