@@ -42,6 +42,11 @@ async function main() {
     };
   });
   await fs.writeFile('./test-res.json', JSON.stringify(results, null, 2), 'utf8');
+
+  // for (let i = 10; i < results.length; i += 1) {
+  //   await updateArticle(results[i].title, 'נתוני בורסה', results[i].text);
+  //   console.log(results[i].title);
+  // }
 }
 
 main().catch((error) => {
