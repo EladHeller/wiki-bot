@@ -1,9 +1,10 @@
 import { MayaCompany } from '../API/mayaAPI';
 import { WikiPage } from '../types';
 import { CurrencyCode, prettyNumericValue } from '../utilities';
-import { getTemplateKeyValueData, findTemplates } from '../wiki/newTemplateParser';
+import {
+  getTemplateKeyValueData, findTemplates, findTemplate, templateFromKeyValueData,
+} from '../wiki/newTemplateParser';
 import { updateArticle } from '../wiki/wikiAPI';
-import WikiTemplateParser from '../wiki/WikiTemplateParser';
 
 const currentYear = process.env.YEAR;
 const TEMPLATE_NAME = 'חברה מסחרית';
@@ -69,7 +70,9 @@ export default class Company {
 
   reference: string;
 
-  templateParser: WikiTemplateParser;
+  templateText: string;
+
+  templateData: Record<string, any>;
 
   newArticleText: string;
 
@@ -137,23 +140,23 @@ export default class Company {
           fieldData,
           this.wikiTemplateData.year,
           this.reference,
-          this.templateParser.templateData[NAME_FIELD] || NAME_STRING,
+          this.templateData[NAME_FIELD] || NAME_STRING,
           isFirst,
           this.currency,
         );
 
         isFirst = false;
-        this.templateParser.templateData[field.wikiName] = this.wikiTemplateData[field.wikiName] || '';
+        this.templateData[field.wikiName] = this.wikiTemplateData[field.wikiName] || '';
       }
     });
 
-    const oldTemplate = this.templateParser.templateText;
-    this.templateParser.updateTamplateFromData();
+    const oldTemplate = this.templateText;
+    const newTemplate = templateFromKeyValueData(this.templateData, TEMPLATE_NAME);
     if (this.isContainsTamplate) {
-      this.newArticleText = this.articleText.replace(oldTemplate, this.templateParser.templateText);
+      this.newArticleText = this.articleText.replace(oldTemplate, newTemplate);
       // If not contains template and not has other template
     } else if (!this.articleText.trim().startsWith('{')) {
-      this.newArticleText = `${this.templateParser.templateText}\n${this.articleText}`;
+      this.newArticleText = `${newTemplate}\n${this.articleText}`;
     }
   }
 
@@ -161,7 +164,8 @@ export default class Company {
     this.isContainsTamplate = 'templates' in wikiData;
     this.articleText = wikiData.revisions[0].slots.main['*'];
     this.reference = wikiData.extlinks[0]['*'];
-    this.templateParser = new WikiTemplateParser(this.articleText, TEMPLATE_NAME);
+    this.templateText = findTemplate(this.articleText, TEMPLATE_NAME, this.name);
+    this.templateData = getTemplateKeyValueData(this.templateText);
   }
 
   appendMayaData(mayaData: Map<string, any>, year: number) {

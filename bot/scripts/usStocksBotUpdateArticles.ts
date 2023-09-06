@@ -6,8 +6,8 @@ import { promiseSequence } from '../utilities';
 import {
   getGoogleFinanceLinksWithContent, login, updateArticle,
 } from '../wiki/wikiAPI';
-import WikiTemplateParser from '../wiki/WikiTemplateParser';
 import { WikiPage } from '../types';
+import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
 async function main() {
   await login();
@@ -44,17 +44,17 @@ async function main() {
       return;
     }
     const content = page.revisions[0].slots.main['*'];
-    const template = new WikiTemplateParser(content, 'חברה מסחרית');
-    if (!template) {
+    const templateText = findTemplate(content, 'חברה מסחרית', page.title);
+    if (!templateText) {
       console.log(page.title, 'not template');
     }
-    const marketCap = template.templateData['שווי'];
-    const marketCapDate = template.templateData['תאריך שווי שוק'];
-    const { templateText } = template;
+    const templateData = getTemplateKeyValueData(templateText);
+    const marketCap = templateData['שווי'];
+    const marketCapDate = templateData['תאריך שווי שוק'];
     if (templateText && (!marketCap || !marketCapDate || !marketCap?.includes('שווי שוק חברה בורסאית'))) {
-      template.templateData['שווי'] = `{{שווי שוק חברה בורסאית (ארצות הברית)|ID=${tiker}}}`;
-      template.templateData['תאריך שווי שוק'] = '{{שווי שוק חברה בורסאית (ארצות הברית)|ID=timestamp}}';
-      const newContent = content.replace(templateText, template.updateTamplateFromData());
+      templateData['שווי'] = `{{שווי שוק חברה בורסאית (ארצות הברית)|ID=${tiker}}}`;
+      templateData['תאריך שווי שוק'] = '{{שווי שוק חברה בורסאית (ארצות הברית)|ID=timestamp}}';
+      const newContent = content.replace(templateText, templateFromKeyValueData(templateData, 'חברה מסחרית'));
       console.log(await updateArticle(page.title, 'שווי שוק', newContent));
     }
   }));

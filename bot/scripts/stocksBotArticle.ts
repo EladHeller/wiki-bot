@@ -4,8 +4,8 @@ import { promiseSequence } from '../utilities';
 import {
   login, getMayaLinks, updateArticle,
 } from '../wiki/wikiAPI';
-import WikiTemplateParser from '../wiki/WikiTemplateParser';
 import { WikiPage } from '../types';
+import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
 async function main() {
   await login();
@@ -33,14 +33,14 @@ async function main() {
     try {
       const content = page.revisions[0].slots.main['*'];
       console.log(page.title);
-      const template = new WikiTemplateParser(content, 'חברה מסחרית');
-      const { templateText } = template;
-      const marketCap = template.templateData['שווי'];
-      const marketCapDate = template.templateData['תאריך שווי שוק'];
+      const templateText = findTemplate(content, 'חברה מסחרית', page.title);
+      const templateData = getTemplateKeyValueData(templateText);
+      const marketCap = templateData['שווי'];
+      const marketCapDate = templateData['תאריך שווי שוק'];
       if (!marketCap || !marketCapDate || !marketCap?.includes('שווי שוק חברה בורסאית')) {
-        template.templateData['שווי'] = `{{שווי שוק חברה בורסאית|ID=${id}}}`;
-        template.templateData['תאריך שווי שוק'] = '{{שווי שוק חברה בורסאית|ID=timestamp}}';
-        const newContent = content.replace(templateText, template.updateTamplateFromData() + (templateText ? '' : '\n'));
+        templateData['שווי'] = `{{שווי שוק חברה בורסאית|ID=${id}}}`;
+        templateData['תאריך שווי שוק'] = '{{שווי שוק חברה בורסאית|ID=timestamp}}';
+        const newContent = content.replace(templateText, templateFromKeyValueData(templateData, 'חברה מסחרית') + (templateText ? '' : '\n'));
         console.log(await updateArticle(page.title, 'הוספת תבנית שווי שוק חברה בורסאית', newContent));
         console.log(page.title, 'updated');
       }

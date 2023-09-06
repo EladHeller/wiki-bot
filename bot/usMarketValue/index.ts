@@ -5,8 +5,8 @@ import { currencyName, getLocalDate, promiseSequence } from '../utilities';
 import {
   getArticleContent, getGoogleFinanceLinks, login, updateArticle,
 } from '../wiki/wikiAPI';
-import WikiTemplateParser from '../wiki/WikiTemplateParser';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
+import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
 const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
 
@@ -15,8 +15,7 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   if (!content) {
     throw new Error('Failed to get template content');
   }
-  const template = new WikiTemplateParser(content, '#switch: {{{ID}}}');
-  const oldTemplate = template.templateText;
+  const oldTemplate = findTemplate(content, '#switch: {{{ID}}}', marketValueTemplate);
   const relevantCompanies = marketValues.filter(({ gf: { marketCap } }) => marketCap.number !== '0');
   const companies = relevantCompanies.map(
     (marketValue) => [
@@ -25,12 +24,12 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
     ],
   ).sort((a, b) => (a[0] > b[0] ? 1 : -1));
 
-  template.updateTamplateFromData({
+  const newTemplate = templateFromKeyValueData({
     ...Object.fromEntries(companies),
     timestamp: getLocalDate(relevantCompanies[0].gf.marketCap.date ?? new Date().toDateString()),
     '#default': '',
-  });
-  const newContent = content.replace(oldTemplate, template.templateText);
+  }, '#switch: {{{ID}}}');
+  const newContent = content.replace(oldTemplate, newTemplate);
   const res = await updateArticle(
     marketValueTemplate,
     'עדכון',

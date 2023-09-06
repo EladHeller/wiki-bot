@@ -5,8 +5,8 @@ import {
   getAllDetails,
 } from '../API/mayaAPI';
 import { getCompanies, login } from '../wiki/wikiAPI';
-import WikiTemplateParser from '../wiki/WikiTemplateParser';
 import { WikiPage } from '../types';
+import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
 async function main() {
   await login();
@@ -30,23 +30,18 @@ async function main() {
   const results = marketValues.map(({ allDetails, wiki }) => {
     const indice = allDetails.IndicesList.find(({ IndexName }) => IndexName === 'ת"א All-Share');
     const content = wiki.revisions[0].slots.main['*'];
-    const template = new WikiTemplateParser(content, 'חברה מסחרית');
-    const oldTemplate = template.templateText;
-    template.templateData['בורסה'] = '[[הבורסה לניירות ערך בתל אביב]]';
+    const oldTemplate = findTemplate(content, 'חברה מסחרית', wiki.title);
+    const templateData = getTemplateKeyValueData(oldTemplate);
+    templateData['בורסה'] = '[[הבורסה לניירות ערך בתל אביב]]';
     if (indice?.Symbol) {
-      template.templateData['סימול'] = indice?.Symbol;
+      templateData['סימול'] = indice?.Symbol;
     }
     return {
       title: wiki.title,
-      text: content.replace(oldTemplate, template.updateTamplateFromData()),
+      text: content.replace(oldTemplate, templateFromKeyValueData(templateData, 'חברה מסחרית')),
     };
   });
   await fs.writeFile('./test-res.json', JSON.stringify(results, null, 2), 'utf8');
-
-  // for (let i = 10; i < results.length; i += 1) {
-  //   await updateArticle(results[i].title, 'נתוני בורסה', results[i].text);
-  //   console.log(results[i].title);
-  // }
 }
 
 main().catch((error) => {
