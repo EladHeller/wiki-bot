@@ -30,7 +30,6 @@ export type WikiPage = {
       title: string;
     }[];
 }
-
 export interface WikiApiConfig {
     baseUrl: string;
     userName: string;

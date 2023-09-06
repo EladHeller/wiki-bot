@@ -4,13 +4,9 @@ import {
   getArticleContent,
   getMayaLinks, login, updateArticle,
 } from '../wiki/wikiAPI';
-import {
-  TableRow,
-  buildTableWithStyle,
-} from '../wiki/WikiParser';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
-import parseTableText from '../wiki/wikiTableParser';
+import parseTableText, { TableRow, buildTableWithStyle } from '../wiki/wikiTableParser';
 import { AllDetailsResponse, getAllDetails } from '../API/mayaAPI';
 import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getLocalDate } from '../utilities';
@@ -218,17 +214,17 @@ async function getTableData() : Promise<ManagementDetails[]> {
   const data = table.rows.map((row) => {
     const [
       name, chairman, articleChairman, chairmanEqual, CEO, articleCEO, CEOEqual, manualApproval,
-    ] = row.values;
+    ] = row.fields;
     return {
       id: 0,
-      title: name.replace(/\[\[(.+?)\]\]/, '$1'),
-      chairman,
-      articleChairman,
+      title: name.toString().replace(/\[\[(.+?)\]\]/, '$1'),
+      chairman: chairman.toString(),
+      articleChairman: articleChairman.toString(),
       chairmanEqual: chairmanEqual as JobChange,
-      CEO,
-      articleCEO,
+      CEO: CEO.toString(),
+      articleCEO: articleCEO.toString(),
       CEOEqual: CEOEqual as JobChange,
-      manualApproval: getManualApprovalValue(manualApproval),
+      manualApproval: getManualApprovalValue(manualApproval.toString()),
     };
   });
 

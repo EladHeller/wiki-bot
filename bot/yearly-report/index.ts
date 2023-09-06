@@ -5,8 +5,8 @@ import getMayaDetails, { MayaWithWiki } from '../API/mayaAPI';
 import {
   getCompanies, getCompany, login, updateArticle,
 } from '../wiki/wikiAPI';
-import { buildTable } from '../wiki/WikiParser';
 import { WikiPage } from '../types';
+import { buildTable } from '../wiki/wikiTableParser';
 
 const year = process.env.YEAR;
 

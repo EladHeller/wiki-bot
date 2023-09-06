@@ -1,8 +1,9 @@
 import { nextWikiText } from './WikiParser';
 
-type TableRow = {
-  values: string[];
-  rowStyle: string;
+export type TableRow = {
+  fields: (string | number | boolean)[];
+  style?: string;
+  isHeader?: boolean;
 }
 
 export type TableData = {
@@ -23,7 +24,7 @@ function getNextRowDelimiterIndex(rowText, currIndex, delimiter) {
 
 function getTableRow(rowText: string, isHeader: boolean): TableRow {
   const delimiter = isHeader ? '!' : '|';
-  const row: TableRow = { values: [], rowStyle: '' };
+  const row: TableRow = { fields: [], style: '' };
   let currIndex = 0;
 
   if (rowText[currIndex] === delimiter) {
@@ -34,19 +35,19 @@ function getTableRow(rowText: string, isHeader: boolean): TableRow {
 
   // Row has style cell
   if (rowText[nextDelimiterIndex + 1] !== delimiter) {
-    row.rowStyle = rowText.substring(currIndex, nextDelimiterIndex).trim();
+    row.style = rowText.substring(currIndex, nextDelimiterIndex).trim();
     currIndex = nextDelimiterIndex + 1;
   }
 
   nextDelimiterIndex = getNextRowDelimiterIndex(rowText, currIndex, delimiter);
 
   while (nextDelimiterIndex !== -1) {
-    row.values.push(rowText.substring(currIndex, nextDelimiterIndex).trim());
+    row.fields.push(rowText.substring(currIndex, nextDelimiterIndex).trim());
     currIndex = nextDelimiterIndex + 2;
     nextDelimiterIndex = getNextRowDelimiterIndex(rowText, currIndex, delimiter);
   }
 
-  row.values.push(rowText.substring(currIndex).trim());
+  row.fields.push(rowText.substring(currIndex).trim());
 
   return row;
 }
@@ -96,6 +97,31 @@ function tableTextToObject(tableText: string): TableData {
   tableData.rows.push(getTableRow(rowText, false));
 
   return tableData;
+}
+
+export function buildTableRow(
+  fields: (string | number | boolean)[],
+  style?: string,
+  isHeader = false,
+): string {
+  const delimiter = isHeader ? '!' : '|';
+  let rowStr = `\n|-${style ?? ''}\n${delimiter}${fields[0].toString().replace(/\n/g, '')}`;
+  for (let i = 1; i < fields.length; i += 1) {
+    rowStr += ` || ${fields[i] == null ? '---' : fields[i].toString().replace(/\n/g, '')}`;
+  }
+  return rowStr;
+}
+
+export function buildTable(headers: string[], rows: string[][]): string {
+  return `{| class="wikitable sortable"
+! ${headers.join(' !! ')}
+${rows.map((row) => buildTableRow(row)).join('')}\n|}`;
+}
+
+export function buildTableWithStyle(headers: string[], rows: TableRow[]): string {
+  return `{| class="wikitable sortable"
+! ${headers.join(' !! ')}
+${rows.map((row) => buildTableRow(row.fields, row.style, row.isHeader)).join('')}\n|}`;
 }
 
 export default function parseTableText(articleText: string): TableData[] {
