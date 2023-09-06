@@ -6,17 +6,15 @@ import {
 } from './utils';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 
-interface KinneretLevelRecord {
-  Survey_Date: string;
-  Kinneret_Level: number;
-  _id: number;
-}
-
 const DATE_REGEX = /(\d{2})\/(\d{2})\/(\d{2})/;
 
 const articleName = 'תבנית:מפלס הכנרת';
 // const apiUrl = 'https://data.gov.il/api/3/action/datastore_search?resource_id=2de7b543-e13d-4e7e-b4c8-56071bc4d3c8&limit=1';
-
+// interface KinneretLevelRecord {
+//   Survey_Date: string;
+//   Kinneret_Level: number;
+//   _id: number;
+// }
 // async function getKineretLevel1() {
 //   const levelRes = await fetch(apiUrl).then((res) => res.json());
 //   const record: KinneretLevelRecord = levelRes.result.records[0];

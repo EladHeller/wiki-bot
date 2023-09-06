@@ -1,6 +1,6 @@
 import { parseLocalDate } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
-import WikiTemplateParser from '../wiki/WikiTemplateParser';
+import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
 const dateFormater = new Intl.DateTimeFormat('he-IL', {
   year: 'numeric',
@@ -71,15 +71,16 @@ export async function updateLevel(
   if (!content) {
     throw new Error('Failed to get article content');
   }
-  const template = new WikiTemplateParser(content, templateName);
-  const oldTemplate = template.templateText;
+  const template = findTemplate(content, templateName, articleName);
+  const oldTemplate = template;
+  const templateData = getTemplateKeyValueData(template);
   if (!oldTemplate) {
     throw new Error('Failed to get template text');
   }
 
-  const change = Number(level) - Number(template.templateData[LEVEL_FIELD]);
+  const change = Number(level) - Number(templateData[LEVEL_FIELD]);
   const changeData = getChangeData(change);
-  const oldDate = template.templateData[DATE_LEVEL_FIELD];
+  const oldDate = templateData[DATE_LEVEL_FIELD];
   const parsedOldDate = parseLocalDate(oldDate);
   const parsedDate = parseLocalDate(levelData.date);
   const today = new Date();
@@ -89,17 +90,17 @@ export async function updateLevel(
     return;
   }
 
-  if (template.templateData[dateLevelField] === date || parsedOldDate > parsedDate) {
+  if (templateData[dateLevelField] === date || parsedOldDate > parsedDate) {
     console.log(`No update needed for ${articleName}`);
     return;
   }
 
-  const newTemplateText = template.updateTamplateFromData({
-    ...template.templateData,
+  const newTemplateText = templateFromKeyValueData({
+    ...templateData,
     [dateLevelField]: date,
     [levelField]: level,
     [CAHNGE_FIELD]: `${changeData.text} ${changeData.icon} מלפני ${datesDiffereceInDays(parsedOldDate, parsedDate)}`,
-  });
+  }, templateName, true);
   const newContent = content.replace(oldTemplate, newTemplateText);
 
   await api.updateArticle(articleName, 'עדכון מפלס', newContent);
