@@ -23,6 +23,19 @@ describe('getInnerLinks', () => {
 
     expect(result).toStrictEqual([]);
   });
+
+  it('should manage open bracket without close bracket', () => {
+    const mockText = '[[Link1|Text1]] [[Link2]] [[Link3|Text3]] [[Link4';
+    const expectedLinks = [
+      { link: 'Link1', text: 'Text1' },
+      { link: 'Link2', text: 'Link2' },
+      { link: 'Link3', text: 'Text3' },
+    ];
+
+    const result = getInnerLinks(mockText);
+
+    expect(result).toStrictEqual(expectedLinks);
+  });
 });
 
 describe('getInnerLink', () => {
@@ -46,6 +59,15 @@ describe('getInnerLink', () => {
   it('should get links even they are in template text', () => {
     const mockText = '{{תבנית|שם=שם|שם בשפת המקור=[[שם בשפת המקור]]|אלבום=אלבום}}';
     const expectedLink = { link: 'שם בשפת המקור', text: 'שם בשפת המקור' };
+
+    const result = getInnerLink(mockText);
+
+    expect(result).toStrictEqual(expectedLink);
+  });
+
+  it('should manage open bracket without close bracket', () => {
+    const mockText = '[[Link1|Text1]] [[Link2]] [[Link3|Text3]] [[Link4';
+    const expectedLink = { link: 'Link1', text: 'Text1' };
 
     const result = getInnerLink(mockText);
 
@@ -80,6 +102,15 @@ describe('getExteranlLinks', () => {
     expect(result).toStrictEqual(expectedLinks);
   });
 
+  it('should manage open bracket without close bracket', () => {
+    const mockText = '[http://example.com link][http://example.com';
+    const expectedLink = { link: 'http://example.com', text: 'link' };
+
+    const result = getExteranlLinks(mockText);
+
+    expect(result).toStrictEqual([expectedLink]);
+  });
+
   it('should return an empty array if there are no exteranal links', () => {
     const mockText = 'No links';
 
@@ -105,5 +136,14 @@ describe('getExteranlLink', () => {
     const result = getExteranlLink(mockText);
 
     expect(result).toBeUndefined();
+  });
+
+  it('should manage open bracket without close bracket', () => {
+    const mockText = '[http://example.com link][http://example.com';
+    const expectedLink = { link: 'http://example.com', text: 'link' };
+
+    const result = getExteranlLink(mockText);
+
+    expect(result).toStrictEqual(expectedLink);
   });
 });
