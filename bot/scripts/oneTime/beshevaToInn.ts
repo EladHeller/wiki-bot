@@ -7,10 +7,10 @@ const templateName = 'בשבע';
 export default async function beshevaToInn() {
   const api = NewWikiApi();
   await api.login();
-  const generator = api.getArticlesWithTemplate(`תבנית:${templateName}`);
+  const generator = api.getArticlesWithTemplate(`תבנית:${templateName}`, undefined, '*');
 
   const number = 0;
-  await asyncGeneratorMapWithSequence<WikiPage>(25, generator, (page) => async () => {
+  await asyncGeneratorMapWithSequence<WikiPage>(5, generator, (page) => async () => {
     const content = page.revisions[0].slots.main['*'];
     if (!content) {
       console.log(`No content for page ${page.title}`);
@@ -18,18 +18,18 @@ export default async function beshevaToInn() {
     }
     let newContent = content;
     const templates = findTemplates(content, templateName, page.title);
-    await promiseSequence(5, templates.map((template) => async () => {
+    await promiseSequence(1, templates.map((template) => async () => {
       const [author, title, id, date] = getTemplateArrayData(
         template,
         templateName,
         page.title,
         true,
       );
+      let actualDate = date;
       if (date) {
-        if (date && !date.match(/\d{1,2} [א-ת]{3,10} \d{4}/)) {
-          console.log(page.title, date);
-        } else {
-          console.log(page.title, 'good date');
+        const withLinkMatch = date.match(/^[הב]?\[?\[?(\d{1,2})[בן,]? ?ב?([א-ת]{3,9})\]?\]?,? ?\[?\[?(\d{4})\]?\]?[.,]?$/);
+        if (withLinkMatch) {
+          actualDate = `${withLinkMatch[1]} ב${withLinkMatch[2]} ${withLinkMatch[3]}`;
         }
       }
 
@@ -41,23 +41,23 @@ export default async function beshevaToInn() {
 
       const res = await fetch(url);
       if (res.status !== 200) {
-        console.log(`Error fetching ${url}`, res.status, `[[${page.title}]]`);
+        console.log(`Error fetching ${url}`, res.status, `[[${page.title}]]`, title, author);
         return;
       }
 
       // https://www.inn.co.il/news/558774
-      if (!res.url.match(/inn\.co\.il\/news\/[0-9]+$/)) {
+      const match = res.url.match(/inn\.co\.il\/news\/([0-9]+)$/);
+      if (!match) {
         console.log('Not news', res.url, url, `[[${page.title}]]`);
         return;
       }
 
-      const newTemplate = `{{ערוץ7|${author ?? ''}|${title ?? ''}|${id ?? ''}|${date ?? ''}}}`;
+      const newTemplate = `{{ערוץ7|${author ?? ''}|${title ?? ''}|${match[1] ?? ''}|${actualDate ?? ''}}}`;
       newContent = newContent.replace(template, newTemplate);
     }));
     if (newContent !== content) {
+      await api.updateArticle(page.title, 'החלפת תבנית בשבע בתבנית ערוץ 7', newContent);
       console.log('success', page.title);
-    } else {
-    //   console.log('fail', page.title);
     }
   });
 
