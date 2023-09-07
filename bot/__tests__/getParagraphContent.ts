@@ -51,6 +51,22 @@ describe('getParagraphContent', () => {
 
     expect(result).toBeNull();
   });
+
+  it('should return content where there are spaces around paragraph title', () => {
+    const articleText = `
+      Some text before
+      == Introduction ==
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+      ==Conclusion==
+      Donec nec enim sed metus consequat aliquet.
+      Some text after
+    `;
+    const paragraphName = 'Introduction';
+
+    const result = getParagraphContent(articleText, paragraphName);
+
+    expect(result).toBe('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
+  });
 });
 
 describe('getUsersFromTagParagraph', () => {
@@ -76,6 +92,24 @@ describe('getUsersFromTagParagraph', () => {
   });
 
   it('should return an empty array when the tag paragraph does not exist in the article content', () => {
+    const articleContent = `
+      Some text before
+      ==Tag==
+      Some text after
+      [[משתמש:User1]] * [[user:User2|User 2]] * [[משתמשת:User3|User 3]] * [[just a link]]
+    `;
+    const paragraphName = 'Tag';
+
+    const result = getUsersFromTagParagraph(articleContent, paragraphName);
+
+    expect(result).toStrictEqual([
+      '[[משתמש:User1]]',
+      '[[user:User2|User 2]]',
+      '[[משתמשת:User3|User 3]]',
+    ]);
+  });
+
+  it('should returns only user links', () => {
     const articleContent = `
       Some text before
       ==Tag==

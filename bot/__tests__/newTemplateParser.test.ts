@@ -1,4 +1,8 @@
-import { findTemplates, getTemplateArrayData } from '../wiki/newTemplateParser';
+import {
+  findTemplate,
+  findTemplates, getTemplateArrayData, getTemplateKeyValueData, templateFromArrayData,
+  templateFromKeyValueData,
+} from '../wiki/newTemplateParser';
 
 describe('findTemplates', () => {
   it('should return empty array if no templates found', () => {
@@ -39,6 +43,31 @@ describe('findTemplates', () => {
     const title = 'test';
     const result = findTemplates(text, templateName, title);
     expect(result).toStrictEqual([]);
+  });
+
+  it('should manage broken template', () => {
+    const text = 'hello {{test|text=hello}} {{test|text=world';
+
+    const result = findTemplates(text, 'test', 'test');
+
+    expect(result).toStrictEqual(['{{test|text=hello}}']);
+  });
+});
+
+describe('findTemplate', () => {
+  const templateName = 'test';
+  const title = 'test';
+
+  it('should finds first template', () => {
+    const text = 'hello world {{template| {{test|text=hello}}{{a}}|test2}} lorem ipsum {{test|text=world}} dilor';
+    const result = findTemplate(text, templateName, title);
+    expect(result).toBe('{{test|text=hello}}');
+  });
+
+  it('should returns empty string if no template found', () => {
+    const text = 'hello world';
+    const result = findTemplate(text, templateName, title);
+    expect(result).toBe('');
   });
 });
 
@@ -95,5 +124,60 @@ describe('getTemplateArrayData', () => {
     const result = getTemplateArrayData('{{test||other}}', 'test', 'text');
 
     expect(result).toStrictEqual(['', 'other']);
+  });
+});
+
+describe('templateFromArrayData', () => {
+  it('shoud creates template from array data', () => {
+    const array = ['text=hello', '', 'test', ''];
+
+    const result = templateFromArrayData(array, 'test');
+
+    expect(result).toBe('{{test|text=hello||test|}}');
+  });
+});
+
+describe('templateFromKeyValueData', () => {
+  it('shoud creates template from key value data', () => {
+    const data = {
+      test: 'hello',
+      other: 'world',
+    };
+
+    const result = templateFromKeyValueData(data, 'test');
+
+    expect(result).toBe('{{test\n|test=hello\n|other=world\n}}');
+  });
+
+  it('shoud creates oneline template if parameter passed', () => {
+    const data = {
+      test: 'hello',
+      other: 'world',
+      author: '',
+    };
+
+    const result = templateFromKeyValueData(data, 'test', false);
+
+    expect(result).toBe('{{test|test=hello|other=world|author=}}');
+  });
+});
+
+describe('getTemplateKeyValueData', () => {
+  it('should get key value data from template', () => {
+    const template = '{{test|text=hello|other=world|empty=|1=1}}';
+
+    const result = getTemplateKeyValueData(template);
+
+    expect(result).toStrictEqual({
+      text: 'hello',
+      other: 'world',
+      empty: '',
+      1: '1',
+    });
+  });
+
+  it('should handle empty template', () => {
+    const result = getTemplateKeyValueData('');
+    expect(result).toStrictEqual({});
   });
 });
