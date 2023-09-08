@@ -51,7 +51,7 @@ export async function first(templateName = 'סינגלי אלבום') {
   const api = NewWikiApi();
   let number = 0;
   await api.login();
-  const generator = api.getArticlesWithTemplate(`תבנית:${templateName}`);
+  const generator = api.getArticlesWithTemplate(templateName);
   const titles = new Set<string>();
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     try {
@@ -117,7 +117,7 @@ export async function second(templateName = 'אלבום') {
   const api = NewWikiApi();
   let number = 0;
   await api.login();
-  const generator = api.getArticlesWithTemplate(`תבנית:${templateName}`);
+  const generator = api.getArticlesWithTemplate(templateName);
   const titles = new Set<string>();
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     try {
@@ -184,7 +184,7 @@ export async function third(templateName = 'סינגל') {
   const api = NewWikiApi();
   let number = 0;
   await api.login();
-  const generator = api.getArticlesWithTemplate(`תבנית:${templateName}`);
+  const generator = api.getArticlesWithTemplate(templateName);
   const titles = new Set<string>();
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     try {

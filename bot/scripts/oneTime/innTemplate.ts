@@ -8,7 +8,7 @@ const TEMPLATE_NAME = 'ערוץ7';
 export default async function innTemplate() {
   const api = NewWikiApi();
   await api.login();
-  const generator = api.getArticlesWithTemplate(`תבנית:${TEMPLATE_NAME}`);
+  const generator = api.getArticlesWithTemplate(TEMPLATE_NAME);
   let number = 0;
   await asyncGeneratorMapWithSequence<WikiPage>(25, generator, (page) => async () => {
     number += 1;
@@ -54,7 +54,7 @@ export default async function innTemplate() {
       }
     }));
     if (newContent !== content) {
-      await api.updateArticle(page.title, 'ערוץ7: פורמט חדש של פרמטר מדור', newContent);
+      // await api.updateArticle(page.title, 'ערוץ7: פורמט חדש של פרמטר מדור', newContent);
       console.log(`Updated page ${page.title}`);
     }
   });

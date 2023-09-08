@@ -7,7 +7,7 @@ const templateName = 'בשבע';
 export default async function beshevaToInn() {
   const api = NewWikiApi();
   await api.login();
-  const generator = api.getArticlesWithTemplate(`תבנית:${templateName}`, undefined, '*');
+  const generator = api.getArticlesWithTemplate(templateName, undefined, 'תבנית', '*');
 
   const number = 0;
   await asyncGeneratorMapWithSequence<WikiPage>(5, generator, (page) => async () => {
