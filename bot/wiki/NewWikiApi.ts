@@ -101,9 +101,10 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   async function* getArticlesWithTemplate(
     templateName: string,
     continueObject?: Record<string, string>,
+    prefix = 'תבנית',
     namespace = '0',
   ): AsyncGenerator<WikiPage[], void, WikiPage[]> {
-    const template = encodeURIComponent(templateName);
+    const template = encodeURIComponent(`${prefix ? `${prefix}:` : ''}${templateName}`);
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content');
     const path = '?action=query&format=json'

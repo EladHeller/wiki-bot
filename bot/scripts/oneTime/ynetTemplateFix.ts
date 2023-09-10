@@ -8,7 +8,7 @@ export default async function ynetTemplateFix() {
   const api = NewWikiApi();
   await api.login();
 
-  const generator = api.getArticlesWithTemplate(`תבנית:${TEMPLATE_NAME}`);
+  const generator = api.getArticlesWithTemplate(TEMPLATE_NAME);
 
   await asyncGeneratorMapWithSequence(25, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];

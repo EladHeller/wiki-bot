@@ -16,7 +16,7 @@ export default async function chronologyTemplate() {
   const api = NewWikiApi();
   let number = 0;
   await api.login();
-  const generator = api.getArticlesWithTemplate(`תבנית:${TEMPLATE_NAME}`);
+  const generator = api.getArticlesWithTemplate(TEMPLATE_NAME);
   const titles = new Set<string>();
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
     try {

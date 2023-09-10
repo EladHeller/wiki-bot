@@ -2,7 +2,12 @@ const nowiki = '<nowiki>';
 const nowikiEnd = '</nowiki>';
 
 export function noWikiEndTagIndex(text: string, startIndex: number): number {
-  return text.indexOf(nowikiEnd, startIndex) + nowikiEnd.length;
+  const nextNoWikiEndIndex = text.indexOf(nowikiEnd, startIndex);
+  if (nextNoWikiEndIndex === -1) {
+    return -1;
+  }
+
+  return nextNoWikiEndIndex + nowikiEnd.length;
 }
 
 export function nextWikiText(
@@ -15,7 +20,12 @@ export function nextWikiText(
   let index = currIndex;
   while (text.substring(index, index + str.length) !== str && index < text.length && index !== -1) {
     if (text.substring(index, index + nowiki.length) === nowiki) {
+      const before = index;
       index = noWikiEndTagIndex(text, index);
+      if (index === -1) {
+        console.warn('<nowiki> without </nowiki>', title, console.log(text.substring(before, before + 100)));
+        return -1;
+      }
     } else if (text.substring(index, index + 2) === '{{' && !ignoreTemplates) {
       const before = index;
       index = nextWikiText(text, index + 2, '}}');

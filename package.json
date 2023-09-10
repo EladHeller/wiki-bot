@@ -1,7 +1,7 @@
 {
-  "name": "tradeboot",
+  "name": "wiki-bot",
   "version": "1.0.0",
-  "description": "tradeBoot",
+  "description": "wiki-bot",
   "main": "dist/index.js",
   "scripts": {
     "lint:test": "eslint ./**/*.ts ./send-email/**/*.mjs --max-warnings 0",
