@@ -22,9 +22,8 @@ async function getDeadSeaLevel() {
     throw new Error('Failed to get dead sea level');
   }
   const [, day, month, year] = date;
-  const dateFormat = formatDate(new Date(`${year}-${month}-${day}`));
   return {
-    date: dateFormat,
+    date: new Date(`${year}-${month}-${day}`),
     level: record['מפלס'].toString().trim(),
   };
 }

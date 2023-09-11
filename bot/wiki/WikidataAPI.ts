@@ -8,7 +8,7 @@ const defaultWikiDataConfig: Partial<WikiApiConfig> = {
   assertBot: false,
 };
 
-export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultWikiDataConfig) {
+export default function WikidataAPI(apiConfig: Partial<WikiApiConfig> = defaultWikiDataConfig) {
   const baseApi = BaseWikiApi(apiConfig);
   let token: string;
 
@@ -21,13 +21,14 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultWi
     return tokenPromise;
   }
 
-  function editClaim() {
-    return baseApi.request('action=wbsetclaim&format=json', 'POST', {
+  function setClaim(claim: string, summary: string) {
+    return baseApi.request(`?action=wbsetclaim&format=json&claim=${claim}&summary=${summary}&bot=true`, 'POST', {
       token,
     });
   }
 
   return {
     login,
+    setClaim,
   };
 }

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { JSDOM } from 'jsdom';
 import updateDeadSeaLevel from './deadSeaBot';
 import {
-  formatDate, updateLevel,
+  updateLevel, updateWikidata,
 } from './utils';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 
@@ -45,7 +45,7 @@ async function getKineretLevel() {
   // const updatedResult = results[0].date > results[1].date ? results[0] : results[1];
   const updatedResult = await getKineretLevel2();
   return {
-    date: formatDate(updatedResult.date),
+    date: updatedResult.date,
     level: updatedResult.level.toString().trim(),
   };
 }
@@ -53,6 +53,7 @@ async function getKineretLevel() {
 async function kineret() {
   const { date, level } = await getKineretLevel();
   await updateLevel({ date, level }, articleName, '#switch: {{{מאפיין}}}');
+  await updateWikidata({ date, level });
 }
 
 export const main = shabathProtectorDecorator(async () => {

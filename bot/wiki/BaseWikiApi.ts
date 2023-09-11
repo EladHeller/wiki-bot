@@ -48,7 +48,12 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>) {
     return getWikiToken(client, config.baseUrl, tokenType);
   }
 
-  async function request(path: string, method?: string, data?: Record<string, any>): Promise<any> {
+  async function request(
+    path: string,
+    method?: string,
+    data?: Record<string, any>,
+    formData = false,
+  ): Promise<any> {
     if (!token) {
       await login();
     }
@@ -56,8 +61,14 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>) {
       url: config.baseUrl + path,
       method: method ?? 'GET',
     };
-    if (data) {
+    if (data && !formData) {
       queryDetails.data = data;
+    } else if (data) {
+      const fd = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        fd.append(key, value);
+      });
+      queryDetails.data = fd;
     }
     const result = await client(queryDetails);
 
