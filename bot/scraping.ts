@@ -7,9 +7,13 @@ export function getSchemaData(doc: Document, type: string): SchamaJson | undefin
   }
 
   return schemas
-    .map((schema) => {
+    .flatMap((schema) => {
       try {
-        return JSON.parse(schema.textContent?.replace(possibleProblem, '') ?? '') as SchamaJson;
+        const schemaData = JSON.parse(schema.textContent?.replace(possibleProblem, '').trim() ?? '');
+        if (schemaData['@graph']) {
+          return schemaData['@graph'];
+        }
+        return JSON.parse(schema.textContent?.replace(possibleProblem, '').trim() ?? '');
       } catch (e) {
         console.warn('Invalid schema', schema.textContent);
         return undefined;
@@ -26,4 +30,9 @@ export function getMetaValue(doc: Document, propertyOrName: string): string | nu
 export function getAttr(doc: Document, selector: string, attr: string): string | null {
   const element = doc.querySelector(selector);
   return element?.getAttribute(attr) ?? null;
+}
+
+export function getContent(doc: Document, selector: string): string | null {
+  const element = doc.querySelector(selector);
+  return element?.textContent ?? null;
 }

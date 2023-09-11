@@ -5,7 +5,8 @@ import {
 import NewWikiApi from '../../../wiki/NewWikiApi';
 import { findTemplates, getTemplateArrayData } from '../../../wiki/newTemplateParser';
 
-const hebrewDateRegex = /^\s*(?:[א-ת]'|[א-ת]"[א-ת] )?[א-ת]{3,10}(?: [אב])? (?:ה'?)?[א-ת]{2,3}(?:"[א-ת])? ?[.,/]?\s*$/;
+const hebrewDateRegex = /\s*(?:[א-ת]['׳] |[א-ת]["״][א-ת] )?[א-ת]{3,10}(?: [אב]['׳])? (?:ה['׳]?)?[א-ת]{2,3}(?:["״][א-ת])? ?[.,/]?\s*/;
+const exactHebrewDateRegex = /^\s*(?:[א-ת]['׳] |[א-ת]["״][א-ת] )?[א-ת]{3,10}(?: [אב]['׳])? (?:ה['׳]?)?[א-ת]{2,3}(?:["״][א-ת])? ?[.,/]?\s*$/;
 
 type DateFromPageCallback = (id: string, title: string, section?: string) => Promise<string>;
 type TemplateData = {
@@ -56,14 +57,18 @@ export default async function templateDates(
         .replace('{{כ}}', '')
         .replace('ניתן ב-', '')
         .replace(/פורסם ב-?/, '')
+        .replace(/[מב]תאריך/, '')
+        .replace(/בשנת/, '')
         .replace('פורסם: ', '')
         .replace(hebrewDateRegex, '')
-        .replace(/באתר/i, '');
+        .replace(/באתר/i, '')
+        .trim();
 
-      if (date.match(hebrewDateRegex)
-          || justDate.trim().match(/^([א-ת]{3,10},? )?\d{4}[.,]?$/)
-          || justDate.trim().match(/^\d{1,2} ב?[א-ת]{3,9}[.,]?$/)
-          || justDate.trim().match(/^ב?\[?\[?[א-ת]{3,9}\]?\]?[,.]? \[?\[?\d{4}\]?\]?[,.]?$/)) {
+      if (date.trim().match(exactHebrewDateRegex)
+          || justDate.match(/^([א-ת]{3,10},? )?\d{4}[.,]?$/) // במאי 2014
+          || justDate.match(/^\d{1,2} ב?[א-ת]{3,9}[.,]?$/) // 1 במאי
+          || justDate.match(/^ב?\[?\[?[א-ת]{3,9}\]?\]?[,.]? \[?\[?\d{4}\]?\]?[,.]?$/) // ב[[מאי]] [[2014]]
+          || !justDate) {
         const dateFromDoc = await getDataFromPage(id, page.title, section);
         if (dateFromDoc) {
           const newTemplateText = template.replace(date, dateFromDoc);
@@ -71,12 +76,11 @@ export default async function templateDates(
           console.log('DateFromDoc', date, dateFromDoc, page.title);
           return;
         }
-        console.log('Failed to get date from page', id, page.title, section);
       }
 
-      const withLinkMatch = justDate.match(/^[הב]?\[?\[?(\d{1,2})[בן,]? ?ב?([א-ת]{3,9})\]?\]?,? ?\[?\[?(\d{4})\]?\]?[.,]?$/);
-      if (withLinkMatch) {
-        const newTemplateText = template.replace(date, `${withLinkMatch[1]} ב${withLinkMatch[2]} ${withLinkMatch[3]}`);
+      const formatWithAdditions = justDate.match(/^[הב]?\[?\[?(\d{1,2})[בן,]?\s?ב?\[?\[?([א-ת]{3,9})\]?\]?,?\s?(?:''')?\[?\[?(\d{4})\]?\]?(?:''')?[.,]?$/);
+      if (formatWithAdditions) {
+        const newTemplateText = template.replace(date, `${formatWithAdditions[1]} ב${formatWithAdditions[2]} ${formatWithAdditions[3]}`);
         if (newTemplateText !== template) {
           console.log('WithLink', date);
           newContent = newContent.replace(template, newTemplateText);
@@ -109,10 +113,10 @@ export default async function templateDates(
       }
 
       let dateFormatMatch = justDate.match(
-        /^(?:\s*\d{2}:\d{2}\s*,\s*)?(?<day>[0-3]?[0-9])[ \\/,.-](?<month>[01]?[0-9])[ \\/,.-](?<year>\d{2,4})[ /,.-]?(?:\s*,?\s*\d{2}:\d{2})?\s*$/,
+        /^\s*\(?(?:\d{2}:\d{2}\s*,\s*)?(?<day>[0-3]?[0-9])[ \\/,.-](?<month>[01]?[0-9])[ \\/,.-](?<year>\d{2,4})[ /,.-]?(?:\s*,?\s*\d{2}:\d{2})?\)?\s*$/, // 01/02/03
       );
       if (!dateFormatMatch) {
-        dateFormatMatch = justDate.match(/^\s*(?<year>\d{4})[ /,.-](?<month>[01]?[0-9])[ /,.-](?<day>[0-3]?[0-9])\s*$/);
+        dateFormatMatch = justDate.match(/^\s*(?<year>\d{4})[ /,.-](?<month>[01]?[0-9])[ /,.-](?<day>[0-3]?[0-9])\s*$/); // 2003/01/02
       }
       const { day, month, year } = dateFormatMatch?.groups ?? {};
       if (!dateFormatMatch || !day || !month || !year) {

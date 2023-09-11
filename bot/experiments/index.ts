@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import beshevaToInn from '../scripts/oneTime/beshevaToInn';
+import the7eyeDates from '../scripts/oneTime/templatesDates/the7eyeDates';
 
 async function main() {
-  await beshevaToInn();
+  await the7eyeDates();
 }
 
 main();
