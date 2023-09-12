@@ -1,7 +1,6 @@
 import {
-  findTemplate,
-  findTemplates, getTemplateArrayData, getTemplateKeyValueData, templateFromArrayData,
-  templateFromKeyValueData,
+  findTemplate, findTemplates, getTemplateArrayData, getTemplateDate, getTemplateKeyValueData,
+  templateFromArrayData, templateFromKeyValueData, templateFromTemplateData,
 } from '../wiki/newTemplateParser';
 
 describe('findTemplates', () => {
@@ -179,5 +178,96 @@ describe('getTemplateKeyValueData', () => {
   it('should handle empty template', () => {
     const result = getTemplateKeyValueData('');
     expect(result).toStrictEqual({});
+  });
+});
+
+describe('getTemplateDate', () => {
+  it('should return an empty object for a template without valid content', () => {
+    const templateText = '{{templateName}}';
+    const templateName = 'name';
+    const title = 'Title';
+    const result = getTemplateDate(templateText, templateName, title);
+    expect(result).toStrictEqual({});
+  });
+
+  it('should parse key-value pairs from a valid template', () => {
+    const templateText = '{{name|key1=value1|key2=value2}}';
+    const templateName = 'name';
+    const title = 'Title';
+    const result = getTemplateDate(templateText, templateName, title);
+    expect(result.keyValueData).toStrictEqual({
+      key1: 'value1',
+      key2: 'value2',
+    });
+    expect(result.arrayData).toStrictEqual([]);
+  });
+
+  it('should parse array data from a valid template', () => {
+    const templateText = '{{name|value1|value2|value3|}}';
+    const templateName = 'name';
+    const title = 'Title';
+    const result = getTemplateDate(templateText, templateName, title);
+    expect(result.keyValueData).toStrictEqual({});
+    expect(result.arrayData).toStrictEqual(['value1', 'value2', 'value3', '']);
+  });
+
+  it('should handle ordered array data with numeric keys', () => {
+    const templateText = '{{name|1=value1|2=value2|3=value3|otherValue1}}';
+    const templateName = 'name';
+    const title = 'Title';
+    const result = getTemplateDate(templateText, templateName, title);
+    expect(result.keyValueData).toStrictEqual({});
+    expect(result.arrayData).toStrictEqual(['otherValue1', 'value2', 'value3']);
+  });
+
+  it('should handle mixed content with key-value pairs and array data', () => {
+    const templateText = '{{name|key1=value1|value1|2=value2}}';
+    const templateName = 'name';
+    const title = 'Title';
+    const result = getTemplateDate(templateText, templateName, title);
+    expect(result.keyValueData).toStrictEqual({
+      key1: 'value1',
+    });
+    expect(result.arrayData).toStrictEqual(['value1', 'value2']);
+  });
+});
+
+describe('templateFromTemplateData', () => {
+  it('should generate a valid template from an empty templateData object', () => {
+    const templateData = {};
+    const templateName = 'name';
+    const result = templateFromTemplateData(templateData, templateName);
+    expect(result).toBe('{{name}}');
+  });
+
+  it('should generate a valid template from templateData with arrayData', () => {
+    const templateData = { arrayData: ['value1', 'value2', 'value3'] };
+    const templateName = 'name';
+    const result = templateFromTemplateData(templateData, templateName);
+    expect(result).toBe('{{name|value1|value2|value3}}');
+  });
+
+  it('should generate a valid template from templateData with keyValueData', () => {
+    const templateData = { keyValueData: { key1: 'value1', key2: 'value2' } };
+    const templateName = 'name';
+    const result = templateFromTemplateData(templateData, templateName);
+    expect(result).toBe('{{name|key1=value1|key2=value2}}');
+  });
+
+  it('should generate a valid template from templateData with both arrayData and keyValueData', () => {
+    const templateData = {
+      arrayData: ['value1', 'value2'],
+      keyValueData: { key1: 'value1', key2: 'value2' },
+    };
+    const templateName = 'name';
+    const result = templateFromTemplateData(templateData, templateName);
+    expect(result).toBe('{{name|value1|value2|key1=value1|key2=value2}}');
+  });
+
+  it('should handle special characters in key-value pairs', () => {
+    const templateData = { keyValueData: { 'special-key': 'special=value' } };
+    const templateName = 'name';
+    const result = templateFromTemplateData(templateData, templateName);
+    expect(result).toBe('{{name|special-key=special=value}}');
   });
 });
