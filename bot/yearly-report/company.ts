@@ -64,7 +64,7 @@ export default class Company {
 
   wikiTemplateData: Record<string, any>;
 
-  isContainsTamplate: boolean;
+  isContainsTemplate: boolean;
 
   articleText: string;
 
@@ -114,7 +114,7 @@ export default class Company {
 
     this.appendMayaData(mayaDetails, mayaYear);
     this.appendWikiData(wikiData);
-    this.updateWikiTamplate();
+    this.updateWikiTemplate();
   }
 
   updateCompanyArticle() {
@@ -131,7 +131,7 @@ export default class Company {
     return updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', finalContent);
   }
 
-  updateWikiTamplate() {
+  updateWikiTemplate() {
     let isFirst = true;
     fieldsForWiki.forEach((field) => {
       const fieldData = this.mayaDataForWiki[field.wikiName];
@@ -152,7 +152,7 @@ export default class Company {
 
     const oldTemplate = this.templateText;
     const newTemplate = templateFromKeyValueData(this.templateData, TEMPLATE_NAME);
-    if (this.isContainsTamplate) {
+    if (this.isContainsTemplate) {
       this.newArticleText = this.articleText.replace(oldTemplate, newTemplate);
       // If not contains template and not has other template
     } else if (!this.articleText.trim().startsWith('{')) {
@@ -161,7 +161,7 @@ export default class Company {
   }
 
   appendWikiData(wikiData: WikiPage) {
-    this.isContainsTamplate = 'templates' in wikiData;
+    this.isContainsTemplate = 'templates' in wikiData;
     this.articleText = wikiData.revisions[0].slots.main['*'];
     this.reference = wikiData.extlinks[0]['*'];
     this.templateText = findTemplate(this.articleText, TEMPLATE_NAME, this.name);
