@@ -2,6 +2,7 @@ import { JSDOM } from 'jsdom';
 import { getLocalDate } from '../../../utilities';
 import templateDates from './templateDates';
 import { getAttr, getMetaValue, getSchemaData } from '../../../scraping';
+import appendDatesToTepmlate from './appendDatesToTepmlate';
 
 const TEMPLATE_NAME = 'הארץ';
 
@@ -32,5 +33,6 @@ async function getDateFromPage(id: string, title: string) {
 }
 
 export default async function haaretzDates() {
+  await appendDatesToTepmlate(TEMPLATE_NAME, getDateFromPage);
   await templateDates(TEMPLATE_NAME, getDateFromPage, [/\[?\[?הארץ\]?\]?/]);
 }

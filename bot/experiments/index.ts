@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import the7eyeDates from '../scripts/oneTime/templatesDates/the7eyeDates';
+import haaretzDates from '../scripts/oneTime/templatesDates/haaretzDates';
 
 async function main() {
-  await the7eyeDates();
+  await haaretzDates();
 }
 
 main();
