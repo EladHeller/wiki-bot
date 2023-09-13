@@ -11,7 +11,7 @@ async function getDateFromPage(id: string, title: string) {
   try {
     const dom = await JSDOM.fromURL(url);
     if (dom.window.location.href === 'https://www.haaretz.co.il/') {
-      console.log('Page not found', url, title);
+      console.log('* Page not found', url, `[[${title}]]`);
       return '';
     }
     const date1 = getMetaValue(dom.window.document, 'property="article:published"');
@@ -25,9 +25,12 @@ async function getDateFromPage(id: string, title: string) {
     || (date2 && getLocalDate(date2))
     || (date3 && getLocalDate(date3))
     || '';
+    if (!date) {
+      console.log('* Failed to get date from page', url, `[[${title}]]`);
+    }
     return date;
   } catch (error) {
-    console.log('Failed to get date from page', url, title);
+    console.log('* Failed to load page', url, `[[${title}]]`);
     return '';
   }
 }

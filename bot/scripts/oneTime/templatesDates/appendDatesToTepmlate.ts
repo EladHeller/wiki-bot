@@ -38,7 +38,7 @@ export default async function appendDatesToTepmlate(
   await api.login();
   const generator = api.categroyPages(`שגיאות פרמטריות בתבנית ${templateName} - ללא תאריך`);
 
-  await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {
+  await asyncGeneratorMapWithSequence<WikiPage>(10, generator, (page) => async () => {
     allCount += 1;
     const content = page.revisions?.[0].slots.main['*'];
     if (!content) {
@@ -51,7 +51,7 @@ export default async function appendDatesToTepmlate(
       console.log('No templates', page.title);
       return;
     }
-    await promiseSequence(1, templates.map((template) => async () => {
+    await promiseSequence(5, templates.map((template) => async () => {
       const { arrayData, keyValueData } = getTemplateDate(
         template,
         templateNameVersion,
