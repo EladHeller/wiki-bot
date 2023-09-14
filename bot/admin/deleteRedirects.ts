@@ -5,8 +5,9 @@ import {
 } from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
-import writeAdminBotLogs, { ArticleLog } from './log';
+import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
+import { ArticleLog } from './types';
 
 export async function deleteRedirects(from: number, to: number[], reasons: string[]) {
   const generator = getRedirects(from, to);
