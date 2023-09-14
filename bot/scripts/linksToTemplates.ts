@@ -7,7 +7,6 @@ import { findTemplates, getTemplateArrayData, getTemplateKeyValueData } from '..
 import type { CiteNewsTemplate, GeneralLinkTemplateData } from './types';
 import { getParagraphContent } from '../wiki/paragraphParser';
 import { WikiLink, getExteranlLinks } from '../wiki/wikiLinkParser';
-import { nextWikiText } from '../wiki/WikiParser';
 
 type GeneralLinkToTemplateCallback = (generalLink: GeneralLinkTemplateData) => string;
 type ExternalLinkToTemplateCallback = (
@@ -116,8 +115,7 @@ async function linksToTemplatesLogic(
       if (!reference.includes(config.url)) {
         return;
       }
-      const referenceData = getTemplateArrayData(reference, 'הערה', page.title);
-      const referenceContent = referenceData.find((v) => v.startsWith('1=') || nextWikiText(v, 0, '=') === -1);
+      const [referenceContent] = getTemplateArrayData(reference, 'הערה', page.title, true);
       if (!referenceContent) {
         return;
       }

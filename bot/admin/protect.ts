@@ -4,8 +4,10 @@ import {
   info, listCategory, login, protect,
 } from '../wiki/wikiAPI';
 import { getLocalDate, promiseSequence } from '../utilities';
-import writeAdminBotLogs, { ArticleLog } from './log';
+import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
+import { ArticleLog } from './types';
+import pagesWithoutProtectInMainPage from './pagesWithoutProtectInMainPage';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
@@ -161,7 +163,8 @@ export const main = shabathProtectorDecorator(async () => {
     });
     await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה');
   }
-  if (needToProtect.length) {
+  const needProtectLogs = await pagesWithoutProtectInMainPage();
+  if (needToProtect.length || needProtectLogs.length) {
     const logs: ArticleLog[] = needToProtect.map((title) => {
       const error = errors.includes(title);
       return {
@@ -169,6 +172,6 @@ export const main = shabathProtectorDecorator(async () => {
         error,
       };
     });
-    await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
+    await writeAdminBotLogs([...logs, ...needProtectLogs], 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
   }
 });

@@ -28,76 +28,6 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     return Object.values(res)[0]?.pageprops?.wikibase_item;
   }
 
-  async function getCompany(title: string): Promise<Record<string, WikiPage>> {
-    const rvprops = encodeURIComponent('user|size');
-    const path = `?action=query&format=json&rvprop=${
-      rvprops
-    }&rvslots=*&rvlimit=1&prop=revisions&titles=${
-      encodeURIComponent(title)
-    }&rvdir=newer`;
-    const result = await request(path);
-    return result.query.pages;
-  }
-
-  async function getCompanies(): Promise<Record<string, WikiPage>> {
-    const template = encodeURIComponent('תבנית:מידע בורסאי');
-    const template2 = encodeURIComponent('תבנית:חברה מסחרית');
-    const props = encodeURIComponent('templates|revisions|extlinks');
-    const rvprops = encodeURIComponent('content|size');
-    const mayaLink = encodeURIComponent('maya.tase.co.il/company/');
-    const path = '?action=query&format=json'
-    // Pages with תבנית:מידע בורסאי
-    + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
-    + `&prop=${props}`
-    // This page contains תבנית:חברה מסחרית?
-    + `&tltemplates=${template2}&tllimit=500`
-    // Get content of page
-    + `&rvprop=${rvprops}&rvslots=*`
-    // Get maya link
-    + `&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
-    const result = await request(path);
-    return result.query.pages;
-  }
-
-  async function getMayaLinks(withContent = false): Promise<Record<string, WikiPage>> {
-    const template = encodeURIComponent('תבנית:מידע בורסאי');
-    const props = encodeURIComponent(`extlinks|pageprops${withContent ? '|revisions' : ''}`);
-    const mayaLink = encodeURIComponent('maya.tase.co.il/company/');
-    const rvprops = encodeURIComponent('content|size');
-    const path = '?action=query&format=json'
-    // Pages with תבנית:מידע בורסאי
-    + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
-    + `&prop=${props}&ellimit=5000`
-    // wikidata identifier
-    + `&ppprop=wikibase_item&redirects=1${
-      // Get content of page
-      withContent ? `&rvprop=${rvprops}&rvslots=*` : ''
-    // Get maya link
-    }&elprotocol=http&elquery=${mayaLink}&ellimit=5000`;
-    const result = await request(path);
-    return result.query.pages;
-  }
-
-  async function getGoogleFinanceLinksWithContent(): Promise<Record<string, WikiPage>> {
-    const template = encodeURIComponent('תבנית:מידע בורסאי (ארצות הברית)');
-    const template2 = encodeURIComponent('תבנית:חברה מסחרית');
-    const props = encodeURIComponent('templates|revisions|extlinks');
-    const googleFinanceLink = encodeURIComponent('www.google.com/finance?q=');
-    const rvprops = encodeURIComponent('content|size');
-    const path = '?action=query&format=json'
-    // Pages with תבנית:מידע בורסאי (ארצות הברית)'
-    + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
-    + `&prop=${props}`
-      // This page contains תבנית:חברה מסחרית?
-      + `&tltemplates=${template2}&tllimit=500`
-    // Get content of page
-    + `&rvprop=${rvprops}&rvslots=*`
-    // Get google link
-    + `&elprotocol=https&elquery=${googleFinanceLink}&ellimit=5000`;
-    const result = await request(path);
-    return result.query.pages;
-  }
-
   async function* getArticlesWithTemplate(
     templateName: string,
     continueObject?: Record<string, string>,
@@ -120,51 +50,10 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     );
   }
 
-  async function getArticleWithKipaTemplate(): Promise<WikiPage[]> {
-    const template = encodeURIComponent('תבנית:כיפה');
-    const props = encodeURIComponent('revisions');
-    const rvprops = encodeURIComponent('content');
-    const path = '?action=query&format=json'
-    // Pages with כיפה'
-    + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
-    + `&prop=${props}`
-    // Get content of page
-    + `&rvprop=${rvprops}&rvslots=*`;
-    let pages: WikiPage[] = [];
-    let result = await request(path);
-    const firstResult = Object.values(result.query.pages) satisfies WikiPage[];
-    pages = firstResult;
-    while (result.continue) {
-      result = await request(`${path}&elcontinue=${result.continue.elcontinue}&rvcontinue=${result.continue.rvcontinue}&continue=${result.continue.continue}`);
-      pages = pages.concat(Object.values(result.query.pages));
-    }
-    const finalResults = pages.filter((page) => page.revisions?.[0]?.slots.main['*'].includes('{{כיפה'));
-    firstResult.forEach((page) => {
-      if (!finalResults.find((p) => p.pageid === page.pageid)) {
-        console.log(page.title);
-      }
-    });
-    return finalResults;
-  }
-
   async function* backlinksTo(target: string, namespace = '0') {
     const path = `?action=query&format=json&generator=backlinks&gblnamespace=${namespace}&gbltitle=${encodeURIComponent(target)}&gbllimit=500`
     + '&gblfilterredir=nonredirects&prop=revisions&rvprop=content&rvslots=*';
     yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
-  }
-
-  async function getGoogleFinanceLinks(): Promise<Record<string, WikiPage>> {
-    const template = encodeURIComponent('תבנית:מידע בורסאי (ארצות הברית)');
-    const props = encodeURIComponent('extlinks');
-    const googleFinanceLink = encodeURIComponent('www.google.com/finance?q=');
-    const path = '?action=query&format=json'
-    // Pages with תבנית:מידע בורסאי (ארצות הברית)'
-    + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
-    + `&prop=${props}`
-    // Get google link
-    + `&elprotocol=https&elquery=${googleFinanceLink}&ellimit=5000`;
-    const result = await request(path);
-    return result.query.pages;
   }
 
   async function updateArticle(
@@ -349,12 +238,6 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   return {
     login,
     backlinksTo,
-    getCompany,
-    getCompanies,
-    getMayaLinks,
-    getGoogleFinanceLinksWithContent,
-    getArticleWithKipaTemplate,
-    getGoogleFinanceLinks,
     updateArticle,
     getArticleContent,
     externalUrl,

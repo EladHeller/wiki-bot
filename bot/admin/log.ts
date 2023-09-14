@@ -2,12 +2,7 @@ import { getLocalDate } from '../utilities';
 import { getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getArticleContent, updateArticle } from '../wiki/wikiAPI';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
-
-export interface ArticleLog {
-    text: string;
-    error?: boolean;
-    skipped?: boolean;
-}
+import { ArticleLog } from './types';
 
 const tagsPage = 'משתמש:Sapper-bot/תיוג משתמשים';
 
@@ -72,12 +67,14 @@ export default async function writeAdminBotLogs(
 
   const subParagraphCode = nightRun ? '====' : '===';
 
-  const success = logs.filter((log) => !log.error && !log.skipped);
+  const success = logs.filter((log) => !log.error && !log.skipped && !log.needProtection);
   const errors = logs.filter((log) => log.error);
   const skipped = logs.filter((log) => log.skipped);
+  const needProtection = logs.filter((log) => log.needProtection);
   const successContent = getContentFromLogs(success);
   const errorContent = `${errors.length ? `${subParagraphCode}שגיאות${subParagraphCode}\n` : ''}${getContentFromLogs(errors)}`;
   const skippedContent = `${skipped.length ? `${subParagraphCode}דפים שדולגו${subParagraphCode}\n` : ''}${getContentFromLogs(skipped)}`;
+  const needProtectionContent = `${needProtection.length ? `${subParagraphCode}דפים בעמוד הראשי שזקוקים להגנה${subParagraphCode}\n` : ''}${getContentFromLogs(needProtection)}`;
 
   const adminUsersToTag = await getAdminUsersToTag();
   const specificUsersToTag = await getUsersToTagFromSpecialPage(logPageContent);
@@ -86,6 +83,6 @@ export default async function writeAdminBotLogs(
   await updateArticle(
     logPageTitle,
     titleAndSummary,
-    `${logPageContent}ֿ\n${title}\n${successContent}${errorContent}${skippedContent}\n${usersToTag}`,
+    `${logPageContent}ֿ\n${title}\n${successContent}${errorContent}${skippedContent}${needProtectionContent}\n${usersToTag}`,
   );
 }

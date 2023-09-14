@@ -1,30 +1,38 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import {
-  deletePage, getRedirects, listCategory, login,
+  deletePage, getRedirects, getRevisions, listCategory, login,
 } from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
-import writeAdminBotLogs, { ArticleLog } from './log';
+import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
+import { ArticleLog } from './types';
 
 export async function deleteRedirects(from: number, to: number[], reasons: string[]) {
   const generator = getRedirects(from, to);
   const all: WikiPage[] = [];
   const errors: string[] = [];
+  const mutlyRevisions: WikiPage[] = [];
   let res;
   try {
     do {
       res = await generator.next();
       const batch: WikiPage[] = Object.values(res.value?.query?.pages ?? {});
-      const relevent = batch.filter((x) => x.links?.length === 1 && x.revisions.length === 1
+      const relevent = batch.filter((x) => x.links?.length === 1
         && x.templates == null && x.categories == null);
       all.push(...relevent);
       await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
         try {
-          const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
-          const target = p.links?.[0].title;
-          await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
+          const reveisionRes = await getRevisions(p.title, 2);
+          const revisionsLength = reveisionRes.revisions?.length;
+          if (revisionsLength === 1) {
+            const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
+            const target = p.links?.[0].title;
+            await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
+          } else {
+            mutlyRevisions.push(p);
+          }
         } catch (error) {
           errors.push(p.title);
           console.log(error?.data || error?.message || error?.toString());
@@ -37,7 +45,8 @@ export async function deleteRedirects(from: number, to: number[], reasons: strin
   const unique = all.filter((v, i, a) => a.findIndex((t) => t.title === v.title) === i);
   const logs: ArticleLog[] = unique.map((x) => {
     const error = errors.includes(x.title);
-    const skipped = x.links?.length !== 1;
+    const skipped = x.links?.length === 1 || x.templates == null || x.categories == null
+     || mutlyRevisions.includes(x);
     return {
       text: `[[${x.title}]] ${x.links?.length === 1 ? ` {{כ}}← [[${x.links?.[0].title}]]` : 'לא ברור'}${error ? ' - שגיאה' : ''}`,
       error,

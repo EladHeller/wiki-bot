@@ -19,7 +19,7 @@ async function saveTable(companies: Company[]) {
     const details = [`[${company.reference}]`, `[[${company.name}]]`, ...Object.values(company.mayaDataForWiki).map((val) => val || '---')];
     details.push(company.currency);
     details.push(company.wikiTemplateData.year);
-    details.push(company.isContainsTamplate);
+    details.push(company.isContainsTemplate);
     details.push(`[[משתמש:${firstRevision.user}|${firstRevision.user}]]`, firstRevision.size);
     details.push(company.revisionSize);
     tableRows.push(details);
