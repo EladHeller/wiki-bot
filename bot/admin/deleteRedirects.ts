@@ -45,7 +45,7 @@ export async function deleteRedirects(from: number, to: number[], reasons: strin
   const unique = all.filter((v, i, a) => a.findIndex((t) => t.title === v.title) === i);
   const logs: ArticleLog[] = unique.map((x) => {
     const error = errors.includes(x.title);
-    const skipped = x.links?.length === 1 || x.templates == null || x.categories == null
+    const skipped = x.links?.length !== 1 || x.templates != null || x.categories != null
      || mutlyRevisions.includes(x);
     return {
       text: `[[${x.title}]] ${x.links?.length === 1 ? ` {{כ}}← [[${x.links?.[0].title}]]` : 'לא ברור'}${error ? ' - שגיאה' : ''}`,
