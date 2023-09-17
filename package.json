@@ -8,7 +8,6 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "build": "rm -rf dist && tsc",
-    "deploy": "sh ./build/deploy.sh",
     "update-env": "tsx ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "rollback": "tsx bot/scripts/rollback.ts",
