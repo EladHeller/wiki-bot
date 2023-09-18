@@ -8,7 +8,7 @@ const bucketCodeName = process.env.CODE_BUCKET;
 
 const s3 = new S3({ region });
 
-const chunk = 1024 * 1024 * 5; // 5MB
+const chunk = 1024 * 1024 * 16; // 5MB
 
 const md5 = (data: Buffer) => crypto.createHash('md5').update(data).digest('hex');
 
@@ -34,7 +34,7 @@ async function upload(bucket: string, key: string, filePath: string) {
   const file = await fs.readFile(filePath);
   console.log(file.length, s3Object.ContentLength);
   const etag = await getEtagOfFile(file);
-  console.log(etag, s3Object.ETag);
+  console.log(etag, JSON.parse(s3Object.ETag ?? '""'));
   if (etag === JSON.parse(s3Object.ETag ?? '""')) {
     console.log(`${key} already up to date`);
     return;
