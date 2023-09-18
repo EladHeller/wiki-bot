@@ -48,6 +48,7 @@ export async function deleteRedirects(from: number, to: number[], reasons: strin
     const skipped = x.links?.length !== 1 || x.templates != null || x.categories != null
      || mutlyRevisions.includes(x);
     return {
+      title: x.title,
       text: `[[${x.title}]] ${x.links?.length === 1 ? ` {{כ}}← [[${x.links?.[0].title}]]` : 'לא ברור'}${error ? ' - שגיאה' : ''}`,
       error,
       skipped,
@@ -67,6 +68,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
       await promiseSequence(10, batch.map((p: WikiPage) => async () => {
         if (match && !p.title.match(match)) {
           logs.push({
+            title: p.title,
             text: `[[${p.title}]]`,
             skipped: true,
           });
@@ -75,10 +77,12 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
         try {
           await deletePage(p.title, reason);
           logs.push({
+            title: p.title,
             text: `[[${p.title}]]`,
           });
         } catch (error) {
           logs.push({
+            title: p.title,
             text: `[[${p.title}]]`,
             error: true,
           });

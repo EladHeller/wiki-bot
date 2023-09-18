@@ -156,6 +156,7 @@ export const main = shabathProtectorDecorator(async () => {
       const skipped = !convertPages.includes(title);
       const error = convertErrors.includes(title);
       return {
+        title,
         text: `[[${title}]]`,
         skipped,
         error,
@@ -168,6 +169,7 @@ export const main = shabathProtectorDecorator(async () => {
     const logs: ArticleLog[] = needToProtect.map((title) => {
       const error = errors.includes(title);
       return {
+        title,
         text: `[[${title}]]`,
         error,
       };

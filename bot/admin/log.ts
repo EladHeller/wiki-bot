@@ -52,6 +52,11 @@ function isNightRun(titleAndSummary: string, content?: string): boolean {
   return true;
 }
 
+function filterDuplicateLog(skipped: ArticleLog[], articleContent = ''): ArticleLog[] {
+  const innerLinks = getInnerLinks(articleContent);
+  return skipped.filter((log) => !innerLinks.some(({ link }) => link === log.title));
+}
+
 export default async function writeAdminBotLogs(
   logs: ArticleLog[],
   logPageTitle: string,
@@ -69,8 +74,11 @@ export default async function writeAdminBotLogs(
 
   const success = logs.filter((log) => !log.error && !log.skipped && !log.needProtection);
   const errors = logs.filter((log) => log.error);
-  const skipped = logs.filter((log) => log.skipped);
-  const needProtection = logs.filter((log) => log.needProtection);
+  const skipped = filterDuplicateLog(logs.filter((log) => log.skipped), logPageContent);
+  const needProtection = filterDuplicateLog(
+    logs.filter((log) => log.needProtection),
+    logPageContent,
+  );
   const successContent = getContentFromLogs(success);
   const errorContent = `${errors.length ? `${subParagraphCode}שגיאות${subParagraphCode}\n` : ''}${getContentFromLogs(errors)}`;
   const skippedContent = `${skipped.length ? `${subParagraphCode}דפים שדולגו${subParagraphCode}\n` : ''}${getContentFromLogs(skipped)}`;
