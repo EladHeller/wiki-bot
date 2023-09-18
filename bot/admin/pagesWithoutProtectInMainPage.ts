@@ -50,7 +50,7 @@ export default async function pagesWithoutProtectInMainPage(): Promise<ArticleLo
   await api.login();
 
   const logs = await Promise.all(articles.flatMap(async (article) => {
-    const response = await api.request(`?action=query&generator=templates&titles=${encodeURIComponent(article)}&prop=info&gtllimit=5000&inprop=protection`);
+    const response = await api.request(`?action=query&format=json&generator=templates&titles=${encodeURIComponent(article)}&prop=info&gtllimit=5000&inprop=protection`);
     const pages: Page[] = Object.values(response?.query?.pages ?? {});
     const problems: ArticleLog[] = [];
     pages.forEach((page) => {
