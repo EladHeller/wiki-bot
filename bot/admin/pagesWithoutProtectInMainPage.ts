@@ -30,7 +30,7 @@ function problemsInLevel(
     problems.push({
       title: page.title,
       needProtection: true,
-      text: `[[${article}]]: [[${page.title}]] - דף ללא הגנת ${viewName}`,
+      text: `[[${article}]]: [[:${page.title}]] - דף ללא הגנת ${viewName}`,
     });
     return problems;
   }
@@ -38,7 +38,7 @@ function problemsInLevel(
   if (protection.level === 'autoconfirmed') {
     problems.push({
       title: page.title,
-      text: `[[${article}]]: [[${page.title}]] - דף עם הגנת ${viewName} רק למשתמשים מאומתים`,
+      text: `[[${article}]]: [[:${page.title}]] - דף עם הגנת ${viewName} רק למשתמשים מאומתים`,
       needProtection: true,
     });
   }
@@ -46,7 +46,7 @@ function problemsInLevel(
   if (protection.expiry !== 'infinity') {
     problems.push({
       title: page.title,
-      text: `[[${article}]]: [[${page.title}]] - דף עם הגנת ${viewName} לזמן מוגבל`,
+      text: `[[${article}]]: [[:${page.title}]] - דף עם הגנת ${viewName} לזמן מוגבל`,
       needProtection: true,
     });
   }
@@ -65,7 +65,7 @@ export default async function pagesWithoutProtectInMainPage(): Promise<ArticleLo
       if (!page.protection?.length) {
         problems.push({
           title: page.title,
-          text: `[[${article}]]: [[${page.title}]] - דף ללא הגנה`,
+          text: `[[${article}]]: [[:${page.title}]] - דף ללא הגנה`,
           needProtection: true,
         });
         return;
@@ -86,7 +86,7 @@ export default async function pagesWithoutProtectInMainPage(): Promise<ArticleLo
       if (!page.protection?.length) {
         problems.push({
           title: page.title,
-          text: `[[${article}]]: [[${page.title}]] - דף ללא הגנה`,
+          text: `[[${article}]]: [[:${page.title}]] - דף ללא הגנה`,
           needProtection: true,
         });
         return;
