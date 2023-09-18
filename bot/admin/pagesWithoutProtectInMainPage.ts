@@ -17,28 +17,33 @@ type Page = {
     ]
 }
 
-function problemsInLevel(page: Page, name: string, viewName: string): ArticleLog[] {
+function problemsInLevel(
+  page: Page,
+  name: string,
+  viewName: string,
+  article: string,
+): ArticleLog[] {
   const problems: ArticleLog[] = [];
   const protection = page.protection?.find(({ type }) => type === name);
 
   if (!protection) {
     problems.push({
       needProtection: true,
-      text: `[[${page.title}]] - דף ללא הגנת ${viewName}`,
+      text: `[[${article}]]: [[${page.title}]] - דף ללא הגנת ${viewName}`,
     });
     return problems;
   }
 
   if (protection.level === 'autoconfirmed') {
     problems.push({
-      text: `[[${page.title}]] - דף עם הגנת ${viewName} רק למשתמשים מאומתים`,
+      text: `[[${article}]]: [[${page.title}]] - דף עם הגנת ${viewName} רק למשתמשים מאומתים`,
       needProtection: true,
     });
   }
 
   if (protection.expiry !== 'infinity') {
     problems.push({
-      text: `[[${page.title}]] - דף עם הגנת ${viewName} לזמן מוגבל`,
+      text: `[[${article}]]: [[${page.title}]] - דף עם הגנת ${viewName} לזמן מוגבל`,
       needProtection: true,
     });
   }
@@ -49,23 +54,41 @@ export default async function pagesWithoutProtectInMainPage(): Promise<ArticleLo
   const api = BaseWikiApi(defaultConfig);
   await api.login();
 
-  const logs = await Promise.all(articles.flatMap(async (article) => {
+  const problems: ArticleLog[] = [];
+  await Promise.all(articles.map(async (article) => {
     const response = await api.request(`?action=query&format=json&generator=templates&titles=${encodeURIComponent(article)}&prop=info&gtllimit=5000&inprop=protection`);
     const pages: Page[] = Object.values(response?.query?.pages ?? {});
-    const problems: ArticleLog[] = [];
     pages.forEach((page) => {
       if (!page.protection?.length) {
         problems.push({
-          text: `[[${page.title}]] - דף ללא הגנה`,
+          text: `[[${article}]]: [[${page.title}]] - דף ללא הגנה`,
           needProtection: true,
         });
         return;
       }
-      problems.push(...problemsInLevel(page, 'edit', 'עריכה'));
-      problems.push(...problemsInLevel(page, 'move', 'העברה'));
+      problems.push(...problemsInLevel(page, 'edit', 'עריכה', article));
+      problems.push(...problemsInLevel(page, 'move', 'העברה', article));
     });
-    return problems;
   }));
 
-  return logs.flatMap((log) => log);
+  await Promise.all(articles.flatMap(async (article) => {
+    const response = await api.request(`?action=query&format=json&generator=images&titles=${encodeURIComponent(article)}&prop=info&gimlimit=500&inprop=protection`);
+    const pages: Page[] = Object.values(response?.query?.pages ?? {});
+    pages.forEach((page) => {
+      if ('missing' in page) {
+        problems.push(...problemsInLevel(page, 'create', 'יצירה', article));
+        return;
+      }
+      if (!page.protection?.length) {
+        problems.push({
+          text: `[[${article}]]: [[${page.title}]] - דף ללא הגנה`,
+          needProtection: true,
+        });
+        return;
+      }
+      problems.push(...problemsInLevel(page, 'edit', 'עריכה', article));
+      problems.push(...problemsInLevel(page, 'move', 'העברה', article));
+    });
+  }));
+  return problems;
 }
