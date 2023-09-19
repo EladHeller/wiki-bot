@@ -96,7 +96,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
   return logs;
 }
 
-export const main = shabathProtectorDecorator(async () => {
+async function deleteBot() {
   await login();
   console.log('logged in');
   const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקיפדיה:בוט\/בוט ההסבה\//);
@@ -116,4 +116,6 @@ export const main = shabathProtectorDecorator(async () => {
   await writeAdminBotLogs(convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
   // await writeAdminBotLogs(jewishEncyclopdia,
   // 'משתמש:Sapper-bot/מחיקת דפים מיותרים במיזם האנציקלופדיה היהודית');
-});
+}
+
+export const main = shabathProtectorDecorator(deleteBot);

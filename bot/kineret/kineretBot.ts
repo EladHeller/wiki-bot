@@ -55,10 +55,12 @@ async function kineret() {
   await updateLevel({ date, level }, articleName, '#switch: {{{מאפיין}}}');
 }
 
-export const main = shabathProtectorDecorator(async () => {
+async function kinneretBot() {
   await kineret();
   await updateDeadSeaLevel();
-});
+}
+
+export const main = shabathProtectorDecorator(kinneretBot);
 
 export default {
   main,

@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { getArticleContent, login, purge } from './wiki/wikiAPI';
 import shabathProtectorDecorator from './decorators/shabathProtector';
 
-export const main = shabathProtectorDecorator(async () => {
+async function purgeBot() {
   await login();
   console.log('Login success');
   const today = new Date().toLocaleString('he', { month: 'long', day: 'numeric' });
@@ -20,4 +20,6 @@ export const main = shabathProtectorDecorator(async () => {
   const relevent = lines.filter((line) => line.startsWith('* [[') && !line.includes('נפטר'));
   const articles = relevent.map((line) => line.match(/\* \[\[\d{4}\]\] – \[\[([^\]]+)\]\]/)?.[1]).filter((x) => x != null) as string[];
   await purge(articles);
-});
+}
+
+export const main = shabathProtectorDecorator(purgeBot);

@@ -38,7 +38,7 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
   }
 }
 
-export const main = shabathProtectorDecorator(async () => {
+async function marketValueBot() {
   await login();
   console.log('Login success');
 
@@ -52,7 +52,9 @@ export const main = shabathProtectorDecorator(async () => {
     }
   }
   await updateTemplate(marketValues);
-});
+}
+
+export const main = shabathProtectorDecorator(marketValueBot);
 
 export default {
   main,
