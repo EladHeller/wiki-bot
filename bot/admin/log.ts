@@ -52,7 +52,7 @@ function isNightRun(titleAndSummary: string, content?: string): boolean {
   return true;
 }
 
-function filterDuplicateLog(skipped: ArticleLog[], articleContent = ''): ArticleLog[] {
+export function filterDuplicateLog(skipped: ArticleLog[], articleContent = ''): ArticleLog[] {
   const innerLinks = getInnerLinks(articleContent);
   return skipped.filter((log) => !innerLinks.some(({ link }) => link === log.title));
 }
@@ -79,6 +79,11 @@ export default async function writeAdminBotLogs(
     logs.filter((log) => log.needProtection),
     logPageContent,
   );
+
+  if (!success.length && !errors.length && !skipped.length && !needProtection.length) {
+    return;
+  }
+
   const successContent = getContentFromLogs(success);
   const errorContent = `${errors.length ? `${subParagraphCode}שגיאות${subParagraphCode}\n` : ''}${getContentFromLogs(errors)}`;
   const skippedContent = `${skipped.length ? `${subParagraphCode}דפים שדולגו${subParagraphCode}\n` : ''}${getContentFromLogs(skipped)}`;

@@ -43,7 +43,7 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   }
 }
 
-export const main = shabathProtectorDecorator(async () => {
+async function usMarketValueBot() {
   await login();
   console.log('Login success');
 
@@ -60,4 +60,6 @@ export const main = shabathProtectorDecorator(async () => {
   }));
 
   await updateTemplate(marketValues);
-});
+}
+
+export const main = shabathProtectorDecorator(usMarketValueBot);

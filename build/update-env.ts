@@ -66,19 +66,8 @@ async function main() {
     ParameterValue: bucketCodeName,
   }]);
 
-  await $`npm run build && \
-  cp ./package.json ./dist/package.json && \
-  cd ./dist && \
-  npm --quiet i --omit=dev --no-bin-links && \
-  rm -rf ./__tests__ ./package-lock.json && \
-  cd .. && \
-  rm -f dist.zip && \
-  zip -rq9 dist.zip ./dist && \
-  cd ./send-email && \
-  npm --quiet i --omit=dev && \
-  cd .. && \
-  rm -f email.zip && \
-  zip -rq9 email.zip ./send-email`;
+  await $`sh ./build/build.sh`;
+
   await updateS3();
   console.log('finnish deploy!');
 
