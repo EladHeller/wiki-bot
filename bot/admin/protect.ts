@@ -92,8 +92,7 @@ async function getTemplatesByCategory(category: string, exceptCategryFormat?: st
   } while (!res?.done);
   return needToProtect;
 }
-
-export const main = shabathProtectorDecorator(async () => {
+export async function protectBot() {
   await login();
   const didYouKnowTemplates = await getTemplatesByCategory('תבניות הידעת?');
   let needToProtect = didYouKnowTemplates.filter((template) => template.startsWith('תבנית:הידעת?'));
@@ -122,11 +121,6 @@ export const main = shabathProtectorDecorator(async () => {
     || template.startsWith('משתמש:בורה בורה/')
     || template.startsWith('משתמש:עמד/')
     || template.startsWith('משתמש:Kotz/'));
-
-  if (needToProtect.length === 0 && convertPages.length === 0) {
-    console.log('No need to protect');
-    return;
-  }
 
   const errors: string[] = [];
   for (const title of needToProtect) {
@@ -176,4 +170,5 @@ export const main = shabathProtectorDecorator(async () => {
     });
     await writeAdminBotLogs([...logs, ...needProtectLogs], 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
   }
-});
+}
+export const main = shabathProtectorDecorator(protectBot);
