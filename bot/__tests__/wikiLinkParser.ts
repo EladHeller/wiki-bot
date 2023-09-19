@@ -36,6 +36,19 @@ describe('getInnerLinks', () => {
 
     expect(result).toStrictEqual(expectedLinks);
   });
+
+  it('should return links without : in start of link', () => {
+    const mockText = '[[:Link1|Text1]] [[:Link2]] [[Link3|Text3]] [[Link4';
+    const expectedLinks = [
+      { link: 'Link1', text: 'Text1' },
+      { link: 'Link2', text: 'Link2' },
+      { link: 'Link3', text: 'Text3' },
+    ];
+
+    const result = getInnerLinks(mockText);
+
+    expect(result).toStrictEqual(expectedLinks);
+  });
 });
 
 describe('getInnerLink', () => {

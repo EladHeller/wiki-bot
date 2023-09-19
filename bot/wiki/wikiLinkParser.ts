@@ -16,7 +16,8 @@ export function getInnerLinks(text: string): WikiLink[] {
     }
     const link = text.substring(nextLinkIndex + 2, endLinkIndex);
     const linkParts = link.split('|');
-    links.push({ link: linkParts[0], text: linkParts[1] ?? linkParts[0] });
+    const innerLink = linkParts[0].startsWith(':') ? linkParts[0].substring(1) : linkParts[0];
+    links.push({ link: innerLink, text: linkParts[1] ?? innerLink });
     currIndex = endLinkIndex + 2;
     nextLinkIndex = nextWikiText(text, currIndex, '[[', true);
   }
