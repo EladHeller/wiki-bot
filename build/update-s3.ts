@@ -8,7 +8,7 @@ const bucketCodeName = process.env.CODE_BUCKET;
 
 const s3 = new S3({ region });
 
-const chunk = 1024 * 1024 * 16; // 5MB
+const chunk = 1024 * 1024 * 16; // 16MB
 
 const md5 = (data: Buffer) => crypto.createHash('md5').update(data).digest('hex');
 
@@ -19,7 +19,7 @@ async function getEtagOfFile(stream: Buffer) {
   const md5Chunks: string[] = [];
   const chunksNumber = Math.ceil(stream.length / chunk);
   for (let i = 0; i < chunksNumber; i += 1) {
-    const chunkStream = stream.slice(i * chunk, (i + 1) * chunk);
+    const chunkStream = Uint8Array.prototype.slice.call(stream, i * chunk, (i + 1) * chunk);
     md5Chunks.push(md5(chunkStream));
   }
 
