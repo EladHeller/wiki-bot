@@ -150,7 +150,7 @@ describe('promiseSequence', () => {
     const promises = [5, 4, 3, 2, 1].map((num) => async () => {
       await new Promise((resolve, reject) => {
         if (num === 3) {
-          reject(new Error('Error'));
+          reject('Error'); // eslint-disable-line prefer-promise-reject-errors
         }
         setTimeout(resolve, num);
       });
@@ -229,5 +229,29 @@ describe('asyncGeneratorMapWithSequence', () => {
     });
 
     expect(results).toStrictEqual([2, 3, 1]);
+  });
+
+  it('should run generator and map with sequence with error, evene continue object is empty', async () => {
+    global.continueObject = undefined;
+    async function* generatorFunc() {
+      yield Promise.resolve([3, 2, 1]);
+      yield Promise.resolve([6, 5, 4]);
+      if (global.continueObject !== '123') {
+        throw 'asdasd'; // eslint-disable-line no-throw-literal
+      }
+      yield Promise.resolve([9, 8, 7]);
+    }
+
+    const generator = generatorFunc();
+
+    const results: number[] = [];
+    await asyncGeneratorMapWithSequence(2, generator, (num) => async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, num);
+      });
+      results.push(num);
+    });
+
+    expect(results).toStrictEqual([2, 3, 1, 5, 6, 4]);
   });
 });
