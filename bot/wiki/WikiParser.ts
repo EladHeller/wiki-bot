@@ -24,14 +24,14 @@ export function nextWikiText(
       index = noWikiEndTagIndex(text, index);
       if (index === -1) {
         console.warn('<nowiki> without </nowiki>', title, console.log(text.substring(before, before + 100)));
-        return -1;
+        index = before + nowiki.length;
       }
     } else if (text.substring(index, index + 2) === '{{' && !ignoreTemplates) {
       const before = index;
       index = nextWikiText(text, index + 2, '}}');
       if (index === -1) {
         console.warn('"{{" without "}}"', title, console.log(text.substring(before, before + 100)));
-        return -1;
+        index = before;
       }
       index += 2;
     } else if (text[index] === '{' && !ignoreTemplates) {
@@ -39,7 +39,7 @@ export function nextWikiText(
       index = nextWikiText(text, index + 1, '}');
       if (index === -1) {
         console.warn('"{" without "}"', title, console.log(text.substring(before, before + 100)));
-        return -1;
+        index = before;
       }
       index += 1;
     } else if (text[index] === '[') {
@@ -47,7 +47,7 @@ export function nextWikiText(
       index = nextWikiText(text, index + 1, ']');
       if (index === -1) {
         console.warn('"[" without "]"', title, console.log(text.substring(before, before + 100)));
-        return -1;
+        index = before;
       }
       index += 1;
     } else {

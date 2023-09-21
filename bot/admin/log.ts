@@ -13,6 +13,14 @@ function getContentFromLogs(logs: ArticleLog[]): string {
   return `* ${logs.map(({ text }) => text).join('\n* ')}\n`;
 }
 
+function getContentFromNeedProtectLogs(logs: ArticleLog[]): string {
+  if (!logs.length) {
+    return '';
+  }
+
+  return `* ${logs.map(({ title, text }) => `{{בקשת הגנה|${title}|${text}}}`).join('\n* ')}\n`;
+}
+
 let tagsPageContent: string| undefined;
 
 async function getAdminUsersToTag(users: string[] = []): Promise<string[]> {
@@ -87,7 +95,7 @@ export default async function writeAdminBotLogs(
   const successContent = getContentFromLogs(success);
   const errorContent = `${errors.length ? `${subParagraphCode}שגיאות${subParagraphCode}\n` : ''}${getContentFromLogs(errors)}`;
   const skippedContent = `${skipped.length ? `${subParagraphCode}דפים שדולגו${subParagraphCode}\n` : ''}${getContentFromLogs(skipped)}`;
-  const needProtectionContent = `${needProtection.length ? `${subParagraphCode}דפים בעמוד הראשי שזקוקים להגנה${subParagraphCode}\n` : ''}${getContentFromLogs(needProtection)}`;
+  const needProtectionContent = `${needProtection.length ? `${subParagraphCode}דפים בעמוד הראשי שזקוקים להגנה${subParagraphCode}\n` : ''}${getContentFromNeedProtectLogs(needProtection)}`;
 
   const adminUsersToTag = await getAdminUsersToTag();
   const specificUsersToTag = await getUsersToTagFromSpecialPage(logPageContent);

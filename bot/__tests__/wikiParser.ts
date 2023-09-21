@@ -18,14 +18,6 @@ describe('noWikiEndTagIndex', () => {
 });
 
 describe('nextWikiText', () => {
-  it.skip('should find the next occurrence of a given string', () => {
-    const text = 'This is {{a}} sample {{text}} with [[templates]] and {{nested {{templates}}}}.';
-    const currIndex = 0;
-    const str = '{{text}}';
-
-    expect(nextWikiText(text, currIndex, str)).toBe(19);
-  });
-
   it('should return -1 if the given string is not found', () => {
     const text = 'This is a sample text without the desired string.';
     const currIndex = 0;
@@ -34,19 +26,51 @@ describe('nextWikiText', () => {
     expect(nextWikiText(text, currIndex, str)).toBe(-1);
   });
 
-  it.skip('should handle nested templates', () => {
-    const text = 'This is {{a {{nested}} template}} with {{multiple {{nested}} templates}}.';
-    const currIndex = 0;
-    const str = '{{multiple {{nested}} templates}}';
-
-    expect(nextWikiText(text, currIndex, str)).toBe(30);
-  });
-
   it('should return -1 if a template is not closed', () => {
     const text = 'This is {{an unclosed template with no closing braces.';
     const currIndex = 0;
     const str = '{{unclosed}}';
 
     expect(nextWikiText(text, currIndex, str)).toBe(-1);
+  });
+
+  it('should ignore text in nowiki tags', () => {
+    const text = 'This is a <nowiki>sample text with {{nested {{templates}}}}</nowiki> nowiki tags.';
+    const currIndex = 0;
+    const str = '{{nested {{templates}}}}';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(-1);
+  });
+
+  it('should handle not closed nowiki tag', () => {
+    const text = 'This is a <nowiki>sample text with {{nested {{templates}}}} nowiki tags.';
+    const currIndex = 0;
+    const str = '{{nested {{templates}}}}';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(35);
+  });
+
+  it('should ignore text in { }', () => {
+    const text = 'This is a {sample text with {{nested {{templates}}}}} braces.';
+    const currIndex = 0;
+    const str = '{{nested {{templates}}}}';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(-1);
+  });
+
+  it('should handle { without }', () => {
+    const text = 'This is a {sample text with {{nested {{templates}}}} braces.';
+    const currIndex = 0;
+    const str = '{{nested {{templates}}}}';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(28);
+  });
+
+  it('should handle [ without ]', () => {
+    const text = 'This is a [sample text with {{nested {{templates}}}} braces.';
+    const currIndex = 0;
+    const str = '{{nested {{templates}}}}';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(28);
   });
 });
