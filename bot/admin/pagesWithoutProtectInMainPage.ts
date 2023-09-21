@@ -75,7 +75,7 @@ export default async function pagesWithoutProtectInMainPage(): Promise<ArticleLo
     });
   }));
 
-  await Promise.all(articles.flatMap(async (article) => {
+  await Promise.all(articles.map(async (article) => {
     const response = await api.request(`?action=query&format=json&generator=images&titles=${encodeURIComponent(article)}&prop=info&gimlimit=500&inprop=protection`);
     const pages: Page[] = Object.values(response?.query?.pages ?? {});
     pages.forEach((page) => {

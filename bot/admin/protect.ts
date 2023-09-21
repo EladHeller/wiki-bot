@@ -8,6 +8,7 @@ import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { ArticleLog } from './types';
 import pagesWithoutProtectInMainPage from './pagesWithoutProtectInMainPage';
+import pagesWithCopyrightIssuesInMainPage from './pagesWithCopyrightIssuesInMainPage';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
@@ -169,6 +170,12 @@ export async function protectBot() {
       };
     });
     await writeAdminBotLogs([...logs, ...needProtectLogs], 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
+  }
+
+  const pagesWithCopyrightIssues = await pagesWithCopyrightIssuesInMainPage();
+
+  if (pagesWithCopyrightIssues.length) {
+    await writeAdminBotLogs(pagesWithCopyrightIssues, 'משתמש:Sapper-bot/זכויות יוצרים');
   }
 }
 export const main = shabathProtectorDecorator(protectBot);

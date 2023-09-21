@@ -179,10 +179,23 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     }));
   }
 
-  async function* listCategory(category: string, limit = 500) {
+  async function* listCategory(category: string, limit = 500, type = 'page|subcat|file') {
     const props = encodeURIComponent('title|sortkeyprefix');
-    const path = `?action=query&format=json&list=categorymembers&cmtitle=Category:${encodeURIComponent(category)}&cmlimit=${limit}&cmprop=${props}`;
-    yield* baseApi.continueQuery(path);
+    const path = `?action=query&format=json&list=categorymembers&cmtype=${encodeURIComponent(type)}&cmtitle=Category:${encodeURIComponent(category)}&cmlimit=${limit}&cmprop=${props}`;
+    yield* baseApi.continueQuery(path, (result) => Object.values(
+      result?.query?.categorymembers ?? {},
+    ));
+  }
+
+  async function* recursiveSubCategories(category: string, limit = 500) {
+    const generator = listCategory(category, limit, 'subcat');
+
+    for await (const subCategory of generator) {
+      for (const page of subCategory) {
+        yield page;
+        yield* recursiveSubCategories(page.title, limit);
+      }
+    }
   }
 
   async function* categroyPages(category: string, limit = 50) {
@@ -237,6 +250,8 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
 
   return {
     login,
+    request: baseApi.request,
+    recursiveSubCategories,
     backlinksTo,
     updateArticle,
     getArticleContent,
