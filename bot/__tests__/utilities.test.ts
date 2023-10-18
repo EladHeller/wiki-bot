@@ -141,7 +141,7 @@ describe('promiseSequence', () => {
     const results: number[] = [];
     const promises = [5, 4, 3, 2, 1].map((num) => async () => {
       await new Promise((resolve) => {
-        setTimeout(resolve, num);
+        setTimeout(resolve, num * 10);
       });
       results.push(num);
     });
