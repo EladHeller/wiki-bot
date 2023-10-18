@@ -41,10 +41,16 @@ describe('prettyNumericValue', () => {
     expect(result).toBe('23.5 [[מיליון]] [[שקל חדש|ש"ח]]');
   });
 
+  it('should round dezens millions with thosands as well', () => {
+    const result = prettyNumericValue('23560');
+
+    expect(result).toBe('23.6 [[מיליון]] [[שקל חדש|ש"ח]]');
+  });
+
   it('should return hundreds millions as well', () => {
     const result = prettyNumericValue('123520');
 
-    expect(result).toBe('123 [[מיליון]] [[שקל חדש|ש"ח]]');
+    expect(result).toBe('124 [[מיליון]] [[שקל חדש|ש"ח]]');
   });
 
   it('should return milliards as well', () => {
@@ -56,7 +62,7 @@ describe('prettyNumericValue', () => {
   it('should return trillion as milliards', () => {
     const result = prettyNumericValue('1123520000');
 
-    expect(result).toBe('1,123 [[מיליארד]] [[שקל חדש|ש"ח]]');
+    expect(result).toBe('1,124 [[מיליארד]] [[שקל חדש|ש"ח]]');
   });
 
   it('should return dolar for dolar values', () => {

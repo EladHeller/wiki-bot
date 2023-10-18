@@ -28,7 +28,11 @@ jobs:
             ${{ runner.os }}-build-
 
       - name: Install modules
-        run: npm ci
+        run: |
+          npm ci
+          cd xmlbot
+          npm ci
+          cd ..
 
       - name: Type check
         run: npm run type-check

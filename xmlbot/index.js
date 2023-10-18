@@ -36,7 +36,7 @@ function readLargeFile(path) {
 }
 
 async function main() {
-  // await readLargeFile('hewiki-20230420-pages-articles.xml');
+  await readLargeFile('hewiki-20230420-pages-articles.xml');
   let botEdits = 0;
   let userEdits = 0;
   for (let i = 0; i <= 9; i += 1) {
