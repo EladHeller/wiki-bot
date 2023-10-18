@@ -30,14 +30,14 @@ export function prettyNumericValue(number: string, currencyCode: CurrencyCode = 
     sumStr = number;
   } else if (number.length < 10) {
     orderOfMagmitude = number.length < 7 ? millionStr : milliardStr;
-    sumStr = number.substring(0, 3);
+    sumStr = Math.round(Number(number.substring(0, 4)) / 10).toString();
     const remind = number.length % 3;
     if (remind) {
       sumStr = [sumStr.slice(0, remind), '.', sumStr.slice(remind)].join('');
     }
   } else {
     orderOfMagmitude = milliardStr;
-    sumStr = Number(number.substring(0, number.length - 6)).toLocaleString();
+    sumStr = Math.round(Number(number.substring(0, number.length - 5)) / 10).toLocaleString();
   }
 
   return `${sumStr}${orderOfMagmitude ? ` [[${orderOfMagmitude}]]` : ''} [[${currencyName[currencyCode]}]]`;
