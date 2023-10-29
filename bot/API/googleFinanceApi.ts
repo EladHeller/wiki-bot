@@ -49,8 +49,7 @@ function textToMarketCao(marketCap: string): MarketCap {
 export default async function getStockData(
   googleFinanceUrl: string,
 ): Promise<GoogleFinanceData | null> {
-  const htmlText = await fetch(googleFinanceUrl).then((x) => x.text());
-  const dom = new JSDOM(htmlText);
+  const dom = await JSDOM.fromURL(googleFinanceUrl);
   const { document } = dom.window;
   const mainElement = document.querySelector('main');
   if (!mainElement) {
@@ -78,6 +77,12 @@ export default async function getStockData(
   return {
     marketCap: { ...textToMarketCao(marketCap ?? ''), date: date.toJSON() },
   };
+}
+
+export async function currencyExchange(from: string, to: string): Promise<number> {
+  const dom = await JSDOM.fromURL(`https://www.google.com/finance/quote/${from}-${to}`);
+  const prevClose = dom.window.document.querySelector('main [role="region"] > div > div');
+  return Number(prevClose?.textContent?.replace(/,/g, '') ?? 0);
 }
 
 export async function getCompanyData(
