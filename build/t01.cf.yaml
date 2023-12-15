@@ -455,7 +455,7 @@ Resources:
       - SwordsOfIronLambda
     Type: 'AWS::Events::Rule'
     Properties:
-      Name: delete-redirects-scheduler
+      Name: swords-of-iron-scheduler
       ScheduleExpression: cron(30 6,11 ? * * *)
       Targets:
         - Id: casualties-update-function
