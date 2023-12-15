@@ -11,7 +11,7 @@
     "update-env": "tsx ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "rollback": "tsx bot/scripts/rollback.ts",
-    "experiments": "node --import tsx bot/experiments/index.ts"
+    "experiments": "tsx bot/experiments/index.ts"
   },
   "repository": {
     "type": "git",
