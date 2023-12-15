@@ -40,6 +40,11 @@ async function getCasualties() {
   const [,,, injuredAll] = Array.from(injured.querySelectorAll('.counters'));
   const [,,, injuredInGazaAll] = Array.from(injuredInGaza.querySelectorAll('.counters'));
 
+  if (!deathsAll || !deathsInsideGaza || !injuredAll || !injuredInGazaAll) {
+    console.log(html);
+    return null;
+  }
+
   return {
     deathsAll: deathsAll?.textContent?.trim(),
     deathsInsideGaza: deathsInsideGaza?.textContent?.trim(),
