@@ -1,10 +1,11 @@
 import 'dotenv/config';
-import { ChatCompletionRequestMessageRoleEnum, Configuration, OpenAIApi } from 'openai';
+// import { ChatCompletionRequestMessageRoleEnum, Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
+import { ChatCompletionMessageParam } from 'openai/resources/index.mjs';
 
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 const prePrompt = `I will ask you about list of two names in Hebrew if they are the same person or not.
 First name may be in format of wiki link.
@@ -16,12 +17,13 @@ export async function isTwoWordsIsTheSamePerson(
   nameFromWiki: string,
   name2: string,
 ): Promise<boolean> {
-  const res = await openai.createCompletion({
+  const res = await openai.completions.create({
     model: 'text-davinci-003',
     prompt: `${prePrompt}\nFirst name: "${nameFromWiki}", Second name: "${name2}".`,
     temperature: 0,
   });
-  const isEqual = res.data.choices[0].text?.trim().replace(/["\n]/g, '') === 'Yes';
+
+  const isEqual = res.choices[0].text?.trim().replace(/["\n]/g, '') === 'Yes';
   console.log(`isTwoWordsIsTheSamePerson: ${nameFromWiki}, ${name2} ${isEqual}`);
   return isEqual;
 }
@@ -45,7 +47,7 @@ const previewAnswers: QuestionAndAnswer[] = [];
   console.log(await chatWithTerminal('ls'));
  */
 export async function chatWithTerminal(prompt: string): Promise<string> {
-  const res = await openai.createChatCompletion({
+  const res = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo-0301',
     messages: [
       {
@@ -54,13 +56,13 @@ export async function chatWithTerminal(prompt: string): Promise<string> {
 You are red hat linux bash terminal please just print the base output without any explanations.
 If there is no output just print empty line.`,
       },
-      ...previewAnswers.flatMap((qa) => [
+      ...previewAnswers.flatMap<ChatCompletionMessageParam>((qa) => [
         {
-          role: 'user' as ChatCompletionRequestMessageRoleEnum,
+          role: 'user',
           content: qa.question,
         },
         {
-          role: 'assistant' as ChatCompletionRequestMessageRoleEnum,
+          role: 'assistant',
           content: qa.answer,
         },
       ]),
@@ -71,7 +73,7 @@ If there is no output just print empty line.`,
     ],
     temperature: 0.2,
   });
-  const answer = res.data.choices[0].message?.content ?? '';
+  const answer = res.choices[0].message?.content ?? '';
   previewAnswers.push({ question: prompt, answer });
   return answer;
 }
