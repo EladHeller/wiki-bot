@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/EladHeller/tradeBoot#readme",
   "dependencies": {
-    "@hebcal/core": "^5.0.3",
+    "@hebcal/core": "^5.0.7",
     "axios": "^1.6.2",
     "axios-cookiejar-support": "^4.0.7",
     "dotenv": "^16.3.1",
