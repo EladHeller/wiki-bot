@@ -1,4 +1,5 @@
 import { getLocalDate } from '../utilities';
+import { findTemplates, getTemplateArrayData } from '../wiki/newTemplateParser';
 import { getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getArticleContent, updateArticle } from '../wiki/wikiAPI';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
@@ -60,9 +61,23 @@ function isNightRun(titleAndSummary: string, content?: string): boolean {
   return true;
 }
 
-export function filterDuplicateLog(skipped: ArticleLog[], articleContent = ''): ArticleLog[] {
+const REQUEST_PROTECTION_TEMPLATE_NAME = 'בקשת הגנה';
+export function filterDuplicateLog(logs: ArticleLog[], logPageTitle: string, articleContent = ''): ArticleLog[] {
+  const requestProtectionTemplates = findTemplates(
+    articleContent,
+    REQUEST_PROTECTION_TEMPLATE_NAME,
+    logPageTitle,
+  ).map(
+    (template) => getTemplateArrayData(template, REQUEST_PROTECTION_TEMPLATE_NAME, logPageTitle),
+  );
   const innerLinks = getInnerLinks(articleContent);
-  return skipped.filter((log) => !innerLinks.some(({ link }) => link === log.title));
+  const withoutLinks = logs.filter((log) => !innerLinks.some(({ link }) => link === log.title));
+  if (!requestProtectionTemplates.length) {
+    return withoutLinks;
+  }
+  return withoutLinks.filter(
+    (log) => !requestProtectionTemplates.some(([file]) => file === log.title),
+  );
 }
 
 export default async function writeAdminBotLogs(
@@ -82,9 +97,14 @@ export default async function writeAdminBotLogs(
 
   const success = logs.filter((log) => !log.error && !log.skipped && !log.needProtection);
   const errors = logs.filter((log) => log.error);
-  const skipped = filterDuplicateLog(logs.filter((log) => log.skipped), logPageContent);
+  const skipped = filterDuplicateLog(
+    logs.filter((log) => log.skipped),
+    logPageTitle,
+    logPageContent,
+  );
   const needProtection = filterDuplicateLog(
     logs.filter((log) => log.needProtection),
+    logPageTitle,
     logPageContent,
   );
 
