@@ -1,16 +1,16 @@
 /* eslint-disable no-bitwise */
-import {
-  HDate, HebrewCalendar, Zmanim, flags, GeoLocation,
-} from '@hebcal/core';
+const {
+  HDate, HebrewCalendar, Zmanim, flags, Location,
+} = require('@hebcal/core');
 
 const JERUSALEM_LATITUDE = 31.7784;
 const JERUSALEM_LONGITUDE = 35.2354;
 
 export default function shabathProtectorDecorator(cb: (...args: any[]) => any) {
   return async function shabathProtector(...args: any[]) {
-    const jerusalemGeo = new GeoLocation(null, JERUSALEM_LATITUDE, JERUSALEM_LONGITUDE, 800, 'Asia/Jerusalem');
+    const jerusalemGeo = new Location(JERUSALEM_LATITUDE, JERUSALEM_LONGITUDE, true, 'Asia/Jerusalem');
     const now = new Date();
-    const zman = new Zmanim(jerusalemGeo, now, true);
+    const zman = new Zmanim(jerusalemGeo, now);
     // 60 minutes before sunset to be on the safe side
     const isAfterStart = now > zman.sunsetOffset(-60);
     // 60 minutes after sunset to be on the safe side
