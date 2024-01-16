@@ -1,7 +1,7 @@
 import checkCopyViolations, { CopyViolaionRank } from '../API/copyvios';
 import writeAdminBotLogs from '../admin/log';
 import type { ArticleLog } from '../admin/types';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 import type { WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
@@ -20,9 +20,10 @@ const violationText: Record<CopyViolaionRank, string> = {
 
 export default async function copyrightViolationBot() {
   const api = NewWikiApi();
-  const before12Hours = new Date();
-  before12Hours.setHours(before12Hours.getHours() - 12);
-  const generator = api.newPages([0, 118], before12Hours.toJSON());
+  const hours = isAfterShabathOrHolliday() ? 36 : 12;
+  const lastRun = new Date();
+  lastRun.setHours(lastRun.getHours() - hours);
+  const generator = api.newPages([0, 118], lastRun.toJSON());
 
   const logs: ArticleLog[] = [];
 
