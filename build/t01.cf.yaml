@@ -443,7 +443,7 @@ Resources:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
-      Handler: dist/maintenance/casualties.main
+      Handler: dist/maintenance/copyrightViolation.main
       Timeout: 900
       MemorySize: 1024
       Code:
@@ -455,7 +455,7 @@ Resources:
       - CopyrighViolationLambda
     Type: 'AWS::Events::Rule'
     Properties:
-      Name: swords-of-iron-scheduler
+      Name: copyright-violation-scheduler
       ScheduleExpression: cron(0 6,18 ? * * *)
       Targets:
         - Id: copyright-violation-function
