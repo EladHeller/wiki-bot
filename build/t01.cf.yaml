@@ -430,44 +430,44 @@ Resources:
       SourceArn:  !GetAtt DeleteRedirectsEventRule.Arn 
       FunctionName: delete-redirects-function
 
-# Iron swords
-  SwordsOfIronLambda:
+# Copyrigh violation
+  CopyrighViolationLambda:
     DependsOn:
       - MarketValueLambdaIamRole
     Type: 'AWS::Lambda::Function'
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
-      FunctionName: casualties-update-function
+      FunctionName: copyright-violation-function
       Runtime: nodejs18.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
-      Handler: dist/swordsOfIron/casualties.main
+      Handler: dist/maintenance/casualties.main
       Timeout: 900
       MemorySize: 1024
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
 
-  SwordsOfIronEventRule:
+  CopyrighViolationEventRule:
     DependsOn:
-      - SwordsOfIronLambda
+      - CopyrighViolationLambda
     Type: 'AWS::Events::Rule'
     Properties:
       Name: swords-of-iron-scheduler
       ScheduleExpression: cron(30 6,11 ? * * *)
       Targets:
-        - Id: casualties-update-function
-          Arn: !GetAtt SwordsOfIronLambda.Arn
+        - Id: copyright-violation-function
+          Arn: !GetAtt CopyrighViolationLambda.Arn
 
-  SwordsOfIronInvokePermission:
+  CopyrighViolationInvokePermission:
     DependsOn:
-      - SwordsOfIronEventRule
-      - SwordsOfIronLambda
+      - CopyrighViolationEventRule
+      - CopyrighViolationLambda
     Type: AWS::Lambda::Permission
     Properties: 
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt SwordsOfIronEventRule.Arn 
-      FunctionName: casualties-update-function
+      SourceArn:  !GetAtt CopyrighViolationEventRule.Arn 
+      FunctionName: copyright-violation-function

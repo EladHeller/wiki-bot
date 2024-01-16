@@ -248,6 +248,13 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     return request(queryDetails.url, queryDetails.method, queryDetails.data);
   }
 
+  async function* newPages(namespaces: number[], endTimestamp: string, limit = 500) {
+    const path = `?action=query&format=json&list=recentchanges&rcprop=title&rcnamespace=${namespaces.join('|')}&rctype=new&rcshow=!redirect|!bot&rclimit=${limit}&rcend=${endTimestamp}`;
+    yield* baseApi.continueQuery(path, (result) => Object.values(
+      result?.query?.recentchanges ?? {},
+    ));
+  }
+
   return {
     login,
     request: baseApi.request,
@@ -273,5 +280,6 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     categoriesStartsWith,
     fileUsage,
     getWikiDataItem,
+    newPages,
   };
 }
