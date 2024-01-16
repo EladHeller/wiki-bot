@@ -456,7 +456,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: swords-of-iron-scheduler
-      ScheduleExpression: cron(30 6,11 ? * * *)
+      ScheduleExpression: cron(0 6,18 ? * * *)
       Targets:
         - Id: copyright-violation-function
           Arn: !GetAtt CopyrighViolationLambda.Arn
