@@ -429,3 +429,45 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn:  !GetAtt DeleteRedirectsEventRule.Arn 
       FunctionName: delete-redirects-function
+
+# Copyrigh violation
+  CopyrighViolationLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: copyright-violation-function
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/maintenance/casualties.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  CopyrighViolationEventRule:
+    DependsOn:
+      - CopyrighViolationLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: swords-of-iron-scheduler
+      ScheduleExpression: cron(30 6,11 ? * * *)
+      Targets:
+        - Id: copyright-violation-function
+          Arn: !GetAtt CopyrighViolationLambda.Arn
+
+  CopyrighViolationInvokePermission:
+    DependsOn:
+      - CopyrighViolationEventRule
+      - CopyrighViolationLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt CopyrighViolationEventRule.Arn 
+      FunctionName: copyright-violation-function
