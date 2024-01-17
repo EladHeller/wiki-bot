@@ -23,6 +23,8 @@ export default async function copyrightViolationBot() {
   const hours = isAfterShabathOrHolliday() ? 36 : 12;
   const lastRun = new Date();
   lastRun.setHours(lastRun.getHours() - hours);
+  lastRun.setMinutes(0);
+  lastRun.setSeconds(0);
   const generator = api.newPages([0, 118], lastRun.toJSON());
 
   const logs: ArticleLog[] = [];
