@@ -19,12 +19,12 @@ export type CopyViolationRespons = {
         url: string;
     };
     best?: {
-        url: string;
+        url?: string;
         confidence: number;
         violation: CopyViolaionRank;
     };
-    sources: {
-        url: string;
+    sources?: {
+        url?: string;
         confidence: number;
         violation: CopyViolaionRank;
         skipped: boolean;
