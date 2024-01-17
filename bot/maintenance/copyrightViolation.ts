@@ -18,6 +18,19 @@ const violationText: Record<CopyViolaionRank, string> = {
   none: 'אין',
 };
 
+function textFromMatch(
+  confidence: number,
+  violation: CopyViolaionRank,
+  url: string | undefined,
+  best: boolean = false,
+) {
+  if (url == null) {
+    return ': אין התאמה';
+  }
+  const matchText = best ? 'התאמה טובה ביותר' : 'התאמה';
+  return `: [${url} ${matchText}], ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
+}
+
 export default async function copyrightViolationBot() {
   const api = NewWikiApi();
   const hours = isAfterShabathOrHolliday() ? 36 : 12;
@@ -39,11 +52,19 @@ export default async function copyrightViolationBot() {
       });
       return;
     }
+
     const { url, confidence, violation } = res.best ?? { violation: 'none', confidence: 0 };
-    const text = url == null ? ': אין התאמה' : `: [${url} התאמה טובה ביותר], ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
+    const matchText = textFromMatch(confidence, violation, url, true);
     logs.push({
       title: page.title,
-      text: `[[${page.title}]]{{כ}}${text}`,
+      text: `[[${page.title}]]{{כ}}${matchText}`,
+    });
+    res.sources?.filter((source) => source.violation !== 'none' && source.url != null && source.url !== url).forEach((source) => {
+      const currText = textFromMatch(source.confidence, source.violation, source.url);
+      logs.push({
+        title: page.title,
+        text: `[[${page.title}]]{{כ}}${currText}`,
+      });
     });
   });
 
