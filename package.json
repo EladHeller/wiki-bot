@@ -53,5 +53,15 @@
     "tsx": "^4.7.0",
     "typescript": "^5.2.2",
     "zx": "^7.2.3"
+  },
+  "jest": {
+    "coverageThreshold": {
+      "global": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
+    }
   }
 }
