@@ -1,4 +1,4 @@
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 
 describe('shabathProtectorDecorator', () => {
   jest.useFakeTimers();
@@ -72,5 +72,55 @@ describe('shabathProtectorDecorator', () => {
     const result = await shabathProtectorDecorator(cb)(...args);
     expect(result).toBe('result');
     expect(cb).toHaveBeenCalledWith(...args);
+  });
+});
+
+describe('isAfterShabathOrHolliday', () => {
+  it('should return false for regular days', () => {
+    const mockDate = new Date('2023-10-09T12:00:00Z'); // Monday
+    jest.setSystemTime(mockDate);
+
+    const result = isAfterShabathOrHolliday();
+    expect(result).toBe(false);
+  });
+
+  it('should return false for Yom Tov night', () => {
+    const mockDate = new Date('2023-09-29T20:00:00Z'); // Sukkot night
+    jest.setSystemTime(mockDate);
+
+    const result = isAfterShabathOrHolliday();
+    expect(result).toBe(false);
+  });
+
+  it('should return true for Motze\'ey Yom Tov', () => {
+    const mockDate = new Date('2023-09-30T20:00:00Z'); // Motze'ey Sukkot
+    jest.setSystemTime(mockDate);
+
+    const result = isAfterShabathOrHolliday();
+    expect(result).toBe(true);
+  });
+
+  it('should return false for Shabath night', async () => {
+    const mockDate = new Date('2024-01-19T21:00:00Z');
+    jest.setSystemTime(mockDate);
+
+    const result = isAfterShabathOrHolliday();
+    expect(result).toBe(false);
+  });
+
+  it('should return false for Shabath morning', async () => {
+    const mockDate = new Date('2024-01-20T10:00:00Z');
+    jest.setSystemTime(mockDate);
+
+    const result = isAfterShabathOrHolliday();
+    expect(result).toBe(false);
+  });
+
+  it('should return true for Motze\'ey Shabath', async () => {
+    const mockDate = new Date('2024-01-20T20:00:00Z');
+    jest.setSystemTime(mockDate);
+
+    const result = isAfterShabathOrHolliday();
+    expect(result).toBe(true);
   });
 });

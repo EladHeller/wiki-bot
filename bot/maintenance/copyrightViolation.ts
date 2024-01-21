@@ -35,6 +35,7 @@ export default async function copyrightViolationBot() {
   const api = NewWikiApi();
   const hours = isAfterShabathOrHolliday() ? 36 : 12;
   const lastRun = new Date();
+  console.log(`Checking for copyvio for the last ${hours} hours`, lastRun.toJSON());
   lastRun.setHours(lastRun.getHours() - hours);
   lastRun.setMinutes(0);
   lastRun.setSeconds(0);
@@ -42,7 +43,7 @@ export default async function copyrightViolationBot() {
 
   const logs: ArticleLog[] = [];
 
-  await asyncGeneratorMapWithSequence(10, generator, (page: WikiPage) => async () => {
+  await asyncGeneratorMapWithSequence(1, generator, (page: WikiPage) => async () => {
     const res = await checkCopyViolations(page.title);
     if (res.status === 'error') {
       logs.push({
@@ -58,17 +59,21 @@ export default async function copyrightViolationBot() {
     logs.push({
       title: page.title,
       text: `[[${page.title}]]{{כ}}${matchText}`,
+      rank: confidence,
     });
     res.sources?.filter((source) => source.violation !== 'none' && source.url != null && source.url !== url).forEach((source) => {
       const currText = textFromMatch(source.confidence, source.violation, source.url);
       logs.push({
         title: page.title,
         text: `[[${page.title}]]{{כ}}${currText}`,
+        rank: confidence,
       });
     });
   });
 
-  await writeAdminBotLogs(logs, 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים');
+  const sortedLogs = logs.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
+
+  await writeAdminBotLogs(sortedLogs, 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים');
 }
 
 export const main = shabathProtectorDecorator(copyrightViolationBot);
