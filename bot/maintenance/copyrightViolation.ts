@@ -71,7 +71,7 @@ export default async function copyrightViolationBot() {
     });
   });
 
-  const sortedLogs = logs.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
+  const sortedLogs = logs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
 
   await writeAdminBotLogs(sortedLogs, 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים');
 }
