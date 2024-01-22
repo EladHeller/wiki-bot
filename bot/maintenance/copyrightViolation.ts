@@ -66,14 +66,13 @@ export default async function copyrightViolationBot() {
       logs.push({
         title: page.title,
         text: `[[${page.title}]]{{כ}}${currText}`,
-        rank: confidence,
+        rank: source.confidence,
       });
     });
   });
+  logs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
 
-  const sortedLogs = logs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
-
-  await writeAdminBotLogs(sortedLogs, 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים');
+  await writeAdminBotLogs(logs, 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים');
 }
 
 export const main = shabathProtectorDecorator(copyrightViolationBot);
