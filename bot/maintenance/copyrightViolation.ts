@@ -35,7 +35,6 @@ export default async function copyrightViolationBot() {
   const api = NewWikiApi();
   const hours = isAfterShabathOrHolliday() ? 36 : 12;
   const lastRun = new Date();
-  console.log(`Checking for copyvio for the last ${hours} hours`, lastRun.toJSON());
   lastRun.setHours(lastRun.getHours() - hours);
   lastRun.setMinutes(0);
   lastRun.setSeconds(0);
