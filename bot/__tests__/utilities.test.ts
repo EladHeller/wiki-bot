@@ -141,7 +141,7 @@ describe('promiseSequence', () => {
     const results: number[] = [];
     const promises = [5, 4, 3, 2, 1].map((num) => async () => {
       await new Promise((resolve) => {
-        setTimeout(resolve, num * 10);
+        setTimeout(resolve, num * 20);
       });
       results.push(num);
     });
@@ -158,7 +158,7 @@ describe('promiseSequence', () => {
         if (num === 3) {
           reject('Error'); // eslint-disable-line prefer-promise-reject-errors
         }
-        setTimeout(resolve, num);
+        setTimeout(resolve, num * 20);
       });
 
       results.push(num);
@@ -205,7 +205,7 @@ describe('asyncGeneratorMapWithSequence', () => {
     const results: number[] = [];
     await asyncGeneratorMapWithSequence(2, generator, (num) => async () => {
       await new Promise((resolve) => {
-        setTimeout(resolve, num);
+        setTimeout(resolve, num * 20);
       });
       results.push(num);
     });
@@ -229,7 +229,7 @@ describe('asyncGeneratorMapWithSequence', () => {
     const results: number[] = [];
     await asyncGeneratorMapWithSequence(2, generator, (num) => async () => {
       await new Promise((resolve) => {
-        setTimeout(resolve, num);
+        setTimeout(resolve, num * 20);
       });
       results.push(num);
     });
@@ -253,7 +253,7 @@ describe('asyncGeneratorMapWithSequence', () => {
     const results: number[] = [];
     await asyncGeneratorMapWithSequence(2, generator, (num) => async () => {
       await new Promise((resolve) => {
-        setTimeout(resolve, num);
+        setTimeout(resolve, num * 20);
       });
       results.push(num);
     });
