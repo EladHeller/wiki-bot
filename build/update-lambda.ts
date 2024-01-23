@@ -47,4 +47,10 @@ export default async function updateLambda() {
     S3Bucket: bucketCodeName,
     S3Key: 'email.zip',
   }));
+
+  await lambda.send(new UpdateFunctionCodeCommand({
+    FunctionName: 'copyright-violation-function',
+    S3Bucket: bucketCodeName,
+    S3Key: 'email.zip',
+  }));
 }
