@@ -471,3 +471,21 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn:  !GetAtt CopyrighViolationEventRule.Arn 
       FunctionName: copyright-violation-function
+
+  CopyrighViolationsLogGroupInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SendEmailLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/copyright-violation-function:*'
+
+  CopyrighViolationsLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/copyright-violation-function'
