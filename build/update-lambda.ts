@@ -43,13 +43,13 @@ export default async function updateLambda() {
   }));
 
   await lambda.send(new UpdateFunctionCodeCommand({
-    FunctionName: 'Send-email-function',
+    FunctionName: 'copyright-violation-function',
     S3Bucket: bucketCodeName,
-    S3Key: 'email.zip',
+    S3Key: 'dist.zip',
   }));
 
   await lambda.send(new UpdateFunctionCodeCommand({
-    FunctionName: 'copyright-violation-function',
+    FunctionName: 'Send-email-function',
     S3Bucket: bucketCodeName,
     S3Key: 'email.zip',
   }));
