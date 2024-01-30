@@ -15,14 +15,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EladHeller/tradeBoot.git"
+    "url": "git+https://github.com/EladHeller/wiki-bot.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/EladHeller/tradeBoot/issues"
+    "url": "https://github.com/EladHeller/wiki-bot/issues"
   },
-  "homepage": "https://github.com/EladHeller/tradeBoot#readme",
+  "homepage": "https://github.com/EladHeller/wiki-bot#readme",
   "dependencies": {
     "@hebcal/core": "^5.0.7",
     "axios": "^1.6.2",
