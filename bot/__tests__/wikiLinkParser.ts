@@ -49,6 +49,17 @@ describe('getInnerLinks', () => {
 
     expect(result).toStrictEqual(expectedLinks);
   });
+
+  it('should return params of image', () => {
+    const mockText = '[[תמונה:DetailOfMedievalHebrewCalendar.jpg|שמאל|105px|הדמות המופיעה בתמונה מתוך לוח שנה עברי]]';
+    const expectedLinks = [{
+      link: 'תמונה:DetailOfMedievalHebrewCalendar.jpg',
+      text: 'שמאל',
+      params: ['שמאל', '105px', 'הדמות המופיעה בתמונה מתוך לוח שנה עברי'],
+    }];
+    const result = getInnerLinks(mockText);
+    expect(result).toStrictEqual(expectedLinks);
+  });
 });
 
 describe('getInnerLink', () => {
