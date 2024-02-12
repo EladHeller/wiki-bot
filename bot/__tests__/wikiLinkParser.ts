@@ -1,5 +1,5 @@
 import {
-  getInnerLinks, getInnerLink, getExteranlLinks, getExteranlLink,
+  getInnerLinks, getInnerLink, getExternalLinks, getExternalLink,
 } from '../wiki/wikiLinkParser';
 
 describe('getInnerLinks', () => {
@@ -49,6 +49,17 @@ describe('getInnerLinks', () => {
 
     expect(result).toStrictEqual(expectedLinks);
   });
+
+  it('should return params of image', () => {
+    const mockText = '[[תמונה:DetailOfMedievalHebrewCalendar.jpg|שמאל|105px|הדמות המופיעה בתמונה מתוך לוח שנה עברי]]';
+    const expectedLinks = [{
+      link: 'תמונה:DetailOfMedievalHebrewCalendar.jpg',
+      text: 'שמאל',
+      params: ['שמאל', '105px', 'הדמות המופיעה בתמונה מתוך לוח שנה עברי'],
+    }];
+    const result = getInnerLinks(mockText);
+    expect(result).toStrictEqual(expectedLinks);
+  });
 });
 
 describe('getInnerLink', () => {
@@ -88,7 +99,7 @@ describe('getInnerLink', () => {
   });
 });
 
-describe('getExteranlLinks', () => {
+describe('getExternalLinks', () => {
   it('should ignore inner links', () => {
     const mockText = '[[Link1|Text1]] [https://example.com text of link] [[Link2]] [[Link3|Text3]]';
 
@@ -96,7 +107,7 @@ describe('getExteranlLinks', () => {
       { link: 'https://example.com', text: 'text of link' },
     ];
 
-    const result = getExteranlLinks(mockText);
+    const result = getExternalLinks(mockText);
 
     expect(result).toStrictEqual(expectedLinks);
   });
@@ -110,7 +121,7 @@ describe('getExteranlLinks', () => {
       { link: 'https://third.com', text: 'description' },
     ];
 
-    const result = getExteranlLinks(mockText);
+    const result = getExternalLinks(mockText);
 
     expect(result).toStrictEqual(expectedLinks);
   });
@@ -119,7 +130,7 @@ describe('getExteranlLinks', () => {
     const mockText = '[http://example.com link][http://example.com';
     const expectedLink = { link: 'http://example.com', text: 'link' };
 
-    const result = getExteranlLinks(mockText);
+    const result = getExternalLinks(mockText);
 
     expect(result).toStrictEqual([expectedLink]);
   });
@@ -127,18 +138,18 @@ describe('getExteranlLinks', () => {
   it('should return an empty array if there are no exteranal links', () => {
     const mockText = 'No links';
 
-    const result = getExteranlLinks(mockText);
+    const result = getExternalLinks(mockText);
 
     expect(result).toStrictEqual([]);
   });
 });
 
-describe('getExteranlLink', () => {
+describe('getExternalLink', () => {
   it('should return the first link', () => {
     const mockText = '[https://example.com text of link] [ https://other.com ] [https://third.com description]';
     const expectedLink = { link: 'https://example.com', text: 'text of link' };
 
-    const result = getExteranlLink(mockText);
+    const result = getExternalLink(mockText);
 
     expect(result).toStrictEqual(expectedLink);
   });
@@ -146,7 +157,7 @@ describe('getExteranlLink', () => {
   it('should return undefined if there are no exteranal links', () => {
     const mockText = 'No links';
 
-    const result = getExteranlLink(mockText);
+    const result = getExternalLink(mockText);
 
     expect(result).toBeUndefined();
   });
@@ -155,7 +166,7 @@ describe('getExteranlLink', () => {
     const mockText = '[http://example.com link][http://example.com';
     const expectedLink = { link: 'http://example.com', text: 'link' };
 
-    const result = getExteranlLink(mockText);
+    const result = getExternalLink(mockText);
 
     expect(result).toStrictEqual(expectedLink);
   });

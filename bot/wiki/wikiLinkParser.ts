@@ -3,6 +3,7 @@ import { nextWikiText } from './WikiParser';
 export type WikiLink = {
   link: string;
   text: string;
+  params?: string[];
 }
 
 export function getInnerLinks(text: string): WikiLink[] {
@@ -17,7 +18,11 @@ export function getInnerLinks(text: string): WikiLink[] {
     const link = text.substring(nextLinkIndex + 2, endLinkIndex);
     const linkParts = link.split('|');
     const innerLink = linkParts[0].startsWith(':') ? linkParts[0].substring(1) : linkParts[0];
-    links.push({ link: innerLink, text: linkParts[1] ?? innerLink });
+    const currentLink: WikiLink = { link: innerLink, text: linkParts[1] ?? innerLink };
+    if (linkParts.length > 2) {
+      currentLink.params = linkParts.slice(1);
+    }
+    links.push(currentLink);
     currIndex = endLinkIndex + 2;
     nextLinkIndex = nextWikiText(text, currIndex, '[[', true);
   }
@@ -30,7 +35,7 @@ export function getInnerLink(text: string): WikiLink | undefined {
   return link;
 }
 
-export function getExteranlLinks(text: string): WikiLink[] {
+export function getExternalLinks(text: string): WikiLink[] {
   const links: WikiLink[] = [];
   let currIndex = 0;
   let nextLinkIndex = nextWikiText(text, currIndex, '[', true);
@@ -55,7 +60,7 @@ export function getExteranlLinks(text: string): WikiLink[] {
   return links;
 }
 
-export function getExteranlLink(text: string): WikiLink | undefined {
-  const [link] = getExteranlLinks(text);
+export function getExternalLink(text: string): WikiLink | undefined {
+  const [link] = getExternalLinks(text);
   return link;
 }

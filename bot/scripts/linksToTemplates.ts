@@ -6,7 +6,7 @@ import { WikiPage } from '../types';
 import { findTemplates, getTemplateArrayData, getTemplateKeyValueData } from '../wiki/newTemplateParser';
 import type { CiteNewsTemplate, GeneralLinkTemplateData } from './types';
 import { getParagraphContent } from '../wiki/paragraphParser';
-import { WikiLink, getExteranlLinks } from '../wiki/wikiLinkParser';
+import { WikiLink, getExternalLinks } from '../wiki/wikiLinkParser';
 
 type GeneralLinkToTemplateCallback = (generalLink: GeneralLinkTemplateData) => string;
 type ExternalLinkToTemplateCallback = (
@@ -90,7 +90,7 @@ async function linksToTemplatesLogic(
           return;
         }
 
-        const externalLinks = getExteranlLinks(externalLinkRow);
+        const externalLinks = getExternalLinks(externalLinkRow);
         if (externalLinks.length !== 1) {
           console.log('extrnal links: possible problem: zero or many', page.title, externalLinks);
           return;
@@ -119,7 +119,7 @@ async function linksToTemplatesLogic(
       if (!referenceContent) {
         return;
       }
-      const externalLinks = getExteranlLinks(referenceContent);
+      const externalLinks = getExternalLinks(referenceContent);
       if (externalLinks.length !== 1) {
         console.log('extrnal links: possible problem: zero or many', page.title, externalLinks);
         return;

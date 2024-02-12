@@ -97,8 +97,6 @@ export async function protectBot() {
   await login();
   const didYouKnowTemplates = await getTemplatesByCategory('תבניות הידעת?');
   let needToProtect = didYouKnowTemplates.filter((template) => template.startsWith('תבנית:הידעת?'));
-  const qouteTemplates = await getTemplatesByCategory('תבניות ציטוט יומי');
-  needToProtect = needToProtect.concat(qouteTemplates.filter((template) => template.match(/תבנית:ציטוט יומי \d{1,2} ב[א-ת]{3,10} \d{4}/)));
   const portalTemplates = await getTemplatesByCategory('פורטלים: קטעי "ערך מומלץ"');
   needToProtect = needToProtect.concat(portalTemplates.filter(
     (template) => template.startsWith('פורטל:ערכים מומלצים/ערכים') || template.startsWith('תבנית:ערך מומלץ'),
