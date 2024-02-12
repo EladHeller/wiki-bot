@@ -19,18 +19,19 @@ type Page = {
 
 function problemsInLevel(
   page: Page,
-  name: string,
-  viewName: string,
+  protectName: string,
+  protectViewName: string,
   article: string,
+  pageType: 'דף' | 'קובץ' = 'דף',
 ): ArticleLog[] {
   const problems: ArticleLog[] = [];
-  const protection = page.protection?.find(({ type }) => type === name);
+  const protection = page.protection?.find(({ type }) => type === protectName);
 
   if (!protection) {
     problems.push({
       title: page.title,
       needProtection: true,
-      text: `[[${article}]]: - דף ללא הגנת ${viewName}`,
+      text: `[[${article}]]: - ${pageType} ללא הגנת ${protectViewName}`,
     });
     return problems;
   }
@@ -38,7 +39,7 @@ function problemsInLevel(
   if (protection.level === 'autoconfirmed') {
     problems.push({
       title: page.title,
-      text: `[[${article}]]: - דף עם הגנת ${viewName} רק למשתמשים מאומתים`,
+      text: `[[${article}]]: - ${pageType} עם הגנת ${protectViewName} רק למשתמשים מאומתים`,
       needProtection: true,
     });
   }
@@ -46,7 +47,7 @@ function problemsInLevel(
   if (protection.expiry !== 'infinity') {
     problems.push({
       title: page.title,
-      text: `[[${article}]]: - דף עם הגנת ${viewName} לזמן מוגבל`,
+      text: `[[${article}]]: - ${pageType} עם הגנת ${protectViewName} לזמן מוגבל`,
       needProtection: true,
     });
   }
@@ -80,7 +81,7 @@ export default async function pagesWithoutProtectInMainPage(): Promise<ArticleLo
     const pages: Page[] = Object.values(response?.query?.pages ?? {});
     pages.forEach((page) => {
       if ('missing' in page) {
-        problems.push(...problemsInLevel(page, 'create', 'יצירה', article));
+        problems.push(...problemsInLevel(page, 'create', 'יצירה', article, 'קובץ'));
         return;
       }
       if (!page.protection?.length) {
