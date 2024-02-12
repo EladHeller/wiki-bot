@@ -30,7 +30,7 @@ export function getInnerLink(text: string): WikiLink | undefined {
   return link;
 }
 
-export function getExteranlLinks(text: string): WikiLink[] {
+export function getExternalLinks(text: string): WikiLink[] {
   const links: WikiLink[] = [];
   let currIndex = 0;
   let nextLinkIndex = nextWikiText(text, currIndex, '[', true);
@@ -55,7 +55,7 @@ export function getExteranlLinks(text: string): WikiLink[] {
   return links;
 }
 
-export function getExteranlLink(text: string): WikiLink | undefined {
-  const [link] = getExteranlLinks(text);
+export function getExternalLink(text: string): WikiLink | undefined {
+  const [link] = getExternalLinks(text);
   return link;
 }
