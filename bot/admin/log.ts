@@ -3,9 +3,15 @@ import { findTemplates, getTemplateArrayData } from '../wiki/newTemplateParser';
 import { getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getArticleContent, updateArticle } from '../wiki/wikiAPI';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
-import { ArticleLog } from './types';
+import { ArticleLog, Paragraph } from './types';
 
 const tagsPage = 'משתמש:Sapper-bot/תיוג משתמשים';
+
+function isParagraphArray(logs: ArticleLog[] | Paragraph[]) : logs is Paragraph[] {
+  const firstElement = logs[0];
+
+  return firstElement && 'content' in firstElement && 'name' in firstElement;
+}
 
 function getContentFromLogs(logs: ArticleLog[]): string {
   if (!logs.length) {
@@ -80,21 +86,12 @@ export function filterDuplicateLog(logs: ArticleLog[], logPageTitle: string, art
   );
 }
 
-export default async function writeAdminBotLogs(
+function parseLogs(
   logs: ArticleLog[],
   logPageTitle: string,
+  subParagraphCode: string,
+  logPageContent = '',
 ) {
-  if (!logs.length) {
-    return;
-  }
-
-  const logPageContent = await getArticleContent(logPageTitle);
-  const titleAndSummary = `לוג ריצה ${getLocalDate(new Date().toLocaleString())}`;
-  const nightRun = isNightRun(titleAndSummary, logPageContent);
-  const title = nightRun ? '===ריצת ערב===' : `==${titleAndSummary}==`;
-
-  const subParagraphCode = nightRun ? '====' : '===';
-
   const success = logs.filter((log) => !log.error && !log.skipped && !log.needProtection);
   const errors = logs.filter((log) => log.error);
   const skipped = filterDuplicateLog(
@@ -109,7 +106,7 @@ export default async function writeAdminBotLogs(
   );
 
   if (!success.length && !errors.length && !skipped.length && !needProtection.length) {
-    return;
+    return '';
   }
 
   const successContent = getContentFromLogs(success);
@@ -117,6 +114,30 @@ export default async function writeAdminBotLogs(
   const skippedContent = `${skipped.length ? `${subParagraphCode}דפים שדולגו${subParagraphCode}\n` : ''}${getContentFromLogs(skipped)}`;
   const needProtectionContent = `${needProtection.length ? `${subParagraphCode}דפים בעמוד הראשי שזקוקים להגנה${subParagraphCode}\n` : ''}${getContentFromNeedProtectLogs(needProtection)}`;
 
+  return `${successContent}${errorContent}${skippedContent}${needProtectionContent}`;
+}
+
+function parseParagraphs(logs: Paragraph[], subParagraphCode: string) {
+  return logs.reduce((acc, { content, name }) => `${acc}${subParagraphCode}${name}${subParagraphCode}\n${content}\n`, '');
+}
+
+export default async function writeAdminBotLogs(
+  logs: ArticleLog[] | Paragraph[],
+  logPageTitle: string,
+) {
+  const logPageContent = await getArticleContent(logPageTitle);
+  const titleAndSummary = `לוג ריצה ${getLocalDate(new Date().toLocaleString())}`;
+  const nightRun = isNightRun(titleAndSummary, logPageContent);
+  const title = nightRun ? '===ריצת ערב===' : `==${titleAndSummary}==`;
+
+  const subParagraphCode = nightRun ? '====' : '===';
+
+  const content = isParagraphArray(logs) ? parseParagraphs(logs, subParagraphCode)
+    : parseLogs(logs, logPageTitle, subParagraphCode, logPageContent);
+
+  if (!content.length) {
+    return;
+  }
   const adminUsersToTag = await getAdminUsersToTag();
   const specificUsersToTag = await getUsersToTagFromSpecialPage(logPageContent);
 
@@ -124,6 +145,6 @@ export default async function writeAdminBotLogs(
   await updateArticle(
     logPageTitle,
     titleAndSummary,
-    `${logPageContent}ֿ\n${title}\n${successContent}${errorContent}${skippedContent}${needProtectionContent}\n${usersToTag}`,
+    `${logPageContent}ֿ\n${title}\n${content}\n${usersToTag}`,
   );
 }
