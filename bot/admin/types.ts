@@ -6,3 +6,8 @@ export interface ArticleLog {
     needProtection?: boolean;
     rank?: number;
 }
+
+export interface Paragraph {
+    name: string;
+    content: string;
+}
