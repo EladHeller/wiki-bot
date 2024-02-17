@@ -58,6 +58,7 @@ export default async function copyrightViolationBot() {
   const currentRun = new Date();
   currentRun.setMinutes(0);
   currentRun.setSeconds(0);
+  currentRun.setMilliseconds(0);
   const lastRun = await getLastRun(api);
 
   const generator = api.newPages([0, 118], lastRun);
@@ -76,7 +77,7 @@ export default async function copyrightViolationBot() {
     }
     const res = await checkCopyViolations(page.title);
     if (res.status === 'error') {
-      if (res.error?.code.includes(NOT_FOUND)) {
+      if (res.error?.code.includes("The page couldn't be found")) {
         otherLogs.push({
           text: NOT_FOUND,
           title: page.title,
@@ -96,7 +97,7 @@ export default async function copyrightViolationBot() {
     if (violation === 'none') {
       otherLogs.push({
         title: page.title,
-        text: `[[${page.title}]] ${confidence} [${url}]`,
+        text: `[[${page.title}]] ${confidence.toFixed(2)}${url ? ` [${url}]` : ''}`,
       });
       return;
     }
@@ -120,7 +121,9 @@ export default async function copyrightViolationBot() {
   await writeAdminBotLogs(logs, BASE_PAGE);
   const notFoundText = otherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[${title}]]`).join(' • ');
   const disambiguationText = otherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[${title}]]`).join(' • ');
-  const otherText = otherLogs.filter(({ error }) => !error).map(({ text }) => text).join(' • ');
+  const otherText = otherLogs.filter(({ error }) => !error)
+    .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))
+    .map(({ text }) => text).join(' • ');
   const paragraphs = [{
     name: 'דפים ללא הפרה',
     content: otherText,
@@ -130,8 +133,9 @@ export default async function copyrightViolationBot() {
   }, {
     name: 'דפים שנמחקו לפני ריצת הבוט',
     content: notFoundText,
-  }] satisfies Paragraph[];
+  }].filter((p) => p.content) satisfies Paragraph[];
   await writeAdminBotLogs(paragraphs, LOG_PAGE);
+  await api.updateArticle(LAST_RUN_PAGE, 'עדכון זמן ריצה', currentRun.toJSON());
 }
 
 export const main = shabathProtectorDecorator(copyrightViolationBot);
