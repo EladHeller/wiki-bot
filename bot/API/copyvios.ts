@@ -32,8 +32,18 @@ export type CopyViolationRespons = {
     }[];
 }
 
-export default async function checkCopyViolations(title: string, lang = 'he'): Promise<CopyViolationRespons> {
-  const res = await fetch(`${baseUrl}?version=1&action=search&project=wikipedia&lang=${lang}&title=${encodeURIComponent(title)}`);
+export default async function checkCopyViolations(
+  title: string,
+  lang: string,
+  url?: string,
+): Promise<CopyViolationRespons> {
+  const sharedParams = `version=1&project=wikipedia&lang=${lang}&title=${encodeURIComponent(title)}`;
+  if (url) {
+    const res = await fetch(`${baseUrl}?action=compare&${sharedParams}&url=${encodeURIComponent(url)}`);
+
+    return res.json();
+  }
+  const res = await fetch(`${baseUrl}?action=search&${sharedParams}`);
 
   return res.json();
 }

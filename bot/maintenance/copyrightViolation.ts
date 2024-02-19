@@ -53,6 +53,8 @@ async function getLastRun(api: ReturnType<typeof NewWikiApi>): Promise<string> {
 const NOT_FOUND = 'not found';
 const DISAMBIGUATION = 'פירושונים';
 
+const HAMICHLOL_DOMAIN = 'https://www.hamichlol.org.il/';
+
 export default async function copyrightViolationBot() {
   const api = NewWikiApi();
   const currentRun = new Date();
@@ -72,45 +74,55 @@ export default async function copyrightViolationBot() {
       });
       return;
     }
-    const res = await checkCopyViolations(page.title);
-    if (res.status === 'error') {
-      if (res.error?.code === 'bad_title') {
-        otherLogs.push({
-          text: NOT_FOUND,
-          title: page.title,
-          error: true,
-        });
-      } else {
+    const results = await Promise.all([
+      checkCopyViolations(page.title, 'he'),
+      checkCopyViolations(page.title, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(page.title)}`),
+    ]);
+    results.forEach((res) => {
+      if (res.status === 'error') {
+        if (res.error?.code === 'no_data') { // Url not found
+          return;
+        }
+
+        if (res.error?.code === 'bad_title') {
+          otherLogs.push({
+            text: NOT_FOUND,
+            title: page.title,
+            error: true,
+          });
+          return;
+        }
         logs.push({
           title: page.title,
           text: `[[${page.title}]] - ${res.error?.info}`,
           error: true,
         });
-      }
-      return;
-    }
 
-    const { url, confidence, violation } = res.best ?? { violation: 'none', confidence: 0 };
-    if (violation === 'none') {
-      otherLogs.push({
-        title: page.title,
-        text: `[[${page.title}]] ${confidence.toFixed(2)}${url ? ` [${url}]` : ''}`,
-        rank: confidence,
-      });
-      return;
-    }
-    const matchText = textFromMatch(confidence, violation, url, true);
-    logs.push({
-      title: page.title,
-      text: `[[${page.title}]]{{כ}}${matchText}`,
-      rank: confidence,
-    });
-    res.sources?.filter((source) => source.violation !== 'none' && source.url != null && source.url !== url).forEach((source) => {
-      const currText = textFromMatch(source.confidence, source.violation, source.url);
+        return;
+      }
+
+      const { url, confidence, violation } = res.best ?? { violation: 'none', confidence: 0 };
+      if (violation === 'none') {
+        otherLogs.push({
+          title: page.title,
+          text: `[[${page.title}]] ${confidence.toFixed(2)}${url ? ` [${url}]` : ''}`,
+          rank: confidence,
+        });
+        return;
+      }
+      const matchText = textFromMatch(confidence, violation, url, true);
       logs.push({
         title: page.title,
-        text: `[[${page.title}]]{{כ}}${currText}`,
-        rank: source.confidence,
+        text: `[[${page.title}]]{{כ}}${matchText}`,
+        rank: confidence,
+      });
+      res.sources?.filter((source) => source.violation !== 'none' && source.url != null && source.url !== url).forEach((source) => {
+        const currText = textFromMatch(source.confidence, source.violation, source.url);
+        logs.push({
+          title: page.title,
+          text: `[[${page.title}]]{{כ}}${currText}`,
+          rank: source.confidence,
+        });
       });
     });
   });
