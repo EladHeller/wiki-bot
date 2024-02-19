@@ -56,9 +56,6 @@ const DISAMBIGUATION = 'פירושונים';
 export default async function copyrightViolationBot() {
   const api = NewWikiApi();
   const currentRun = new Date();
-  currentRun.setMinutes(0);
-  currentRun.setSeconds(0);
-  currentRun.setMilliseconds(0);
   const lastRun = await getLastRun(api);
 
   const generator = api.newPages([0, 118], lastRun);
@@ -77,7 +74,7 @@ export default async function copyrightViolationBot() {
     }
     const res = await checkCopyViolations(page.title);
     if (res.status === 'error') {
-      if (res.error?.code.includes("The page couldn't be found")) {
+      if (res.error?.code === 'bad_title') {
         otherLogs.push({
           text: NOT_FOUND,
           title: page.title,
