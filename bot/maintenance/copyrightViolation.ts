@@ -58,7 +58,7 @@ export default async function copyrightViolationBot() {
   const currentRun = new Date();
   const lastRun = await getLastRun(api);
 
-  const generator = api.newPages([0, 118], lastRun);
+  const generator = api.newPages([0, 2, 118], lastRun);
 
   const logs: ArticleLog[] = [];
   const otherLogs: ArticleLog[] = [];
