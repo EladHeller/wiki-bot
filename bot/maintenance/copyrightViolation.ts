@@ -74,10 +74,12 @@ export default async function copyrightViolationBot() {
       });
       return;
     }
-    const results = await Promise.all([
-      checkCopyViolations(page.title, 'he'),
-      checkCopyViolations(page.title, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(page.title)}`),
-    ]);
+
+    const promises = [checkCopyViolations(page.title, 'he')];
+    if (page.ns === 0) {
+      promises.push(checkCopyViolations(page.title, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(page.title)}`));
+    }
+    const results = await Promise.all(promises);
     results.forEach((res) => {
       if (res.status === 'error') {
         if (res.error?.code === 'no_data') { // Url not found
