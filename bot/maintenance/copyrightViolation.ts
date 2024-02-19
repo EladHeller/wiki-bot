@@ -95,6 +95,7 @@ export default async function copyrightViolationBot() {
       otherLogs.push({
         title: page.title,
         text: `[[${page.title}]] ${confidence.toFixed(2)}${url ? ` [${url}]` : ''}`,
+        rank: confidence,
       });
       return;
     }
