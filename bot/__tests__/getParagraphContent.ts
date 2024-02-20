@@ -77,6 +77,7 @@ describe('getUsersFromTagParagraph', () => {
       [[משתמש:User1]]
       [[user:User2|User 2]]
       * [[משתמש:User3|User 3]]
+      {{א|User 4}}
       Some text after
     `;
     const paragraphName = 'Tag';
@@ -84,6 +85,7 @@ describe('getUsersFromTagParagraph', () => {
       '[[משתמש:User1]]',
       '[[user:User2|User 2]]',
       '[[משתמש:User3|User 3]]',
+      '{{א|User 4}}',
     ];
 
     const result = getUsersFromTagParagraph(articleContent, paragraphName);
