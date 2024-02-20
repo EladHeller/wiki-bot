@@ -67,6 +67,25 @@ describe('getParagraphContent', () => {
 
     expect(result).toBe('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
   });
+
+  it('should return subtitles with more than 2 equal signs', () => {
+    const articleText = `
+      Some text before
+      ==Introduction==
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+      ===SubIntroduction===
+      Donec nec enim sed metus consequat aliquet.
+      Some text after
+    `;
+    const paragraphName = 'Introduction';
+
+    const result = getParagraphContent(articleText, paragraphName);
+
+    expect(result).toBe(`Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+      ===SubIntroduction===
+      Donec nec enim sed metus consequat aliquet.
+      Some text after`);
+  });
 });
 
 describe('getUsersFromTagParagraph', () => {
@@ -77,6 +96,7 @@ describe('getUsersFromTagParagraph', () => {
       [[משתמש:User1]]
       [[user:User2|User 2]]
       * [[משתמש:User3|User 3]]
+      {{א|User 4}}
       Some text after
     `;
     const paragraphName = 'Tag';
@@ -84,6 +104,7 @@ describe('getUsersFromTagParagraph', () => {
       '[[משתמש:User1]]',
       '[[user:User2|User 2]]',
       '[[משתמש:User3|User 3]]',
+      '{{א|User 4}}',
     ];
 
     const result = getUsersFromTagParagraph(articleContent, paragraphName);
