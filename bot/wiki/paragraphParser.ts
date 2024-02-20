@@ -17,6 +17,9 @@ export function getParagraphContent(
     }
   }
   let endIndex = nextWikiText(articleText, startIndex + paragraphStartText.length, '==', false, title);
+  while (articleText.substring(endIndex, endIndex + 3) === '===') {
+    endIndex = nextWikiText(articleText, endIndex + 2, '==', false, title);
+  }
   if (endIndex === -1) {
     endIndex = articleText.length;
   }
@@ -26,7 +29,6 @@ export function getParagraphContent(
 
 export function getUsersFromTagParagraph(articleContent: string, paragraphName: string) : string[] {
   const tagParagraph = getParagraphContent(articleContent, paragraphName);
-  console.log(tagParagraph);
   const users: string[] = [];
   if (!tagParagraph) {
     return users;

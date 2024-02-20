@@ -67,6 +67,25 @@ describe('getParagraphContent', () => {
 
     expect(result).toBe('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
   });
+
+  it('should return subtitles with more than 2 equal signs', () => {
+    const articleText = `
+      Some text before
+      ==Introduction==
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+      ===SubIntroduction===
+      Donec nec enim sed metus consequat aliquet.
+      Some text after
+    `;
+    const paragraphName = 'Introduction';
+
+    const result = getParagraphContent(articleText, paragraphName);
+
+    expect(result).toBe(`Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+      ===SubIntroduction===
+      Donec nec enim sed metus consequat aliquet.
+      Some text after`);
+  });
 });
 
 describe('getUsersFromTagParagraph', () => {
