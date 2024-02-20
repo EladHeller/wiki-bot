@@ -1,4 +1,5 @@
 import { nextWikiText } from './WikiParser';
+import { findTemplates } from './newTemplateParser';
 import { getInnerLinks } from './wikiLinkParser';
 
 export function getParagraphContent(
@@ -25,6 +26,7 @@ export function getParagraphContent(
 
 export function getUsersFromTagParagraph(articleContent: string, paragraphName: string) : string[] {
   const tagParagraph = getParagraphContent(articleContent, paragraphName);
+  console.log(tagParagraph);
   const users: string[] = [];
   if (!tagParagraph) {
     return users;
@@ -39,5 +41,6 @@ export function getUsersFromTagParagraph(articleContent: string, paragraphName: 
       users.push(`[[${link}|${text}]]`);
     }
   });
+  users.push(...findTemplates(tagParagraph, 'א', paragraphName));
   return users;
 }
