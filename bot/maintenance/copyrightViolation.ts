@@ -65,7 +65,7 @@ export default async function copyrightViolationBot() {
   const logs: ArticleLog[] = [];
   const otherLogs: ArticleLog[] = [];
 
-  await asyncGeneratorMapWithSequence(2, generator, (page: WikiPage) => async () => {
+  await asyncGeneratorMapWithSequence(1, generator, (page: WikiPage) => async () => {
     if (page.title.includes(`(${DISAMBIGUATION})`)) {
       otherLogs.push({
         text: DISAMBIGUATION,
@@ -75,12 +75,11 @@ export default async function copyrightViolationBot() {
       return;
     }
 
-    const promises = [checkCopyViolations(page.title, 'he')];
+    const results = [await checkCopyViolations(page.title, 'he')];
     if (page.ns === 0) {
-      promises.push(checkCopyViolations(page.title, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(page.title)}`));
+      results.push(await checkCopyViolations(page.title, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(page.title)}`));
     }
-    const results = await Promise.all(promises);
-    results.forEach((res) => {
+    results.forEach(async (res) => {
       if (res.status === 'error') {
         if (res.error?.code === 'no_data') { // Url not found
           return;
