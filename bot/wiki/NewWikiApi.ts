@@ -2,7 +2,37 @@ import { WikiApiConfig, WikiPage } from '../types';
 import { objectToFormData, promiseSequence } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
 
-export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultConfig) {
+export interface IWikiApi {
+  login(): Promise<void>;
+  request(path: string, method?: string, data?: Record<string, any>): Promise<any>;
+  recursiveSubCategories(category: string, limit?: number): AsyncGenerator<WikiPage, WikiPage, void>;
+  backlinksTo(target: string, namespace?: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  updateArticle(articleTitle: string, summary: string, content: string, newSectionTitle?: string): Promise<any>;
+  getArticleContent(title: string): Promise<string | undefined>;
+  externalUrl(link: string, protocol?: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  info(titles: string[]): Promise<Partial<WikiPage>[]>;
+  purge(titles: string[]): Promise<any>;
+  rollback(title: string, user: string, summary: string): Promise<any>;
+  undo(title: string, summary: string, revision: number): Promise<any>;
+  rollbackUserContributions(user: string, summary: string, count?: number): Promise<any>;
+  categroyPages(category: string, limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  undoContributions(user: string, summary: string, count?: number): Promise<any>;
+  protect(title: string, protections: string, expiry: string, reason: string): Promise<any>;
+  deletePage(title: string, reason: string): Promise<any>;
+  getArticlesWithTemplate(
+    templateName: string, continueObject?: Record<string, string>, prefix?: string, namespace?: string
+  ): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  search(text: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  getRedirects(namespace?: number, linkNamespace?: number[]): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  userContributes(user: string, limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  listCategory(category: string, limit?: number, type?: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  categoriesStartsWith(prefix: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  fileUsage(pageIds: string[], limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  getWikiDataItem(title: string): Promise<string | undefined>;
+  newPages(namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+}
+
+export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultConfig): IWikiApi {
   const baseApi = BaseWikiApi(apiConfig);
   let token: string;
 

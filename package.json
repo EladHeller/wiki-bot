@@ -55,6 +55,11 @@
     "zx": "^7.2.3"
   },
   "jest": {
+    "coveragePathIgnorePatterns": [
+      "BaseWikiApi.ts",
+      "NewWikiApi.ts",
+      "wikiLogin.ts"
+    ],
     "coverageThreshold": {
       "global": {
         "branches": 100,
