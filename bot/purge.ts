@@ -18,7 +18,9 @@ async function purgeBot() {
   birthContent = birthContent.slice(0, nextSection);
   const lines = birthContent.split('\n');
   const relevent = lines.filter((line) => line.startsWith('* [[') && !line.includes('נפטר'));
-  const articles = relevent.map((line) => line.match(/\* \[\[\d{4}\]\] – \[\[([^\]]+)\]\]/)?.[1]).filter((x) => x != null) as string[];
+  const articles = relevent
+    .map((line) => line.match(/\* \[\[\d{4}\]\] – \[\[([^\]]+)\]\]/)?.[1])
+    .filter((x) => x != null) as string[];
   await purge(articles);
 }
 

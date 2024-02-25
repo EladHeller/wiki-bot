@@ -1,4 +1,4 @@
-import checkCopyViolations, { CopyViolaionRank } from '../API/copyvios';
+import checkCopyViolations, { CopyViolaionRank, CopyViolationResponse } from '../API/copyvios';
 import writeAdminBotLogs from '../admin/log';
 import type { ArticleLog, Paragraph } from '../admin/types';
 import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
@@ -54,6 +54,22 @@ const NOT_FOUND = 'not found';
 const DISAMBIGUATION = 'פירושונים';
 
 const HAMICHLOL_DOMAIN = 'https://www.hamichlol.org.il/';
+const WIKIPEDIA_DOMAIN = 'https://he.wikipedia.org/wiki/';
+async function checkHamichlol(title: string) {
+  try {
+    const res = await fetch(`${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
+    if (!res.ok) {
+      return null;
+    }
+    const text = await res.text();
+    if (text.includes('בערך זה קיים תוכן בעייתי') || text.includes(WIKIPEDIA_DOMAIN + encodeURIComponent(title.replace(/ /g, '_')))) {
+      return null;
+    }
+    return checkCopyViolations(title, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
+  } catch (e) {
+    return null;
+  }
+}
 
 export default async function copyrightViolationBot() {
   const api = NewWikiApi();
@@ -75,11 +91,14 @@ export default async function copyrightViolationBot() {
       return;
     }
 
-    const results = [await checkCopyViolations(page.title, 'he')];
+    const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(page.title, 'he')];
     if (page.ns === 0) {
-      results.push(await checkCopyViolations(page.title, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(page.title)}`));
+      results.push(await checkHamichlol(page.title));
     }
     results.forEach(async (res) => {
+      if (res == null) {
+        return;
+      }
       if (res.status === 'error') {
         if (res.error?.code === 'no_data') { // Url not found
           return;
