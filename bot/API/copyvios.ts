@@ -2,7 +2,7 @@ const baseUrl = 'https://copyvios.toolforge.org/api.json';
 
 export type CopyViolaionRank = 'suspected' | 'possible' | 'none';
 
-export type CopyViolationRespons = {
+export type CopyViolationResponse = {
     status: 'ok' | 'error';
     error?: {
         code: string;
@@ -36,7 +36,7 @@ export default async function checkCopyViolations(
   title: string,
   lang: string,
   url?: string,
-): Promise<CopyViolationRespons> {
+): Promise<CopyViolationResponse> {
   const sharedParams = `version=1&project=wikipedia&lang=${lang}&title=${encodeURIComponent(title)}`;
   if (url) {
     const res = await fetch(`${baseUrl}?action=compare&${sharedParams}&url=${encodeURIComponent(url)}`);
