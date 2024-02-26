@@ -18,17 +18,21 @@ const violationText: Record<CopyViolaionRank, string> = {
   none: 'אין',
 };
 
+function copyviosSearchLink(title: string) {
+  return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${encodeURIComponent(title)}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
+}
+
 function textFromMatch(
   confidence: number,
   violation: CopyViolaionRank,
   url: string | undefined,
-  best: boolean = false,
+  title: string,
 ) {
   if (url == null) {
     return ': אין התאמה';
   }
-  const matchText = best ? 'התאמה טובה ביותר' : 'התאמה';
-  return `: [${url} ${matchText}], ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
+  const linkToCopyviosText = 'קישור לחיפוש ב-copyvios';
+  return `: [${copyviosSearchLink(title)} ${linkToCopyviosText}], ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
 }
 
 const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
@@ -130,20 +134,20 @@ export default async function copyrightViolationBot() {
         });
         return;
       }
-      const matchText = textFromMatch(confidence, violation, url, true);
+      const matchText = textFromMatch(confidence, violation, url, page.title);
       logs.push({
         title: page.title,
         text: `[[${page.title}]]{{כ}}${matchText}`,
         rank: confidence,
       });
-      res.sources?.filter((source) => source.violation !== 'none' && source.url != null && source.url !== url).forEach((source) => {
-        const currText = textFromMatch(source.confidence, source.violation, source.url);
-        logs.push({
-          title: page.title,
-          text: `[[${page.title}]]{{כ}}${currText}`,
-          rank: source.confidence,
-        });
-      });
+      // res.sources?.filter((source) => source.violation !== 'none' && source.url != null && source.url !== url).forEach((source) => {
+      //   const currText = textFromMatch(source.confidence, source.violation, source.url);
+      //   logs.push({
+      //     title: page.title,
+      //     text: `[[${page.title}]]{{כ}}${currText}`,
+      //     rank: source.confidence,
+      //   });
+      // });
     });
   });
   logs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
