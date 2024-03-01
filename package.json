@@ -25,7 +25,7 @@
   "homepage": "https://github.com/EladHeller/wiki-bot#readme",
   "dependencies": {
     "@hebcal/core": "^5.0.7",
-    "axios": "^1.6.2",
+    "axios": "^1.6.7",
     "axios-cookiejar-support": "^4.0.7",
     "dotenv": "^16.3.1",
     "jsdom": "^23.0.1",
