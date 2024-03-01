@@ -8,7 +8,7 @@ import {
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
-const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
+const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)/נתונים';
 
 async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   const content = await getArticleContent(marketValueTemplate);
