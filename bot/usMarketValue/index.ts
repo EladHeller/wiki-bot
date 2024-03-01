@@ -3,12 +3,13 @@ import 'dotenv/config';
 import { getCompanyData, WikiPageWithGoogleFinance } from '../API/googleFinanceApi';
 import { currencyName, getLocalDate, promiseSequence } from '../utilities';
 import {
-  getArticleContent, getGoogleFinanceLinks, login, updateArticle,
+  getArticleContent, getGoogleFinanceLinks, login, purge, updateArticle,
 } from '../wiki/wikiAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
-const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)/נתונים';
+const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
+const marketValueTemplate = `${baseMarketValueTemplate}/נתונים`;
 
 async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   const content = await getArticleContent(marketValueTemplate);
@@ -41,6 +42,7 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   if ('error' in res) {
     throw new Error(JSON.stringify(res.error));
   }
+  await purge([baseMarketValueTemplate]);
 }
 
 async function usMarketValueBot() {

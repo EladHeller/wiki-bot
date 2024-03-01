@@ -8,7 +8,7 @@ import shabathProtectorDecorator from '../decorators/shabathProtector';
 
 const DATE_REGEX = /(\d{2})\/(\d{2})\/(\d{2})/;
 
-const articleName = 'תבנית:מפלס הכנרת/נתונים';
+const articleName = 'תבנית:מפלס הכנרת';
 // const apiUrl = 'https://data.gov.il/api/3/action/datastore_search?resource_id=2de7b543-e13d-4e7e-b4c8-56071bc4d3c8&limit=1';
 // interface KinneretLevelRecord {
 //   Survey_Date: string;
@@ -55,13 +55,9 @@ async function kineret() {
   await updateLevel({ date, level }, articleName, '#switch: {{{מאפיין}}}');
 }
 
-async function kinneretBot() {
+export default async function kinneretBot() {
   await kineret();
   await updateDeadSeaLevel();
 }
 
 export const main = shabathProtectorDecorator(kinneretBot);
-
-export default {
-  main,
-};

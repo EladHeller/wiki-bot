@@ -1,13 +1,14 @@
 import 'dotenv/config';
 import { getLocalDate, prettyNumericValue } from '../utilities';
 import {
-  getArticleContent, getMayaLinks, login, updateArticle,
+  getArticleContent, getMayaLinks, login, purge, updateArticle,
 } from '../wiki/wikiAPI';
 import { MayaMarketValue, getMarketValue } from '../API/mayaAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
-const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית/נתונים';
+const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
+const marketValueTemplate = `${baseMarketValueTemplate}/נתונים`;
 
 async function updateTemplate(marketValues: MayaMarketValue[]) {
   const content = await getArticleContent(marketValueTemplate);
@@ -36,6 +37,8 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
   if ('error' in res) {
     throw new Error(JSON.stringify(res.error));
   }
+
+  await purge([baseMarketValueTemplate]);
 }
 
 async function marketValueBot() {
