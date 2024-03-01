@@ -7,7 +7,7 @@ import { MayaMarketValue, getMarketValue } from '../API/mayaAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
-const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
+const marketValueTemplate = 'תבנית:שווי שוק חברה בורסאית/נתונים';
 
 async function updateTemplate(marketValues: MayaMarketValue[]) {
   const content = await getArticleContent(marketValueTemplate);
