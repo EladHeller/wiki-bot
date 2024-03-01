@@ -59,13 +59,14 @@ const api = NewWikiApi();
 
 export async function updateLevel(
   levelData: LevelData,
-  articleName: string,
+  baseArticleName: string,
   templateName:string = TEMPLATE_NAME,
   dateLevelField:string = DATE_LEVEL_FIELD,
   levelField:string = LEVEL_FIELD,
 ) {
   await api.login();
   const { date, level } = levelData;
+  const articleName = `${baseArticleName}/נתונים`;
 
   const content = await api.getArticleContent(articleName);
   if (!content) {
@@ -104,4 +105,6 @@ export async function updateLevel(
   const newContent = content.replace(oldTemplate, newTemplateText);
 
   await api.updateArticle(articleName, 'עדכון מפלס', newContent);
+
+  await api.purge([baseArticleName]);
 }

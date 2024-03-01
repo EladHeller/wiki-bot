@@ -10,7 +10,7 @@ interface DeadSeaLevelRecord {
     _id: number;
 }
 
-const articleName = 'תבנית:מפלס ים המלח/נתונים';
+const articleName = 'תבנית:מפלס ים המלח';
 
 const DATE_REGEX = /(\d{2})\/(\d{2})\/(\d{4})/;
 
