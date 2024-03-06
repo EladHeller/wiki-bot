@@ -7,7 +7,7 @@
     "lint:test": "eslint ./**/*.ts ./send-email/**/*.mjs ./xmlbot/**/*.js --max-warnings 0",
     "type-check": "tsc --noEmit",
     "test": "jest --coverage",
-    "build": "rm -rf dist && tsc",
+    "build": "rm -rf dist && tsc --project tsconfig.build.json",
     "update-env": "tsx ./build/update-env.ts",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "rollback": "tsx bot/scripts/rollback.ts",
