@@ -168,6 +168,19 @@ describe('promiseSequence', () => {
 
     expect(results).toStrictEqual([4, 5, 2, 1]);
   });
+
+  it('should return promise results', async () => {
+    const promises = [5, 4, 3, 2, 1].map((num) => async () => {
+      await new Promise((resolve) => {
+        setTimeout((resolve), num * 20);
+      });
+      return num;
+    });
+
+    const results = await promiseSequence(2, promises);
+
+    expect(results).toStrictEqual([4, 5, 2, 3, 1]);
+  });
 });
 
 describe('objectToFormData', () => {

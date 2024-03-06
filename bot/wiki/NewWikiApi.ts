@@ -1,4 +1,6 @@
-import { WikiApiConfig, WikiPage } from '../types';
+import {
+  Revision, UserContribution, WikiApiConfig, WikiPage,
+} from '../types';
 import { objectToFormData, promiseSequence } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
 
@@ -24,12 +26,13 @@ export interface IWikiApi {
   ): AsyncGenerator<WikiPage[], void, WikiPage[]>;
   search(text: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
   getRedirects(namespace?: number, linkNamespace?: number[]): AsyncGenerator<WikiPage[], void, WikiPage[]>;
-  userContributes(user: string, limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  userContributes(user: string, limit?: number): AsyncGenerator<UserContribution[], void, UserContribution[]>;
   listCategory(category: string, limit?: number, type?: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
   categoriesStartsWith(prefix: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
   fileUsage(pageIds: string[], limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
   getWikiDataItem(title: string): Promise<string | undefined>;
   newPages(namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  getArticleRevisions(title: string, limit: number): Promise<Revision[]>;
 }
 
 export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultConfig): IWikiApi {
@@ -113,6 +116,17 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
   }
 
+  async function getArticleRevisions(title: string, limit: number) {
+    const props = encodeURIComponent('content|user|size|comment');
+    const path = `?action=query&format=json&rvprop=${props}&rvslots=*&prop=revisions&titles=${
+      encodeURIComponent(title)
+    }&rvlimit=${limit}`;
+    const result = await request(path);
+    const wikiPages:Record<string, Partial<WikiPage>> = result.query.pages;
+
+    return Object.values(wikiPages)[0]?.revisions ?? [];
+  }
+
   async function* externalUrl(link:string, protocol:string = 'https') {
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content');
@@ -154,7 +168,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     const encodedTitles = encodeURIComponent(titles.join('|'));
     const path = `?action=query&format=json&prop=info&inprop=${props}&titles=${encodedTitles}`;
     const result = await request(path);
-    const res:Record<string, Partial<WikiPage>> = result.query?.pages;
+    const res:Record<string, Partial<WikiPage>> = result.query?.pages ?? {};
     return Object.values(res);
   }
 
@@ -193,9 +207,9 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   }
 
   async function* userContributes(user:string, limit = 500) {
-    const props = encodeURIComponent('title|ids');
+    const props = encodeURIComponent('title|ids|comment');
     const path = `?action=query&format=json&list=usercontribs&ucuser=${encodeURIComponent(user)}&uclimit=${limit}&ucprop=${props}`;
-    yield* baseApi.continueQuery(path);
+    yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.usercontribs ?? {}));
   }
 
   async function rollbackUserContributions(user:string, summary: string, count = 5) {
@@ -310,6 +324,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     categoriesStartsWith,
     fileUsage,
     getWikiDataItem,
+    getArticleRevisions,
     newPages,
   };
 }

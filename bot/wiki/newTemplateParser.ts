@@ -19,7 +19,7 @@ export function findTemplates(text: string, templateName: string, title: string)
     templateStartIndex = currIndex + templateStartIndex;
     templateEndIndex = nextWikiText(text, templateStartIndex + templateStart.length, '}}');
     if (templateEndIndex === -1) {
-      console.log('Error: template end not found', title);
+      console.log('Error: template end not found', title, text.substring(templateStartIndex, templateStartIndex + 100));
       break;
     }
     const templateText = text.substring(templateStartIndex, templateEndIndex + 2);

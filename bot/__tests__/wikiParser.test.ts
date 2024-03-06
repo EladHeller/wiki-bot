@@ -50,6 +50,22 @@ describe('nextWikiText', () => {
     expect(nextWikiText(text, currIndex, str)).toBe(35);
   });
 
+  it('should ignore text in <!-- -->', () => {
+    const text = 'This is a <!--sample text with {{nested {{templates}}}}--> comment.';
+    const currIndex = 0;
+    const str = '{{nested {{templates}}}}';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(-1);
+  });
+
+  it('should handle not closed <!-- tag', () => {
+    const text = 'This is a <!--sample text with {{nested {{templates}}}} comment.';
+    const currIndex = 0;
+    const str = '{{nested {{templates}}}}';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(31);
+  });
+
   it('should ignore text in { }', () => {
     const text = 'This is a {sample text with {{nested {{templates}}}}} braces.';
     const currIndex = 0;

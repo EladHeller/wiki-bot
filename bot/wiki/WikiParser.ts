@@ -1,5 +1,7 @@
 const nowiki = '<nowiki>';
 const nowikiEnd = '</nowiki>';
+const comment = '<!--';
+const commentEnd = '-->';
 
 export function noWikiEndTagIndex(text: string, startIndex: number): number {
   const nextNoWikiEndIndex = text.indexOf(nowikiEnd, startIndex);
@@ -25,6 +27,15 @@ export function nextWikiText(
       if (index === -1) {
         console.warn('<nowiki> without </nowiki>', title, console.log(text.substring(before, before + 100)));
         index = before + nowiki.length;
+      }
+    } else if (text.substring(index, index + comment.length) === comment) {
+      const before = index;
+      index = text.indexOf(commentEnd, index);
+      if (index === -1) {
+        console.warn('<!-- without -->', title, console.log(text.substring(before, before + 100)));
+        index = before + comment.length;
+      } else {
+        index += commentEnd.length;
       }
     } else if (text.substring(index, index + 2) === '{{' && !ignoreTemplates) {
       const before = index;
