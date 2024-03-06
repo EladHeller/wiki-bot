@@ -117,7 +117,7 @@ export function objectToQueryString(obj: Record<string, any>): string {
   return Object.entries(obj).map(([key, val]) => `${key}=${encodeURIComponent(val)}`).join('&');
 }
 
-export async function asyncGeneratorMapWithSequence<T, R>(
+export async function asyncGeneratorMapWithSequence<T, R = any>(
   sequenceSize: number,
   generator: AsyncGenerator<T[], void, T[]>,
   callback: (value: T) => () => Promise<R>,
