@@ -42,13 +42,6 @@ export interface WikiApiConfig {
 }
 
 export type UserContribution = {
-  // userid: 313102,
-  // user: 'Sapper-bot',
-  // pageid: 1426492,
-  // revid: 38017533,
-  // parentid: 20071400,
-  // ns: 10,
-  // title: 'תבנית:ציטוט יומי 6 בינואר 2017'
   userid: number;
   user: string;
   pageid: number;
@@ -57,4 +50,16 @@ export type UserContribution = {
   ns: number;
   title: string;
   comment: string;
+}
+
+export type IBaseWikiApi = {
+  login: () => Promise<string>;
+  request: (path: string, method?: string, data?: Record<string, any>) => Promise<any>;
+  continueQuery: (
+    path: string,
+    resultConverterCallback?: ((result: any) => any),
+    baseContinue?: Record<string, any>
+  ) => AsyncGenerator<any, any, void>;
+  getToken: (tokenType?: string) => Promise<Record<string, string>>;
+
 }

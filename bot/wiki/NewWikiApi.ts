@@ -1,5 +1,5 @@
 import {
-  Revision, UserContribution, WikiApiConfig, WikiPage,
+  Revision, UserContribution, WikiPage,
 } from '../types';
 import { objectToFormData, promiseSequence } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
@@ -8,39 +8,38 @@ export interface IWikiApi {
   login(): Promise<void>;
   request(path: string, method?: string, data?: Record<string, any>): Promise<any>;
   recursiveSubCategories(category: string, limit?: number): AsyncGenerator<WikiPage, WikiPage, void>;
-  backlinksTo(target: string, namespace?: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  backlinksTo(target: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   updateArticle(articleTitle: string, summary: string, content: string, newSectionTitle?: string): Promise<any>;
   getArticleContent(title: string): Promise<string | undefined>;
-  externalUrl(link: string, protocol?: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  externalUrl(link: string, protocol?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<Partial<WikiPage>[]>;
   purge(titles: string[]): Promise<any>;
   rollback(title: string, user: string, summary: string): Promise<any>;
   undo(title: string, summary: string, revision: number): Promise<any>;
   rollbackUserContributions(user: string, summary: string, count?: number): Promise<any>;
-  categroyPages(category: string, limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  categroyPages(category: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
   undoContributions(user: string, summary: string, count?: number): Promise<any>;
   protect(title: string, protections: string, expiry: string, reason: string): Promise<any>;
   deletePage(title: string, reason: string): Promise<any>;
   getArticlesWithTemplate(
     templateName: string, continueObject?: Record<string, string>, prefix?: string, namespace?: string
-  ): AsyncGenerator<WikiPage[], void, WikiPage[]>;
-  search(text: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
-  getRedirects(namespace?: number, linkNamespace?: number[]): AsyncGenerator<WikiPage[], void, WikiPage[]>;
-  userContributes(user: string, limit?: number): AsyncGenerator<UserContribution[], void, UserContribution[]>;
-  listCategory(category: string, limit?: number, type?: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
-  categoriesStartsWith(prefix: string): AsyncGenerator<WikiPage[], void, WikiPage[]>;
-  fileUsage(pageIds: string[], limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  ): AsyncGenerator<WikiPage[], void, void>;
+  search(text: string): AsyncGenerator<WikiPage[], void, void>;
+  getRedirects(namespace?: number, linkNamespace?: number[]): AsyncGenerator<WikiPage[], void, void>;
+  userContributes(user: string, limit?: number): AsyncGenerator<UserContribution[], void, void>;
+  listCategory(category: string, limit?: number, type?: string): AsyncGenerator<WikiPage[], void, void>;
+  categoriesStartsWith(prefix: string): AsyncGenerator<WikiPage[], void, void>;
+  fileUsage(pageIds: string[], limit?: number): AsyncGenerator<WikiPage[], void, void>;
   getWikiDataItem(title: string): Promise<string | undefined>;
-  newPages(namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<WikiPage[], void, WikiPage[]>;
+  newPages(namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
   getArticleRevisions(title: string, limit: number): Promise<Revision[]>;
 }
 
-export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultConfig): IWikiApi {
-  const baseApi = BaseWikiApi(apiConfig);
+export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
   let token: string;
 
   async function init() {
-    token = await baseApi.login();
+    token = await baseWikiApi.login();
   }
   const tokenPromise = init();
 
@@ -50,7 +49,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
 
   async function request(path: string, method?: string, data?: Record<string, any>): Promise<any> {
     await tokenPromise;
-    return baseApi.request(path, method, data);
+    return baseWikiApi.request(path, method, data);
   }
 
   async function getWikiDataItem(title: string): Promise<string | undefined> {
@@ -66,7 +65,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     continueObject?: Record<string, string>,
     prefix = 'תבנית',
     namespace = '0',
-  ): AsyncGenerator<WikiPage[], void, WikiPage[]> {
+  ): AsyncGenerator<WikiPage[], void, void> {
     const template = encodeURIComponent(`${prefix ? `${prefix}:` : ''}${templateName}`);
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content');
@@ -76,7 +75,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     + `&prop=${props}`
     // Get content of page
     + `&rvprop=${rvprops}&rvslots=*`;
-    yield* baseApi.continueQuery(
+    yield* baseWikiApi.continueQuery(
       path,
       (result) => Object.values(result?.query?.pages ?? {}),
       continueObject,
@@ -86,7 +85,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   async function* backlinksTo(target: string, namespace = '0') {
     const path = `?action=query&format=json&generator=backlinks&gblnamespace=${namespace}&gbltitle=${encodeURIComponent(target)}&gbllimit=500`
     + '&gblfilterredir=nonredirects&prop=revisions&rvprop=content&rvslots=*';
-    yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
   async function updateArticle(
@@ -134,7 +133,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=100`
     + `&prop=${props}`
     + `&rvprop=${rvprops}&rvslots=*`;
-    yield* baseApi.continueQuery(
+    yield* baseWikiApi.continueQuery(
       path,
       (result) => Object.values(result?.query?.pages ?? {}),
     );
@@ -148,7 +147,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     + `&prop=${props}`
     + `&rvprop=${rvprops}&rvslots=*`;
 
-    yield* baseApi.continueQuery(path);
+    yield* baseWikiApi.continueQuery(path);
   }
 
   async function* getRedirects(namespace = 0, linkNamespace = [0]) {
@@ -157,7 +156,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     const category = encodeURIComponent('קטגוריה:הפניות לא למחוק');
     const path = `?action=query&format=json&generator=allpages&gaplimit=500&gapfilterredir=redirects&gapnamespace=${namespace}`
     + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}&tltemplates=${template}&clcategories=${category}`;
-    yield* baseApi.continueQuery(path);
+    yield* baseWikiApi.continueQuery(path);
   }
 
   async function info(titles:string[]) {
@@ -182,7 +181,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   }
 
   async function rollback(title: string, user: string, summary: string) {
-    const { rollbacktoken } = await baseApi.getToken('rollback');
+    const { rollbacktoken } = await baseWikiApi.getToken('rollback');
     const path = '?action=rollback&format=json';
 
     return request(path, 'post', objectToFormData({
@@ -209,7 +208,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   async function* userContributes(user:string, limit = 500) {
     const props = encodeURIComponent('title|ids|comment');
     const path = `?action=query&format=json&list=usercontribs&ucuser=${encodeURIComponent(user)}&uclimit=${limit}&ucprop=${props}`;
-    yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.usercontribs ?? {}));
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.usercontribs ?? {}));
   }
 
   async function rollbackUserContributions(user:string, summary: string, count = 5) {
@@ -226,7 +225,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
   async function* listCategory(category: string, limit = 500, type = 'page|subcat|file') {
     const props = encodeURIComponent('title|sortkeyprefix');
     const path = `?action=query&format=json&list=categorymembers&cmtype=${encodeURIComponent(type)}&cmtitle=Category:${encodeURIComponent(category)}&cmlimit=${limit}&cmprop=${props}`;
-    yield* baseApi.continueQuery(path, (result) => Object.values(
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(
       result?.query?.categorymembers ?? {},
     ));
   }
@@ -248,12 +247,12 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     const path = `?action=query&format=json&generator=categorymembers&gcmtitle=Category:${encodeURIComponent(category)}&gcmlimit=${limit}&gcmprop=${props}`
     + `&prop=revisions&rvprop=${rvprops}&rvslots=*`;
 
-    yield* baseApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
   async function* categoriesStartsWith(prefix: string) {
     const path = `?action=query&format=json&list=allcategories&acprop=size&acprefix=${encodeURIComponent(prefix)}&aclimit=5000`;
-    yield* baseApi.continueQuery(path);
+    yield* baseWikiApi.continueQuery(path);
   }
 
   async function undoContributions(user:string, summary: string, count = 5) {
@@ -272,7 +271,7 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
     const pageIdsString = encodeURIComponent(pageIds.join('|'));
     const path = `?action=query&format=json&list=fileusage&fuprop=${props}&fulimit=${limit}&pageids=${pageIdsString}`;
 
-    yield* baseApi.continueQuery(path);
+    yield* baseWikiApi.continueQuery(path);
   }
 
   async function protect(title:string, protections: string, expiry: string, reason: string) {
@@ -294,14 +293,14 @@ export default function NewWikiApi(apiConfig: Partial<WikiApiConfig> = defaultCo
 
   async function* newPages(namespaces: number[], endTimestamp: string, limit = 500) {
     const path = `?action=query&format=json&list=recentchanges&rcprop=title&rcnamespace=${namespaces.join('|')}&rctype=new&rcshow=!redirect|!bot&rclimit=${limit}&rcend=${endTimestamp}`;
-    yield* baseApi.continueQuery(path, (result) => Object.values(
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(
       result?.query?.recentchanges ?? {},
     ));
   }
 
   return {
     login,
-    request: baseApi.request,
+    request: baseWikiApi.request,
     recursiveSubCategories,
     backlinksTo,
     updateArticle,
