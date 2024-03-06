@@ -8,3 +8,4 @@
 res*.json
 maya*.json
 coverage/
+.vscode/

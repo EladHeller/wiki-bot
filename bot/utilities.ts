@@ -89,15 +89,22 @@ export function parseLocalDate(dateString:string, throwError = true): Date {
   return new Date(`${year}-${monthNumber}-${day.padStart(2, '0')}`);
 }
 
-export async function promiseSequence(size: number, callbacks: Array<() => Promise<any>>) {
+export async function promiseSequence<T>(size: number, callbacks: Array<() => Promise<T>>): Promise<Array<T>> {
   let batch = callbacks.splice(0, size);
+  const results: T[] = [];
 
   while (batch.length > 0) {
-    await Promise.all(batch.map((callback) => callback().catch(
-      (error) => console.log(error?.data || error?.message || error?.toString()),
-    )));
+    await Promise.all(batch.map(async (callback) => {
+      try {
+        const res = await callback();
+        results.push(res);
+      } catch (error) {
+        console.log(error?.data || error?.message || error?.toString());
+      }
+    }));
     batch = callbacks.splice(0, size);
   }
+  return results;
 }
 
 export function objectToFormData(obj: Record<string, any>) {
@@ -110,17 +117,18 @@ export function objectToQueryString(obj: Record<string, any>): string {
   return Object.entries(obj).map(([key, val]) => `${key}=${encodeURIComponent(val)}`).join('&');
 }
 
-export async function asyncGeneratorMapWithSequence<T>(
+export async function asyncGeneratorMapWithSequence<T, R>(
   sequenceSize: number,
   generator: AsyncGenerator<T[], void, T[]>,
-  callback: (value: T) => () => Promise<any>,
-) {
+  callback: (value: T) => () => Promise<R>,
+): Promise<Array<R | void>> {
   let res: IteratorResult<T[], void> = { done: false, value: [] };
+  const results: Array<R | void> = [];
   do {
     try {
       res = await generator.next();
       if (res.value) {
-        await promiseSequence(sequenceSize, res.value.map(callback));
+        results.push(...await promiseSequence(sequenceSize, res.value.map(callback)));
       }
     } catch (error) {
       console.log(error?.data || error?.message || error?.toString());
@@ -129,4 +137,6 @@ export async function asyncGeneratorMapWithSequence<T>(
       }
     }
   } while (!res.done);
+
+  return results;
 }

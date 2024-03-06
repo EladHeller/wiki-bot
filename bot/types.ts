@@ -1,3 +1,16 @@
+export type Revision = {
+  user: string;
+  size: number;
+  comment?: string;
+  slots: {
+    main: {
+      contentmodel: string;
+      contentformat: string;
+      '*': string;
+    }
+  }
+};
+
 export type WikiPage = {
     pageid: number;
     ns: number;
@@ -5,17 +18,8 @@ export type WikiPage = {
       ns: number;
       title: string;
     }[];
-    revisions: {
-      user: string;
-      size: number;
-      slots: {
-        main: {
-          contentmodel: string;
-          contentformat: string;
-          '*': string;
-        }
-      }
-    }[];
+    missing?: string;
+    revisions: Revision[];
     extlinks: {
       '*': string;
     }[];
@@ -35,4 +39,22 @@ export interface WikiApiConfig {
     userName: string;
     password: string;
     assertBot?: boolean;
+}
+
+export type UserContribution = {
+  // userid: 313102,
+  // user: 'Sapper-bot',
+  // pageid: 1426492,
+  // revid: 38017533,
+  // parentid: 20071400,
+  // ns: 10,
+  // title: 'תבנית:ציטוט יומי 6 בינואר 2017'
+  userid: number;
+  user: string;
+  pageid: number;
+  revid: number;
+  parentid: number;
+  ns: number;
+  title: string;
+  comment: string;
 }
