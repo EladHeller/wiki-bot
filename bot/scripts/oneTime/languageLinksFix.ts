@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 import NewWikiApi from '../../wiki/NewWikiApi';
 import { getInnerLinks } from '../../wiki/wikiLinkParser';
-import { parseContent } from '../languageLinks';
+import { parseContent } from '../../maintenance/languageLinks';
 
 const RELEVANT_COMMENT = 'הסרת תבנית קישור שפה';
 const BOT_NAME = 'Sapper-bot';

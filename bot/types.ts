@@ -29,6 +29,7 @@ export type WikiPage = {
     pageprops?: {
       wikibase_item: string;
     };
+    redirect?: string;
     categories?: {
       ns: number;
       title: string;
