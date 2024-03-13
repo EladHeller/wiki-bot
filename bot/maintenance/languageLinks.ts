@@ -1,7 +1,7 @@
-import shabathProtectorDecorator from '../../decorators/shabathProtector';
-import { asyncGeneratorMapWithSequence, promiseSequence } from '../../utilities';
-import NewWikiApi, { IWikiApi } from '../../wiki/NewWikiApi';
-import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
+import shabathProtectorDecorator from '../decorators/shabathProtector';
+import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
+import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import { findTemplates, getTemplateArrayData } from '../wiki/newTemplateParser';
 
 const CATEGORY_NAME = 'ערכים עם קישור שפה לערך שכבר קיים בעברית';
 const LANGUAGE_LINKS_TEMPLATE = 'קישור שפה';

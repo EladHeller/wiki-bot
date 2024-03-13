@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 import NewWikiApi from '../../wiki/NewWikiApi';
-import { getInnerLinks } from '../../wiki/wikiLinkParser';
+// import { getInnerLinks } from '../../wiki/wikiLinkParser';
 import { parseContent } from '../../maintenance/languageLinks';
 
 const RELEVANT_COMMENT = 'הסרת תבנית קישור שפה';
@@ -29,46 +29,56 @@ export async function fixMissingQuotation() {
 export default async function fixLanguageLinks() {
   const api = NewWikiApi();
   await api.login();
-  const generator = api.userContributes('sapper-bot', 500);
+  const generator = api.userContributes('sapper-bot', 380);
   const titles = await asyncGeneratorMapWithSequence(1, generator, (contribution) => async () => {
+    console.log(`Checking ${contribution.title}`);
     if (contribution.comment === RELEVANT_COMMENT) {
-      const revisions = await api.getArticleRevisions(contribution.title, 4);
+      const revisions = await api.getArticleRevisions(contribution.title, 10);
       const botRevisionIndex = revisions.findIndex((rev) => rev.user === BOT_NAME && rev.comment === RELEVANT_COMMENT);
-      if (![0, 1, 2].includes(botRevisionIndex)) {
+      if (botRevisionIndex === -1 || botRevisionIndex > 8) {
         console.log(`Bot revision is ${botRevisionIndex} for ${contribution.title}`);
         return null;
       }
-      let returnValue: string | null = null;
       const beforeContent = revisions[botRevisionIndex + 1].slots.main['*'];
       const afterContent = revisions[botRevisionIndex].slots.main['*'];
-      const beforeMatches = beforeContent.match(/מירכאות=כן/g);
-      const afterMatches = afterContent.match(/מירכאות=כן/g);
-      if ((beforeMatches && !afterMatches)
-      || (beforeMatches && afterMatches && beforeMatches.length < afterMatches.length)) {
-        console.log(`Bot fault at ${contribution.title}`);
-        returnValue = contribution.title;
-      }
-
-      const content = revisions[0].slots.main['*'];
-      let newContent = content;
-
-      const links = getInnerLinks(content);
-      links.forEach((link) => {
-        if (link.text.startsWith("'''") && link.text.endsWith("'''")) {
-          const isBold = link.text.startsWith("'''") && link.text.endsWith("'''");
-          const newText = link.text.substring(isBold ? 3 : 2, link.text.length - (isBold ? 3 : 2));
-          const styleText = isBold ? "'''" : "''";
-          const newLink = `${styleText}[[${link.link}|${newText}]]${styleText}`;
-          const oldLink = `[[${link.link}|${link.text}]]`;
-          newContent = newContent.replace(oldLink, newLink);
+      const parsedContent = await parseContent(api, contribution.title, beforeContent);
+      if (afterContent !== parsedContent) {
+        console.log(`not equal ${contribution.title}`);
+        if (botRevisionIndex === 0) {
+          await api.updateArticle(contribution.title, 'החזרת תבנית קישור שפה', parsedContent);
+          return null;
         }
-      });
-
-      if (newContent !== content) {
-        console.log(`Updating ${contribution.title}!!!!!!!!!`);
-        await api.updateArticle(contribution.title, 'הוצאת עיצוב מטקסט הקישור', newContent);
+        return contribution.title;
       }
-      return returnValue;
+      // const returnValue: string | null = null;
+      // const beforeMatches = beforeContent.match(/מירכאות=כן/g);
+      // const afterMatches = afterContent.match(/מירכאות=כן/g);
+      // if ((beforeMatches && !afterMatches)
+      // || (beforeMatches && afterMatches && beforeMatches.length < afterMatches.length)) {
+      //   console.log(`Bot fault at ${contribution.title}`);
+      //   returnValue = contribution.title;
+      // }
+
+      // const content = revisions[0].slots.main['*'];
+      // let newContent = content;
+
+      // const links = getInnerLinks(content);
+      // links.forEach((link) => {
+      //   if (link.text.startsWith("'''") && link.text.endsWith("'''")) {
+      //     const isBold = link.text.startsWith("'''") && link.text.endsWith("'''");
+      //     const newText = link.text.substring(isBold ? 3 : 2, link.text.length - (isBold ? 3 : 2));
+      //     const styleText = isBold ? "'''" : "''";
+      //     const newLink = `${styleText}[[${link.link}|${newText}]]${styleText}`;
+      //     const oldLink = `[[${link.link}|${link.text}]]`;
+      //     newContent = newContent.replace(oldLink, newLink);
+      //   }
+      // });
+
+      // if (newContent !== content) {
+      //   console.log(`Updating ${contribution.title}!!!!!!!!!`);
+      //   await api.updateArticle(contribution.title, 'הוצאת עיצוב מטקסט הקישור', newContent);
+      // }
+      // return returnValue;
     }
     return null;
   });
