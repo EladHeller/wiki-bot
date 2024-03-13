@@ -1,4 +1,5 @@
 import {
+  LogEvent,
   Revision, UserContribution, WikiPage,
 } from '../types';
 import { objectToFormData, promiseSequence } from '../utilities';
@@ -33,6 +34,7 @@ export interface IWikiApi {
   getWikiDataItem(title: string): Promise<string | undefined>;
   newPages(namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
   getArticleRevisions(title: string, limit: number): Promise<Revision[]>;
+  logs(type: string, namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<LogEvent[], void, void>
 }
 
 export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -298,6 +300,13 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     ));
   }
 
+  async function* logs(type: string, namespaces: number[], endTimestamp: string, limit = 100) {
+    const path = `?action=query&format=json&list=logevents&letype=${encodeURIComponent(type)}&lenamespace=${namespaces.join('|')}&leend=${endTimestamp}&lelimit${limit}`;
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(
+      result?.query?.logevents ?? {},
+    ));
+  }
+
   return {
     login,
     request: baseWikiApi.request,
@@ -325,5 +334,6 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     getWikiDataItem,
     getArticleRevisions,
     newPages,
+    logs,
   };
 }

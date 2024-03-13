@@ -29,5 +29,6 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     getWikiDataItem: base.getWikiDataItem ?? jest.fn(),
     newPages: base.newPages ?? jest.fn(),
     getArticleRevisions: base.getArticleRevisions ?? jest.fn(),
+    logs: base.logs ?? jest.fn(),
   };
 }
