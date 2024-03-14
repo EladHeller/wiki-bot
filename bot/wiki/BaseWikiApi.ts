@@ -3,7 +3,7 @@ import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import { objectToQueryString } from '../utilities';
 import { baseLogin, getToken as getWikiToken } from './wikiLogin';
-import { WikiApiConfig } from '../types';
+import { IBaseWikiApi, WikiApiConfig } from '../types';
 
 export const defaultConfig: Partial<WikiApiConfig> = {
   baseUrl: 'https://he.wikipedia.org/w/api.php',
@@ -19,7 +19,7 @@ function validateConfig(config: Partial<WikiApiConfig> = defaultConfig): config 
   return true;
 }
 
-export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>) {
+export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWikiApi {
   const jar = new CookieJar();
   const client = wrapper(axios.create({ jar }));
 
