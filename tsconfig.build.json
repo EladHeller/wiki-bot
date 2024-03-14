@@ -8,5 +8,6 @@
         "moduleResolution": "node",
         "outDir": "dist"
     },
-    "include": ["bot"]
+    "include": ["bot"],
+    "exclude": ["bot/__tests__"]
 }
