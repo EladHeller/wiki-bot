@@ -1,4 +1,3 @@
-import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 import { findTemplates, getTemplateArrayData } from '../wiki/newTemplateParser';
@@ -26,8 +25,8 @@ export async function parseContent(api: IWikiApi, title: string, content: string
       title,
       true,
     );
-    const [infoRes] = await api.info([articleName]);
-    if (infoRes && infoRes.missing == null && infoRes.redirect == null) {
+    const infoRes = await api.info([articleName]);
+    if (infoRes[0] && infoRes[0].missing == null) {
       newContent = newContent.replace(template, getLinkText(template, articleName, presentName));
     }
   }));
@@ -54,5 +53,3 @@ export default async function languageLinks() {
     }
   });
 }
-
-export const main = shabathProtectorDecorator(languageLinks);

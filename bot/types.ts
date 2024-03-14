@@ -12,37 +12,43 @@ export type Revision = {
 };
 
 export type WikiPage = {
-  pageid: number;
-  ns: number;
-  templates?: {
+    pageid: number;
     ns: number;
+    templates?: {
+      ns: number;
+      title: string;
+    }[];
+    missing?: string;
+    revisions: Revision[];
+    extlinks: {
+      '*': string;
+    }[];
+    protection?: {type: string, level: string, expiry: string}[];
+    links?: {ns: number, title: string}[];
     title: string;
-  }[];
-  missing?: string;
-  revisions: Revision[];
-  extlinks: {
-    '*': string;
-  }[];
-  protection?: { type: string, level: string, expiry: string }[];
-  links?: { ns: number, title: string }[];
-  title: string;
-  pageprops?: {
-    wikibase_item: string;
-  };
-  redirect?: string;
-  categories?: {
-    ns: number;
-    title: string;
-  }[];
+    pageprops?: {
+      wikibase_item: string;
+    };
+    categories?: {
+      ns: number;
+      title: string;
+    }[];
 }
 export interface WikiApiConfig {
-  baseUrl: string;
-  userName: string;
-  password: string;
-  assertBot?: boolean;
+    baseUrl: string;
+    userName: string;
+    password: string;
+    assertBot?: boolean;
 }
 
 export type UserContribution = {
+  // userid: 313102,
+  // user: 'Sapper-bot',
+  // pageid: 1426492,
+  // revid: 38017533,
+  // parentid: 20071400,
+  // ns: 10,
+  // title: 'תבנית:ציטוט יומי 6 בינואר 2017'
   userid: number;
   user: string;
   pageid: number;
@@ -51,34 +57,4 @@ export type UserContribution = {
   ns: number;
   title: string;
   comment: string;
-}
-
-export type IBaseWikiApi = {
-  login: () => Promise<string>;
-  request: (path: string, method?: string, data?: Record<string, any>) => Promise<any>;
-  continueQuery: (
-    path: string,
-    resultConverterCallback?: ((result: any) => any),
-    baseContinue?: Record<string, any>
-  ) => AsyncGenerator<any, any, void>;
-  getToken: (tokenType?: string) => Promise<Record<string, string>>;
-
-}
-
-export type LogEvent = {
-  ns: number;
-  pageid: number;
-  logpage: number;
-  revid: number;
-  action: string;
-  logid?: number;
-  title?: string;
-  params?: {
-    target_ns?: number;
-    target_title?: string;
-  };
-  type?: string;
-  user?: string;
-  timestamp?: string;
-  comment?: string;
 }

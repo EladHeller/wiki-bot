@@ -119,7 +119,7 @@ export function objectToQueryString(obj: Record<string, any>): string {
 
 export async function asyncGeneratorMapWithSequence<T, R = any>(
   sequenceSize: number,
-  generator: AsyncGenerator<T[], void, void>,
+  generator: AsyncGenerator<T[], void, T[]>,
   callback: (value: T) => () => Promise<R>,
 ): Promise<Array<R | void>> {
   let res: IteratorResult<T[], void> = { done: false, value: [] };

@@ -127,7 +127,7 @@ export async function getGoogleFinanceLinksWithContent(): Promise<Record<string,
 
 export async function* getArticlesWithTemplate(
   templateName: string,
-): AsyncGenerator<WikiPage[], void, void> {
+): AsyncGenerator<WikiPage[], void, WikiPage[]> {
   const template = encodeURIComponent(templateName);
   const props = encodeURIComponent('revisions');
   const rvprops = encodeURIComponent('content');

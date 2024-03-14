@@ -55,5 +55,20 @@
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",
     "zx": "^7.2.3"
+  },
+  "jest": {
+    "coveragePathIgnorePatterns": [
+      "BaseWikiApi.ts",
+      "NewWikiApi.ts",
+      "wikiLogin.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
+    }
   }
 }

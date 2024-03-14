@@ -2,7 +2,7 @@ import checkCopyViolations, { CopyViolaionRank, CopyViolationResponse } from '..
 import writeAdminBotLogs from '../admin/log';
 import type { ArticleLog, Paragraph } from '../admin/types';
 import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
-import type { LogEvent, WikiPage } from '../types';
+import type { WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
 
@@ -17,11 +17,6 @@ const violationText: Record<CopyViolaionRank, string> = {
   possible: 'אפשרי',
   none: 'אין',
 };
-const HAMICHLOL_DOMAIN = 'https://www.hamichlol.org.il/';
-const WIKIPEDIA_DOMAIN = 'https://he.wikipedia.org/wiki/';
-const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
-const LAST_RUN_PAGE = `${BASE_PAGE}/ריצה אחרונה`;
-const LOG_PAGE = `${BASE_PAGE}/לוג`;
 
 function copyviosSearchLink(title: string) {
   return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${encodeURIComponent(title)}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
@@ -37,12 +32,12 @@ function textFromMatch(
     return ': אין התאמה';
   }
   const linkToCopyviosText = 'קישור לחיפוש ב-copyvios';
-
-  const link = url.startsWith(HAMICHLOL_DOMAIN)
-    ? `[${url} ${encodeURIComponent(url.replace(HAMICHLOL_DOMAIN, '').replace(/_/g, ' '))} במכלול]`
-    : `[${copyviosSearchLink(title)} ${linkToCopyviosText}]`;
-  return `: ${link}, ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
+  return `: [${copyviosSearchLink(title)} ${linkToCopyviosText}], ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
 }
+
+const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
+const LAST_RUN_PAGE = `${BASE_PAGE}/ריצה אחרונה`;
+const LOG_PAGE = `${BASE_PAGE}/לוג`;
 
 async function getLastRun(api: ReturnType<typeof NewWikiApi>): Promise<string> {
   const lastRunFromWiki = await api.getArticleContent(LAST_RUN_PAGE);
@@ -62,6 +57,8 @@ async function getLastRun(api: ReturnType<typeof NewWikiApi>): Promise<string> {
 const NOT_FOUND = 'not found';
 const DISAMBIGUATION = 'פירושונים';
 
+const HAMICHLOL_DOMAIN = 'https://www.hamichlol.org.il/';
+const WIKIPEDIA_DOMAIN = 'https://he.wikipedia.org/wiki/';
 async function checkHamichlol(title: string) {
   try {
     const res = await fetch(`${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
@@ -78,80 +75,6 @@ async function checkHamichlol(title: string) {
   }
 }
 
-async function handlePage(title: string, ns: number) {
-  const logs: ArticleLog[] = [];
-  const otherLogs: ArticleLog[] = [];
-  if (title.includes(`(${DISAMBIGUATION})`)) {
-    otherLogs.push({
-      text: DISAMBIGUATION,
-      title,
-      error: true,
-    });
-    return { logs, otherLogs };
-  }
-
-  const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
-  if (ns === 0) {
-    results.push(await checkHamichlol(title));
-    results.push(await checkHamichlol(`רבי ${title}`));
-    results.push(await checkHamichlol(`הרב ${title}`));
-  } else {
-    const lastPart = title.split(/[:/]/).at(-1);
-    if (lastPart) {
-      results.push(await checkHamichlol(lastPart));
-      results.push(await checkHamichlol(`רבי ${lastPart}`));
-      results.push(await checkHamichlol(`הרב ${lastPart}`));
-    }
-  }
-  results.forEach(async (res) => {
-    if (res == null) {
-      return;
-    }
-    if (res.status === 'error') {
-      if (res.error?.code === 'no_data') { // Url not found
-        return;
-      }
-
-      if (res.error?.code === 'bad_title') {
-        otherLogs.push({
-          text: NOT_FOUND,
-          title,
-          error: true,
-        });
-        return;
-      }
-      logs.push({
-        title,
-        text: `[[${title}]] - ${res.error?.info}`,
-        error: true,
-      });
-
-      return;
-    }
-
-    const { url, confidence, violation } = res.best ?? { violation: 'none', confidence: 0 };
-    if (violation === 'none') {
-      otherLogs.push({
-        title,
-        text: `[[${title}]] ${confidence.toFixed(2)}${url ? ` [${url}]` : ''}`,
-        rank: confidence,
-      });
-      return;
-    }
-    const matchText = textFromMatch(confidence, violation, url, title);
-    logs.push({
-      title,
-      text: `[[${title}]]{{כ}}${matchText}`,
-      rank: confidence,
-    });
-  });
-
-  return {
-    logs,
-    otherLogs,
-  };
-}
-
 export default async function copyrightViolationBot() {
   const api = NewWikiApi();
   const currentRun = new Date();
@@ -159,31 +82,80 @@ export default async function copyrightViolationBot() {
 
   const generator = api.newPages([0, 2, 118], lastRun);
 
-  const allLogs: ArticleLog[] = [];
-  const allOtherLogs: ArticleLog[] = [];
+  const logs: ArticleLog[] = [];
+  const otherLogs: ArticleLog[] = [];
 
   await asyncGeneratorMapWithSequence(1, generator, (page: WikiPage) => async () => {
-    const { logs, otherLogs } = await handlePage(page.title, page.ns);
-    allLogs.push(...logs);
-    allOtherLogs.push(...otherLogs);
-  });
-  const logsGenerator = api.logs('move', [0, 2, 118], lastRun);
-
-  await asyncGeneratorMapWithSequence(1, logsGenerator, (log: LogEvent) => async () => {
-    if (!log.title || log.params?.target_ns == null || log.params.target_title == null
-       || log.params.target_ns === log.ns) {
+    if (page.title.includes(`(${DISAMBIGUATION})`)) {
+      otherLogs.push({
+        text: DISAMBIGUATION,
+        title: page.title,
+        error: true,
+      });
       return;
     }
-    const { logs, otherLogs } = await handlePage(log.params.target_title, log.params.target_ns);
-    allLogs.push(...logs);
-    allOtherLogs.push(...otherLogs);
-  });
-  allLogs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
 
-  await writeAdminBotLogs(allLogs, BASE_PAGE);
-  const notFoundText = allOtherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[${title}]]`).join(' • ');
-  const disambiguationText = allOtherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[${title}]]`).join(' • ');
-  const otherText = allOtherLogs.filter(({ error }) => !error)
+    const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(page.title, 'he')];
+    if (page.ns === 0) {
+      results.push(await checkHamichlol(page.title));
+    }
+    results.forEach(async (res) => {
+      if (res == null) {
+        return;
+      }
+      if (res.status === 'error') {
+        if (res.error?.code === 'no_data') { // Url not found
+          return;
+        }
+
+        if (res.error?.code === 'bad_title') {
+          otherLogs.push({
+            text: NOT_FOUND,
+            title: page.title,
+            error: true,
+          });
+          return;
+        }
+        logs.push({
+          title: page.title,
+          text: `[[${page.title}]] - ${res.error?.info}`,
+          error: true,
+        });
+
+        return;
+      }
+
+      const { url, confidence, violation } = res.best ?? { violation: 'none', confidence: 0 };
+      if (violation === 'none') {
+        otherLogs.push({
+          title: page.title,
+          text: `[[${page.title}]] ${confidence.toFixed(2)}${url ? ` [${url}]` : ''}`,
+          rank: confidence,
+        });
+        return;
+      }
+      const matchText = textFromMatch(confidence, violation, url, page.title);
+      logs.push({
+        title: page.title,
+        text: `[[${page.title}]]{{כ}}${matchText}`,
+        rank: confidence,
+      });
+      // res.sources?.filter((source) => source.violation !== 'none' && source.url != null && source.url !== url).forEach((source) => {
+      //   const currText = textFromMatch(source.confidence, source.violation, source.url);
+      //   logs.push({
+      //     title: page.title,
+      //     text: `[[${page.title}]]{{כ}}${currText}`,
+      //     rank: source.confidence,
+      //   });
+      // });
+    });
+  });
+  logs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
+
+  await writeAdminBotLogs(logs, BASE_PAGE);
+  const notFoundText = otherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[${title}]]`).join(' • ');
+  const disambiguationText = otherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[${title}]]`).join(' • ');
+  const otherText = otherLogs.filter(({ error }) => !error)
     .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))
     .map(({ text }) => text).join(' • ');
   const paragraphs = [{
