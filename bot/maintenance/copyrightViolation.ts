@@ -70,8 +70,10 @@ async function checkHamichlol(title: string) {
     }
     const text = await res.text();
     if (text.includes('בערך זה קיים תוכן בעייתי') || text.includes(WIKIPEDIA_DOMAIN + encodeURIComponent(title.replace(/ /g, '_')))) {
+      console.log(`Hamichlol from wiki: ${title}`);
       return null;
     }
+    console.log(`Is from Hamichlol?: ${title}`);
     return checkCopyViolations(title, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
   } catch (e) {
     return null;
