@@ -1,11 +1,10 @@
 {
     "compilerOptions": {
-        "target": "ESNext",
-        "module": "ESNext",
+        "target": "ES2022",
+        "module": "NodeNext",
         "skipLibCheck": true,
         "esModuleInterop": true,
         "strictNullChecks": true,
-        "moduleResolution": "node",
         "outDir": "dist"
     },
     "include": ["bot"]

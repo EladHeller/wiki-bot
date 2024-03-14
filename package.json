@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "wiki-bot",
   "main": "dist/index.js",
-  "type": "module",
   "scripts": {
     "lint:test": "eslint ./**/*.ts ./send-email/**/*.mjs ./xmlbot/**/*.js --max-warnings 0",
     "type-check": "tsc --noEmit",
@@ -51,7 +50,6 @@
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-jest": "^27.9.0",
     "jest": "^29.7.0",
-    "ts-jest": "^29.1.2",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",
     "zx": "^7.2.3"
