@@ -301,10 +301,12 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
   }
 
   async function* logs(type: string, namespaces: number[], endTimestamp: string, limit = 100) {
-    const path = `?action=query&format=json&list=logevents&letype=${encodeURIComponent(type)}&lenamespace=${namespaces.join('|')}&leend=${endTimestamp}&lelimit${limit}`;
-    yield* baseWikiApi.continueQuery(path, (result) => Object.values(
-      result?.query?.logevents ?? {},
-    ));
+    for (const namespace of namespaces) {
+      const path = `?action=query&format=json&list=logevents&letype=${encodeURIComponent(type)}&lenamespace=${namespace}&leend=${endTimestamp}&lelimit${limit}`;
+      yield* baseWikiApi.continueQuery(path, (result) => Object.values(
+        result?.query?.logevents ?? {},
+      ));
+    }
   }
 
   return {
