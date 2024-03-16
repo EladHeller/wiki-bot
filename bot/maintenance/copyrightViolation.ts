@@ -62,7 +62,7 @@ async function getLastRun(api: ReturnType<typeof NewWikiApi>): Promise<string> {
 const NOT_FOUND = 'not found';
 const DISAMBIGUATION = 'פירושונים';
 
-async function checkHamichlol(title: string) {
+async function checkHamichlol(title: string, wikipediaTitle = title) {
   try {
     const res = await fetch(`${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
     if (!res.ok) {
@@ -70,11 +70,11 @@ async function checkHamichlol(title: string) {
     }
     const text = await res.text();
     if (text.includes('בערך זה קיים תוכן בעייתי') || text.includes(WIKIPEDIA_DOMAIN + encodeURIComponent(title.replace(/ /g, '_')))) {
-      console.log(`Hamichlol from wiki: ${title}`);
+      console.log(`Hamichlol from wiki: ${wikipediaTitle}`);
       return null;
     }
-    console.log(`Is from Hamichlol?: ${title}`);
-    return checkCopyViolations(title, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
+    console.log(`Is from Hamichlol?: ${wikipediaTitle}`);
+    return checkCopyViolations(wikipediaTitle, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
   } catch (e) {
     return null;
   }
@@ -95,14 +95,14 @@ async function handlePage(title: string, ns: number) {
   const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
   if (ns === 0) {
     results.push(await checkHamichlol(title));
-    results.push(await checkHamichlol(`רבי ${title}`));
-    results.push(await checkHamichlol(`הרב ${title}`));
+    results.push(await checkHamichlol(`רבי ${title}`, title));
+    results.push(await checkHamichlol(`הרב ${title}`, title));
   } else {
     const lastPart = title.split(/[:/]/).at(-1);
     if (lastPart) {
-      results.push(await checkHamichlol(lastPart));
-      results.push(await checkHamichlol(`רבי ${lastPart}`));
-      results.push(await checkHamichlol(`הרב ${lastPart}`));
+      results.push(await checkHamichlol(lastPart, title));
+      results.push(await checkHamichlol(`רבי ${lastPart}`, title));
+      results.push(await checkHamichlol(`הרב ${lastPart}`, title));
     }
   }
   results.forEach(async (res) => {
