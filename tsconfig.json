@@ -1,10 +1,12 @@
 {
     "compilerOptions": {
-        "target": "ES2022",
-        "module": "NodeNext",
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "node",
         "skipLibCheck": true,
         "esModuleInterop": true,
         "strictNullChecks": true,
+        "forceConsistentCasingInFileNames":false,
         "outDir": "dist",
         "sourceMap": true
     },

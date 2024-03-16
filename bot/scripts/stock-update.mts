@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import {
   AllDetailsResponse,
   getAllDetails,
-} from '../API/mayaAPI';
+} from '../API/mayaAPI.js';
 import { getCompanies, login } from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';

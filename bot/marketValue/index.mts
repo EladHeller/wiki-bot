@@ -3,7 +3,7 @@ import { getLocalDate, prettyNumericValue } from '../utilities';
 import {
   getArticleContent, getMayaLinks, login, purge, updateArticle,
 } from '../wiki/wikiAPI';
-import { MayaMarketValue, getMarketValue } from '../API/mayaAPI';
+import { MayaMarketValue, getMarketValue } from '../API/mayaAPI.js';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 

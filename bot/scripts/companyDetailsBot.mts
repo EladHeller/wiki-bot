@@ -7,7 +7,7 @@ import {
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import parseTableText, { TableRow, buildTableWithStyle } from '../wiki/wikiTableParser';
-import { AllDetailsResponse, getAllDetails } from '../API/mayaAPI';
+import { AllDetailsResponse, getAllDetails } from '../API/mayaAPI.js';
 import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getLocalDate } from '../utilities';
 import { isTwoWordsIsTheSamePerson } from '../API/openai';
