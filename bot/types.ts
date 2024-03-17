@@ -2,6 +2,7 @@ export type Revision = {
   user: string;
   size: number;
   comment?: string;
+  revid?: number;
   slots: {
     main: {
       contentmodel: string;

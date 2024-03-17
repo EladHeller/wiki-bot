@@ -10,7 +10,13 @@ export interface IWikiApi {
   request(path: string, method?: string, data?: Record<string, any>): Promise<any>;
   recursiveSubCategories(category: string, limit?: number): AsyncGenerator<WikiPage, WikiPage, void>;
   backlinksTo(target: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
+  /**
+   * @deprecated Use edit api instead
+   */
   updateArticle(articleTitle: string, summary: string, content: string, newSectionTitle?: string): Promise<any>;
+  edit(
+    articleTitle: string, summary: string, content: string, baseRevId: number, newSectionTitle?: string
+  ): Promise<any>;
   getArticleContent(title: string): Promise<string | undefined>;
   externalUrl(link: string, protocol?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<Partial<WikiPage>[]>;
@@ -34,7 +40,10 @@ export interface IWikiApi {
   getWikiDataItem(title: string): Promise<string | undefined>;
   newPages(namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
   getArticleRevisions(title: string, limit: number): Promise<Revision[]>;
-  logs(type: string, namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<LogEvent[], void, void>
+  logs(
+    type: string, namespaces: number[], endTimestamp: string, limit?: number
+  ): AsyncGenerator<LogEvent[], void, void>;
+  movePage(from: string, to: string, reason: string): Promise<void>;
 }
 
 export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -98,6 +107,24 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
   ) {
     const data: Record<string, string> = {
       title: articleTitle, text: content, token, summary,
+    };
+    if (newSectionTitle) {
+      data.sectiontitle = newSectionTitle;
+      data.section = 'new';
+    }
+
+    return request('?action=edit&format=json&assert=bot&bot=true', 'post', objectToFormData(data));
+  }
+
+  async function edit(
+    articleTitle: string,
+    summary: string,
+    content: string,
+    baseRevId: number,
+    newSectionTitle?: string,
+  ) {
+    const data: Record<string, string> = {
+      title: articleTitle, text: content, token, summary, baserevid: baseRevId.toString(),
     };
     if (newSectionTitle) {
       data.sectiontitle = newSectionTitle;
@@ -238,13 +265,13 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     for await (const subCategory of generator) {
       for (const page of subCategory) {
         yield page;
-        yield* recursiveSubCategories(page.title, limit);
+        yield* recursiveSubCategories(page.title.replace('קטגוריה:', ''), limit);
       }
     }
   }
 
   async function* categroyPages(category: string, limit = 50) {
-    const rvprops = encodeURIComponent('content|size');
+    const rvprops = encodeURIComponent('content|size|ids');
     const props = encodeURIComponent('title|sortkeyprefix');
     const path = `?action=query&format=json&generator=categorymembers&gcmtitle=Category:${encodeURIComponent(category)}&gcmlimit=${limit}&gcmprop=${props}`
     + `&prop=revisions&rvprop=${rvprops}&rvslots=*`;
@@ -254,7 +281,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
 
   async function* categoriesStartsWith(prefix: string) {
     const path = `?action=query&format=json&list=allcategories&acprop=size&acprefix=${encodeURIComponent(prefix)}&aclimit=5000`;
-    yield* baseWikiApi.continueQuery(path);
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.allcategories ?? {}));
   }
 
   async function undoContributions(user:string, summary: string, count = 5) {
@@ -309,6 +336,12 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     }
   }
 
+  async function movePage(from: string, to: string, reason: string) {
+    return request('?action=move&format=json&movetalk=true', 'post', objectToFormData({
+      from, to, token, reason,
+    }));
+  }
+
   return {
     login,
     request: baseWikiApi.request,
@@ -337,5 +370,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     getArticleRevisions,
     newPages,
     logs,
+    movePage,
+    edit,
   };
 }
