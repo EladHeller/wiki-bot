@@ -140,3 +140,7 @@ export async function asyncGeneratorMapWithSequence<T, R = any>(
 
   return results;
 }
+
+export function encodeWikiUrl(title: string): string {
+  return encodeURIComponent(title.replace(/ /g, '_')).replace(/'/g, '%27');
+}

@@ -3,7 +3,7 @@ import writeAdminBotLogs from '../admin/log';
 import type { ArticleLog, Paragraph } from '../admin/types';
 import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 import type { LogEvent, WikiPage } from '../types';
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, encodeWikiUrl } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
 
 const violationColor: Record<CopyViolaionRank, string> = {
@@ -63,14 +63,14 @@ async function getLastRun(api: ReturnType<typeof NewWikiApi>): Promise<string> {
 const NOT_FOUND = 'not found';
 const DISAMBIGUATION = 'פירושונים';
 
-async function checkHamichlol(title: string, wikipediaTitle = title) {
+export async function checkHamichlol(title: string, wikipediaTitle = title) {
   try {
     const res = await fetch(`${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
     if (!res.ok) {
       return null;
     }
     const text = await res.text();
-    if (text.includes('בערך זה קיים תוכן בעייתי') || text.includes(WIKIPEDIA_DOMAIN + encodeURIComponent(title.replace(/ /g, '_')))) {
+    if (text.includes('בערך זה קיים תוכן בעייתי') || text.includes(WIKIPEDIA_DOMAIN + encodeWikiUrl(title))) {
       console.log(`Hamichlol from wiki: ${wikipediaTitle}`);
       return null;
     }
