@@ -24,7 +24,7 @@ const LAST_RUN_PAGE = `${BASE_PAGE}/ריצה אחרונה`;
 const LOG_PAGE = `${BASE_PAGE}/לוג`;
 
 function copyviosSearchLink(title: string) {
-  return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${encodeURIComponent(title)}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
+  return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
 }
 
 function textFromMatch(
@@ -39,7 +39,7 @@ function textFromMatch(
   const linkToCopyviosText = 'קישור לחיפוש ב-copyvios';
 
   const link = url.startsWith(HAMICHLOL_DOMAIN)
-    ? `[${url} ${encodeURIComponent(url.replace(HAMICHLOL_DOMAIN, '').replace(/_/g, ' '))} במכלול]`
+    ? `[${url} ${decodeURIComponent(url.replace(HAMICHLOL_DOMAIN, '').replace(/_/g, ' '))} במכלול]`
     : `[${copyviosSearchLink(title)} ${linkToCopyviosText}]`;
   return `: ${link}, ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
 }
