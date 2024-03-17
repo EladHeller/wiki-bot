@@ -15,7 +15,7 @@ export default async function innTemplate() {
     if (number % 100 === 0) {
       console.log(number);
     }
-    const content = page.revisions[0].slots.main['*'];
+    const content = page.revisions?.[0].slots.main['*'];
     if (!content) {
       console.log(`No content for page ${page.title}`);
       return;

@@ -13,7 +13,7 @@ export default async function ynetTemplateFix() {
   await asyncGeneratorMapWithSequence(25, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
     if (!content) {
-      console.log('Missing content', page.title);
+      throw new Error(`Missing content ${page.title}`);
     }
     let newContent = content;
 

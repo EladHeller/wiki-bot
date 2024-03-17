@@ -19,7 +19,7 @@ export type WikiPage = {
     title: string;
   }[];
   missing?: string;
-  revisions: Revision[];
+  revisions?: Revision[];
   extlinks: {
     '*': string;
   }[];

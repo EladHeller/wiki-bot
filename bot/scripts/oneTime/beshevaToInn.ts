@@ -11,7 +11,7 @@ export default async function beshevaToInn() {
 
   const number = 0;
   await asyncGeneratorMapWithSequence<WikiPage>(5, generator, (page) => async () => {
-    const content = page.revisions[0].slots.main['*'];
+    const content = page.revisions?.[0]?.slots.main['*'];
     if (!content) {
       console.log(`No content for page ${page.title}`);
       return;
