@@ -2,6 +2,7 @@ export type Revision = {
   user: string;
   size: number;
   comment?: string;
+  revid?: number;
   slots: {
     main: {
       contentmodel: string;
@@ -19,7 +20,7 @@ export type WikiPage = {
     title: string;
   }[];
   missing?: string;
-  revisions: Revision[];
+  revisions?: Revision[];
   extlinks: {
     '*': string;
   }[];

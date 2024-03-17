@@ -90,7 +90,11 @@ export default class Company {
     wikiData: WikiPage,
     companyId: number,
   ) {
-    this.revisionSize = wikiData.revisions[0].size;
+    const revision = wikiData.revisions?.[0];
+    if (!revision) {
+      throw new Error(`Missing revision ${name}`);
+    }
+    this.revisionSize = revision.size;
     this.companyId = companyId;
     this.name = name;
     this.currency = currencyDict[mayData.CurrencyName];
@@ -162,7 +166,11 @@ export default class Company {
 
   appendWikiData(wikiData: WikiPage) {
     this.isContainsTemplate = 'templates' in wikiData;
-    this.articleText = wikiData.revisions[0].slots.main['*'];
+    const revision = wikiData.revisions?.[0];
+    if (!revision) {
+      throw new Error(`Missing revision for ${this.name}`);
+    }
+    this.articleText = revision.slots.main['*'];
     this.reference = wikiData.extlinks[0]['*'];
     this.templateText = findTemplate(this.articleText, TEMPLATE_NAME, this.name);
     this.templateData = getTemplateKeyValueData(this.templateText);

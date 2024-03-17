@@ -15,7 +15,10 @@ async function saveTable(companies: Company[]) {
 
   for (const company of companies) {
     console.log(company.name);
-    const firstRevision = Object.values(await getCompany(company.name))[0].revisions[0];
+    const firstRevision = Object.values(await getCompany(company.name))[0].revisions?.[0];
+    if (!firstRevision) {
+      throw new Error(`No revision for ${company.name}`);
+    }
     const details = [`[${company.reference}]`, `[[${company.name}]]`, ...Object.values(company.mayaDataForWiki).map((val) => val || '---')];
     details.push(company.currency);
     details.push(company.wikiTemplateData.year);

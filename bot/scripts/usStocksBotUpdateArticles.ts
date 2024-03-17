@@ -43,7 +43,10 @@ async function main() {
       console.log(page.title, { extLink, tiker });
       return;
     }
-    const content = page.revisions[0].slots.main['*'];
+    const content = page.revisions?.[0].slots.main['*'];
+    if (!content) {
+      throw new Error(`No content for page ${page.title}`);
+    }
     const templateText = findTemplate(content, 'חברה מסחרית', page.title);
     if (!templateText) {
       console.log(page.title, 'not template');

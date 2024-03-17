@@ -52,7 +52,7 @@ async function main() {
     if (page.size < 3) {
       const sportPages = await categroyPages(page.name, 5000);
       await Promise.all(sportPages.map(async (p) => {
-        const content = p.revisions[0].slots.main['*'];
+        const content = p.revisions?.[0].slots.main['*'];
         if (!content) {
           return;
         }

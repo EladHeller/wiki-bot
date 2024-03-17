@@ -31,7 +31,10 @@ async function main() {
 
   await promiseSequence(10, marketValues.map(({ page, id }) => async () => {
     try {
-      const content = page.revisions[0].slots.main['*'];
+      const content = page.revisions?.[0].slots.main['*'];
+      if (!content) {
+        throw new Error(`No content for page ${page.title}`);
+      }
       console.log(page.title);
       const templateText = findTemplate(content, 'חברה מסחרית', page.title);
       const templateData = getTemplateKeyValueData(templateText);

@@ -29,7 +29,10 @@ async function main() {
   const marketValues:AllDetailsResponse[] = JSON.parse(await fs.readFile('./maya-res.json', 'utf8'));
   const results = marketValues.map(({ allDetails, wiki }) => {
     const indice = allDetails.IndicesList.find(({ IndexName }) => IndexName === 'ת"א All-Share');
-    const content = wiki.revisions[0].slots.main['*'];
+    const content = wiki.revisions?.[0].slots.main['*'];
+    if (!content) {
+      throw new Error(`No content for page ${wiki.title}`);
+    }
     const oldTemplate = findTemplate(content, 'חברה מסחרית', wiki.title);
     const templateData = getTemplateKeyValueData(oldTemplate);
     templateData['בורסה'] = '[[הבורסה לניירות ערך בתל אביב]]';
