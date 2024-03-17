@@ -22,6 +22,7 @@ const WIKIPEDIA_DOMAIN = 'https://he.wikipedia.org/wiki/';
 const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
 const LAST_RUN_PAGE = `${BASE_PAGE}/ריצה אחרונה`;
 const LOG_PAGE = `${BASE_PAGE}/לוג`;
+const SELECTED_QOUTE = 'ציטוט נבחר';
 
 function copyviosSearchLink(title: string) {
   return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
@@ -90,6 +91,13 @@ async function handlePage(title: string, ns: number) {
       error: true,
     });
     return { logs, otherLogs };
+  }
+  if (title.includes(`/${SELECTED_QOUTE}/`)) {
+    otherLogs.push({
+      text: SELECTED_QOUTE,
+      title,
+      error: false,
+    });
   }
 
   const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
@@ -185,6 +193,7 @@ export default async function copyrightViolationBot() {
   await writeAdminBotLogs(allLogs, BASE_PAGE);
   const notFoundText = allOtherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[${title}]]`).join(' • ');
   const disambiguationText = allOtherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[${title}]]`).join(' • ');
+  const quotesText = allOtherLogs.filter(({ text }) => text === SELECTED_QOUTE).map(({ title }) => `[[${title}]]`).join(' • ');
   const otherText = allOtherLogs.filter(({ error }) => !error)
     .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))
     .map(({ text }) => text).join(' • ');
@@ -194,6 +203,9 @@ export default async function copyrightViolationBot() {
   }, {
     name: DISAMBIGUATION,
     content: disambiguationText,
+  }, {
+    name: SELECTED_QOUTE,
+    content: quotesText,
   }, {
     name: 'דפים שנמחקו לפני ריצת הבוט',
     content: notFoundText,
