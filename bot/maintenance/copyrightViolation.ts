@@ -25,7 +25,7 @@ const LOG_PAGE = `${BASE_PAGE}/לוג`;
 const SELECTED_QOUTE = 'ציטוט נבחר';
 
 function copyviosSearchLink(title: string) {
-  return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
+  return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title.replace(/ /g, '_')}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
 }
 
 function textFromMatch(
