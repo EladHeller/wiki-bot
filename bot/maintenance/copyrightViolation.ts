@@ -22,7 +22,9 @@ const WIKIPEDIA_DOMAIN = 'https://he.wikipedia.org/wiki/';
 const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
 const LAST_RUN_PAGE = `${BASE_PAGE}/ריצה אחרונה`;
 const LOG_PAGE = `${BASE_PAGE}/לוג`;
-const SELECTED_QOUTE = 'ציטוט נבחר';
+const SELECTED_QOUTE = 'ציטוט_נבחר';
+const WEBSITE_FOR_VISIT = 'אתר לביקור';
+const DRAFT = 'טיוטה';
 
 function copyviosSearchLink(title: string) {
   return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title.replace(/ /g, '_')}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
@@ -100,6 +102,14 @@ async function handlePage(title: string, ns: number) {
     });
   }
 
+  if (title.includes(`/${WEBSITE_FOR_VISIT}/`)) {
+    otherLogs.push({
+      text: WEBSITE_FOR_VISIT,
+      title,
+      error: false,
+    });
+  }
+
   const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
   if (ns === 0) {
     results.push(await checkHamichlol(title));
@@ -107,7 +117,7 @@ async function handlePage(title: string, ns: number) {
     results.push(await checkHamichlol(`הרב ${title}`, title));
   } else {
     const lastPart = title.split(/[:/]/).at(-1);
-    if (lastPart) {
+    if (lastPart && lastPart !== DRAFT) {
       results.push(await checkHamichlol(lastPart, title));
       results.push(await checkHamichlol(`רבי ${lastPart}`, title));
       results.push(await checkHamichlol(`הרב ${lastPart}`, title));
@@ -194,6 +204,7 @@ export default async function copyrightViolationBot() {
   const notFoundText = allOtherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[${title}]]`).join(' • ');
   const disambiguationText = allOtherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[${title}]]`).join(' • ');
   const quotesText = allOtherLogs.filter(({ text }) => text === SELECTED_QOUTE).map(({ title }) => `[[${title}]]`).join(' • ');
+  const websiteText = allOtherLogs.filter(({ text }) => text === WEBSITE_FOR_VISIT).map(({ title }) => `[[${title}]]`).join(' • ');
   const otherText = allOtherLogs.filter(({ error }) => !error)
     .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))
     .map(({ text }) => text).join(' • ');
@@ -206,6 +217,9 @@ export default async function copyrightViolationBot() {
   }, {
     name: SELECTED_QOUTE,
     content: quotesText,
+  }, {
+    name: WEBSITE_FOR_VISIT,
+    content: websiteText,
   }, {
     name: 'דפים שנמחקו לפני ריצת הבוט',
     content: notFoundText,
