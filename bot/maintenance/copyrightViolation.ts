@@ -27,7 +27,7 @@ const WEBSITE_FOR_VISIT = 'אתר לביקור';
 const DRAFT = 'טיוטה';
 
 function copyviosSearchLink(title: string) {
-  return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title.replace(/ /g, '_')}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
+  return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title.replace(/ /g, '_').replace(/"/g, '%22')}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
 }
 
 function textFromMatch(
@@ -140,6 +140,15 @@ async function handlePage(title: string, ns: number) {
         });
         return;
       }
+
+      // if (res.error?.code === 'search_error') {
+      //   otherLogs.push({
+      //     text: 'search error',
+      //     title,
+      //     error: true,
+      //   });
+      //   return;
+      // }
       logs.push({
         title,
         text: `[[${title}]] - ${res.error?.info}`,
