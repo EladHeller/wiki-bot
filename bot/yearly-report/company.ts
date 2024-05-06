@@ -128,7 +128,7 @@ export default class Company {
       const referenceData = getTemplateKeyValueData(reference);
       const referenceKey = referenceData.שם;
       const previousYear = Number(currentYear) - 1;
-      if (referenceKey && referenceKey.startsWith(`דוח${previousYear}`)) {
+      if (referenceKey && referenceKey.startsWith(`דוח${previousYear}-${this.templateData[NAME_FIELD] || NAME_STRING}`)) {
         finalContent = finalContent.replace(reference, '');
       }
     });

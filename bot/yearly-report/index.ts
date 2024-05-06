@@ -8,8 +8,6 @@ import {
 import { WikiPage } from '../types';
 import { buildTable } from '../wiki/wikiTableParser';
 
-const year = process.env.YEAR;
-
 async function saveTable(companies: Company[]) {
   const tableRows: string[][] = [];
 
@@ -38,14 +36,14 @@ async function saveTable(companies: Company[]) {
   console.log(res);
 }
 
-function getRelevantCompanies(companies: Company[]) {
+function getRelevantCompanies(companies: Company[], year: string) {
   return companies.filter((company) => company.newArticleText
-    && (company.wikiTemplateData.year.toString() === year)
+    && (company.wikiTemplateData.year?.toString() === year)
     && company.hasData
     && company.newArticleText !== company.articleText);
 }
 
-async function main() {
+export default async function yearlyReport(year: string) {
   await login();
   console.log('Login success');
 
@@ -79,20 +77,9 @@ async function main() {
   console.log(companies.length);
   await saveTable(companies);
 
-  const relevantCompanies = getRelevantCompanies(companies);
+  const relevantCompanies = getRelevantCompanies(companies, year);
   console.log(relevantCompanies.length);
   for (let i = 0; i < relevantCompanies.length; i += 1) {
     await relevantCompanies[i].updateCompanyArticle();
   }
 }
-
-main().catch((error) => {
-  if (error?.data) {
-    console.log(error?.data);
-  } else if (error?.message) {
-    console.log(error?.message);
-  } else {
-    console.log(error);
-  }
-  console.log(error?.toString());
-});
