@@ -1,7 +1,7 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import {
-  deletePage, getRedirects, getRevisions, listCategory, login,
+  getRedirects, getRevisions, listCategory, login,
 } from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
@@ -29,7 +29,7 @@ export async function deleteRedirects(from: number, to: number[], reasons: strin
           if (revisionsLength === 1) {
             const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
             const target = p.links?.[0].title;
-            await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
+            console.log(p.title, reason + (target ? ` - [[${target}]]` : ''));
           } else {
             mutlyRevisions.push(p);
           }
@@ -75,7 +75,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
           return;
         }
         try {
-          await deletePage(p.title, reason);
+          console.log(p.title, reason);
           logs.push({
             title: p.title,
             text: `[[${p.title}]]`,
