@@ -1,7 +1,7 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import {
-  getRedirects, getRevisions, listCategory, login,
+  deletePage, getRedirects, getRevisions, listCategory, login,
 } from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
@@ -29,7 +29,7 @@ export async function deleteRedirects(from: number, to: number[], reasons: strin
           if (revisionsLength === 1) {
             const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
             const target = p.links?.[0].title;
-            console.log(p.title, reason + (target ? ` - [[${target}]]` : ''));
+            await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
           } else {
             mutlyRevisions.push(p);
           }
@@ -75,7 +75,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
           return;
         }
         try {
-          console.log(p.title, reason);
+          await deletePage(p.title, reason);
           logs.push({
             title: p.title,
             text: `[[${p.title}]]`,
@@ -107,9 +107,9 @@ async function deleteBot() {
   // /(מיון נושאים: לוויקי|ערכים שנוצרו באנציקלופדיה היהודית)\//,
   // );
   const logs: ArticleLog[] = [];
-  logs.push(...(await deleteRedirects(119, [1], ['הפניה ממרחב שיחת טיוטה למרחב השיחה'])));
-  logs.push(...(await deleteRedirects(118, [0], ['הפניה ממרחב הטיוטה למרחב הערכים'])));
-  logs.push(...(await deleteRedirects(3, [1], ['הפניה ממרחב שיחת משתמש למרחב שיחה'])));
+  // logs.push(...(await deleteRedirects(119, [1], ['הפניה ממרחב שיחת טיוטה למרחב השיחה'])));
+  // logs.push(...(await deleteRedirects(118, [0], ['הפניה ממרחב הטיוטה למרחב הערכים'])));
+  // logs.push(...(await deleteRedirects(3, [1], ['הפניה ממרחב שיחת משתמש למרחב שיחה'])));
   logs.push(...(await deleteRedirects(0, [2, 118], [
     'הפניה ממרחב ראשי למרחב משתמש', 'הפניה ממרחב ראשי למרחב טיוטה'])));
   await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
