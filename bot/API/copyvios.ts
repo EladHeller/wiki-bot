@@ -43,7 +43,11 @@ export default async function checkCopyViolations(
 
     return res.json();
   }
-  const res = await fetch(`${baseUrl}?action=search&${sharedParams}`);
 
+  const res = await fetch(`${baseUrl}?action=search&${sharedParams}`, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    },
+  });
   return res.json();
 }
