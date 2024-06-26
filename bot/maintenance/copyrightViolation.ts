@@ -149,6 +149,7 @@ async function handlePage(title: string, ns: number) {
       //   });
       //   return;
       // }
+      console.log(res.error);
       logs.push({
         title,
         text: `[[${title}]] - ${res.error?.info}`,
