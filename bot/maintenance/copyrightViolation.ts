@@ -5,6 +5,7 @@ import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorato
 import type { LogEvent, WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence, encodeWikiUrl } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
+import { getInnerLinks } from '../wiki/wikiLinkParser';
 
 const violationColor: Record<CopyViolaionRank, string> = {
   suspected: 'אדום',
@@ -21,6 +22,7 @@ const HAMICHLOL_DOMAIN = 'https://www.hamichlol.org.il/';
 const WIKIPEDIA_DOMAIN = 'https://he.wikipedia.org/wiki/';
 const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
 const LAST_RUN_PAGE = `${BASE_PAGE}/ריצה אחרונה`;
+const SEARCH_ERROR_PAGE = `${BASE_PAGE}/שגיאות זמניות`;
 const LOG_PAGE = `${BASE_PAGE}/לוג`;
 const SELECTED_QOUTE = 'ציטוט_נבחר';
 const WEBSITE_FOR_VISIT = 'אתר לביקור';
@@ -64,6 +66,7 @@ async function getLastRun(api: ReturnType<typeof NewWikiApi>): Promise<string> {
 
 const NOT_FOUND = 'not found';
 const DISAMBIGUATION = 'פירושונים';
+const SEARCH_ERROR = 'שגיאת חיפוש';
 
 export async function checkHamichlol(title: string, wikipediaTitle = title) {
   try {
@@ -83,7 +86,7 @@ export async function checkHamichlol(title: string, wikipediaTitle = title) {
   }
 }
 
-async function handlePage(title: string, ns: number) {
+async function handlePage(title: string, isMainNameSpace: boolean) {
   const logs: ArticleLog[] = [];
   const otherLogs: ArticleLog[] = [];
   if (title.includes(`(${DISAMBIGUATION})`)) {
@@ -111,7 +114,7 @@ async function handlePage(title: string, ns: number) {
   }
 
   const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
-  if (ns === 0) {
+  if (isMainNameSpace) {
     results.push(await checkHamichlol(title));
     results.push(await checkHamichlol(`רבי ${title}`, title));
     results.push(await checkHamichlol(`הרב ${title}`, title));
@@ -141,14 +144,14 @@ async function handlePage(title: string, ns: number) {
         return;
       }
 
-      // if (res.error?.code === 'search_error') {
-      //   otherLogs.push({
-      //     text: 'search error',
-      //     title,
-      //     error: true,
-      //   });
-      //   return;
-      // }
+      if (res.error?.code === 'search_error') {
+        otherLogs.push({
+          text: SEARCH_ERROR,
+          title,
+          error: true,
+        });
+        return;
+      }
       console.log(res.error);
       logs.push({
         title,
@@ -182,18 +185,39 @@ async function handlePage(title: string, ns: number) {
   };
 }
 
+async function handlePreviousErrors(errorPagesTitles: string[]) {
+  const allLogs: ArticleLog[] = [];
+  const allOtherLogs: ArticleLog[] = [];
+
+  for (const title of errorPagesTitles) {
+    const { logs, otherLogs } = await handlePage(title, !title.includes(':'));
+    allLogs.push(...logs);
+    allOtherLogs.push(...otherLogs);
+  }
+
+  return { logs: allLogs, otherLogs: allOtherLogs };
+}
+
 export default async function copyrightViolationBot() {
   const api = NewWikiApi();
   const currentRun = new Date();
   const lastRun = await getLastRun(api);
+  const searchErrorPage = await api.articleContent(SEARCH_ERROR_PAGE);
 
   const generator = api.newPages([0, 2, 118], lastRun);
 
   const allLogs: ArticleLog[] = [];
   const allOtherLogs: ArticleLog[] = [];
 
+  if (searchErrorPage && searchErrorPage.content.length) {
+    const links = getInnerLinks(searchErrorPage.content);
+    const { logs, otherLogs } = await handlePreviousErrors(links.map((link) => link.link));
+    allLogs.push(...logs);
+    allOtherLogs.push(...otherLogs);
+  }
+
   await asyncGeneratorMapWithSequence(1, generator, (page: WikiPage) => async () => {
-    const { logs, otherLogs } = await handlePage(page.title, page.ns);
+    const { logs, otherLogs } = await handlePage(page.title, page.ns === 0);
     allLogs.push(...logs);
     allOtherLogs.push(...otherLogs);
   });
@@ -204,7 +228,7 @@ export default async function copyrightViolationBot() {
        || log.params.target_ns === log.ns) {
       return;
     }
-    const { logs, otherLogs } = await handlePage(log.params.target_title, log.params.target_ns);
+    const { logs, otherLogs } = await handlePage(log.params.target_title, log.params.target_ns === 0);
     allLogs.push(...logs);
     allOtherLogs.push(...otherLogs);
   });
@@ -215,6 +239,7 @@ export default async function copyrightViolationBot() {
   const disambiguationText = allOtherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[${title}]]`).join(' • ');
   const quotesText = allOtherLogs.filter(({ text }) => text === SELECTED_QOUTE).map(({ title }) => `[[${title}]]`).join(' • ');
   const websiteText = allOtherLogs.filter(({ text }) => text === WEBSITE_FOR_VISIT).map(({ title }) => `[[${title}]]`).join(' • ');
+  const searchErrorText = allOtherLogs.filter(({ text }) => text === SEARCH_ERROR).map(({ title }) => `[[${title}]]`).join(' • ');
   const otherText = allOtherLogs.filter(({ error }) => !error)
     .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))
     .map(({ text }) => text).join(' • ');
@@ -231,11 +256,17 @@ export default async function copyrightViolationBot() {
     name: WEBSITE_FOR_VISIT,
     content: websiteText,
   }, {
+    name: 'שגיאות זמניות (יטופלו בריצה חוזרת)',
+    content: searchErrorText,
+  }, {
     name: 'דפים שנמחקו לפני ריצת הבוט',
     content: notFoundText,
   }].filter((p) => p.content) satisfies Paragraph[];
   await writeAdminBotLogs(paragraphs, LOG_PAGE);
   await api.updateArticle(LAST_RUN_PAGE, 'עדכון זמן ריצה', currentRun.toJSON());
+  if (searchErrorText && searchErrorPage) {
+    await api.edit(SEARCH_ERROR_PAGE, 'עדכון שגיאות', searchErrorText, searchErrorPage.revid);
+  }
 }
 
 export const main = shabathProtectorDecorator(copyrightViolationBot);

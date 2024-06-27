@@ -17,7 +17,11 @@ export interface IWikiApi {
   edit(
     articleTitle: string, summary: string, content: string, baseRevId: number, newSectionTitle?: string
   ): Promise<any>;
+    /**
+   * @deprecated Use articleContent api instead
+   */
   getArticleContent(title: string): Promise<string | undefined>;
+  articleContent(title: string): Promise<{content: string, revid: number} | null>;
   externalUrl(link: string, protocol?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<Partial<WikiPage>[]>;
   purge(titles: string[]): Promise<any>;
@@ -142,6 +146,25 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     const wikiPages:Record<string, Partial<WikiPage>> = result.query.pages;
 
     return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
+  }
+
+  async function articleContent(title: string): Promise<{content: string, revid: number} | null> {
+    const props = encodeURIComponent('content|ids');
+    const path = `?action=query&format=json&rvprop=${props}&rvslots=*&prop=revisions&titles=${
+      encodeURIComponent(title)
+    }`;
+    const result = await request(path);
+    const wikiPages:Record<string, Partial<WikiPage>> = result.query.pages;
+
+    const revision = Object.values(wikiPages)[0]?.revisions?.[0];
+    if (!revision?.revid) {
+      return null;
+    }
+
+    return {
+      content: revision.slots.main['*'],
+      revid: revision.revid,
+    };
   }
 
   async function getArticleRevisions(title: string, limit: number) {
@@ -349,6 +372,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     backlinksTo,
     updateArticle,
     getArticleContent,
+    articleContent,
     externalUrl,
     info,
     purge,
