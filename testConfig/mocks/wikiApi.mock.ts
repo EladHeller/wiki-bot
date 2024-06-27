@@ -9,6 +9,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     backlinksTo: base.backlinksTo ?? jest.fn(),
     updateArticle: base.updateArticle ?? jest.fn(),
     getArticleContent: base.getArticleContent ?? jest.fn(),
+    articleContent: base.articleContent ?? jest.fn(),
     externalUrl: base.externalUrl ?? jest.fn(),
     info: base.info ?? jest.fn(),
     purge: base.purge ?? jest.fn(),
