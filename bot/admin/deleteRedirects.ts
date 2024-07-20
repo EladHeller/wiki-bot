@@ -9,7 +9,7 @@ import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { ArticleLog } from './types';
 
-export async function deleteRedirects(from: number, to: number[], reasons: string[]) {
+async function deleteRedirects(from: number, to: number[], reasons: string[], delayDays = 0) {
   const generator = getRedirects(from, to);
   const all: WikiPage[] = [];
   const errors: string[] = [];
@@ -19,8 +19,17 @@ export async function deleteRedirects(from: number, to: number[], reasons: strin
     do {
       res = await generator.next();
       const batch: WikiPage[] = Object.values(res.value?.query?.pages ?? {});
-      const relevent = batch.filter((x) => x.links?.length === 1
-        && x.templates == null && x.categories == null);
+      const relevent = batch.filter((x) => {
+        const timestamp = x.revisions?.[0]?.timestamp;
+        if (!timestamp) {
+          return false;
+        }
+        const date = new Date(timestamp);
+        const now = new Date();
+        date.setDate(date.getDate() + delayDays);
+        const isDelay30Days = date < now;
+        return x.links?.length === 1 && x.templates == null && x.categories == null && isDelay30Days;
+      });
       all.push(...relevent);
       await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
         try {
@@ -96,7 +105,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
   return logs;
 }
 
-async function deleteBot() {
+export default async function deleteBot() {
   await login();
   console.log('logged in');
   const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקיפדיה:בוט\/בוט ההסבה\//);
@@ -107,9 +116,9 @@ async function deleteBot() {
   // /(מיון נושאים: לוויקי|ערכים שנוצרו באנציקלופדיה היהודית)\//,
   // );
   const logs: ArticleLog[] = [];
-  // logs.push(...(await deleteRedirects(119, [1], ['הפניה ממרחב שיחת טיוטה למרחב השיחה'])));
-  // logs.push(...(await deleteRedirects(118, [0], ['הפניה ממרחב הטיוטה למרחב הערכים'])));
-  // logs.push(...(await deleteRedirects(3, [1], ['הפניה ממרחב שיחת משתמש למרחב שיחה'])));
+  logs.push(...(await deleteRedirects(119, [1], ['הפניה ממרחב שיחת טיוטה למרחב השיחה'], 30)));
+  logs.push(...(await deleteRedirects(118, [0], ['הפניה ממרחב הטיוטה למרחב הערכים'], 30)));
+  logs.push(...(await deleteRedirects(3, [1], ['הפניה ממרחב שיחת משתמש למרחב שיחה'], 30)));
   logs.push(...(await deleteRedirects(0, [2, 118], [
     'הפניה ממרחב ראשי למרחב משתמש', 'הפניה ממרחב ראשי למרחב טיוטה'])));
   await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
