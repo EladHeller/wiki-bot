@@ -6,9 +6,14 @@ import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 describe('archiveBotModel', () => {
   let archiveBotModel: IArchiveBotModel;
   let wikiApi: Mocked<IWikiApi>;
+  const fakerTimers = jest.useFakeTimers();
 
   beforeEach(() => {
     wikiApi = WikiApiMock();
+  });
+
+  afterEach(() => {
+    jest.setSystemTime(jest.getRealSystemTime());
   });
 
   describe('updateArchiveTemplate', () => {
@@ -84,16 +89,9 @@ describe('archiveBotModel', () => {
     });
 
     it('should use default config', async () => {
+      fakerTimers.setSystemTime(new Date('2020-01-02'));
       wikiApi.articleContent.mockResolvedValue({ content: '{{תיבת ארכיון|\nparameter\n}}', revid: 1 });
-      archiveBotModel = ArchiveBotModel(wikiApi, {
-        archiveTemplate: 'ארכיון',
-        archiveBoxTemplate: 'תיבת ארכיון',
-        logParagraphTitlePrefix: 'לוג ריצה ',
-        archiveTemplatePath: '/ארכיונים',
-        languageCode: 'he-IL',
-        monthArchivePath: (monthAndYear: string) => `ארכיון ${monthAndYear}`,
-        archiveMonthDate: new Date('2019-12-01'),
-      });
+      archiveBotModel = ArchiveBotModel(wikiApi);
 
       await archiveBotModel.updateArchiveTemplate('logPage');
 
@@ -117,6 +115,7 @@ describe('archiveBotModel', () => {
 
   describe('archiveContent', () => {
     it('should archive content', async () => {
+      fakerTimers.setSystemTime(new Date('2020-03-02'));
       wikiApi.articleContent.mockResolvedValue({
         content: `text before
 ==simple paragraph==
@@ -153,15 +152,7 @@ adasd
 שגשדג`,
         revid: 1,
       });
-      archiveBotModel = ArchiveBotModel(wikiApi, {
-        archiveTemplate: 'ארכיון',
-        archiveBoxTemplate: 'תיבת ארכיון',
-        logParagraphTitlePrefix: 'לוג ריצה ',
-        archiveTemplatePath: '/ארכיונים',
-        languageCode: 'he-IL',
-        monthArchivePath: (monthAndYear: string) => `ארכיון ${monthAndYear}`,
-        archiveMonthDate: new Date('2020-02-02'),
-      });
+      archiveBotModel = ArchiveBotModel(wikiApi);
 
       await archiveBotModel.archiveContent('logPage');
 
@@ -201,6 +192,18 @@ adasd
 שדגשדלח שדג
 שגשגשדגשדג
 שדג\n`);
+    });
+
+    it('should not archive if no content to archive', async () => {
+      wikiApi.articleContent.mockResolvedValue({ content: 'text before', revid: 1 });
+      archiveBotModel = ArchiveBotModel(wikiApi);
+
+      await archiveBotModel.archiveContent('logPage');
+
+      expect(wikiApi.articleContent).toHaveBeenCalledTimes(1);
+      expect(wikiApi.articleContent).toHaveBeenCalledWith('logPage');
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalled();
     });
   });
 });

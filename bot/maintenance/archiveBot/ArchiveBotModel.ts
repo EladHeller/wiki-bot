@@ -14,10 +14,9 @@ type ArchiveConfig = {
   languageCode: string;
   logParagraphTitlePrefix: string;
   archiveTemplate: string;
-  archiveMonthDate: Date;
+  archiveMonthDate?: Date;
 };
-const lastMonth = new Date();
-lastMonth.setMonth(lastMonth.getMonth() - 1);
+
 const defaultConfig: ArchiveConfig = {
   archiveTemplatePath: '/ארכיונים',
   archiveBoxTemplate: 'תיבת ארכיון',
@@ -25,7 +24,6 @@ const defaultConfig: ArchiveConfig = {
   languageCode: 'he-IL',
   logParagraphTitlePrefix: 'לוג ריצה ',
   archiveTemplate: 'ארכיון',
-  archiveMonthDate: lastMonth,
 };
 
 async function getContent(wikiApi: IWikiApi, title: string) {
@@ -37,9 +35,12 @@ async function getContent(wikiApi: IWikiApi, title: string) {
 }
 
 export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig = defaultConfig): IArchiveBotModel {
-  const monthAndYear = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric' }).format(config.archiveMonthDate);
-  const month = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(config.archiveMonthDate);
-  const year = config.archiveMonthDate.getFullYear();
+  const lastMonth = new Date();
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+  const archiveMonthDate = config.archiveMonthDate ?? lastMonth;
+  const monthAndYear = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric' }).format(archiveMonthDate);
+  const month = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(archiveMonthDate);
+  const year = archiveMonthDate.getFullYear();
   function getLastMonthTitle(logPage: string) {
     return `${logPage}/${config.monthArchivePath(monthAndYear)}`;
   }
@@ -72,10 +73,10 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
     const { content, revid } = await getContent(wikiApi, logPage);
     let text = '';
     let newContent = content;
-    const dayDate = new Date(config.archiveMonthDate);
+    const dayDate = new Date(archiveMonthDate);
     for (let i = 1; i <= 31; i += 1) {
       dayDate.setDate(i);
-      if (dayDate.getMonth() === config.archiveMonthDate.getMonth()) {
+      if (dayDate.getMonth() === archiveMonthDate.getMonth()) {
         const day = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric', day: 'numeric' }).format(dayDate);
         const paragraphContent = getParagraphContent(newContent, config.logParagraphTitlePrefix + day);
         if (paragraphContent) {
