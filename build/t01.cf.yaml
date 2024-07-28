@@ -489,3 +489,46 @@ Resources:
       DestinationArn: !GetAtt SendEmailLambda.Arn
       FilterPattern: Invoke Error
       LogGroupName: '/aws/lambda/copyright-violation-function'
+
+# Arcive logs
+  ArchiveLogsLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: archive-logs-function
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/maintenance/archiveBot/index.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  ArchiveLogsEventRule:
+    DependsOn:
+      - ArchiveLogsLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: archive-logs-scheduler
+      ScheduleExpression: cron(0 6 3 * ? *)
+      Targets:
+        - Id: archive-logs-function
+          Arn: !GetAtt ArchiveLogsLambda.Arn
+
+  ArchiveLogsInvokePermission:
+    DependsOn:
+      - ArchiveLogsEventRule
+      - ArchiveLogsLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt ArchiveLogsEventRule.Arn 
+      FunctionName: archive-logs-function
+
