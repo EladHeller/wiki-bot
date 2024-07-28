@@ -26,11 +26,11 @@ const defaultConfig: ArchiveConfig = {
 };
 
 async function getContent(wikiApi: IWikiApi, title: string) {
-  const content = await wikiApi.getArticleContent(title);
-  if (!content) {
+  const result = await wikiApi.articleContent(title);
+  if (!result) {
     throw new Error(`Missing content for ${title}`);
   }
-  return content;
+  return result;
 }
 
 export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig = defaultConfig): IArchiveBotModel {
@@ -44,7 +44,7 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
 
   async function updateArchiveTemplate(logPage: string) {
     const archivePage = logPage + config.archiveTemplatePath;
-    const archivePageContent = await getContent(wikiApi, archivePage);
+    const { content: archivePageContent, revid: archivePageRevid } = await getContent(wikiApi, archivePage);
 
     const year = lastMonthDate.getFullYear();
     const month = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(lastMonthDate);
@@ -65,11 +65,11 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
       return;
     }
 
-    await wikiApi.updateArticle(archivePage, 'הוספת חודש נוכחי לתבנית ארכיון', archivePageContent.replace(parameter, newParameter));
+    await wikiApi.edit(archivePage, 'הוספת חודש נוכחי לתבנית ארכיון', archivePageContent.replace(parameter, newParameter), archivePageRevid);
   }
 
   async function archiveContent(logPage: string) {
-    const content = await getContent(wikiApi, logPage);
+    const { content, revid } = await getContent(wikiApi, logPage);
     let text = '';
     let newContent = content;
     const dayDate = new Date(lastMonthDate);
@@ -87,8 +87,8 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
         }
       }
     }
-    await wikiApi.updateArticle(logPage, 'ארכוב', newContent);
-    await wikiApi.updateArticle(getLastMonthTitle(logPage), 'ארכוב', `{{${config.archiveTemplate}}}\n${text}`);
+    await wikiApi.edit(logPage, 'ארכוב', newContent, revid);
+    await wikiApi.create(getLastMonthTitle(logPage), 'ארכוב', `{{${config.archiveTemplate}}}\n${text}`);
   }
 
   return {
