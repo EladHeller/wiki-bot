@@ -17,6 +17,9 @@ export interface IWikiApi {
   edit(
     articleTitle: string, summary: string, content: string, baseRevId: number, newSectionTitle?: string
   ): Promise<any>;
+  create(
+    articleTitle: string, summary: string, content: string
+  ): Promise<any>;
     /**
    * @deprecated Use articleContent api instead
    */
@@ -134,6 +137,18 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
       data.sectiontitle = newSectionTitle;
       data.section = 'new';
     }
+
+    return request('?action=edit&format=json&assert=bot&bot=true', 'post', objectToFormData(data));
+  }
+
+  async function create(
+    articleTitle: string,
+    summary: string,
+    content: string,
+  ) {
+    const data: Record<string, string> = {
+      title: articleTitle, text: content, token, summary, createonly: 'true',
+    };
 
     return request('?action=edit&format=json&assert=bot&bot=true', 'post', objectToFormData(data));
   }
@@ -396,5 +411,6 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     logs,
     movePage,
     edit,
+    create,
   };
 }

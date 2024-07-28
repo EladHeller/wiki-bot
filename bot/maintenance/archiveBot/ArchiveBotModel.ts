@@ -14,6 +14,7 @@ type ArchiveConfig = {
   languageCode: string;
   logParagraphTitlePrefix: string;
   archiveTemplate: string;
+  archiveMonthDate?: Date;
 };
 
 const defaultConfig: ArchiveConfig = {
@@ -26,28 +27,28 @@ const defaultConfig: ArchiveConfig = {
 };
 
 async function getContent(wikiApi: IWikiApi, title: string) {
-  const content = await wikiApi.getArticleContent(title);
-  if (!content) {
+  const result = await wikiApi.articleContent(title);
+  if (!result) {
     throw new Error(`Missing content for ${title}`);
   }
-  return content;
+  return result;
 }
 
 export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig = defaultConfig): IArchiveBotModel {
-  const lastMonthDate = new Date();
-  lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
-  const monthAndYear = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric' }).format(lastMonthDate);
-
+  const lastMonth = new Date();
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+  const archiveMonthDate = config.archiveMonthDate ?? lastMonth;
+  const monthAndYear = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric' }).format(archiveMonthDate);
+  const month = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(archiveMonthDate);
+  const year = archiveMonthDate.getFullYear();
   function getLastMonthTitle(logPage: string) {
     return `${logPage}/${config.monthArchivePath(monthAndYear)}`;
   }
 
   async function updateArchiveTemplate(logPage: string) {
     const archivePage = logPage + config.archiveTemplatePath;
-    const archivePageContent = await getContent(wikiApi, archivePage);
+    const { content: archivePageContent, revid: archivePageRevid } = await getContent(wikiApi, archivePage);
 
-    const year = lastMonthDate.getFullYear();
-    const month = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(lastMonthDate);
     const lastMonthArchivePageLink = `[[${getLastMonthTitle(logPage)}|${month}]]`;
     const yearTitle = `'''${year}'''`;
 
@@ -65,30 +66,36 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
       return;
     }
 
-    await wikiApi.updateArticle(archivePage, 'הוספת חודש נוכחי לתבנית ארכיון', archivePageContent.replace(parameter, newParameter));
+    await wikiApi.edit(archivePage, 'הוספת חודש נוכחי לתבנית ארכיון', archivePageContent.replace(parameter, newParameter), archivePageRevid);
   }
 
   async function archiveContent(logPage: string) {
-    const content = await getContent(wikiApi, logPage);
+    const { content, revid } = await getContent(wikiApi, logPage);
     let text = '';
     let newContent = content;
-    const dayDate = new Date(lastMonthDate);
+    const dayDate = new Date(archiveMonthDate);
     for (let i = 1; i <= 31; i += 1) {
       dayDate.setDate(i);
-      if (dayDate.getMonth() === lastMonthDate.getMonth()) {
+      if (dayDate.getMonth() === archiveMonthDate.getMonth()) {
         const day = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric', day: 'numeric' }).format(dayDate);
         const paragraphContent = getParagraphContent(newContent, config.logParagraphTitlePrefix + day);
         if (paragraphContent) {
           text += `==${config.logParagraphTitlePrefix}${day}==\n${paragraphContent}\n`;
           newContent = newContent
-            .replace(paragraphContent, '')
+            .replace(paragraphContent, '\n')
             .replace(`\n== ${config.logParagraphTitlePrefix}${day} ==\n`, '')
             .replace(`\n==${config.logParagraphTitlePrefix}${day}==\n`, '');
         }
       }
     }
-    await wikiApi.updateArticle(logPage, 'ארכוב', newContent);
-    await wikiApi.updateArticle(getLastMonthTitle(logPage), 'ארכוב', `{{${config.archiveTemplate}}}\n${text}`);
+    if (text === '') {
+      return;
+    }
+    while (newContent.includes('\n\n\n')) {
+      newContent = newContent.replace(/\n\n\n/g, '\n\n');
+    }
+    await wikiApi.create(getLastMonthTitle(logPage), `ארכוב ${month} ${year}`, `{{${config.archiveTemplate}}}\n${text}`);
+    await wikiApi.edit(logPage, `ארכוב ${month} ${year}`, newContent, revid);
   }
 
   return {

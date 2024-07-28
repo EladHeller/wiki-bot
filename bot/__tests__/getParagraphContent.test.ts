@@ -68,7 +68,7 @@ describe('getParagraphContent', () => {
     expect(result).toBe('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
   });
 
-  it('should return subtitles with more than 2 equal signs', () => {
+  it('should return subtitles with 3 equal signs', () => {
     const articleText = `
       Some text before
       ==Introduction==
@@ -85,6 +85,22 @@ describe('getParagraphContent', () => {
       ===SubIntroduction===
       Donec nec enim sed metus consequat aliquet.
       Some text after`);
+  });
+
+  it('should should return subtitles with 4 equal signs', () => {
+    const articleText = `==לוג ריצה 2 ביוני 2024==
+===first===
+text
+====third====
+text
+`;
+    const paragraphName = 'לוג ריצה 2 ביוני 2024';
+
+    const result = getParagraphContent(articleText, paragraphName);
+    expect(result).toBe(`===first===
+text
+====third====
+text`);
   });
 });
 
