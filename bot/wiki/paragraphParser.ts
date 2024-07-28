@@ -18,7 +18,10 @@ export function getParagraphContent(
   }
   let endIndex = nextWikiText(articleText, startIndex + paragraphStartText.length, '==', false, title);
   while (articleText.substring(endIndex, endIndex + 3) === '===') {
-    endIndex = nextWikiText(articleText, endIndex + 2, '==', false, title);
+    while (articleText[endIndex] === '=') {
+      endIndex += 1;
+    }
+    endIndex = nextWikiText(articleText, endIndex, '==', false, title);
   }
   if (endIndex === -1) {
     endIndex = articleText.length;

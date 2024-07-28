@@ -37,7 +37,8 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
   const lastMonthDate = new Date();
   lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
   const monthAndYear = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric' }).format(lastMonthDate);
-
+  const month = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(lastMonthDate);
+  const year = lastMonthDate.getFullYear();
   function getLastMonthTitle(logPage: string) {
     return `${logPage}/${config.monthArchivePath(monthAndYear)}`;
   }
@@ -46,8 +47,6 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
     const archivePage = logPage + config.archiveTemplatePath;
     const { content: archivePageContent, revid: archivePageRevid } = await getContent(wikiApi, archivePage);
 
-    const year = lastMonthDate.getFullYear();
-    const month = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(lastMonthDate);
     const lastMonthArchivePageLink = `[[${getLastMonthTitle(logPage)}|${month}]]`;
     const yearTitle = `'''${year}'''`;
 
@@ -81,14 +80,20 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
         if (paragraphContent) {
           text += `==${config.logParagraphTitlePrefix}${day}==\n${paragraphContent}\n`;
           newContent = newContent
-            .replace(paragraphContent, '')
+            .replace(paragraphContent, '\n')
             .replace(`\n== ${config.logParagraphTitlePrefix}${day} ==\n`, '')
             .replace(`\n==${config.logParagraphTitlePrefix}${day}==\n`, '');
         }
       }
     }
-    await wikiApi.edit(logPage, 'ארכוב', newContent, revid);
-    await wikiApi.create(getLastMonthTitle(logPage), 'ארכוב', `{{${config.archiveTemplate}}}\n${text}`);
+    if (text === '') {
+      return;
+    }
+    while (newContent.includes('\n\n\n')) {
+      newContent = newContent.replace(/\n\n\n/g, '\n\n');
+    }
+    await wikiApi.create(getLastMonthTitle(logPage), `ארכוב ${month} ${year}`, `{{${config.archiveTemplate}}}\n${text}`);
+    await wikiApi.edit(logPage, `ארכוב ${month} ${year}`, newContent, revid);
   }
 
   return {

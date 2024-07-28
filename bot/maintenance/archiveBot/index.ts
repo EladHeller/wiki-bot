@@ -5,6 +5,9 @@ import ArchiveBotModel from './ArchiveBotModel';
 
 const pages = [
   'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי',
+  'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם',
+  // 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים',
+  // 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים/לוג',
 ];
 
 export default async function archiveBot() {
