@@ -243,7 +243,8 @@ export async function* getRedirects(namespace = 0, linkNamespace = [0]) {
 }
 
 export async function getRevisions(title: string, limit = 500): Promise<WikiPage> {
-  const path = `${baseUrl}?action=query&format=json&prop=revisions&titles=${encodeURIComponent(title)}&rvprop=timestamp&rvslots=*&rvlimit=${limit}`;
+  const props = encodeURIComponent('timestamp|user');
+  const path = `${baseUrl}?action=query&format=json&prop=revisions&titles=${encodeURIComponent(title)}&rvprop=${props}&rvslots=*&rvlimit=${limit}`;
   const res = await request(path);
   return Object.values(res.query.pages)[0] as WikiPage;
 }

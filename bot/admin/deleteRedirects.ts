@@ -9,6 +9,8 @@ import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { ArticleLog } from './types';
 
+const fixBrokenRedirectsBotName = 'EmausBot';
+
 async function deleteRedirects(from: number, to: number[], reasons: string[], delayDays = 0) {
   const generator = getRedirects(from, to);
   const all: WikiPage[] = [];
@@ -35,7 +37,8 @@ async function deleteRedirects(from: number, to: number[], reasons: string[], de
         try {
           const reveisionRes = await getRevisions(p.title, 2);
           const revisionsLength = reveisionRes.revisions?.length;
-          if (revisionsLength === 1) {
+          if (revisionsLength === 1
+            || (revisionsLength === 2 && reveisionRes.revisions?.[0].user === fixBrokenRedirectsBotName)) {
             const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
             const target = p.links?.[0].title;
             await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
