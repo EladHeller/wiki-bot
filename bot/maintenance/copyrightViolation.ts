@@ -5,7 +5,6 @@ import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorato
 import type { LogEvent, WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence, encodeWikiUrl } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
-import { getInnerLinks } from '../wiki/wikiLinkParser';
 
 const violationColor: Record<CopyViolaionRank, string> = {
   suspected: 'אדום',
@@ -185,36 +184,16 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
   };
 }
 
-async function handlePreviousErrors(errorPagesTitles: string[]) {
-  const allLogs: ArticleLog[] = [];
-  const allOtherLogs: ArticleLog[] = [];
-
-  for (const title of errorPagesTitles) {
-    const { logs, otherLogs } = await handlePage(title, !title.includes(':'));
-    allLogs.push(...logs);
-    allOtherLogs.push(...otherLogs);
-  }
-
-  return { logs: allLogs, otherLogs: allOtherLogs };
-}
-
 export default async function copyrightViolationBot() {
   const api = NewWikiApi();
   const currentRun = new Date();
   const lastRun = await getLastRun(api);
-  const searchErrorPage = await api.articleContent(SEARCH_ERROR_PAGE);
+  const [searchErrorPage] = await api.info([SEARCH_ERROR_PAGE]);
 
   const generator = api.newPages([0, 2, 118], lastRun);
 
   const allLogs: ArticleLog[] = [];
   const allOtherLogs: ArticleLog[] = [];
-
-  if (searchErrorPage && searchErrorPage.content.length) {
-    const links = getInnerLinks(searchErrorPage.content);
-    const { logs, otherLogs } = await handlePreviousErrors(links.map((link) => link.link));
-    allLogs.push(...logs);
-    allOtherLogs.push(...otherLogs);
-  }
 
   await asyncGeneratorMapWithSequence(1, generator, (page: WikiPage) => async () => {
     const { logs, otherLogs } = await handlePage(page.title, page.ns === 0);
@@ -264,8 +243,8 @@ export default async function copyrightViolationBot() {
   }].filter((p) => p.content) satisfies Paragraph[];
   await writeAdminBotLogs(paragraphs, LOG_PAGE);
   await api.updateArticle(LAST_RUN_PAGE, 'עדכון זמן ריצה', currentRun.toJSON());
-  if (searchErrorText && searchErrorPage) {
-    await api.edit(SEARCH_ERROR_PAGE, 'עדכון שגיאות', searchErrorText, searchErrorPage.revid);
+  if (searchErrorText && searchErrorPage?.revisions?.[0]?.revid) {
+    await api.edit(SEARCH_ERROR_PAGE, 'עדכון שגיאות', searchErrorText, searchErrorPage.revisions[0].revid);
   }
 }
 
