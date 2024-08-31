@@ -5,6 +5,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
   return {
     login: base.login ?? jest.fn(),
     request: base.request ?? jest.fn(),
+    continueQuery: base.continueQuery ?? jest.fn(),
     recursiveSubCategories: base.recursiveSubCategories ?? jest.fn(),
     backlinksTo: base.backlinksTo ?? jest.fn(),
     updateArticle: base.updateArticle ?? jest.fn(),

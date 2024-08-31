@@ -431,24 +431,24 @@ Resources:
       FunctionName: delete-redirects-function
 
 # Copyrigh violation
-  CopyrighViolationLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
-      FunctionName: copyright-violation-function
-      Runtime: nodejs20.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
-      Handler: dist/maintenance/copyrightViolation.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
+  # CopyrighViolationLambda:
+  #   DependsOn:
+  #     - MarketValueLambdaIamRole
+  #   Type: 'AWS::Lambda::Function'
+  #   Properties:
+  #     Role: !GetAtt MarketValueLambdaIamRole.Arn
+  #     FunctionName: copyright-violation-function
+  #     Runtime: nodejs20.x
+  #     Environment:
+  #       Variables:
+  #         USER_NAME: !Ref WikiUserName
+  #         PASSWORD: !Ref WikiPassword
+  #     Handler: dist/maintenance/copyrightViolation.main
+  #     Timeout: 900
+  #     MemorySize: 1024
+  #     Code:
+  #       S3Bucket: !Ref BucketCodeName
+  #       S3Key: dist.zip
 
   # CopyrighViolationEventRule:
   #   DependsOn:
@@ -461,34 +461,34 @@ Resources:
   #       - Id: copyright-violation-function
   #         Arn: !GetAtt CopyrighViolationLambda.Arn
 
-  CopyrighViolationInvokePermission:
-    DependsOn:
-      - CopyrighViolationEventRule
-      - CopyrighViolationLambda
-    Type: AWS::Lambda::Permission
-    Properties: 
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn:  !GetAtt CopyrighViolationEventRule.Arn 
-      FunctionName: copyright-violation-function
+  # CopyrighViolationInvokePermission:
+  #   DependsOn:
+  #     - CopyrighViolationEventRule
+  #     - CopyrighViolationLambda
+  #   Type: AWS::Lambda::Permission
+  #   Properties: 
+  #     Action: lambda:InvokeFunction
+  #     Principal: events.amazonaws.com
+  #     SourceArn:  !GetAtt CopyrighViolationEventRule.Arn 
+  #     FunctionName: copyright-violation-function
 
-  CopyrighViolationsLogGroupInvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt SendEmailLambda.Arn
-      Action: lambda:InvokeFunction
-      Principal: logs.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/copyright-violation-function:*'
+  # CopyrighViolationsLogGroupInvokeLambdaPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !GetAtt SendEmailLambda.Arn
+  #     Action: lambda:InvokeFunction
+  #     Principal: logs.amazonaws.com
+  #     SourceAccount: !Ref 'AWS::AccountId'
+  #     SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/copyright-violation-function:*'
 
-  CopyrighViolationsLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties: 
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/copyright-violation-function'
+  # CopyrighViolationsLogGroupFailedSubscription:
+  #   DependsOn:
+  #     - SendEmailLambda
+  #   Type: AWS::Logs::SubscriptionFilter
+  #   Properties: 
+  #     DestinationArn: !GetAtt SendEmailLambda.Arn
+  #     FilterPattern: Invoke Error
+  #     LogGroupName: '/aws/lambda/copyright-violation-function'
 
 # Arcive logs
   ArchiveLogsLambda:
@@ -532,3 +532,22 @@ Resources:
       SourceArn:  !GetAtt ArchiveLogsEventRule.Arn 
       FunctionName: archive-logs-function
 
+# Scripts lambda
+  RunScriptsLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: run-scripts-function
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiProtectUserName
+          PASSWORD: !Ref WikiProtectPassword
+      Handler: dist/experiments/lambda.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
