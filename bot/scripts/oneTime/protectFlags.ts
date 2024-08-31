@@ -21,13 +21,7 @@ export default async function protectFlags() {
     }
     const logs: ArticleLog[] = [];
     for await (const pages of pagesGenerator) {
-      if (logs.length >= 5) {
-        break;
-      }
       for (const page of pages) {
-        if (logs.length >= 5) {
-          break;
-        }
         const editProtect = page.protection?.some(({ type, expiry }) => type === 'edit' && expiry === 'infinity');
         const moveProtect = page.protection?.some(({ type, expiry }) => type === 'move' && expiry === 'infinity');
         if (!editProtect || !moveProtect) {
