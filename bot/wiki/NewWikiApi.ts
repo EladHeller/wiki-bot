@@ -8,6 +8,8 @@ import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
 export interface IWikiApi {
   login(): Promise<void>;
   request(path: string, method?: string, data?: Record<string, any>): Promise<any>;
+  continueQuery(path: string, resultSelector?: (result: any) => any[], continueObject?: Record<string, string>):
+    AsyncGenerator<any, void, void>;
   recursiveSubCategories(category: string, limit?: number): AsyncGenerator<WikiPage, WikiPage, void>;
   backlinksTo(target: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   /**
@@ -383,6 +385,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
   return {
     login,
     request: baseWikiApi.request,
+    continueQuery: baseWikiApi.continueQuery,
     recursiveSubCategories,
     backlinksTo,
     updateArticle,
