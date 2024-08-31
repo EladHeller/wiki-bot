@@ -21,7 +21,13 @@ export default async function protectFlags() {
     }
     const logs: ArticleLog[] = [];
     for await (const pages of pagesGenerator) {
+      if (logs.length >= 5) {
+        break;
+      }
       for (const page of pages) {
+        if (logs.length >= 5) {
+          break;
+        }
         const editProtect = page.protection?.some(({ type, expiry }) => type === 'edit' && expiry === 'infinity');
         const moveProtect = page.protection?.some(({ type, expiry }) => type === 'move' && expiry === 'infinity');
         if (!editProtect || !moveProtect) {
@@ -46,7 +52,7 @@ export default async function protectFlags() {
 
     const successLogsText = logs.filter((log) => !log.error).map((log) => `* [[${log.title}]]`).join('\n');
     const errorLogsText = logs.filter((log) => log.error).map((log) => `* [[${log.title}]] - ${log.text}`).join('\n');
-    await api.edit('משתמש:Sapper-bot/הגנת תבניות דגל', 'ריצה מקדימה', `סך הכל ${logs.length} תבניות.\n${successLogsText}\n===שגיאות===\n${errorLogsText}`, logContent.revid, 'ריצת אמת');
+    await api.edit('משתמש:Sapper-bot/הגנת תבניות דגל', 'ריצת נסיון', `סך הכל ${logs.length} תבניות.\n${successLogsText}\n===שגיאות===\n${errorLogsText}`, logContent.revid, 'ריצת נסיון');
   } catch (e) {
     console.error(e);
   }
