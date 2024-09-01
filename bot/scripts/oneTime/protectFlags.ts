@@ -10,6 +10,8 @@ async function* getPages(api: IWikiApi): AsyncGenerator<WikiPage[], void, void> 
   yield* api.continueQuery(queryPath, (result) => Object.values(result.query.pages));
 }
 
+const levels = ['sysop', 'editautopatrolprotected'];
+
 export default async function protectFlags() {
   const api = NewWikiApi();
   try {
@@ -22,14 +24,14 @@ export default async function protectFlags() {
     const logs: ArticleLog[] = [];
     for await (const pages of pagesGenerator) {
       for (const page of pages) {
-        const editProtect = page.protection?.some(({ type, expiry }) => type === 'edit' && expiry === 'infinity');
-        const moveProtect = page.protection?.some(({ type, expiry }) => type === 'move' && expiry === 'infinity');
+        const editProtect = page.protection?.some(({ type, expiry, level }) => type === 'edit' && expiry === 'infinity' && levels.includes(level));
+        const moveProtect = page.protection?.some(({ type, expiry, level }) => type === 'move' && expiry === 'infinity' && levels.includes(level));
         if (!editProtect || !moveProtect) {
           try {
             await api.protect(page.title, 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'תבנית דגל: בשימוש רב');
             logs.push({
               title: page.title,
-              text: 'הצליח',
+              text: page.protection?.map(({ type, level }) => `${type} - ${level}`).join(', ') || '',
               error: false,
             });
           } catch (e) {
