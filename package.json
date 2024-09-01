@@ -37,7 +37,7 @@
     "@aws-sdk/client-lambda": "^3.588.0",
     "@aws-sdk/client-s3": "^3.621.0",
     "@aws-sdk/client-ses": "^3.565.0",
-    "@babel/preset-env": "^7.25.3",
+    "@babel/preset-env": "^7.25.4",
     "@babel/preset-typescript": "^7.23.3",
     "@types/jest": "^29.5.12",
     "@types/jsdom": "^21.1.6",
