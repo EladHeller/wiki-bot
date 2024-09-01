@@ -46,7 +46,7 @@ export default async function protectFlags() {
 
     const successLogsText = logs.filter((log) => !log.error).map((log) => `* [[${log.title}]]`).join('\n');
     const errorLogsText = logs.filter((log) => log.error).map((log) => `* [[${log.title}]] - ${log.text}`).join('\n');
-    await api.edit('משתמש:Sapper-bot/הגנת תבניות דגל', 'ריצת נסיון', `סך הכל ${logs.length} תבניות.\n${successLogsText}\n===שגיאות===\n${errorLogsText}`, logContent.revid, 'ריצת נסיון');
+    await api.edit('משתמש:Sapper-bot/הגנת תבניות דגל', 'לוג ריצה', `סך הכל ${logs.length} תבניות.\n${successLogsText}\n===שגיאות===\n${errorLogsText}`, logContent.revid, 'לוג ריצה');
   } catch (e) {
     console.error(e);
   }
