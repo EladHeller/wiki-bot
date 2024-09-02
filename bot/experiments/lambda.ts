@@ -1,8 +1,14 @@
 import 'dotenv/config';
-import protectFlags from '../scripts/oneTime/protectFlags';
+import NewWikiApi from '../wiki/NewWikiApi';
 
 export async function main() {
-  await protectFlags();
+  const api = NewWikiApi();
+  try {
+    await api.protect('תבנית:דגל/שימאנה (מחוז)', 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'תבנית דגל: בשימוש רב');
+    console.log('Done');
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 export default main;
