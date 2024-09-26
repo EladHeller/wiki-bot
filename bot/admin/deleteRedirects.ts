@@ -9,7 +9,7 @@ import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { ArticleLog } from './types';
 
-const fixBrokenRedirectsBotName = 'EmausBot';
+const fixBrokenRedirectsBotNames = ['EmausBot', 'Xqbot']; // Updated this line
 
 async function deleteRedirects(from: number, to: number[], reasons: string[], delayDays = 0) {
   const generator = getRedirects(from, to);
@@ -38,7 +38,7 @@ async function deleteRedirects(from: number, to: number[], reasons: string[], de
           const reveisionRes = await getRevisions(p.title, 2);
           const revisionsLength = reveisionRes.revisions?.length;
           if (revisionsLength === 1
-            || (revisionsLength === 2 && reveisionRes.revisions?.[0].user === fixBrokenRedirectsBotName)) {
+            || (revisionsLength === 2 && fixBrokenRedirectsBotNames.includes(reveisionRes.revisions?.[0].user))) { // Updated this line
             const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
             const target = p.links?.[0].title;
             await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
@@ -111,7 +111,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
 export default async function deleteBot() {
   await login();
   console.log('logged in');
-  const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקיפדיה:בוט\/בוט ההסבה\//);
+  const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקי[...]
   // const jewishEncyclopdia = await deleteInCategory(
   //   'ויקיפדיה - ערכים למחיקה ממיזם האנציקלופדיה היהודית',
   //   'דף למחיקה - מיזם האנציקלופדיה היהודית',
