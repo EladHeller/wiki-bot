@@ -38,7 +38,7 @@ async function deleteRedirects(from: number, to: number[], reasons: string[], de
           const reveisionRes = await getRevisions(p.title, 2);
           const revisionsLength = reveisionRes.revisions?.length;
           if (revisionsLength === 1
-            || (revisionsLength === 2 && fixBrokenRedirectsBotNames.includes(reveisionRes.revisions?.[0].user))) {
+            || (revisionsLength === 2 && reveisionRes.revisions?.[0].user && fixBrokenRedirectsBotNames.includes(reveisionRes.revisions?.[0].user))) {
             const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
             const target = p.links?.[0].title;
             await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
