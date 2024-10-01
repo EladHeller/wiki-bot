@@ -1,4 +1,4 @@
-[![CI](https://github.com/EladHeller/tradeBoot/actions/workflows/linter.yml/badge.svg)](https://github.com/EladHeller/tradeBoot/actions/workflows/linter.yml) [![CD](https://github.com/EladHeller/tradeBoot/actions/workflows/deploy.yml/badge.svg)](https://github.com/EladHeller/tradeBoot/actions/workflows/deploy.yml) [![CodeQL](https://github.com/EladHeller/wiki-bot/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/EladHeller/wiki-bot/actions/workflows/github-code-scanning/codeql)
+[![CI](https://github.com/EladHeller/tradeBoot/actions/workflows/linter.yml/badge.svg?branch=develop)](https://github.com/EladHeller/tradeBoot/actions/workflows/linter.yml) [![CD](https://github.com/EladHeller/tradeBoot/actions/workflows/deploy.yml/badge.svg)](https://github.com/EladHeller/tradeBoot/actions/workflows/deploy.yml) [![CodeQL](https://github.com/EladHeller/wiki-bot/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/EladHeller/wiki-bot/actions/workflows/github-code-scanning/codeql)
 
 ## Wiki Bot
 This bot operates in the AWS environment, and updates the Hebrew Wikipedia.
