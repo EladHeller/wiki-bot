@@ -28,7 +28,7 @@
     "axios": "^1.7.7",
     "axios-cookiejar-support": "^5.0.2",
     "dotenv": "^16.4.5",
-    "jsdom": "^24.1.0",
+    "jsdom": "^25.0.1",
     "openai": "^4.66.1",
     "tough-cookie": "^4.1.3"
   },
