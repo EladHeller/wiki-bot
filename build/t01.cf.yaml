@@ -543,8 +543,8 @@ Resources:
       Runtime: nodejs20.x
       Environment:
         Variables:
-          USER_NAME: !Ref WikiProtectUserName
-          PASSWORD: !Ref WikiProtectPassword
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
       Handler: dist/experiments/lambda.main
       Timeout: 900
       MemorySize: 1024
