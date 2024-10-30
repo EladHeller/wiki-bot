@@ -1,28 +1,17 @@
 env:
-  browser: true
+  node: true
   es2021: true
 globals:
   RequestCredentials: readonly
 extends:
   - airbnb-base
-  - plugin:import/typescript
-  - plugin:jest/all
-parser: '@typescript-eslint/parser'
-parserOptions:
-  ecmaVersion: 12
+parserOptions: 
+  ecmaVersion: 2023
   sourceType: module
-  project: './tsconfig.eslint.json'
-plugins:
-  - '@typescript-eslint'
 rules:
-  jest/prefer-expect-assertions: 0
-  jest/no-hooks: 0
-  jest/require-hook: 0
   no-console: off
   no-await-in-loop: off
   no-restricted-syntax: off
-  no-unused-vars: off
   max-len: [error, { code: 120, ignoreStrings: true, ignoreTemplateLiterals: true, ignoreComments: true }]
-  "@typescript-eslint/no-unused-vars": [error]
   import/extensions:
       ['error', 'ignorePackages', {'js': 'never', 'jsx': 'never', 'ts': 'never', 'tsx': 'never'}]
