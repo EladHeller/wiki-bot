@@ -14,7 +14,7 @@ export function getSchemaData(doc: Document, type: string): SchamaJson | undefin
           return schemaData['@graph'];
         }
         return JSON.parse(schema.textContent?.replace(possibleProblem, '').trim() ?? '');
-      } catch (e) {
+      } catch {
         console.warn('Invalid schema', schema.textContent);
         return undefined;
       }
