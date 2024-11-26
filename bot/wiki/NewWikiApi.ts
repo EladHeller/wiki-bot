@@ -41,7 +41,8 @@ export interface IWikiApi {
     templateName: string, continueObject?: Record<string, string>, prefix?: string, namespace?: string
   ): AsyncGenerator<WikiPage[], void, void>;
   search(text: string): AsyncGenerator<WikiPage[], void, void>;
-  getRedirects(namespace?: number, linkNamespace?: number[]): AsyncGenerator<WikiPage[], void, void>;
+  getRedirects(namespace?: number, linkNamespace?: number[], limit?: number, templates?: string, categories?: string):
+    AsyncGenerator<WikiPage[], void, void>;
   userContributes(user: string, limit?: number): AsyncGenerator<UserContribution[], void, void>;
   listCategory(category: string, limit?: number, type?: string): AsyncGenerator<WikiPage[], void, void>;
   categoriesStartsWith(prefix: string): AsyncGenerator<WikiPage[], void, void>;
@@ -88,7 +89,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
   ): AsyncGenerator<WikiPage[], void, void> {
     const template = encodeURIComponent(`${prefix ? `${prefix}:` : ''}${templateName}`);
     const props = encodeURIComponent('revisions');
-    const rvprops = encodeURIComponent('content');
+    const rvprops = encodeURIComponent('content|ids');
     const path = '?action=query&format=json'
     // Pages with template
     + `&generator=embeddedin&geinamespace=${namespace}&geilimit=50&geititle=${template}`
@@ -210,22 +211,24 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
 
   async function* search(text:string) {
     const props = encodeURIComponent('revisions|extlinks');
-    const rvprops = encodeURIComponent('content');
+    const rvprops = encodeURIComponent('content|ids');
 
     const path = `?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=500`
     + `&prop=${props}`
     + `&rvprop=${rvprops}&rvslots=*`;
 
-    yield* baseWikiApi.continueQuery(path);
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
-  async function* getRedirects(namespace = 0, linkNamespace = [0]) {
+  async function* getRedirects(namespace: number, linkNamespace: number[], limit = 100, templates = '', categories = '') {
     const props = encodeURIComponent('links|templates|categories');
-    const template = encodeURIComponent('תבנית:הפניה לא למחוק');
-    const category = encodeURIComponent('קטגוריה:הפניות לא למחוק');
-    const path = `?action=query&format=json&generator=allpages&gaplimit=500&gapfilterredir=redirects&gapnamespace=${namespace}`
-    + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}&tltemplates=${template}&clcategories=${category}`;
-    yield* baseWikiApi.continueQuery(path);
+    const template = encodeURIComponent(templates);
+    const templateString = template ? `&tltemplates=${template}&tllimit=${limit}` : '';
+    const category = encodeURIComponent(categories);
+    const categoryString = category ? `&clcategories=${category}&cllimit=${limit}` : '';
+    const path = `?action=query&format=json&generator=allredirects&garlimit=${limit}&garnamespace=${namespace}&gardir=ascending`
+    + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}${templateString}${categoryString}&pllimit=${limit}`;
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
   async function info(titles:string[]) {
