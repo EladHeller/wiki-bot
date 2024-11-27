@@ -27,7 +27,7 @@ export interface IWikiApi {
    */
   getArticleContent(title: string): Promise<string | undefined>;
   articleContent(title: string): Promise<{content: string, revid: number} | null>;
-  externalUrl(link: string, protocol?: string): AsyncGenerator<WikiPage[], void, void>;
+  externalUrl(link: string, protocol?: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<Partial<WikiPage>[]>;
   purge(titles: string[]): Promise<any>;
   rollback(title: string, user: string, summary: string): Promise<any>;
@@ -196,11 +196,11 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     return Object.values(wikiPages)[0]?.revisions ?? [];
   }
 
-  async function* externalUrl(link:string, protocol:string = 'https') {
+  async function* externalUrl(link:string, protocol:string = 'https', namespace = '0') {
     const props = encodeURIComponent('revisions');
-    const rvprops = encodeURIComponent('content');
+    const rvprops = encodeURIComponent('content|ids');
     const path = '?action=query&format=json&'
-    + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=0&geuquery=${encodeURIComponent(link)}&geulimit=100`
+    + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=${encodeURIComponent(namespace)}&geuquery=${encodeURIComponent(link)}&geulimit=100`
     + `&prop=${props}`
     + `&rvprop=${rvprops}&rvslots=*`;
     yield* baseWikiApi.continueQuery(
