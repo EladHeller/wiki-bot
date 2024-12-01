@@ -11,11 +11,11 @@ export default async function updateIsraeliWriters() {
     for await (const categoryPages of categoryGenerator) {
       for (const page of categoryPages) {
         if (page.sortkeyprefix !== '*') {
-          pages.add(page.title.replace(/ \(עיתונאית?\)/, '').replace(/ \(מאיירת?\)/, ''));
+          pages.add(page.title.replace(/ \(עיתונאית?\)/, '').replace(/ \(מאיירת?\)/, '').replace(/ \(ציירת?\)/, ''));
         }
       }
     }
   }
 
-  await fs.writeFile('data/israeli-writers.json', JSON.stringify(Array.from(pages), null, 2));
+  await fs.writeFile('bot/data/israeli-writers.json', JSON.stringify(Array.from(pages), null, 2));
 }
