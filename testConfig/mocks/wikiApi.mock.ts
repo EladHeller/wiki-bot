@@ -35,5 +35,6 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     movePage: base.movePage ?? jest.fn(),
     edit: base.edit ?? jest.fn(),
     create: base.create ?? jest.fn(),
+    categroyTitles: base.categroyTitles ?? jest.fn(),
   };
 }

@@ -10,7 +10,7 @@ const articleRegex = /https?:\/\/www.ynet\.co\.il\/articles\/\d,\d+,\w-(\d+),\d+
 // https://www.ynet.co.il/digital/article/r1AIJ48pH
 const generalRegex = /https?:\/\/www.ynet\.co\.il\/([^?]+)/;
 
-function generalLinkConverter(generalLink: GeneralLinkTemplateData) {
+async function generalLinkConverter(generalLink: GeneralLinkTemplateData) {
   const url = generalLink['כתובת'];
   const match = url.match(articleRegex);
   const articleId = match?.[1] ?? url.match(generalRegex)?.[1] ?? '';

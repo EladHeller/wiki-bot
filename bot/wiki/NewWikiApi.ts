@@ -34,6 +34,7 @@ export interface IWikiApi {
   undo(title: string, summary: string, revision: number): Promise<any>;
   rollbackUserContributions(user: string, summary: string, count?: number): Promise<any>;
   categroyPages(category: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
+  categroyTitles(category: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
   undoContributions(user: string, summary: string, count?: number): Promise<any>;
   protect(title: string, protections: string, expiry: string, reason: string): Promise<any>;
   deletePage(title: string, reason: string): Promise<any>;
@@ -317,9 +318,16 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     const rvprops = encodeURIComponent('content|size|ids');
     const props = encodeURIComponent('title|sortkeyprefix');
     const path = `?action=query&format=json&generator=categorymembers&gcmtitle=Category:${encodeURIComponent(category)}&gcmlimit=${limit}&gcmprop=${props}`
-    + `&prop=revisions&rvprop=${rvprops}&rvslots=*`;
+      + `&prop=revisions&rvprop=${rvprops}&rvslots=*`;
 
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
+  }
+
+  async function* categroyTitles(category: string, limit = 50) {
+    const props = encodeURIComponent('title|sortkeyprefix');
+    const path = `?action=query&format=json&list=categorymembers&cmtitle=Category:${encodeURIComponent(category)}&cmlimit=${limit}&cmprop=${props}`;
+
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.categorymembers ?? {}));
   }
 
   async function* categoriesStartsWith(prefix: string) {
@@ -395,6 +403,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     getArticleContent,
     articleContent,
     externalUrl,
+    categroyTitles,
     info,
     purge,
     rollback,

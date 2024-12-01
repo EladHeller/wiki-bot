@@ -5,6 +5,7 @@
         "skipLibCheck": true,
         "esModuleInterop": true,
         "strictNullChecks": true,
+        "resolveJsonModule": true,
         "outDir": "dist"
     },
     "include": ["bot"],
