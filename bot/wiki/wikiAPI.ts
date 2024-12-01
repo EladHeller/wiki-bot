@@ -236,9 +236,9 @@ export async function* getRedirects(namespace = 0, linkNamespace = [0]) {
   const props = encodeURIComponent('links|templates|categories|revisions');
   const template = encodeURIComponent('תבנית:הפניה לא למחוק');
   const category = encodeURIComponent('קטגוריה:הפניות לא למחוק');
-  const path = `${baseUrl}?action=query&format=json&generator=allpages&gaplimit=500&gapfilterredir=redirects&gapnamespace=${namespace}`
+  const path = `${baseUrl}?action=query&format=json&generator=allredirects&garlimit=500&garnamespace=${namespace}`
   + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}&tltemplates=${template}&clcategories=${category}`
-  + '&rvprop=timestamp';
+  + '&pllimit=500&cllimit=500&tllimit=500&rvprop=timestamp';
   yield* continueQuery(path);
 }
 

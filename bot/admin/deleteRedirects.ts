@@ -29,16 +29,18 @@ async function deleteRedirects(from: number, to: number[], reasons: string[], de
         const date = new Date(timestamp);
         const now = new Date();
         date.setDate(date.getDate() + delayDays);
-        const isDelay30Days = date < now;
-        return x.links?.length === 1 && x.templates == null && x.categories == null && isDelay30Days;
+        const isPassedDelayDays = date < now;
+        return x.links?.length === 1 && x.templates == null && x.categories == null && isPassedDelayDays;
       });
       all.push(...relevent);
       await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
         try {
           const reveisionRes = await getRevisions(p.title, 2);
           const revisionsLength = reveisionRes.revisions?.length;
+
           if (revisionsLength === 1
-            || (revisionsLength === 2 && reveisionRes.revisions?.[0].user && fixBrokenRedirectsBotNames.includes(reveisionRes.revisions?.[0].user))) {
+            || (revisionsLength === 2 && reveisionRes.revisions?.[0].user
+              && fixBrokenRedirectsBotNames.includes(reveisionRes.revisions?.[0].user))) {
             const reason = reasons[to.indexOf(p.links?.[0].ns || 0)] ?? reasons[0];
             const target = p.links?.[0].title;
             await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));

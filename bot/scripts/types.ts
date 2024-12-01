@@ -11,8 +11,10 @@ export type GeneralLinkTemplateData = {
 
 export type CiteNewsTemplate = {
     title: string;
-    url?: string;
+    url: string;
     date?: string;
     last?: string;
     first?: string;
+    author?: string;
+    'access-date'?: string;
 }
