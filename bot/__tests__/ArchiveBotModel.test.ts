@@ -1,3 +1,6 @@
+import {
+  afterEach, beforeEach, describe, expect, it, jest,
+} from '@jest/globals';
 import ArchiveBotModel, { IArchiveBotModel } from '../maintenance/archiveBot/ArchiveBotModel';
 import { IWikiApi } from '../wiki/NewWikiApi';
 import { Mocked } from '../../testConfig/mocks/types';

@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import { getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
 
 describe('getParagraphContent', () => {
@@ -97,6 +98,7 @@ text
     const paragraphName = 'לוג ריצה 2 ביוני 2024';
 
     const result = getParagraphContent(articleText, paragraphName);
+
     expect(result).toBe(`===first===
 text
 ====third====

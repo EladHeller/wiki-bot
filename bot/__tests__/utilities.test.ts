@@ -1,4 +1,5 @@
 /* eslint-disable jest/no-conditional-in-test */
+import { describe, expect, it } from '@jest/globals';
 import {
   asyncGeneratorMapWithSequence, encodeWikiUrl, getFullYear, getLocalDate, objectToFormData, objectToQueryString,
   parseLocalDate, prettyNumericValue, promiseSequence,
@@ -281,12 +282,16 @@ describe('encodeWikiUrl', () => {
 
     expect(encodedUrl).toBe('%D7%92%D7%95%D7%92%D7%9C');
   });
+
   it('should replace spaces with underscore', () => {
     const encodedUrl = encodeWikiUrl('גוגל ישראל');
+
     expect(encodedUrl).toBe('%D7%92%D7%95%D7%92%D7%9C_%D7%99%D7%A9%D7%A8%D7%90%D7%9C');
   });
+
   it('should replace Apostrophe with %27', () => {
     const encodedUrl = encodeWikiUrl('גוגל\'ישראל');
+
     expect(encodedUrl).toBe('%D7%92%D7%95%D7%92%D7%9C%27%D7%99%D7%A9%D7%A8%D7%90%D7%9C');
   });
 });

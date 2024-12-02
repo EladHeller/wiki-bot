@@ -1,4 +1,5 @@
 /* eslint-disable jest/no-disabled-tests */
+import { describe, expect, it } from '@jest/globals';
 import { noWikiEndTagIndex, nextWikiText } from '../wiki/WikiParser';
 
 describe('noWikiEndTagIndex', () => {

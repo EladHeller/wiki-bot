@@ -1,3 +1,6 @@
+import {
+  describe, expect, it, jest,
+} from '@jest/globals';
 import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 
 describe('shabathProtectorDecorator', () => {
@@ -70,6 +73,7 @@ describe('shabathProtectorDecorator', () => {
 
     const args = [1, 2, 3];
     const result = await shabathProtectorDecorator(cb)(...args);
+
     expect(result).toBe('result');
     expect(cb).toHaveBeenCalledWith(...args);
   });
@@ -81,6 +85,7 @@ describe('isAfterShabathOrHolliday', () => {
     jest.setSystemTime(mockDate);
 
     const result = isAfterShabathOrHolliday();
+
     expect(result).toBe(false);
   });
 
@@ -89,6 +94,7 @@ describe('isAfterShabathOrHolliday', () => {
     jest.setSystemTime(mockDate);
 
     const result = isAfterShabathOrHolliday();
+
     expect(result).toBe(false);
   });
 
@@ -97,6 +103,7 @@ describe('isAfterShabathOrHolliday', () => {
     jest.setSystemTime(mockDate);
 
     const result = isAfterShabathOrHolliday();
+
     expect(result).toBe(true);
   });
 
@@ -105,6 +112,7 @@ describe('isAfterShabathOrHolliday', () => {
     jest.setSystemTime(mockDate);
 
     const result = isAfterShabathOrHolliday();
+
     expect(result).toBe(false);
   });
 
@@ -113,6 +121,7 @@ describe('isAfterShabathOrHolliday', () => {
     jest.setSystemTime(mockDate);
 
     const result = isAfterShabathOrHolliday();
+
     expect(result).toBe(false);
   });
 
@@ -121,6 +130,7 @@ describe('isAfterShabathOrHolliday', () => {
     jest.setSystemTime(mockDate);
 
     const result = isAfterShabathOrHolliday();
+
     expect(result).toBe(true);
   });
 });

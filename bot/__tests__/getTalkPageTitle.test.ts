@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import getTalkPageTitle from '../wiki/getTalkPage';
 
 describe('getTalkPageTitle function', () => {
