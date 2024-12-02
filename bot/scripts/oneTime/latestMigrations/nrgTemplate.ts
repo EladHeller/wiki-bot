@@ -83,9 +83,6 @@ async function externalLinkConverter(originalText: string, { link, text }: WikiL
     }
   }
   writers = Array.from(new Set(writers));
-  writers.forEach((writer) => {
-    remainText = remainText.replaceAll(writer, '');
-  });
 
   const lastWriter = writers.pop();
   let writerText = '';
@@ -120,8 +117,11 @@ async function externalLinkConverter(originalText: string, { link, text }: WikiL
     .replace(/שליפות/g, '')
     .replace(/יהדות/g, '')
     .replace(/{{כ}}/g, '')
-    .replace(/{{סרטונים}}/g, '')
-    .replace(/\d{1,2}[\s,-]{1,3}[א-ת]{4,8}[\s,-]{1,3}\d{4}/g, '')
+    .replace(/{{סרטונים}}/g, '');
+  writers.forEach((writer) => {
+    remainText = remainText.replaceAll(writer, '');
+  });
+  remainText = remainText.replace(/\d{1,2}[\s,-]{1,3}[א-ת]{4,8}[\s,-]{1,3}\d{4}/g, '')
     .replace(/\s+/g, '')
     .replace(/\d{1,2}(?:[.-/])\d{1,2}(?:[.-/])\d{2,4}/g, '')
     .replace(/[[\],*()|:.'"–ו-]/g, '');
