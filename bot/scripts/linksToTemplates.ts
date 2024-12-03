@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { writeFile } from 'fs/promises';
+import findHebrewFullNames from 'find-hebrew-names';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 import { WikiPage } from '../types';
@@ -7,16 +8,109 @@ import { findTemplates, getTemplateArrayData, getTemplateKeyValueData } from '..
 import type { CiteNewsTemplate, GeneralLinkTemplateData } from './types';
 import { getParagraphContent } from '../wiki/paragraphParser';
 import { WikiLink, getExternalLinks } from '../wiki/wikiLinkParser';
+import israeliWriters from '../data/israeli-writers.json';
+
+const citeNewsAllowedKeys = ['title', 'url', 'date', 'last', 'first', 'author', 'access-date', 'newspaper', 'access-date'];
+
+const dateRegex = /\d{1,2}(?:[.-/])\d{1,2}(?:[.-/])(?:\[\[)?\d{2,4}(?:\]\])?/;
+const otherDateRegex = /(?:(?:\[\[)?\d{1,2}[\s,-]{1,3})?[א-ת]{3,8}(?:\]\])?[\s,-]{1,3}(?:\[\[)?\d{4}(?:\]\])?/;
 
 type GeneralLinkToTemplateCallback = (generalLink: GeneralLinkTemplateData | CiteNewsTemplate) => Promise<string|null>;
-type ExternalLinkToTemplateCallback = (
-  originalText: string, wikiLink: WikiLink
-) => Promise<string | null>;
+
+type ExternalLinkToTemplateCallback = (originalText: string, wikiLink: WikiLink) => Promise<string | null>;
 type ConvertionConfig = {
   generalLinkConverter: GeneralLinkToTemplateCallback;
   externalLinkConverter: ExternalLinkToTemplateCallback;
   url: string;
   description?: string;
+}
+
+type BasicConverterData = {
+  link: string;
+  text: string;
+  remainText: string;
+  writerText: string;
+  date: string;
+  match: RegExpMatchArray;
+}
+
+export function basicConverter(
+  originalText: string,
+  { link, text }: WikiLink,
+  linkRegex: RegExp,
+): BasicConverterData | null {
+  const match = link.match(linkRegex);
+  if (!match) {
+    return null;
+  }
+  let remainText = originalText;
+  const date = originalText.match(dateRegex)?.[0] || originalText.match(otherDateRegex)?.[0] || '';
+
+  remainText = remainText
+    .replace(link, '')
+    .replace(text, '')
+    .replace(date, '')
+    .replace('{{כותרת קישור נוצרה על ידי בוט}}', '')
+    .replace(/(?:\[\[)?nrg(?:\]\])?/gi, '')
+    .replace(/(?:\[\[)?מעריב(?:\]\])?/g, '')
+    .replace(/[מב]?אתר/g, '')
+    .replace(/ב-/g, '')
+    .replace(/ה-/g, '')
+    .replace(/זמן תל אביב/g, '')
+    .replace(/ ב /g, '')
+    .replace(/מתוך/g, '')
+    .replace(/ראיון/g, '')
+    .replace(/חדשות/g, '')
+    .replace(/המקוון/g, '')
+    .replace(/ניו אייג'/g, '')
+    .replace(/בתאריך/g, '')
+    .replace(/כתבה/g, '')
+    .replace(/מאת/g, '')
+    .replace(/כתבת/g, '')
+    .replace(/ארכיון/g, '')
+    .replace(/עיתונאי/g, '')
+    .replace(/שליפות/g, '')
+    .replace(/יהדות/g, '')
+    .replace(/{{כ}}/g, '')
+    .replace(/\d{1,2}[\s,-]{1,3}[א-ת]{4,8}[\s,-]{1,3}\d{4}/g, '')
+    .replace(/\d{1,2}(?:[.-/])\d{1,2}(?:[.-/])\d{2,4}/g, '')
+    .replace(/{{סרטונים}}/g, '');
+
+  let writers: string[] = [];
+  for (const writer of israeliWriters) {
+    if (remainText.includes(writer)) {
+      writers.push(writer);
+    }
+  }
+  const hebrewNames = findHebrewFullNames(remainText);
+  for (const name of hebrewNames) {
+    if (remainText.includes(name)) {
+      writers.push(name);
+    }
+  }
+  writers = Array.from(new Set(writers));
+  writers.forEach((writer) => {
+    remainText = remainText.replaceAll(writer, '');
+  });
+  const lastWriter = writers.pop();
+  let writerText = '';
+  if (!writers.length) {
+    writerText = lastWriter || '';
+  } else {
+    writerText = `${writers.join(', ')} ו${lastWriter}`;
+  }
+
+  remainText = remainText.replace(/\s+/g, '')
+    .replace(/[[\],*()|:.'"–ו-]/g, '');
+
+  return {
+    remainText,
+    writerText,
+    date,
+    link,
+    text,
+    match,
+  };
 }
 
 const all: string[] = [];
@@ -76,7 +170,13 @@ async function linksToTemplatesLogic(
       const templateData = getTemplateKeyValueData(
         citeNewsTemplate,
       ) as CiteNewsTemplate;
+
       if (templateData.url?.includes(config.url)) {
+        const keys = Object.keys(templateData);
+        if (keys.some((key) => !citeNewsAllowedKeys.includes(key))) {
+          console.log('Cite news: unknown key', page.title, keys);
+          return;
+        }
         const newTemplateText = await config.generalLinkConverter(templateData as CiteNewsTemplate);
         if (newTemplateText) {
           newContent = newContent.replace(citeNewsTemplate, newTemplateText);
