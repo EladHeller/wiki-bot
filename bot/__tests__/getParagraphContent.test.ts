@@ -104,6 +104,27 @@ text
 ====third====
 text`);
   });
+
+  it('should return content when the paragraph has one space in start or end', () => {
+    const articleText = `
+      Some text before
+      ==Introduction ==
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+      == Conclusion==
+      Donec nec enim sed met`;
+
+    const paragraphName = 'Introduction';
+    const expectedContent = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
+    const result = getParagraphContent(articleText, paragraphName);
+
+    expect(result).toStrictEqual(expectedContent);
+
+    const paragraphName2 = 'Conclusion';
+    const expectedContent2 = 'Donec nec enim sed met';
+    const result2 = getParagraphContent(articleText, paragraphName2);
+
+    expect(result2).toStrictEqual(expectedContent2);
+  });
 });
 
 describe('getUsersFromTagParagraph', () => {

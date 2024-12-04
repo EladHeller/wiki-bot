@@ -12,6 +12,14 @@ export function getParagraphContent(
   if (startIndex === -1) {
     paragraphStartText = `== ${paragraphName} ==`;
     startIndex = articleText.indexOf(paragraphStartText);
+  }
+  if (startIndex === -1) {
+    paragraphStartText = `==${paragraphName} ==`;
+    startIndex = articleText.indexOf(paragraphStartText);
+  }
+  if (startIndex === -1) {
+    paragraphStartText = `== ${paragraphName}==`;
+    startIndex = articleText.indexOf(paragraphStartText);
     if (startIndex === -1) {
       return null;
     }

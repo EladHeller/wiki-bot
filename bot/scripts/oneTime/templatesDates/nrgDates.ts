@@ -7,8 +7,8 @@ async function getDateFromPage(id: string, title: string, section?: string) {
   const url = `https://www.makorrishon.co.il/nrg/online/${section}/ART${id}.html`;
   try {
     const dom = await JSDOM.fromURL(url);
-    const dateText = getContent(dom.window.document, '#articleCBar > .cdat, .article-autor > .cdat, #article-autor > .cdat, .newsVitzCredit') ?? '';
-    const dateMatch = dateText.match(/(?<day>\d{1,2})\/(?<month>\d{1,2})\/(?<year>\d{4})/);
+    const dateText = getContent(dom.window.document, '#articleCBar > .cdat, .article-autor > .cdat, #article-autor > .cdat, .newsVitzCredit, #art_date') ?? '';
+    const dateMatch = dateText.match(/(?<day>\d{1,2})[/.](?<month>\d{1,2})[/.](?<year>\d{4})/);
     const { year, month, day } = dateMatch?.groups ?? {};
     if (year && month && day) {
       return getLocalDate(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
