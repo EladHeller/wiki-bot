@@ -37,7 +37,7 @@ async function getDataFromPage(link: string, articleTitle: string): Promise<Page
   const url = `https://www.makorrishon.co.il/nrg/online/${series ?? '1'}/ART${artNumber ?? ''}/${id}.html`;
   try {
     let date: string | undefined;
-    let writer: string | undefined;
+    let author: string | undefined;
     let dom = await JSDOM.fromURL(url);
     if (dom.window.location.href === notFountPage) {
       dom = await JSDOM.fromURL(`https://www.makorrishon.co.il/nrg/online/1/ART${artNumber ?? ''}/${id}.html`);
@@ -62,27 +62,27 @@ async function getDataFromPage(link: string, articleTitle: string): Promise<Page
       console.log('Failed to get date from page', url, articleTitle);
     }
 
-    // writer
-    writer = getContent(dom.window.document, '#art_credit')?.trim() ?? '';
-    if (!writer) {
-      writer = dateText;
+    // author
+    author = getContent(dom.window.document, '#art_credit')?.trim() ?? '';
+    if (!author) {
+      author = dateText;
       const hourMatch = dateText.match(/(\d{1,2}:\d{1,2})/);
 
       if (hourMatch) {
-        writer = writer.replace(hourMatch[0], '');
+        author = author.replace(hourMatch[0], '');
       }
       if (dateMatch) {
-        writer = writer.replace(dateMatch[0], '');
+        author = author.replace(dateMatch[0], '');
       }
 
-      writer = writer.replace(/[,|:]/g, '').replace('מאת', '').replace('changeClass();', '').trim();
+      author = author.replace(/[,|:]/g, '').replace('מאת', '').replace('changeClass();', '').trim();
     }
     // title
     const title = getContent(dom.window.document, '#titleS1, #article > h1, #top_story_title, #articleBody > h1')?.trim() ?? undefined;
 
     return {
       date,
-      writer,
+      author,
       title,
       series: newSeries,
     };
@@ -137,7 +137,7 @@ async function generalLinkConverter(generalLink: CiteNewsTemplate | GeneralLinkT
   return `{{nrg|${authors}|${title}|${match[3]}|${otherWords}|${series}|${match[2] || ''}}}`;
 }
 
-// const writersRegex = /דנה ויילר|ענת שיחור-אהרונסון|מקור ראשון|בן זגגי|רגב גולדמן|קלמן ליבסקינד|אור גלזר|אהוד פירר|רגב גולדמן|בן דרור ימיני|אחיקם משה דוד|ערן סורוקה|יהונתן גפן|חני יודל|עמרי מניב|רותי קדוש|עמרי גלפרין|אלמוג שריד|דביר בר|רונן טל|מוריה בן יוסף|שחר אורן|עודד מרום|עדי שבת|תמרה דקל|צח יוקד|מאיר שניצר|אלון הדר|כרמית ספיר ויץ|דניאל שחק|יעל פרידסון|נחום דידי|רוי רגב|שגיא כהן|רותי רוסו|יעל עופר|יובל גורן|אסף גבור|ניב גלבוע|יעקב זיו|גילי איזיקוביץ|תמר פרלשטיין|אסף רוזן|ערן סויסה|ברק רביד|אלישיב רייכנר|זאב קם|ארי גלהר|אבי זעירא|רון קסלר|אורי בינדר|סוכנויות הידיעות|עמית כהן|דליה מזורי|תומר ולמר|ירון ששון|לירן דנש|טל לאור|הרב יהודה ברנדס|אורי גליקמן|דורית גבאי|אסף גור|יונתן לוי|אורי גלזר|אורי יבלונקה|חן קוטסבר|יוחאי עופר|פליקס פריש|יניב טוכמן|אליענה שפר|ליאת רון|רוביק רוזנטל|אלי לוי|רן יגיל|חזי כרמל|אלעד דויטש|יהודה שרוני|מנחם בן|איתמר ענברי|טל שנידר|טל שניידר|ענבל שתיוי|ארז בן[- ]ארי|אמיר בוחבוט|מרב בטיטו(?:[- ])?(?:פריד)?|יאיר קלדור|אריק בנדר|יוסי מזרחי|רון מיברג|רון לוין|אריאל כהנא|נתן זהבי|שלום ירושלמי|עופר שלח|עפר שלח|אראל סג"ל|רועי שרון|אלכס דורון/g;
+// const authorsRegex = /דנה ויילר|ענת שיחור-אהרונסון|מקור ראשון|בן זגגי|רגב גולדמן|קלמן ליבסקינד|אור גלזר|אהוד פירר|רגב גולדמן|בן דרור ימיני|אחיקם משה דוד|ערן סורוקה|יהונתן גפן|חני יודל|עמרי מניב|רותי קדוש|עמרי גלפרין|אלמוג שריד|דביר בר|רונן טל|מוריה בן יוסף|שחר אורן|עודד מרום|עדי שבת|תמרה דקל|צח יוקד|מאיר שניצר|אלון הדר|כרמית ספיר ויץ|דניאל שחק|יעל פרידסון|נחום דידי|רוי רגב|שגיא כהן|רותי רוסו|יעל עופר|יובל גורן|אסף גבור|ניב גלבוע|יעקב זיו|גילי איזיקוביץ|תמר פרלשטיין|אסף רוזן|ערן סויסה|ברק רביד|אלישיב רייכנר|זאב קם|ארי גלהר|אבי זעירא|רון קסלר|אורי בינדר|סוכנויות הידיעות|עמית כהן|דליה מזורי|תומר ולמר|ירון ששון|לירן דנש|טל לאור|הרב יהודה ברנדס|אורי גליקמן|דורית גבאי|אסף גור|יונתן לוי|אורי גלזר|אורי יבלונקה|חן קוטסבר|יוחאי עופר|פליקס פריש|יניב טוכמן|אליענה שפר|ליאת רון|רוביק רוזנטל|אלי לוי|רן יגיל|חזי כרמל|אלעד דויטש|יהודה שרוני|מנחם בן|איתמר ענברי|טל שנידר|טל שניידר|ענבל שתיוי|ארז בן[- ]ארי|אמיר בוחבוט|מרב בטיטו(?:[- ])?(?:פריד)?|יאיר קלדור|אריק בנדר|יוסי מזרחי|רון מיברג|רון לוין|אריאל כהנא|נתן זהבי|שלום ירושלמי|עופר שלח|עפר שלח|אראל סג"ל|רועי שרון|אלכס דורון/g;
 const remains: string[][] = [];
 
 async function externalLinkConverter(originalText: string, { link, text }: WikiLink, wikiPageTitle: string) {
@@ -147,7 +147,7 @@ async function externalLinkConverter(originalText: string, { link, text }: WikiL
     return null;
   }
   const {
-    remainText, writerText, date, match,
+    remainText, authorText, date, match,
   } = converterData;
   if (remainText) {
     remains.push([remainText, originalText]);
@@ -162,7 +162,7 @@ async function externalLinkConverter(originalText: string, { link, text }: WikiL
     return null;
   }
 
-  return `{{nrg|${writerText}|${text}|${match[3]}|${date}|${series}|${match[2] || ''}}}`;
+  return `{{nrg|${authorText}|${text}|${match[3]}|${date}|${series}|${match[2] || ''}}}`;
 }
 
 export default async function nrgTemplate() {

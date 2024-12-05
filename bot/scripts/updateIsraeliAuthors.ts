@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import NewWikiApi from '../wiki/NewWikiApi';
 
-export default async function updateIsraeliWriters() {
+export default async function updateIsraeliAuthors() {
   const api = NewWikiApi();
   await api.login();
   const generator = api.recursiveSubCategories('סגל כלי תקשורת בישראל');
@@ -17,5 +17,5 @@ export default async function updateIsraeliWriters() {
     }
   }
 
-  await fs.writeFile('bot/data/israeli-writers.json', JSON.stringify(Array.from(pages), null, 2));
+  await fs.writeFile('bot/data/israeli-authors.json', JSON.stringify(Array.from(pages), null, 2));
 }

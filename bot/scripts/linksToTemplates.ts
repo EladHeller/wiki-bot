@@ -8,7 +8,7 @@ import { findTemplates, getTemplateArrayData, getTemplateKeyValueData } from '..
 import type { CiteNewsTemplate, GeneralLinkTemplateData } from './types';
 import { getParagraphContent } from '../wiki/paragraphParser';
 import { WikiLink, getExternalLinks } from '../wiki/wikiLinkParser';
-import israeliWriters from '../data/israeli-writers.json';
+import israeliAuthors from '../data/israeli-authors.json';
 import formalizedDateFormat from '../utilities/formalizedDateFormat';
 
 const citeNewsAllowedKeys = ['title', 'url', 'date', 'last', 'first', 'author', 'access-date', 'newspaper', 'access-date'];
@@ -31,7 +31,7 @@ type BasicConverterData = {
   link: string;
   text: string;
   remainText: string;
-  writerText: string;
+  authorText: string;
   date: string;
   match: RegExpMatchArray;
 }
@@ -43,8 +43,9 @@ type TemplateFixData = {
 }
 export type PageData = {
   date?: string;
-  writer?: string;
+  author?: string;
   title?: string;
+  dateModified?: string;
 }
 
 export function basicConverter(
@@ -66,13 +67,18 @@ export function basicConverter(
     .replace(text, '')
     .replace(date, '')
     .replace(pageData?.title ?? '', '')
+    .replace(pageData?.date ?? '', '')
+    .replace(pageData?.dateModified ?? '', '')
     .replace('{{כותרת קישור נוצרה על ידי בוט}}', '')
     .replace(/(?:\[\[)?nrg(?:\]\])?/gi, '')
     .replace(/(?:\[\[)?מעריב(?:\]\])?/g, '')
     .replace(/[מב]?אתר/g, '')
     .replace(/ב-/g, '')
     .replace(/ה-/g, '')
+    .replace(/(?:\[\[)?ynet(?:\]\])?/g, '')
+    .replace(/(?:\[\[)?ידיעות(?: אחרונות)?(?:\]\])?/g, '')
     .replace(/זמן תל אביב/g, '')
+    .replace(/ב-/g, '')
     .replace(/ ב /g, '')
     .replace(/מתוך/g, '')
     .replace(/ראיון/g, '')
@@ -85,6 +91,11 @@ export function basicConverter(
     .replace(/פורסם/g, '')
     .replace(/סופשבוע/g, '')
     .replace(/סגנון/g, '')
+    .replace(/מוסף ל?שבת/g, '')
+    .replace(/ערוץ הבריאות/g, '')
+    .replace(/טור דעה(?: על)?/g, '')
+    .replace(/פנאי פלוס/g, '')
+    .replace(/ביקורת/g, '')
     .replace(/נשים/g, '')
     .replace(/גליון/g, '')
     .replace(/מקור ראשון/g, '')
@@ -105,33 +116,33 @@ export function basicConverter(
     .replace(/ד"ר/g, '')
     .replace(/{{סרטונים}}/g, '');
 
-  let writers: string[] = [];
-  if (pageData?.writer) {
-    writers.push(pageData.writer);
+  let authors: string[] = [];
+  if (pageData?.author) {
+    authors.push(pageData.author);
   }
-  for (const writer of israeliWriters) {
-    if (remainText.includes(writer)) {
-      writers.push(writer);
+  for (const author of israeliAuthors) {
+    if (remainText.includes(author)) {
+      authors.push(author);
     }
   }
   const hebrewNames = findHebrewFullNames(remainText);
   for (const name of hebrewNames) {
     if (remainText.includes(name)) {
-      writers.push(name);
+      authors.push(name);
     }
   }
-  writers = Array.from(new Set(writers));
-  writers.forEach((writer) => {
-    remainText = remainText.replaceAll(writer, '');
+  authors = Array.from(new Set(authors));
+  authors.forEach((author) => {
+    remainText = remainText.replaceAll(author, '');
   });
-  const lastWriter = writers.pop();
-  let writerText = '';
-  if (pageData?.writer) {
-    writerText = pageData.writer;
-  } else if (!writers.length) {
-    writerText = lastWriter || '';
+  const lastAuthor = authors.pop();
+  let authorText = '';
+  if (pageData?.author) {
+    authorText = pageData.author;
+  } else if (!authors.length) {
+    authorText = lastAuthor || '';
   } else {
-    writerText = `${writers.join(', ')} ו${lastWriter}`;
+    authorText = `${authors.join(', ')} ו${lastAuthor}`;
   }
 
   remainText = remainText.replace(/\s+/g, '')
@@ -139,7 +150,7 @@ export function basicConverter(
 
   return {
     remainText,
-    writerText,
+    authorText,
     date: formalizedDateFormat(date, wikiPageTitle) || date || '',
     link,
     text,
@@ -172,8 +183,8 @@ export async function pageConvertLinksToTemplate(page: WikiPage, api: IWikiApi, 
   all.push(page.title);
   const isContentContains = content.includes(config.url);
   if (!isContentContains) {
-    console.log('Not contains', page.title);
-    notFoundLinks.push(page.title);
+    // console.log('Not contains', page.title);
+    // notFoundLinks.push(page.title);
     return;
   }
 
