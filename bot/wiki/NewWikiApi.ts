@@ -211,10 +211,10 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
   }
 
   async function* search(text:string) {
-    const props = encodeURIComponent('revisions|extlinks');
+    const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content|ids');
 
-    const path = `?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=500`
+    const path = `?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=50`
     + `&prop=${props}`
     + `&rvprop=${rvprops}&rvslots=*`;
 

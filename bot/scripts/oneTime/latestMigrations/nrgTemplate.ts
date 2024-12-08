@@ -1,21 +1,96 @@
 /* eslint-disable max-len */
 import 'dotenv/config';
+import { JSDOM } from 'jsdom';
 import fs from 'fs/promises';
 import NewWikiApi from '../../../wiki/NewWikiApi';
-import linksToTemplates from '../../linksToTemplates';
+import linksToTemplates, { basicConverter, PageData } from '../../linksToTemplates';
 import { WikiLink } from '../../../wiki/wikiLinkParser';
 import { CiteNewsTemplate, GeneralLinkTemplateData } from '../../types';
-import israeliWriters from '../../../data/israeli-writers.json';
+import { getContent } from '../../../scraping';
+import { getFullYear, getLocalDate } from '../../../utilities';
 
 const oldLink = 'www.nrg.co.il/online';
 
-const pages: string[] = [];
-const updatedPages: string[] = [];
-const errorPages: string[] = [];
-
-const linkRegex = /https?:\/\/www\.nrg\.co\.il\/online\/(\d{1,5}|archive)\/ART(\d{1,5})?\/(\d{1,5}(?:\/\d{1,5})?)\.html/i;
+const linkRegex = /https?:\/\/www\.nrg\.co\.il\/online\/(?<series>\d{1,5}|archive)\/ART(?<artNumber>\d{1,5})?\/(?<id>\d{1,5}(?:\/\d{1,5})?)\.html/i;
 
 const notFountPage = 'https://www.makorrishon.co.il/nrg/images/stuff/404_page/404_page.html';
+
+/*
+https://www.makorrishon.co.il/nrg/online/1/ART/789/163.html
+https://www.makorrishon.co.il/nrg/online/1/ART1/451/288.html
+https://www.makorrishon.co.il/nrg/online/15/ART1/072/964.html
+https://www.makorrishon.co.il/nrg/online/archive/ART94/521.html
+https://www.makorrishon.co.il/nrg/online/54/ART2/060/324.html
+https://www.makorrishon.co.il/nrg/online/15/ART1/072/964.html
+https://www.makorrishon.co.il/nrg/online/71/ART2/350/295.html
+https://www.makorrishon.co.il/nrg/online/archive/ART/474/584.html
+https://www.makorrishon.co.il/nrg/online/20/ART2/387/424.html
+*/
+async function getDataFromPage(link: string, articleTitle: string): Promise<PageData & {series: string}| null> {
+  const match = link.match(linkRegex);
+  const { id, series, artNumber } = match?.groups ?? {};
+  let newSeries = series;
+  if (!id || !series) {
+    console.log('Failed to get article id or series', link, articleTitle, { id, series, artNumber });
+    return null;
+  }
+  const url = `https://www.makorrishon.co.il/nrg/online/${series ?? '1'}/ART${artNumber ?? ''}/${id}.html`;
+  try {
+    let date: string | undefined;
+    let author: string | undefined;
+    let dom = await JSDOM.fromURL(url);
+    if (dom.window.location.href === notFountPage) {
+      dom = await JSDOM.fromURL(`https://www.makorrishon.co.il/nrg/online/1/ART${artNumber ?? ''}/${id}.html`);
+      newSeries = '1';
+    }
+    if (dom.window.location.href === notFountPage) {
+      dom = await JSDOM.fromURL(`https://www.makorrishon.co.il/nrg/online/archive/ART${artNumber ?? ''}/${id}.html`);
+      newSeries = 'archive';
+    }
+    if (dom.window.location.href === notFountPage) {
+      console.log('404', url, articleTitle);
+      return null;
+    }
+
+    // date
+    const dateText = getContent(dom.window.document, '#articleCBar > .cdat, .article-autor > .cdat, #article-autor > .cdat, .newsVitzCredit, #art_date, .opinionMainVitzBody, .articleBar > h4, #articleBody > .spacer') ?? '';
+    const dateMatch = dateText.match(/(?<day>\d{1,2})[/.](?<month>\d{1,2})[/.](?<year>\d{2,4})/);
+    const { year, month, day } = dateMatch?.groups ?? {};
+    if (year && month && day) {
+      date = getLocalDate(`${getFullYear(year)}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+    } else {
+      console.log('Failed to get date from page', url, articleTitle);
+    }
+
+    // author
+    author = getContent(dom.window.document, '#art_credit')?.trim() ?? '';
+    if (!author) {
+      author = dateText;
+      const hourMatch = dateText.match(/(\d{1,2}:\d{1,2})/);
+
+      if (hourMatch) {
+        author = author.replace(hourMatch[0], '');
+      }
+      if (dateMatch) {
+        author = author.replace(dateMatch[0], '');
+      }
+
+      author = author.replace(/[,|:]/g, '').replace('מאת', '').replace('changeClass();', '').trim();
+    }
+    // title
+    const title = getContent(dom.window.document, '#titleS1, #article > h1, #top_story_title, #articleBody > h1')?.trim() ?? undefined;
+
+    return {
+      date,
+      author,
+      title,
+      series: newSeries,
+    };
+  } catch (e) {
+    console.log('Failed to get data from page', url, articleTitle, e);
+    return null;
+  }
+}
 
 async function getSeries(match: RegExpMatchArray) {
   const originalUrl = `https://www.makorrishon.co.il/nrg/online/${match[1]}/ART${match[2] || ''}/${match[3]}.html`;
@@ -62,83 +137,32 @@ async function generalLinkConverter(generalLink: CiteNewsTemplate | GeneralLinkT
   return `{{nrg|${authors}|${title}|${match[3]}|${otherWords}|${series}|${match[2] || ''}}}`;
 }
 
-const writersRegex = /דנה ויילר|ענת שיחור-אהרונסון|מקור ראשון|בן זגגי|רגב גולדמן|קלמן ליבסקינד|אור גלזר|אהוד פירר|רגב גולדמן|בן דרור ימיני|אחיקם משה דוד|ערן סורוקה|יהונתן גפן|חני יודל|עמרי מניב|רותי קדוש|עמרי גלפרין|אלמוג שריד|דביר בר|רונן טל|מוריה בן יוסף|שחר אורן|עודד מרום|עדי שבת|תמרה דקל|צח יוקד|מאיר שניצר|אלון הדר|כרמית ספיר ויץ|דניאל שחק|יעל פרידסון|נחום דידי|רוי רגב|שגיא כהן|רותי רוסו|יעל עופר|יובל גורן|אסף גבור|ניב גלבוע|יעקב זיו|גילי איזיקוביץ|תמר פרלשטיין|אסף רוזן|ערן סויסה|ברק רביד|אלישיב רייכנר|זאב קם|ארי גלהר|אבי זעירא|רון קסלר|אורי בינדר|סוכנויות הידיעות|עמית כהן|דליה מזורי|תומר ולמר|ירון ששון|לירן דנש|טל לאור|הרב יהודה ברנדס|אורי גליקמן|דורית גבאי|אסף גור|יונתן לוי|אורי גלזר|אורי יבלונקה|חן קוטסבר|יוחאי עופר|פליקס פריש|יניב טוכמן|אליענה שפר|ליאת רון|רוביק רוזנטל|אלי לוי|רן יגיל|חזי כרמל|אלעד דויטש|יהודה שרוני|מנחם בן|איתמר ענברי|טל שנידר|טל שניידר|ענבל שתיוי|ארז בן[- ]ארי|אמיר בוחבוט|מרב בטיטו(?:[- ])?(?:פריד)?|יאיר קלדור|אריק בנדר|יוסי מזרחי|רון מיברג|רון לוין|אריאל כהנא|נתן זהבי|שלום ירושלמי|עופר שלח|עפר שלח|אראל סג"ל|רועי שרון|אלכס דורון/g;
-const dateRegex = /\d{1,2}(?:[.-/])\d{1,2}(?:[.-/])(?:\[\[)?\d{2,4}(?:\]\])?/;
-const otherDateRegex = /(?:(?:\[\[)?\d{1,2}[\s,-]{1,3})?[א-ת]{3,8}(?:\]\])?[\s,-]{1,3}(?:\[\[)?\d{4}(?:\]\])?/;
-
+// const authorsRegex = /דנה ויילר|ענת שיחור-אהרונסון|מקור ראשון|בן זגגי|רגב גולדמן|קלמן ליבסקינד|אור גלזר|אהוד פירר|רגב גולדמן|בן דרור ימיני|אחיקם משה דוד|ערן סורוקה|יהונתן גפן|חני יודל|עמרי מניב|רותי קדוש|עמרי גלפרין|אלמוג שריד|דביר בר|רונן טל|מוריה בן יוסף|שחר אורן|עודד מרום|עדי שבת|תמרה דקל|צח יוקד|מאיר שניצר|אלון הדר|כרמית ספיר ויץ|דניאל שחק|יעל פרידסון|נחום דידי|רוי רגב|שגיא כהן|רותי רוסו|יעל עופר|יובל גורן|אסף גבור|ניב גלבוע|יעקב זיו|גילי איזיקוביץ|תמר פרלשטיין|אסף רוזן|ערן סויסה|ברק רביד|אלישיב רייכנר|זאב קם|ארי גלהר|אבי זעירא|רון קסלר|אורי בינדר|סוכנויות הידיעות|עמית כהן|דליה מזורי|תומר ולמר|ירון ששון|לירן דנש|טל לאור|הרב יהודה ברנדס|אורי גליקמן|דורית גבאי|אסף גור|יונתן לוי|אורי גלזר|אורי יבלונקה|חן קוטסבר|יוחאי עופר|פליקס פריש|יניב טוכמן|אליענה שפר|ליאת רון|רוביק רוזנטל|אלי לוי|רן יגיל|חזי כרמל|אלעד דויטש|יהודה שרוני|מנחם בן|איתמר ענברי|טל שנידר|טל שניידר|ענבל שתיוי|ארז בן[- ]ארי|אמיר בוחבוט|מרב בטיטו(?:[- ])?(?:פריד)?|יאיר קלדור|אריק בנדר|יוסי מזרחי|רון מיברג|רון לוין|אריאל כהנא|נתן זהבי|שלום ירושלמי|עופר שלח|עפר שלח|אראל סג"ל|רועי שרון|אלכס דורון/g;
 const remains: string[][] = [];
 
-async function externalLinkConverter(originalText: string, { link, text }: WikiLink) {
-  const match = link.match(linkRegex);
-  if (!match) {
+async function externalLinkConverter(originalText: string, { link, text }: WikiLink, wikiPageTitle: string) {
+  const pageData = await getDataFromPage(link, originalText);
+  const converterData = basicConverter(originalText, { link, text }, linkRegex, pageData, wikiPageTitle);
+  if (!converterData) {
     return null;
   }
-  const writersMatch = Array.from(originalText.matchAll(writersRegex));
-  let writers = writersMatch.map((writerMatch) => writerMatch[0]);
-  const date = originalText.match(dateRegex)?.[0] || originalText.match(otherDateRegex)?.[0] || '';
-  let remainText = originalText;
-  for (const writer of israeliWriters) {
-    if (originalText.includes(writer)) {
-      writers.push(writer);
-    }
-  }
-  writers = Array.from(new Set(writers));
-  writers.forEach((writer) => {
-    remainText = remainText.replaceAll(writer, '');
-  });
-
-  const lastWriter = writers.pop();
-  let writerText = '';
-  if (!writers.length) {
-    writerText = lastWriter || '';
-  } else {
-    writerText = `${writers.join(', ')} ו${lastWriter}`;
-  }
-
-  remainText = remainText
-    .replace(link, '')
-    .replace(text, '')
-    .replace(date, '')
-    .replace('{{כותרת קישור נוצרה על ידי בוט}}', '')
-    .replace(/(?:\[\[)?nrg(?:\]\])?/gi, '')
-    .replace(/(?:\[\[)?מעריב(?:\]\])?/g, '')
-    .replace(/[מב]?אתר/g, '')
-    .replace(/ב-/g, '')
-    .replace(/זמן תל אביב/g, '')
-    .replace(/ ב /g, '')
-    .replace(/מתוך/g, '')
-    .replace(/ראיון/g, '')
-    .replace(/חדשות/g, '')
-    .replace(/המקוון/g, '')
-    .replace(/ניו אייג'/g, '')
-    .replace(/בתאריך/g, '')
-    .replace(/כתבה/g, '')
-    .replace(/מאת/g, '')
-    .replace(/כתבת/g, '')
-    .replace(/ארכיון/g, '')
-    .replace(/עיתונאי/g, '')
-    .replace(/שליפות/g, '')
-    .replace(/יהדות/g, '')
-    .replace(/{{כ}}/g, '')
-    .replace(/{{סרטונים}}/g, '')
-    .replace(/\d{1,2}[\s,-]{1,3}[א-ת]{4,8}[\s,-]{1,3}\d{4}/g, '')
-    .replace(/\s+/g, '')
-    .replace(/\d{1,2}(?:[.-/])\d{1,2}(?:[.-/])\d{2,4}/g, '')
-    .replace(/[[\],*()|:.'"–ו-]/g, '');
+  const {
+    remainText, authorText, date, match,
+  } = converterData;
   if (remainText) {
     remains.push([remainText, originalText]);
     return null;
   }
   let series: string|null = match[1];
   if (!['1', 'archive'].includes(series)) {
-    series = await getSeries(match);
+    series = pageData?.series ?? null;
   }
 
   if (!series) {
     return null;
   }
 
-  return `{{nrg|${writerText}|${text}|${match[3]}|${date}|${series}|${match[2] || ''}}}`;
+  return `{{nrg|${authorText}|${text}|${match[3]}|${date}|${series}|${match[2] || ''}}}`;
 }
 
 export default async function nrgTemplate() {
@@ -151,9 +175,5 @@ export default async function nrgTemplate() {
     generalLinkConverter,
   });
 
-  console.log('Pages:', pages.length);
-  console.log('Updated:', updatedPages.length);
-  console.log('Errors:', errorPages.length);
-  console.log('Error pages:', errorPages.toString());
   await fs.writeFile('remains.log', remains.join('\n'));
 }

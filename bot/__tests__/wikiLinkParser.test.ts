@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import {
   getInnerLinks, getInnerLink, getExternalLinks, getExternalLink,
 } from '../wiki/wikiLinkParser';
@@ -58,6 +59,7 @@ describe('getInnerLinks', () => {
       params: ['שמאל', '105px', 'הדמות המופיעה בתמונה מתוך לוח שנה עברי'],
     }];
     const result = getInnerLinks(mockText);
+
     expect(result).toStrictEqual(expectedLinks);
   });
 });

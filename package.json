@@ -4,7 +4,7 @@
   "description": "wiki-bot",
   "main": "dist/index.js",
   "scripts": {
-    "lint:test": "eslint ./**/*.ts ./send-email/**/*.mjs ./xmlbot/**/*.js --max-warnings 0",
+    "lint:test": "eslint ./**/*.ts ./bot/**/*.ts ./bot/*.ts ./send-email/**/*.mjs ./xmlbot/**/*.js --max-warnings 0",
     "type-check": "tsc --noEmit",
     "test": "jest --coverage",
     "build": "rm -rf dist && tsc --project tsconfig.build.json",
@@ -28,6 +28,7 @@
     "axios": "^1.7.8",
     "axios-cookiejar-support": "^5.0.2",
     "dotenv": "^16.4.5",
+    "find-hebrew-names": "^0.0.2",
     "jsdom": "^25.0.1",
     "openai": "^4.69.0",
     "tough-cookie": "^4.1.3"
@@ -39,6 +40,7 @@
     "@aws-sdk/client-ses": "^3.699.0",
     "@babel/preset-env": "^7.26.0",
     "@babel/preset-typescript": "^7.26.0",
+    "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.14",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.0.2",

@@ -80,7 +80,7 @@ export async function checkHamichlol(title: string, wikipediaTitle = title) {
     }
     console.log(`Is from Hamichlol?: ${wikipediaTitle}`);
     return checkCopyViolations(wikipediaTitle, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
-  } catch (e) {
+  } catch {
     return null;
   }
 }

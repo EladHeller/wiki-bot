@@ -1,12 +1,14 @@
 import 'dotenv/config';
-import NewWikiApi from '../wiki/NewWikiApi';
+import { JSDOM } from 'jsdom';
 
 export async function main() {
-  const api = NewWikiApi();
   try {
-    await api.login();
-    await api.create('User:SapperBot/test', 'test', 'Hello, world!');
-    console.log('Done');
+    await JSDOM.fromURL('https://kineret.org.il/');
+  } catch (e) {
+    console.error(e);
+  }
+  try {
+    await fetch('https://kineret.org.il/');
   } catch (e) {
     console.error(e);
   }

@@ -1,8 +1,9 @@
+import { describe, expect, it } from '@jest/globals';
 import { getArguments } from '../decorators/getArguments';
 
 describe('getArguments', () => {
   it('should parse args from function', () => {
-    // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars
     function a({ wikiApi, asdasd }, b: string,     c: number) {
     }
 
@@ -10,7 +11,7 @@ describe('getArguments', () => {
   });
 
   it('should parse args from arrow function', () => {
-    // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars
     const a = ({ wikiApi, asdasd }, b: string, c: number) => {
     };
 
@@ -18,17 +19,17 @@ describe('getArguments', () => {
   });
 
   it('should parse args with comments', () => {
-    // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars
     const a = (//
       // eslint-disable-next-line indent
 // /* comment */
-/* eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars */ // eslint-disable-line indent
+/* eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars */ // eslint-disable-line indent
       { wikiApi,  /* comment //  */  asdasd }, /* comment */
       /*
-    eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars
+    eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars
     */
       b: string,
-      // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, indent, spaced-comment, comma-spacing
+      // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, indent, spaced-comment, comma-spacing, no-unused-vars
          [,e, f,/*test*/     g]: number[], //
     /** */) => {
     };
@@ -45,7 +46,7 @@ describe('getArguments', () => {
   });
 
   it('should parse empty destructure', () => {
-    // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars
     const a = ({}, b: string, []) => { // eslint-disable-line no-empty-pattern
     };
 

@@ -33,6 +33,11 @@ export function getAttr(doc: Document, selector: string, attr: string): string |
 }
 
 export function getContent(doc: Document, selector: string): string | null {
-  const element = doc.querySelector(selector);
-  return element?.textContent ?? null;
+  const elements = doc.querySelectorAll(selector);
+  for (const element of elements) {
+    if (element.textContent?.trim()) {
+      return element.textContent.trim();
+    }
+  }
+  return null;
 }

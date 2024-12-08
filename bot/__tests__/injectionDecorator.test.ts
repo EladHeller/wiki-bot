@@ -1,14 +1,18 @@
 // eslint-disable-next-line import/first
+import {
+  describe, expect, it, jest,
+} from '@jest/globals';
 import injectionDecorator, { CallbackArgs } from '../decorators/injectionDecorator';
 
 describe('injectionDecorator', () => {
   it('should inject wikiApi', async () => {
     const implemtationDictionary = {};
-    const implementationFunction = jest.fn().mockReturnValue('test');
+    const implementationFunction = jest.fn<any>().mockReturnValue('test');
     const injection = injectionDecorator(({ wikiApi }: CallbackArgs) => wikiApi, {
       wikiApi: implementationFunction,
     }, implemtationDictionary);
     const result = await injection();
+
     expect(implementationFunction).toHaveBeenCalledTimes(1);
     expect(result).toBe('test');
   });
@@ -16,7 +20,7 @@ describe('injectionDecorator', () => {
   it('should memoized results', async () => {
     const implemtationDictionary = {};
 
-    const implementationFunction = jest.fn().mockReturnValue('test');
+    const implementationFunction = jest.fn<any>().mockReturnValue('test');
     const injection = injectionDecorator(({ wikiApi }: CallbackArgs) => wikiApi, {
       wikiApi: implementationFunction,
     }, implemtationDictionary);
@@ -33,6 +37,7 @@ describe('injectionDecorator', () => {
 
   it('should failed without overrideInjection', async () => {
     const injection = injectionDecorator(({ wikiApi }: CallbackArgs) => wikiApi);
+
     await expect(injection()).rejects.toThrow('Missing username or password');
   });
 
@@ -41,6 +46,7 @@ describe('injectionDecorator', () => {
     // eslint-disable-next-line prefer-rest-params
     const injection = injectionDecorator(function foo() { return arguments[0]; });
     const result = await injection();
+
     expect(implementationFunction).not.toHaveBeenCalled();
     expect(result).toBeUndefined();
   });
@@ -50,6 +56,7 @@ describe('injectionDecorator', () => {
     // eslint-disable-next-line prefer-rest-params
     const injection = injectionDecorator((arg) => arg);
     const result = await injection();
+
     expect(implementationFunction).not.toHaveBeenCalled();
     expect(result).toBeUndefined();
   });
@@ -62,6 +69,7 @@ describe('injectionDecorator', () => {
     // @ts-ignore
     const injection = injectionDecorator(({ test }) => test);
     const result = await injection();
+
     expect(implementationFunction).not.toHaveBeenCalled();
     expect(result).toBeUndefined();
   });

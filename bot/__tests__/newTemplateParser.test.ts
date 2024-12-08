@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import {
   findTemplate, findTemplates, getTemplateArrayData, getTemplateDate, getTemplateKeyValueData,
   templateFromArrayData, templateFromKeyValueData, templateFromTemplateData,
@@ -9,6 +10,7 @@ describe('findTemplates', () => {
     const templateName = 'test';
     const title = 'test';
     const result = findTemplates(text, templateName, title);
+
     expect(result).toStrictEqual([]);
   });
 
@@ -17,6 +19,7 @@ describe('findTemplates', () => {
     const templateName = 'template';
     const title = 'test';
     const result = findTemplates(text, templateName, title);
+
     expect(result).toStrictEqual(['{{template| test}}']);
   });
 
@@ -25,6 +28,7 @@ describe('findTemplates', () => {
     const templateName = 'test';
     const title = 'test';
     const result = findTemplates(text, templateName, title);
+
     expect(result).toStrictEqual(['{{test|text=hello}}']);
   });
 
@@ -33,6 +37,7 @@ describe('findTemplates', () => {
     const templateName = 'test';
     const title = 'test';
     const result = findTemplates(text, templateName, title);
+
     expect(result).toStrictEqual(['{{test|text=hello}}', '{{test|text=world}}']);
   });
 
@@ -41,6 +46,7 @@ describe('findTemplates', () => {
     const templateName = 'template';
     const title = 'test';
     const result = findTemplates(text, templateName, title);
+
     expect(result).toStrictEqual([]);
   });
 
@@ -60,12 +66,14 @@ describe('findTemplate', () => {
   it('should finds first template', () => {
     const text = 'hello world {{template| {{test|text=hello}}{{a}}|test2}} lorem ipsum {{test|text=world}} dilor';
     const result = findTemplate(text, templateName, title);
+
     expect(result).toBe('{{test|text=hello}}');
   });
 
   it('should returns empty string if no template found', () => {
     const text = 'hello world';
     const result = findTemplate(text, templateName, title);
+
     expect(result).toBe('');
   });
 });
@@ -177,6 +185,7 @@ describe('getTemplateKeyValueData', () => {
 
   it('should handle empty template', () => {
     const result = getTemplateKeyValueData('');
+
     expect(result).toStrictEqual({});
   });
 });
@@ -187,6 +196,7 @@ describe('getTemplateDate', () => {
     const templateName = 'name';
     const title = 'Title';
     const result = getTemplateDate(templateText, templateName, title);
+
     expect(result).toStrictEqual({});
   });
 
@@ -195,6 +205,7 @@ describe('getTemplateDate', () => {
     const templateName = 'name';
     const title = 'Title';
     const result = getTemplateDate(templateText, templateName, title);
+
     expect(result.keyValueData).toStrictEqual({
       key1: 'value1',
       key2: 'value2',
@@ -207,6 +218,7 @@ describe('getTemplateDate', () => {
     const templateName = 'name';
     const title = 'Title';
     const result = getTemplateDate(templateText, templateName, title);
+
     expect(result.keyValueData).toStrictEqual({});
     expect(result.arrayData).toStrictEqual(['value1', 'value2', 'value3', '']);
   });
@@ -216,6 +228,7 @@ describe('getTemplateDate', () => {
     const templateName = 'name';
     const title = 'Title';
     const result = getTemplateDate(templateText, templateName, title);
+
     expect(result.keyValueData).toStrictEqual({});
     expect(result.arrayData).toStrictEqual(['otherValue1', 'value2', 'value3']);
   });
@@ -225,6 +238,7 @@ describe('getTemplateDate', () => {
     const templateName = 'name';
     const title = 'Title';
     const result = getTemplateDate(templateText, templateName, title);
+
     expect(result.keyValueData).toStrictEqual({
       key1: 'value1',
     });
@@ -237,6 +251,7 @@ describe('templateFromTemplateData', () => {
     const templateData = {};
     const templateName = 'name';
     const result = templateFromTemplateData(templateData, templateName);
+
     expect(result).toBe('{{name}}');
   });
 
@@ -244,6 +259,7 @@ describe('templateFromTemplateData', () => {
     const templateData = { arrayData: ['value1', 'value2', 'value3'] };
     const templateName = 'name';
     const result = templateFromTemplateData(templateData, templateName);
+
     expect(result).toBe('{{name|value1|value2|value3}}');
   });
 
@@ -251,6 +267,7 @@ describe('templateFromTemplateData', () => {
     const templateData = { keyValueData: { key1: 'value1', key2: 'value2' } };
     const templateName = 'name';
     const result = templateFromTemplateData(templateData, templateName);
+
     expect(result).toBe('{{name|key1=value1|key2=value2}}');
   });
 
@@ -261,6 +278,7 @@ describe('templateFromTemplateData', () => {
     };
     const templateName = 'name';
     const result = templateFromTemplateData(templateData, templateName);
+
     expect(result).toBe('{{name|value1|value2|key1=value1|key2=value2}}');
   });
 
@@ -268,6 +286,7 @@ describe('templateFromTemplateData', () => {
     const templateData = { keyValueData: { 'special-key': 'special=value' } };
     const templateName = 'name';
     const result = templateFromTemplateData(templateData, templateName);
+
     expect(result).toBe('{{name|special-key=special=value}}');
   });
 });
