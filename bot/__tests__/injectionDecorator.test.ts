@@ -7,7 +7,7 @@ import injectionDecorator, { CallbackArgs } from '../decorators/injectionDecorat
 describe('injectionDecorator', () => {
   it('should inject wikiApi', async () => {
     const implemtationDictionary = {};
-    const implementationFunction = jest.fn().mockReturnValue('test');
+    const implementationFunction = jest.fn<any>().mockReturnValue('test');
     const injection = injectionDecorator(({ wikiApi }: CallbackArgs) => wikiApi, {
       wikiApi: implementationFunction,
     }, implemtationDictionary);
@@ -20,7 +20,7 @@ describe('injectionDecorator', () => {
   it('should memoized results', async () => {
     const implemtationDictionary = {};
 
-    const implementationFunction = jest.fn().mockReturnValue('test');
+    const implementationFunction = jest.fn<any>().mockReturnValue('test');
     const injection = injectionDecorator(({ wikiApi }: CallbackArgs) => wikiApi, {
       wikiApi: implementationFunction,
     }, implemtationDictionary);
