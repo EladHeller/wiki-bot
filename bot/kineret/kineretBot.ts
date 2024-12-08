@@ -25,7 +25,7 @@ const articleName = 'תבנית:מפלס הכנרת';
 // }
 
 async function getKineretLevel2() {
-  const kinneretDocument = await JSDOM.fromURL('https://kineret.org.il/');
+  const kinneretDocument = await fetch('https://kineret.org.il/').then((res) => res.text()).then((html) => new JSDOM(html));
   const levelElement = kinneretDocument.window.document.querySelector('#hp_miflas');
   const date = levelElement?.querySelector('.hp_miflas_date')?.textContent?.match(DATE_REGEX);
   const level = levelElement?.querySelector('.hp_miflas_height')?.textContent;
