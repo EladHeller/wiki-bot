@@ -22,10 +22,6 @@ export interface IWikiApi {
   create(
     articleTitle: string, summary: string, content: string
   ): Promise<any>;
-    /**
-   * @deprecated Use articleContent api instead
-   */
-  getArticleContent(title: string): Promise<string | undefined>;
   articleContent(title: string): Promise<{content: string, revid: number} | null>;
   externalUrl(link: string, protocol?: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<Partial<WikiPage>[]>;
@@ -155,16 +151,6 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     };
 
     return request('?action=edit&format=json&assert=bot&bot=true', 'post', objectToFormData(data));
-  }
-
-  async function getArticleContent(title: string): Promise<string | undefined> {
-    const path = `?action=query&format=json&rvprop=content&rvslots=*&prop=revisions&titles=${
-      encodeURIComponent(title)
-    }`;
-    const result = await request(path);
-    const wikiPages:Record<string, Partial<WikiPage>> = result.query.pages;
-
-    return Object.values(wikiPages)[0]?.revisions?.[0].slots.main['*'];
   }
 
   async function articleContent(title: string): Promise<{content: string, revid: number} | null> {
@@ -400,7 +386,6 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     recursiveSubCategories,
     backlinksTo,
     updateArticle,
-    getArticleContent,
     articleContent,
     externalUrl,
     categroyTitles,

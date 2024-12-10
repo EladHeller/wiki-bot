@@ -68,10 +68,11 @@ export async function updateLevel(
   const { date, level } = levelData;
   const articleName = `${baseArticleName}/נתונים`;
 
-  const content = await api.getArticleContent(articleName);
-  if (!content) {
+  const contentResult = await api.articleContent(articleName);
+  if (!contentResult) {
     throw new Error('Failed to get article content');
   }
+  const { content, revid } = contentResult;
   const template = findTemplate(content, templateName, articleName);
   const oldTemplate = template;
   const templateData = getTemplateKeyValueData(template);
@@ -104,7 +105,7 @@ export async function updateLevel(
   }, templateName, true);
   const newContent = content.replace(oldTemplate, newTemplateText);
 
-  await api.updateArticle(articleName, 'עדכון מפלס', newContent);
+  await api.edit(articleName, 'עדכון מפלס', newContent, revid);
 
   await api.purge([baseArticleName]);
 }

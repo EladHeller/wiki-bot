@@ -49,9 +49,9 @@ function textFromMatch(
 }
 
 async function getLastRun(api: ReturnType<typeof NewWikiApi>): Promise<string> {
-  const lastRunFromWiki = await api.getArticleContent(LAST_RUN_PAGE);
-  if (lastRunFromWiki) {
-    return lastRunFromWiki;
+  const lastRunResult = await api.articleContent(LAST_RUN_PAGE);
+  if (lastRunResult) {
+    return lastRunResult.content;
   }
   const hours = isAfterShabathOrHolliday() ? 36 : 12;
 

@@ -59,10 +59,11 @@ export default async function renameParlementMembersCategories(api: IWikiApi) {
     const isMale = !old.includes('חברות כנסת');
 
     try {
-      const content = await api.getArticleContent(old);
-      if (!content) {
+      const contentResult = await api.articleContent(old);
+      if (!contentResult) {
         throw new Error(`No content for page ${old}`);
       }
+      const { content } = contentResult;
       if (!content.includes('#הפניה [[:קטגוריה')) {
         throw new Error(`No reference for page ${oldCategory}`);
       }
