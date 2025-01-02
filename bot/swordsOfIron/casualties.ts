@@ -72,10 +72,11 @@ export default async function casualtiesBot() {
     }
   }
 
-  const content = await api.getArticleContent(templateName);
-  if (!content) {
+  const contentResult = await api.articleContent(templateName);
+  if (!contentResult) {
     throw new Error('Failed to get article content');
   }
+  const { content, revid } = contentResult;
   const rows = content.split('\n').filter((row) => row.trim().startsWith('|'));
   let newContent = replaceData(content, rows, 'חיילים', casualties.deathsAll);
   newContent = replaceData(newContent, rows, 'חיילים בעזה', casualties.deathsInsideGaza);
@@ -85,7 +86,7 @@ export default async function casualtiesBot() {
     console.log('No changes');
     return;
   }
-  await api.updateArticle(templateName, newContent, 'בוט: עדכון נתוני אבדות');
+  await api.edit(templateName, newContent, 'בוט: עדכון נתוני אבדות', revid);
 }
 
 export const main = shabathProtectorDecorator(casualtiesBot);
