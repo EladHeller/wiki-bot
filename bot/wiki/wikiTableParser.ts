@@ -112,14 +112,14 @@ export function buildTableRow(
   return rowStr;
 }
 
-export function buildTable(headers: string[], rows: string[][]): string {
-  return `{| class="wikitable sortable"
+export function buildTable(headers: string[], rows: string[][], sortable = true): string {
+  return `{| class="wikitable${sortable ? ' sortable' : ''}"
 ! ${headers.join(' !! ')}
 ${rows.map((row) => buildTableRow(row)).join('')}\n|}`;
 }
 
-export function buildTableWithStyle(headers: string[], rows: TableRow[]): string {
-  return `{| class="wikitable sortable"
+export function buildTableWithStyle(headers: string[], rows: TableRow[], sortable = true): string {
+  return `{| class="wikitable${sortable ? ' sortable' : ''}"
 ! ${headers.join(' !! ')}
 ${rows.map((row) => buildTableRow(row.fields, row.style, row.isHeader)).join('')}\n|}`;
 }
