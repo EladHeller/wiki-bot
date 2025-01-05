@@ -13,54 +13,54 @@ interface IMediaForestBotModel {
 }
 
 interface MediaForestConfig {
-    url: string;
-    page: string;
+  baseUrl: string;
+  page: string;
 }
 
-const defaultConfig: MediaForestConfig = {
-  url: 'https://mediaforest-group.com/weekly_charts.html',
-  page: 'ויקיפדיה:בוט/בוט מצעדים/מדיה פורסט',
-};
+const lastWeekPath = 'שבוע אחרון';
+
+async function getContent(wikiApi: IWikiApi, title: string) {
+  const result = await wikiApi.articleContent(title);
+  if (!result || !result.content) {
+    throw new Error(`Missing content for ${title}`);
+  }
+  if (!result.revid) {
+    throw new Error(`Missing revid for ${title}`);
+  }
+
+  return result;
+}
 
 export default function MediaForestBotModel(
   wikiApi: IWikiApi,
-  config: MediaForestConfig = defaultConfig,
+  config: MediaForestConfig,
+  dataFetcher: (url: string) => Promise<any>,
 ): IMediaForestBotModel {
+  const currentYear = new Date().getFullYear();
   async function getMediaForestData() {
-    const result = await JSDOM.fromURL(config.url);
-    const { document } = result.window;
-    const table = document.querySelector('table');
-    if (!table) {
-      throw new Error('Table not found');
+    const weeks = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${currentYear}`);
+    if (!weeks || !weeks.length) {
+      throw new Error('No data found');
     }
-    const rows = table.querySelectorAll('tr');
-    const data: SongData[] = [];
-    for (const row of rows) {
-      const position = row.querySelector('td:nth-child(1)')?.textContent?.trim();
-      const cell = row.querySelector('td:nth-child(3)');
-      const artist = cell?.querySelector('b')?.textContent?.trim();
-      const title = cell?.querySelector('span')?.textContent?.trim();
-      if (!position || !artist || !title) {
-        throw new Error('Data not found in cell');
-      }
-      data.push({
-        title,
-        artist,
-        position,
-      });
+    const lastWeek = weeks[0];
+    const { content: weekContent, revid } = await getContent(wikiApi, `${config.page}/${lastWeekPath}`);
+    if (weekContent === lastWeek) {
+      console.log('No changes');
+      return [];
     }
-    return data;
+
+    const chart = await dataFetcher(`${config.baseUrl}weekly_charts/ISR/${currentYear}/${encodeURIComponent(lastWeek)}/RadioHe.json`);
+
+    await wikiApi.edit(`${config.page}/${lastWeekPath}`, 'עדכון מדיה פורסט', lastWeek, revid);
+    return chart.entries.map((entry: any) => ({
+      title: entry.title,
+      artist: entry.artist,
+      position: entry.thisweek,
+    }));
   }
 
   async function updateChartTable(data: SongData[]) {
-    const articleContent = await wikiApi.articleContent(config.page);
-    if (!articleContent || !articleContent.content) {
-      throw new Error('Article content not found');
-    }
-    if (!articleContent.revid) {
-      throw new Error('Article revid not found');
-    }
-    const { content, revid } = articleContent;
+    const { content, revid } = await getContent(wikiApi, config.page);
 
     const tablesData = parseTableText(content);
     if (tablesData.length !== 1) {
@@ -79,15 +79,11 @@ export default function MediaForestBotModel(
     });
 
     const newTableText = buildTableWithStyle(
-      tableData.rows[0].fields.map((f) => f.toString()),
+      tableData.rows[0].fields.map((f) => f.toString().trim()),
       tableData.rows.slice(1),
       false,
     );
     const newContent = content.replace(tableData.text, newTableText);
-    if (newContent === content) {
-      console.log('No changes');
-      return;
-    }
     await wikiApi.edit(config.page, 'עדכון מדיה פורסט', newContent, revid);
   }
   return {
