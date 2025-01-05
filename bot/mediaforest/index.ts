@@ -17,12 +17,13 @@ export default async function mdeiaForestBot() {
     baseUrl: 'https://mediaforest-group.com/',
     page: 'ויקיפדיה:בוט/בוט מצעדים/מדיה פורסט',
   }, defaultDataFetcher);
+
   const data = await model.getMediaForestData();
-  if (!data || !data.length) {
+  if (!data.entries?.length) {
     console.log('No data found');
     return;
   }
-  await model.updateChartTable(data);
+  await model.updateChartTable([data]);
   console.log('Media forest bot finished');
 }
 

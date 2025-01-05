@@ -7,9 +7,15 @@ interface SongData {
   position: string;
 }
 
+interface WeeklyChartData {
+  entries: SongData[];
+  week: string;
+}
+
 interface IMediaForestBotModel {
-  getMediaForestData(): Promise<SongData[]>;
-  updateChartTable(data: SongData[]): Promise<void>;
+  getMediaForestData(): Promise<WeeklyChartData>;
+  updateChartTable(data: WeeklyChartData[]): Promise<void>;
+  getOldData(start: number, end: number): Promise<WeeklyChartData[]>;
 }
 
 interface MediaForestConfig {
@@ -37,29 +43,65 @@ export default function MediaForestBotModel(
   dataFetcher: (url: string) => Promise<any>,
 ): IMediaForestBotModel {
   const currentYear = new Date().getFullYear();
-  async function getMediaForestData() {
+
+  function normalizeWeek(week: string) {
+    return week.split(' ').splice(1).map((x) => x.replaceAll('-', '.')).join('-');
+  }
+
+  async function getMediaForestData(): Promise<WeeklyChartData> {
     const weeks = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${currentYear}`);
     if (!weeks || !weeks.length) {
       throw new Error('No data found');
     }
     const lastWeek = weeks[0];
+    const lastWeekText = normalizeWeek(lastWeek);
     const { content: weekContent, revid } = await getContent(wikiApi, `${config.page}/${lastWeekPath}`);
     if (weekContent === lastWeek) {
       console.log('No changes');
-      return [];
+      return {
+        entries: [],
+        week: lastWeekText,
+      };
     }
 
     const chart = await dataFetcher(`${config.baseUrl}weekly_charts/ISR/${currentYear}/${encodeURIComponent(lastWeek)}/RadioHe.json`);
 
     await wikiApi.edit(`${config.page}/${lastWeekPath}`, 'עדכון מדיה פורסט', lastWeek, revid);
-    return chart.entries.map((entry: any) => ({
-      title: entry.title,
-      artist: entry.artist,
-      position: entry.thisweek,
-    }));
+    return {
+      entries: chart.entries.map((entry: any) => ({
+        title: entry.title,
+        artist: entry.artist,
+        position: entry.thisweek,
+      })),
+      week: lastWeekText,
+    };
   }
 
-  async function updateChartTable(data: SongData[]) {
+  async function getOldData(start: number, end: number) {
+    const data:WeeklyChartData[] = [];
+    for (let year = start; year <= end; year += 1) {
+      const weeks: string[] = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${year}`);
+      if (!weeks || !weeks.length) {
+        throw new Error('No data found');
+      }
+      for (const week of weeks) {
+        const chart = await dataFetcher(`${config.baseUrl}weekly_charts/ISR/${year}/${encodeURIComponent(week)}/RadioHe.json`);
+        const weekText = normalizeWeek(week);
+
+        data.push({
+          week: weekText,
+          entries: chart.entries.map((entry: any) => ({
+            title: entry.title,
+            artist: entry.artist,
+            position: entry.thisweek,
+          })),
+        });
+      }
+    }
+    return data;
+  }
+
+  async function updateChartTable(weeklyCharts: WeeklyChartData[]) {
     const { content, revid } = await getContent(wikiApi, config.page);
 
     const tablesData = parseTableText(content);
@@ -67,16 +109,11 @@ export default function MediaForestBotModel(
       throw new Error('Table not found');
     }
     const tableData = tablesData[0];
-    const today = new Date();
-    const daysToWeekend = 6 - today.getDay();
-    const weekRangeEndDate = new Date(today);
-    weekRangeEndDate.setDate(today.getDate() + daysToWeekend);
-    const weekRangeStartDate = new Date(weekRangeEndDate);
-    weekRangeStartDate.setDate(weekRangeStartDate.getDate() - 6);
-    const weekRangeText = `${weekRangeStartDate.getDate()}.${weekRangeStartDate.getMonth() + 1}.${weekRangeStartDate.getFullYear().toString().slice(2)}-${weekRangeEndDate.getDate()}.${weekRangeEndDate.getMonth() + 1}.${weekRangeEndDate.getFullYear().toString().slice(2)}`;
-    tableData.rows.push({
-      fields: [weekRangeText, ...data.map((d) => `"${d.title}" - (${d.artist})`)],
-    });
+    for (const weeklyChart of weeklyCharts) {
+      tableData.rows.push({
+        fields: [weeklyChart.week, ...weeklyChart.entries.map((d) => `"${d.title}" - (${d.artist})`)],
+      });
+    }
 
     const newTableText = buildTableWithStyle(
       tableData.rows[0].fields.map((f) => f.toString().trim()),
@@ -89,5 +126,6 @@ export default function MediaForestBotModel(
   return {
     getMediaForestData,
     updateChartTable,
+    getOldData,
   };
 }

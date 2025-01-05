@@ -20,7 +20,7 @@ describe('mediaForestBotModel', () => {
   describe('getMediaForestData', () => {
     it('should fetch and return chart data when there are changes', async () => {
       mockDataFetcher
-        .mockResolvedValueOnce(['2024-W10']) // weeks response
+        .mockResolvedValueOnce(['10 10.11 17.11']) // weeks response
         .mockResolvedValueOnce({ // chart response
           entries: [
             { title: 'Song1', artist: 'Artist1', thisweek: '1' },
@@ -36,26 +36,86 @@ describe('mediaForestBotModel', () => {
       const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
       const result = await model.getMediaForestData();
 
-      expect(result).toStrictEqual([
-        { title: 'Song1', artist: 'Artist1', position: '1' },
-        { title: 'Song2', artist: 'Artist2', position: '2' },
-      ]);
+      expect(result).toStrictEqual({
+        entries: [
+          { title: 'Song1', artist: 'Artist1', position: '1' },
+          { title: 'Song2', artist: 'Artist2', position: '2' },
+        ],
+
+        week: '10.11-17.11',
+      });
       expect(mockWikiApi.edit).toHaveBeenCalledTimes(1);
-      expect(mockWikiApi.edit).toHaveBeenCalledWith(`${mockConfig.page}/שבוע אחרון`, 'עדכון מדיה פורסט', '2024-W10', 123);
+      expect(mockWikiApi.edit).toHaveBeenCalledWith(`${mockConfig.page}/שבוע אחרון`, 'עדכון מדיה פורסט', '10 10.11 17.11', 123);
     });
 
     it('should return empty array when no changes', async () => {
-      mockDataFetcher.mockResolvedValueOnce(['2024-W10']);
+      mockDataFetcher.mockResolvedValueOnce(['2024 10-11 17-11']);
       mockWikiApi.articleContent.mockResolvedValue({
-        content: '2024-W10',
+        content: '2024 10-11 17-11',
         revid: 123,
       });
 
       const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
       const result = await model.getMediaForestData();
 
-      expect(result).toStrictEqual([]);
+      expect(result).toStrictEqual({
+        entries: [],
+        week: '10.11-17.11',
+      });
       expect(mockWikiApi.edit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getOldData', () => {
+    it('should fetch and save data for a single year', async () => {
+      const mockWeeks = ['10 3-5', '11 10-5'];
+      const mockChart = {
+        entries: [
+          { title: 'Song1', artist: 'Artist1', thisweek: '1' },
+          { title: 'Song2', artist: 'Artist2', thisweek: '2' },
+        ],
+      };
+
+      mockDataFetcher
+        .mockResolvedValueOnce(mockWeeks)
+        .mockResolvedValueOnce(mockChart)
+        .mockResolvedValueOnce(mockChart);
+
+      const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
+      const result = await model.getOldData(2023, 2023);
+
+      expect(result).toHaveLength(2);
+      expect(mockDataFetcher).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle multiple years', async () => {
+      mockDataFetcher
+        .mockResolvedValueOnce(['2022-W52'])
+        .mockResolvedValueOnce({ entries: [] })
+        .mockResolvedValueOnce(['2023-W01'])
+        .mockResolvedValueOnce({ entries: [] });
+
+      const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
+      const result = await model.getOldData(2022, 2023);
+
+      expect(result).toHaveLength(2);
+      expect(mockDataFetcher).toHaveBeenCalledTimes(4);
+    });
+
+    it('should throw error when no weeks found', async () => {
+      mockDataFetcher.mockResolvedValueOnce([]);
+
+      const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
+
+      await expect(model.getOldData(2023, 2023)).rejects.toThrow('No data found');
+    });
+
+    it('should handle API errors', async () => {
+      mockDataFetcher.mockRejectedValueOnce(new Error('API Error'));
+
+      const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
+
+      await expect(model.getOldData(2023, 2023)).rejects.toThrow('API Error');
     });
   });
 
@@ -74,7 +134,10 @@ describe('mediaForestBotModel', () => {
         { title: 'New Song2', artist: 'Artist2', position: '2' },
       ];
 
-      await model.updateChartTable(data);
+      await model.updateChartTable([{
+        entries: data,
+        week: '5.1.25-11.1.25',
+      }]);
 
       expect(mockWikiApi.edit).toHaveBeenCalledTimes(1);
       expect(mockWikiApi.edit).toHaveBeenCalledWith(
@@ -96,7 +159,10 @@ describe('mediaForestBotModel', () => {
         { title: 'Song1', artist: 'Artist1', position: '1' },
       ];
 
-      await expect(model.updateChartTable(data)).rejects.toThrow('Table not found');
+      await expect(model.updateChartTable([{
+        entries: data,
+        week: '5.1.25-11.1.25',
+      }])).rejects.toThrow('Table not found');
     });
   });
 
