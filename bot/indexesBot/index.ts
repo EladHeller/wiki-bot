@@ -4,8 +4,8 @@ import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from 
 import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 
 const companyNamesPage = 'תבנית:חברות מאיה/נתונים';
-const baseindexesTemplatePage = 'תבנית:מדד תל אביב בסיס';
-const indexesTemplatePage = `${baseindexesTemplatePage}/נתונים`;
+const baseIndexesTemplatePage = 'תבנית:מדד תל אביב בסיס';
+const indexesTemplatePage = `${baseIndexesTemplatePage}/נתונים`;
 const templateStart = '#switch: {{{1}}}';
 type IndexData = {
   indexName: string;
@@ -50,6 +50,7 @@ export default async function indexesBot() {
     return;
   }
   await api.edit(indexesTemplatePage, 'עדכון', newContent, revid);
+  await api.purge([baseIndexesTemplatePage]);
 }
 
 export const main = shabathProtectorDecorator(indexesBot);
