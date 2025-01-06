@@ -233,7 +233,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: Kineret-level-scheduler
-      ScheduleExpression: cron(0,30 5,7,9,11,19 ? * * *)
+      ScheduleExpression: cron(0 10,11 ? * * *)
       Targets:
         - Id: Kineret-level-function
           Arn: !GetAtt KineretLevelLambda.Arn
@@ -532,6 +532,24 @@ Resources:
       SourceArn:  !GetAtt ArchiveLogsEventRule.Arn 
       FunctionName: archive-logs-function
 
+  ArchiveLogsLogGroupInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SendEmailLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/archive-logs-function:*'
+
+  ArchiveLogsLogGroupFailedSubscription:
+    DependsOn:
+      - SendEmailLambda
+    Type: AWS::Logs::SubscriptionFilter
+    Properties: 
+      DestinationArn: !GetAtt SendEmailLambda.Arn
+      FilterPattern: Invoke Error
+      LogGroupName: '/aws/lambda/archive-logs-function'
+
 # Scripts lambda
   RunScriptsLambda:
     DependsOn:
@@ -551,3 +569,46 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+
+# Indexes
+# Arcive logs
+  IndexesBotLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: indexes-function
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/indexesBot/index.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  IndexesBotEventRule:
+    DependsOn:
+      - IndexesBotLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: indexes-bot-scheduler
+      ScheduleExpression: cron(0 18 ? * * *)
+      Targets:
+        - Id: indexes-function
+          Arn: !GetAtt IndexesBotLambda.Arn
+
+  IndexesBotInvokePermission:
+    DependsOn:
+      - IndexesBotEventRule
+      - IndexesBotLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt IndexesBotEventRule.Arn 
+      FunctionName: indexes-function

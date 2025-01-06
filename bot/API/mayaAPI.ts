@@ -4,10 +4,24 @@ import { WikiPage } from '../types';
 const mayaLinkRegex = /^https?:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/;
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';
 const jsonAllLink = 'https://mayaapi.tase.co.il/api/company/alldetails?companyId=';
+const indicesListApiUrl = 'https://api.tase.co.il/api/index/indiceslistfornavigator?idxId=undefined&lang=0';
+const indexComponentsApiUrl = 'https://api.tase.co.il/api/index/components';
+
 const companyPageLink = /https?:\/\/maya.tase.co.il\/company\//;
 const companyReportView = '?view=reports';
 const mayaGetOptions = {
   method: 'get',
+  credentials: 'include',
+  headers: {
+    'X-Maya-With': 'allow',
+    referer: 'https://maya.tase.co.il/',
+    accept: 'application/json',
+    authority: 'mayaapi.tase.co.il',
+  },
+};
+
+const mayaPostOptions = {
+  method: 'post',
   credentials: 'include',
   headers: {
     'X-Maya-With': 'allow',
@@ -150,6 +164,36 @@ export interface SymbolResult {
   englishName: string;
 }
 
+type Index = {
+  TradeDate: string;
+  TradeTime: string;
+  Name: string;
+  Id: string;
+  IndexId: string;
+  IndexHebName: string;
+  LastRate: number;
+  Change: number;
+  Turnover: number;
+  Gainers: number;
+  Decliners: number;
+  NoChanges: number;
+  TradingStage: string;
+  TradingStageDesc: string;
+  TradingStageMob: string;
+  InDay: number;
+  IndexCategoryType: string;
+  CategoryName: string;
+  IsRezef: number;
+  IsBond: boolean;
+  MarketOpen: boolean;
+}
+
+type Stock = {
+  ShortName: string;
+  Symbol: string;
+  CompanyId: number;
+}
+
 function getMayaLinkFromWikiPage(wikiPage: Partial<WikiPage>): string {
   const extLink = wikiPage.extlinks?.find((link) => link['*'].match(mayaLinkRegex))?.['*'];
   if (!extLink) {
@@ -158,6 +202,48 @@ function getMayaLinkFromWikiPage(wikiPage: Partial<WikiPage>): string {
   return extLink
     .replace(companyPageLink, jsonAllLink)
     .replace(companyReportView, '');
+}
+
+export async function getIndicesList(): Promise<Index[]> {
+  try {
+    const response = await axios(indicesListApiUrl, mayaGetOptions);
+    return response.data?.NavCmpnIndicesData;
+  } catch (e) {
+    console.error(
+      'getIndicesList error',
+      e?.data || e?.message || e,
+    );
+    throw e;
+  }
+}
+
+export async function getIndexStocks(indexId: string): Promise<Stock[]> {
+  try {
+    const items: Array<any> = [];
+    let response: axios.AxiosResponse<any, any> | null = null;
+    let pageNum = 1;
+    while (!response || response.data?.Items?.length === 30) {
+      response = await axios(indexComponentsApiUrl, {
+        ...mayaPostOptions,
+        data: {
+          oId: indexId,
+          pageNum,
+          lang: '0',
+        },
+      });
+      if (response?.data?.Items?.length) {
+        items.push(...response.data.Items);
+      }
+      pageNum += 1;
+    }
+    return items;
+  } catch (e) {
+    console.error(
+      'getIndicesList error',
+      e?.data || e?.message || e,
+    );
+    throw e;
+  }
 }
 
 export async function getMarketValue(
