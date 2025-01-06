@@ -9,6 +9,8 @@ import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParse
 
 const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 const marketValueTemplate = `${baseMarketValueTemplate}/נתונים`;
+const baseCompanyNameTemplate = 'תבנית:חברות מאיה';
+const companyNameTemplate = `${baseCompanyNameTemplate}/נתונים`;
 
 async function updateTemplate(marketValues: MayaMarketValue[]) {
   const content = await getArticleContent(marketValueTemplate);
@@ -41,7 +43,34 @@ async function updateTemplate(marketValues: MayaMarketValue[]) {
   await purge([baseMarketValueTemplate]);
 }
 
-async function marketValueBot() {
+async function updateNameTemplate(marketValues: MayaMarketValue[]) {
+  const content = await getArticleContent(companyNameTemplate);
+  if (!content) {
+    throw new Error('Failed to get template content');
+  }
+  const data = marketValues.map((marketValue) => [marketValue.id, marketValue.title])
+    .sort((a, b) => ((a[0] || 0) > (b[0] || 0) ? 1 : -1));
+  const oldTemplate = findTemplate(content, '#switch: {{{ID}}}', companyNameTemplate);
+  const newTemplate = templateFromKeyValueData({
+    ...Object.fromEntries(data),
+    timestamp: getLocalDate(marketValues[0].correctionDate),
+    '#default': '',
+  }, '#switch: {{{ID}}}');
+  const newContent = content.replace(oldTemplate, newTemplate);
+  const res = await updateArticle(
+    companyNameTemplate,
+    'עדכון',
+    newContent,
+  );
+
+  console.log(res);
+  if ('error' in res) {
+    throw new Error(JSON.stringify(res.error));
+  }
+  await purge([baseCompanyNameTemplate]);
+}
+
+export default async function marketValueBot() {
   await login();
   console.log('Login success');
 
@@ -55,10 +84,7 @@ async function marketValueBot() {
     }
   }
   await updateTemplate(marketValues);
+  await updateNameTemplate(marketValues);
 }
 
 export const main = shabathProtectorDecorator(marketValueBot);
-
-export default {
-  main,
-};
