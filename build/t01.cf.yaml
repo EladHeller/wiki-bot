@@ -532,23 +532,24 @@ Resources:
       SourceArn:  !GetAtt ArchiveLogsEventRule.Arn 
       FunctionName: archive-logs-function
 
-  ArchiveLogsLogGroupInvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt SendEmailLambda.Arn
-      Action: lambda:InvokeFunction
-      Principal: logs.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/archive-logs-function:*'
+  # TODO:
+  # ArchiveLogsLogGroupInvokeLambdaPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !GetAtt SendEmailLambda.Arn
+  #     Action: lambda:InvokeFunction
+  #     Principal: logs.amazonaws.com
+  #     SourceAccount: !Ref 'AWS::AccountId'
+  #     SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/archive-logs-function:*'
 
-  ArchiveLogsLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties: 
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/archive-logs-function'
+  # ArchiveLogsLogGroupFailedSubscription:
+  #   DependsOn:
+  #     - SendEmailLambda
+  #   Type: AWS::Logs::SubscriptionFilter
+  #   Properties: 
+  #     DestinationArn: !GetAtt SendEmailLambda.Arn
+  #     FilterPattern: Invoke Error
+  #     LogGroupName: '/aws/lambda/archive-logs-function'
 
 # Scripts lambda
   RunScriptsLambda:
