@@ -184,7 +184,7 @@ describe('mediaForestBotModel', () => {
     });
 
     it('throw error on missing wiki content', async () => {
-      mockWikiApi.articleContent.mockResolvedValue(null);
+      mockWikiApi.articleContent.mockResolvedValue({ content: '', revid: 123 });
 
       const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
 
