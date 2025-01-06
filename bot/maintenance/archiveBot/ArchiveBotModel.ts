@@ -28,7 +28,7 @@ const defaultConfig: ArchiveConfig = {
 
 async function getContent(wikiApi: IWikiApi, title: string) {
   const result = await wikiApi.articleContent(title);
-  if (!result) {
+  if (!result.content) {
     throw new Error(`Missing content for ${title}`);
   }
   return result;

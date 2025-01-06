@@ -22,6 +22,7 @@ export type WikiPage = {
   }[];
   missing?: string;
   revisions?: Revision[];
+  lastrevid?: number;
   extlinks: {
     '*': string;
   }[];

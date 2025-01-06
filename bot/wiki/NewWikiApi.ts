@@ -22,7 +22,7 @@ export interface IWikiApi {
   create(
     articleTitle: string, summary: string, content: string
   ): Promise<any>;
-  articleContent(title: string): Promise<{content: string, revid: number} | null>;
+  articleContent(title: string): Promise<{content: string, revid: number}>;
   externalUrl(link: string, protocol?: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<Partial<WikiPage>[]>;
   purge(titles: string[]): Promise<any>;
@@ -153,7 +153,9 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     return request('?action=edit&format=json&assert=bot&bot=true', 'post', objectToFormData(data));
   }
 
-  async function articleContent(title: string): Promise<{content: string, revid: number} | null> {
+  async function articleContent(
+    title: string,
+  ): Promise<{content: string, revid: number}> {
     const props = encodeURIComponent('content|ids');
     const path = `?action=query&format=json&rvprop=${props}&rvslots=*&prop=revisions&titles=${
       encodeURIComponent(title)
@@ -163,7 +165,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
 
     const revision = Object.values(wikiPages)[0]?.revisions?.[0];
     if (!revision?.revid) {
-      return null;
+      throw new Error(`No revid for ${title}`);
     }
 
     return {

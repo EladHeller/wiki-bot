@@ -109,7 +109,7 @@ describe('archiveBotModel', () => {
     });
 
     it('should throw error if archive page content is missing', async () => {
-      wikiApi.articleContent.mockResolvedValue(null);
+      wikiApi.articleContent.mockResolvedValue({ content: '', revid: 1 });
       archiveBotModel = ArchiveBotModel(wikiApi);
 
       await expect(archiveBotModel.updateArchiveTemplate('logPage')).rejects.toThrow('Missing content for logPage/ארכיונים');
