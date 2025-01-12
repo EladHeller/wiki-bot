@@ -42,18 +42,23 @@ export default function MediaForestBotModel(
   config: MediaForestConfig,
   dataFetcher: (url: string) => Promise<any>,
 ): IMediaForestBotModel {
-  const currentYear = new Date().getFullYear();
+  const currentFullYear = new Date().getFullYear();
 
   function normalizeWeek(week: string) {
     return week.split(' ').splice(1).map((x) => x.replaceAll('-', '.')).join('-');
   }
 
   async function getMediaForestData(): Promise<WeeklyChartData> {
-    const weeks = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${currentYear}`);
+    let weeks: string[] | null = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${currentFullYear}`);
     if (!weeks || !weeks.length) {
       throw new Error('No data found');
     }
-    const lastWeek = weeks[0];
+    const currentShortYear = currentFullYear % 100;
+    weeks = weeks.filter((w: string) => w.endsWith(currentShortYear.toString()));
+    const lastWeek = weeks.at(-1);
+    if (!lastWeek) {
+      throw new Error('No last week found');
+    }
     const lastWeekText = normalizeWeek(lastWeek);
     const { content: weekContent, revid } = await getContent(wikiApi, `${config.page}/${lastWeekPath}`);
     if (weekContent === lastWeek) {
@@ -64,7 +69,7 @@ export default function MediaForestBotModel(
       };
     }
 
-    const chart = await dataFetcher(`${config.baseUrl}weekly_charts/ISR/${currentYear}/${encodeURIComponent(lastWeek)}/RadioHe.json`);
+    const chart = await dataFetcher(`${config.baseUrl}weekly_charts/ISR/${currentFullYear}/${encodeURIComponent(lastWeek)}/RadioHe.json`);
 
     await wikiApi.edit(`${config.page}/${lastWeekPath}`, 'עדכון מדיה פורסט', lastWeek, revid);
     return {
@@ -80,10 +85,11 @@ export default function MediaForestBotModel(
   async function getOldData(start: number, end: number) {
     const data:WeeklyChartData[] = [];
     for (let year = start; year <= end; year += 1) {
-      const weeks: string[] = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${year}`);
+      let weeks: string[] = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${year}`);
       if (!weeks || !weeks.length) {
         throw new Error('No data found');
       }
+      weeks = weeks.filter((w: string) => w.endsWith((year % 100).toString()));
       for (const week of weeks) {
         const chart = await dataFetcher(`${config.baseUrl}weekly_charts/ISR/${year}/${encodeURIComponent(week)}/RadioHe.json`);
         const weekText = normalizeWeek(week);
