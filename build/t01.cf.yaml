@@ -572,7 +572,6 @@ Resources:
         S3Key: dist.zip
 
 # Indexes
-# Arcive logs
   IndexesBotLambda:
     DependsOn:
       - MarketValueLambdaIamRole
@@ -613,3 +612,45 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn:  !GetAtt IndexesBotEventRule.Arn 
       FunctionName: indexes-function
+
+# Record carts
+  RecordChartsLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: record-charts-function
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/recordCharts/index.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  RecordChartsEventRule:
+    DependsOn:
+      - RecordChartsLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: indexes-bot-scheduler
+      ScheduleExpression: cron(0 18 ? * * *)
+      Targets:
+        - Id: record-charts-function
+          Arn: !GetAtt RecordChartsLambda.Arn
+
+  RecordChartsInvokePermission:
+    DependsOn:
+      - RecordChartsEventRule
+      - RecordChartsLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt RecordChartsEventRule.Arn 
+      FunctionName: record-charts-function

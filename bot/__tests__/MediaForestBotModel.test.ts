@@ -1,7 +1,7 @@
 import {
   beforeEach, describe, expect, it, jest,
 } from '@jest/globals';
-import MediaForestBotModel from '../mediaforest/MediaForestModel';
+import MediaForestBotModel from '../recordCharts/MediaForestModel';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 
 describe('mediaForestBotModel', () => {

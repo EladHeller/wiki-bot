@@ -66,6 +66,13 @@ export default async function updateLambda() {
     S3Key: 'dist.zip',
   }));
 
+  // TODO: after publishing the new function
+  // await lambda.send(new UpdateFunctionCodeCommand({
+  //   FunctionName: 'record-charts-function',
+  //   S3Bucket: bucketCodeName,
+  //   S3Key: 'dist.zip',
+  // }));
+
   await lambda.send(new UpdateFunctionCodeCommand({
     FunctionName: 'Send-email-function',
     S3Bucket: bucketCodeName,
