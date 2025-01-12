@@ -638,7 +638,7 @@ Resources:
       - RecordChartsLambda
     Type: 'AWS::Events::Rule'
     Properties:
-      Name: indexes-bot-scheduler
+      Name: record-charts-scheduler
       ScheduleExpression: cron(0 18 ? * * *)
       Targets:
         - Id: record-charts-function
