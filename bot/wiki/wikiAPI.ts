@@ -242,49 +242,6 @@ export async function* getRedirects(namespace = 0, linkNamespace = [0]) { // TOD
   yield* continueQuery(path);
 }
 
-export async function pageContainsTemplate(title: string, template: string) : Promise<boolean> {
-  const path = `${baseUrl}?action=query&format=json&titles=${encodeURIComponent(title)}&prop=templates&tltemplates=${encodeURIComponent(template)}`;
-  const result = await request(path);
-  const pages = Object.values(result?.query?.pages ?? {}) as {templates: {title: string}[]}[];
-  const page = pages[0];
-  if (!page) {
-    throw new Error('Invalid title');
-  }
-
-  return page.templates?.some((t) => t.title === template);
-}
-
-export async function pageContainsCategory(title: string, category: string) : Promise<boolean> {
-  const path = `${baseUrl}?action=query&format=json&titles=${encodeURIComponent(title)}&prop=categories&clcategories=${encodeURIComponent(category)}`;
-  const result = await request(path);
-  const pages = Object.values(result?.query?.pages ?? {}) as {categories: {title: string}[]}[];
-  const page = pages[0];
-  if (!page) {
-    throw new Error('Invalid title');
-  }
-
-  return page.categories?.some((t) => t.title === category);
-}
-
-// export async function* tempGetRedirects(namespace = 0) { // TODO: there is a bug here
-//   const path = `${baseUrl}?action=query&format=json&list=allredirects&arlimit=50&arnamespace=${namespace}`;
-//   yield* continueQuery(path);
-// }
-
-// export async function tempInfoRedirects(titles: string[], toNamespaces: number[]) { // TODO: there is a bug here
-//   const encodedTitles = encodeURIComponent(titles.join('|'));
-//   const props = encodeURIComponent('categories|templates|links|revisions');
-//   const category = encodeURIComponent('קטגוריה:הפניות לא למחוק');
-//   const template = encodeURIComponent('תבנית:הפניה לא למחוק');
-//   const toNamespacesString = encodeURIComponent(toNamespaces.join('|'));
-//   const path = `${baseUrl}?action=query&format=json&prop=info&inprop=${props}&titles=${
-//     encodedTitles}&clcategories=${category}&tltemplates=${template}&plnamespace=${toNamespacesString}&rvprop=timestamp`;
-
-//   const result = await request(path);
-//   const res:Record<string, WikiPage> = result.query?.pages;
-//   return res;
-// }
-
 export async function getRevisions(title: string, limit = 500): Promise<WikiPage> {
   const props = encodeURIComponent('timestamp|user');
   const path = `${baseUrl}?action=query&format=json&prop=revisions&titles=${encodeURIComponent(title)}&rvprop=${props}&rvslots=*&rvlimit=${limit}`;
