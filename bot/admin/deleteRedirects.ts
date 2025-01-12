@@ -2,8 +2,6 @@
 import 'dotenv/config';
 import {
   deletePage, getRedirects, getRevisions, listCategory, login,
-  pageContainsCategory,
-  pageContainsTemplate,
 } from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
@@ -14,7 +12,7 @@ import { ArticleLog } from './types';
 const fixBrokenRedirectsBotNames = ['EmausBot', 'Xqbot'];
 
 async function deleteRedirects(from: number, to: number, reasons: string[], delayDays = 0) {
-  const generator = getRedirects(to);
+  const generator = getRedirects(to, [to]);
   const all: WikiPage[] = [];
   const errors: string[] = [];
   const mutlyRevisions: WikiPage[] = [];
@@ -23,38 +21,25 @@ async function deleteRedirects(from: number, to: number, reasons: string[], dela
     do {
       res = await generator.next();
       const batch: WikiPage[] = Object.values(res.value?.query?.pages ?? {});
-      // const relevent = batch.filter((x) => {
-      //   const timestamp = x.revisions?.[0]?.timestamp;
-      //   if (!timestamp) {
-      //     return false;
-      //   }
-      //   const date = new Date(timestamp);
-      //   const now = new Date();
-      //   date.setDate(date.getDate() + delayDays);
-      //   const isPassedDelayDays = date < now;
-      //   return x.links?.length === 1 && x.templates == null && x.categories == null && isPassedDelayDays;
-      // });
-      const relevent = batch.filter((x) => x.ns === from);
+      const relevent = batch.filter((x) => {
+        const timestamp = x.revisions?.[0]?.timestamp;
+        if (!timestamp) {
+          return false;
+        }
+        if (x.ns !== from) {
+          return false;
+        }
+        const date = new Date(timestamp);
+        const now = new Date();
+        date.setDate(date.getDate() + delayDays);
+        const isPassedDelayDays = date < now;
+        return x.links?.length === 1 && x.templates == null && x.categories == null && isPassedDelayDays;
+      });
+      all.push(...relevent);
+
       await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
         try {
           const reveisionRes = await getRevisions(p.title, 2);
-          if (!reveisionRes.revisions?.[0].timestamp) {
-            return;
-          }
-          const date = new Date(reveisionRes.revisions?.[0].timestamp);
-          const now = new Date();
-          date.setDate(date.getDate() + delayDays);
-          const isPassedDelayDays = date < now;
-          if (!isPassedDelayDays) {
-            return;
-          }
-          if (await pageContainsTemplate(p.title, 'תבנית:הפניה לא למחוק')) {
-            return;
-          }
-          if (await pageContainsCategory(p.title, 'קטגוריה:הפניות לא למחוק')) {
-            return;
-          }
-          all.push(p);
           const revisionsLength = reveisionRes.revisions?.length;
           const isRevisionsLengthValid = revisionsLength === 1
           || (revisionsLength === 2 && reveisionRes.revisions?.[0].user
@@ -140,9 +125,9 @@ export default async function deleteBot() {
   // /(מיון נושאים: לוויקי|ערכים שנוצרו באנציקלופדיה היהודית)\//,
   // );
   const logs: ArticleLog[] = [];
-  // logs.push(...(await deleteRedirects(119, [1], ['הפניה ממרחב שיחת טיוטה למרחב השיחה'], 30)));
-  // logs.push(...(await deleteRedirects(118, [0], ['הפניה ממרחב הטיוטה למרחב הערכים'], 30)));
-  // logs.push(...(await deleteRedirects(3, [1], ['הפניה ממרחב שיחת משתמש למרחב שיחה'], 30)));
+  logs.push(...(await deleteRedirects(119, 1, ['הפניה ממרחב שיחת טיוטה למרחב השיחה'], 30)));
+  logs.push(...(await deleteRedirects(118, 0, ['הפניה ממרחב הטיוטה למרחב הערכים'], 30)));
+  logs.push(...(await deleteRedirects(3, 1, ['הפניה ממרחב שיחת משתמש למרחב שיחה'], 30)));
   logs.push(...(await deleteRedirects(0, 2, ['הפניה ממרחב ראשי למרחב משתמש'])));
   logs.push(...(await deleteRedirects(0, 118, ['הפניה ממרחב ראשי למרחב טיוטה'])));
   await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
