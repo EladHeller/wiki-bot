@@ -31,6 +31,8 @@
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^25.0.1",
     "openai": "^4.69.0",
+    "playwright-aws-lambda": "^0.11.0",
+    "playwright-core": "^1.49.1",
     "tough-cookie": "^5.0.0"
   },
   "devDependencies": {
