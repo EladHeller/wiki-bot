@@ -14,10 +14,6 @@ jobs:
           persist-credentials: false
           lfs: true
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.6.0
-
       - name: Cache node modules
         uses: actions/cache@v2
         env:
