@@ -683,7 +683,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name: iron-swords-scheduler
-      # ScheduleExpression: cron(30 6,11 ? * * *)
+      ScheduleExpression: cron(0 18 ? * * *)
       Targets:
         - Id: iron-swords-function
           Arn: !GetAtt IronSwordsLambda.Arn
