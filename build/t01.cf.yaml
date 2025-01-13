@@ -682,8 +682,8 @@ Resources:
       - IronSwordsLambda
     Type: 'AWS::Events::Rule'
     Properties:
-      Name: delete-redirects-scheduler
-      ScheduleExpression: cron(30 6,11 ? * * *)
+      Name: iron-swords-scheduler
+      # ScheduleExpression: cron(30 6,11 ? * * *)
       Targets:
         - Id: iron-swords-function
           Arn: !GetAtt IronSwordsLambda.Arn
