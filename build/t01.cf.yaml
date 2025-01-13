@@ -656,44 +656,44 @@ Resources:
       FunctionName: record-charts-function
 
 # Iron swords
-  IronSwordsLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
-      FunctionName: iron-swords-function
-      Runtime: nodejs18.x
-      RuntimeManagementConfig:
-        UpdateRuntimeOn: Manual
-        RuntimeVersionArn: arn:aws:lambda:us-east-1::runtime:0cdcfbdefbc5e7d3343f73c2e2dd3cba17d61dea0686b404502a0c9ce83931b9
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
-      Handler: dist/ironSwords/index.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-  IronSwordsEventRule:
-    DependsOn:
-      - IronSwordsLambda
-    Type: 'AWS::Events::Rule'
-    Properties:
-      Name: delete-redirects-scheduler
-      ScheduleExpression: cron(30 6,11 ? * * *)
-      Targets:
-        - Id: iron-swords-function
-          Arn: !GetAtt IronSwordsLambda.Arn
-  IronSwordsInvokePermission:
-    DependsOn:
-      - IronSwordsEventRule
-      - IronSwordsLambda
-    Type: AWS::Lambda::Permission
-    Properties: 
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn:  !GetAtt IronSwordsEventRule.Arn 
-      FunctionName: iron-swords-function
+  # IronSwordsLambda:
+  #   DependsOn:
+  #     - MarketValueLambdaIamRole
+  #   Type: 'AWS::Lambda::Function'
+  #   Properties:
+  #     Role: !GetAtt MarketValueLambdaIamRole.Arn
+  #     FunctionName: iron-swords-function
+  #     Runtime: nodejs18.x
+  #     RuntimeManagementConfig:
+  #       UpdateRuntimeOn: Manual
+  #       RuntimeVersionArn: arn:aws:lambda:us-east-1::runtime:0cdcfbdefbc5e7d3343f73c2e2dd3cba17d61dea0686b404502a0c9ce83931b9
+  #     Environment:
+  #       Variables:
+  #         USER_NAME: !Ref WikiUserName
+  #         PASSWORD: !Ref WikiPassword
+  #     Handler: dist/ironSwords/index.main
+  #     Timeout: 900
+  #     MemorySize: 1024
+  #     Code:
+  #       S3Bucket: !Ref BucketCodeName
+  #       S3Key: dist.zip
+  # IronSwordsEventRule:
+  #   DependsOn:
+  #     - IronSwordsLambda
+  #   Type: 'AWS::Events::Rule'
+  #   Properties:
+  #     Name: delete-redirects-scheduler
+  #     ScheduleExpression: cron(30 6,11 ? * * *)
+  #     Targets:
+  #       - Id: iron-swords-function
+  #         Arn: !GetAtt IronSwordsLambda.Arn
+  # IronSwordsInvokePermission:
+  #   DependsOn:
+  #     - IronSwordsEventRule
+  #     - IronSwordsLambda
+  #   Type: AWS::Lambda::Permission
+  #   Properties: 
+  #     Action: lambda:InvokeFunction
+  #     Principal: events.amazonaws.com
+  #     SourceArn:  !GetAtt IronSwordsEventRule.Arn 
+  #     FunctionName: iron-swords-function
