@@ -136,7 +136,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: US-stocks-function
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -197,7 +197,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Kineret-level-function
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -258,7 +258,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: purge-birthday-function
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -318,7 +318,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: protect-templates-function
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiProtectUserName
@@ -378,7 +378,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: delete-redirects-function
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiDeleteUserName
@@ -431,46 +431,46 @@ Resources:
       FunctionName: delete-redirects-function
 
 # Copyrigh violation
-  # CopyrighViolationLambda:
-  #   DependsOn:
-  #     - MarketValueLambdaIamRole
-  #   Type: 'AWS::Lambda::Function'
-  #   Properties:
-  #     Role: !GetAtt MarketValueLambdaIamRole.Arn
-  #     FunctionName: copyright-violation-function
-  #     Runtime: nodejs22.x
-  #     Environment:
-  #       Variables:
-  #         USER_NAME: !Ref WikiUserName
-  #         PASSWORD: !Ref WikiPassword
-  #     Handler: dist/maintenance/copyrightViolation.main
-  #     Timeout: 900
-  #     MemorySize: 1024
-  #     Code:
-  #       S3Bucket: !Ref BucketCodeName
-  #       S3Key: dist.zip
+  CopyrighViolationLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: copyright-violation-function
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/maintenance/copyrightViolation.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
 
-  # CopyrighViolationEventRule:
-  #   DependsOn:
-  #     - CopyrighViolationLambda
-  #   Type: 'AWS::Events::Rule'
-  #   Properties:
-  #     Name: copyright-violation-scheduler
-  #     ScheduleExpression: cron(0 6,18 ? * * *)
-  #     Targets:
-  #       - Id: copyright-violation-function
-  #         Arn: !GetAtt CopyrighViolationLambda.Arn
+  CopyrighViolationEventRule:
+    DependsOn:
+      - CopyrighViolationLambda
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: copyright-violation-scheduler
+      ScheduleExpression: cron(0 6,18 ? * * *)
+      Targets:
+        - Id: copyright-violation-function
+          Arn: !GetAtt CopyrighViolationLambda.Arn
 
-  # CopyrighViolationInvokePermission:
-  #   DependsOn:
-  #     - CopyrighViolationEventRule
-  #     - CopyrighViolationLambda
-  #   Type: AWS::Lambda::Permission
-  #   Properties: 
-  #     Action: lambda:InvokeFunction
-  #     Principal: events.amazonaws.com
-  #     SourceArn:  !GetAtt CopyrighViolationEventRule.Arn 
-  #     FunctionName: copyright-violation-function
+  CopyrighViolationInvokePermission:
+    DependsOn:
+      - CopyrighViolationEventRule
+      - CopyrighViolationLambda
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:  !GetAtt CopyrighViolationEventRule.Arn 
+      FunctionName: copyright-violation-function
 
   # CopyrighViolationsLogGroupInvokeLambdaPermission:
   #   Type: AWS::Lambda::Permission
@@ -498,7 +498,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: archive-logs-function
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -559,7 +559,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: run-scripts-function
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -579,7 +579,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: indexes-function
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -621,7 +621,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: record-charts-function
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
