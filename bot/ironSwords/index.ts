@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom';
 import { Browser } from 'playwright-core';
 import NewWikiApi from '../wiki/NewWikiApi';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
+import { getLocalDate } from '../utilities';
 
 const baseTemplatePageName = 'תבנית:אבדות במלחמת חרבות ברזל';
 const templatePageName = `${baseTemplatePageName}/נתונים`;
@@ -73,6 +74,20 @@ function replaceData(content: string, rows: string[], fieldName: string, newData
   return content.replace(templateRow, `|${fieldName}=${newData}`);
 }
 
+function updateDate(content: string, rows: string[], fieldName: string): string {
+  const templateRow = rows.find((row) => row.startsWith(`|מקור ${fieldName}=`));
+  if (!templateRow) {
+    return content;
+  }
+  const date = getLocalDate(new Date().toString());
+  const oldDate = templateRow.match(/\d{1,2} ב[א-ת]{3,7} \d{4}/)?.[0];
+  if (!oldDate) {
+    throw new Error('Failed to update date');
+  }
+  const newRow = templateRow.replace(oldDate, date);
+  return content.replace(templateRow, newRow);
+}
+
 export default async function ironSwordsBot() {
   const api = NewWikiApi();
   const casualties = await getCasualties();
@@ -83,7 +98,6 @@ export default async function ironSwordsBot() {
   }
   const rows = content.split('\n').filter((row) => row.trim().startsWith('|'));
   let newContent = content;
-
   Object.entries(keysMapping).forEach(([key, value]) => {
     newContent = replaceData(newContent, rows, key, casualties[value]);
   });
@@ -91,6 +105,9 @@ export default async function ironSwordsBot() {
     console.log('No changes');
     return;
   }
+  Object.keys(keysMapping).forEach((key) => {
+    newContent = updateDate(newContent, rows, key);
+  });
   const editResult = await api.edit(templatePageName, 'בוט: עדכון נתוני אבדות', newContent, revid);
   console.log(editResult);
   await api.purge([baseTemplatePageName]);
