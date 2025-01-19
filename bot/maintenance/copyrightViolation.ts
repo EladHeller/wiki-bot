@@ -165,7 +165,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
     if (violation === 'none') {
       otherLogs.push({
         title,
-        text: `[[${title}]] ${confidence.toFixed(2)}${url ? ` [${url}]` : ''}`,
+        text: `[[${title}]] ${confidence.toFixed(2)} [${copyviosSearchLink(title)}]`,
         rank: confidence,
       });
       return;
