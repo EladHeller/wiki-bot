@@ -1,69 +1,21 @@
 import 'dotenv/config';
-import * as playwright from 'playwright-aws-lambda';
-import { JSDOM } from 'jsdom';
-import { Browser } from 'playwright-core';
+
 import NewWikiApi from '../wiki/NewWikiApi';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { getLocalDate } from '../utilities';
+import getCasualties from './idfSiteScraper';
+import getWarData from './inssSiteScraper';
 
 const baseTemplatePageName = 'תבנית:אבדות במלחמת חרבות ברזל';
 const templatePageName = `${baseTemplatePageName}/נתונים`;
-const url = 'https://www.idf.il/אתרי-יחידות/יומן-המלחמה/חללי-ופצועי-צה-ל-במלחמה/';
-
-function getCounter(
-  counters: Element[],
-  title: string,
-  index?: number,
-): number | null {
-  const elements = counters.filter((counter) => {
-    const text = counter.textContent;
-    return text?.includes(title);
-  });
-  if (elements.length > 1 && index == null) {
-    throw new Error(`Multiple counters with title ${title}`);
-  }
-  const element = elements[index ?? 0];
-  const numberElement = element?.querySelector('.counters');
-  const text = numberElement?.textContent;
-  if (!text) {
-    throw new Error(`Counter with title ${title} not found`);
-  }
-  return text ? Number(text.trim().replaceAll(',', '')) : null;
-}
-
-async function getCasualties() {
-  let browser: Browser | null = null;
-  try {
-    browser = await playwright.launchChromium({
-      headless: false,
-      timeout: 10 * 1000,
-    });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await page.goto(url);
-    const content = await page.content();
-    const { window } = new JSDOM(content);
-    const counters = Array.from(window.document.querySelectorAll('.counter-parent'));
-    const soldiersKilled = getCounter(counters, 'חללים מתחילת המלחמה');
-    const soldiersKilledManeuver = getCounter(counters, 'חללים מהתמרון בעזה');
-    const soldiersWounded = getCounter(counters, 'סה"כ', 0);
-    const soldiersWoundedManeuver = getCounter(counters, 'סה"כ', 1);
-    return {
-      soldiersKilled,
-      soldiersKilledManeuver,
-      soldiersWounded,
-      soldiersWoundedManeuver,
-    };
-  } finally {
-    await browser?.close();
-  }
-}
 
 const keysMapping = {
   חיילים: 'soldiersKilled',
   'חיילים בעזה': 'soldiersKilledManeuver',
   'חיילים פצועים': 'soldiersWounded',
   'חיילים פצועים בעזה': 'soldiersWoundedManeuver',
+  'הרוגים ישראלים': 'הרוגים ישראלים',
+  'סך החטופים ההרוגים': 'חטופים שנהרגו',
 };
 
 function replaceData(content: string, rows: string[], fieldName: string, newData?: number): string {
@@ -91,6 +43,8 @@ function updateDate(content: string, rows: string[], fieldName: string): string 
 export default async function ironSwordsBot() {
   const api = NewWikiApi();
   const casualties = await getCasualties();
+  const warData = await getWarData();
+  const allData = { ...casualties, ...warData };
 
   const { revid, content } = await api.articleContent(templatePageName);
   if (!content) {
@@ -99,7 +53,7 @@ export default async function ironSwordsBot() {
   const rows = content.split('\n').filter((row) => row.trim().startsWith('|'));
   let newContent = content;
   Object.entries(keysMapping).forEach(([key, value]) => {
-    newContent = replaceData(newContent, rows, key, casualties[value]);
+    newContent = replaceData(newContent, rows, key, allData[value]);
   });
   if (newContent === content) {
     console.log('No changes');
