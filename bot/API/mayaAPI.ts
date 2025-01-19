@@ -192,6 +192,7 @@ type Stock = {
   ShortName: string;
   Symbol: string;
   CompanyId: number;
+  Weight: number;
 }
 
 function getMayaLinkFromWikiPage(wikiPage: Partial<WikiPage>): string {

@@ -22,7 +22,6 @@ async function getIndexes(api: IWikiApi) {
     const indexStocks = await getIndexStocks(index.IndexId ?? index.Id);
     const stocks = indexStocks.map((stock) => (companyIdNameDict[stock.CompanyId] ? `[[${companyIdNameDict[stock.CompanyId]}]]` : stock.ShortName));
     const uniqueStocks = [...new Set(stocks)];
-    uniqueStocks.sort((a, b) => a.localeCompare(b));
     data.push({
       indexName: index.IndexHebName,
       indexStocks: uniqueStocks,
