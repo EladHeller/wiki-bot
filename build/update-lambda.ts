@@ -42,11 +42,11 @@ export default async function updateLambda() {
     S3Key: 'dist.zip',
   }));
 
-  // await lambda.send(new UpdateFunctionCodeCommand({
-  //   FunctionName: 'copyright-violation-function',
-  //   S3Bucket: bucketCodeName,
-  //   S3Key: 'dist.zip',
-  // }));
+  await lambda.send(new UpdateFunctionCodeCommand({
+    FunctionName: 'copyright-violation-function',
+    S3Bucket: bucketCodeName,
+    S3Key: 'dist.zip',
+  }));
 
   await lambda.send(new UpdateFunctionCodeCommand({
     FunctionName: 'archive-logs-function',
@@ -68,6 +68,12 @@ export default async function updateLambda() {
 
   await lambda.send(new UpdateFunctionCodeCommand({
     FunctionName: 'record-charts-function',
+    S3Bucket: bucketCodeName,
+    S3Key: 'dist.zip',
+  }));
+
+  await lambda.send(new UpdateFunctionCodeCommand({
+    FunctionName: 'iron-swords-function',
     S3Bucket: bucketCodeName,
     S3Key: 'dist.zip',
   }));
