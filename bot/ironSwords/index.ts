@@ -15,7 +15,9 @@ const keysMapping = {
   'חיילים פצועים': 'soldiersWounded',
   'חיילים פצועים בעזה': 'soldiersWoundedManeuver',
   'הרוגים ישראלים': 'הרוגים ישראלים',
-  'סך החטופים ההרוגים': 'חטופים שנהרגו',
+  'חטופים שנהרגו': 'סך החטופים ההרוגים',
+  'פלסטינים ביהודה ושומרון': 'הרוגים פלסטינים באיו"ש',
+  'עצורים ביהודה ושומרון': 'עצורים פלסטינים**',
 };
 
 function replaceData(content: string, rows: string[], fieldName: string, newData?: number): string {
