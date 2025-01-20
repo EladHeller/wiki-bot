@@ -2,12 +2,14 @@ import * as playwright from 'playwright-aws-lambda';
 import { Browser, Page } from 'playwright-core';
 
 const urlDict = {
-  'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x': { titles: ['הרוגים ישראלים'], numberUp: false },
-  'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v': { titles: ['סך החטופים ההרוגים'], numberUp: true },
+  'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x': { titles: ['הרוגים ישראלים'], numberUp: false, page: 1 },
+  'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x#': { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**'], numberUp: false, page: 5 },
+  'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v': { titles: ['סך החטופים ההרוגים'], numberUp: true, page: 1 },
 };
 
 async function getPanelData(page: Page, titles: string[], numberUp = false) {
   return page.evaluate((config) => {
+    const textsToRemove = ['מעל ל-'];
     const blocks = Array.from(globalThis.document.querySelectorAll('.public-DraftStyleDefault-block '));
     const data = config.titles.reduce((acc, key) => {
       const elements = blocks.filter((counter) => {
@@ -18,28 +20,34 @@ async function getPanelData(page: Page, titles: string[], numberUp = false) {
         throw new Error(`Multiple blocks with title ${key}`);
       }
       const element = elements[0];
-      const elementRects = element.getClientRects();
+      const elementRect = element.getBoundingClientRect();
       const relatedElements = blocks.filter((block) => {
         if (block === element) {
           return false;
         }
 
-        const blockRects = block.getClientRects();
+        const blockRect = block.getBoundingClientRect();
         return (config.numberUp
-          ? (elementRects[0].top - 40 < blockRects[0].bottom)
-          : (elementRects[0].bottom < blockRects[0].top && blockRects[0].top - 40 < elementRects[0].bottom))
-        && elementRects[0].left < blockRects[0].right && elementRects[0].right > blockRects[0].left;
+          ? (elementRect.top - 40 < blockRect.bottom && elementRect.top > blockRect.top)
+          : (blockRect.top - 40 < elementRect.bottom && blockRect.top > elementRect.top))
+        && elementRect.left < blockRect.right && elementRect.right > blockRect.left;
       });
       const numberElements = relatedElements.filter((block) => {
-        const text = block.textContent?.trim();
+        let text = block.textContent?.trim();
+        for (const textToRemove of textsToRemove) {
+          text = text?.replace(textToRemove, '');
+        }
         return text?.match(/^(\d+,?)+$/)?.[0];
       });
       if (numberElements.length > 1) {
-        throw new Error(`Multiple number elements related to ${key}`);
+        throw new Error(`Multiple number elements related to ${key}: ${numberElements.map((el) => el.textContent ?? '').join(', ')}`);
       } else if (numberElements.length === 0) {
         throw new Error(`No number elements related to ${key}`);
       }
-      const text = numberElements[0].textContent;
+      let text = numberElements[0].textContent?.trim();
+      for (const textToRemove of textsToRemove) {
+        text = text?.replace(textToRemove, '');
+      }
       const number = parseInt(text?.replace(/,/g, '') ?? '', 10);
       if (Number.isNaN(number)) {
         throw new Error(`Invalid number ${text}`);
@@ -69,6 +77,11 @@ export default async function getWarData() {
     for (const [url, config] of Object.entries(urlDict)) {
       await page.goto(url);
       await page.waitForSelector('.public-DraftStyleDefault-block');
+      for (let i = 1; i < config.page; i += 1) {
+        await page.click('[aria-label="Next page"]');
+        await page.waitForTimeout(200);
+      }
+
       const currResults = await getPanelData(page, config.titles, config.numberUp);
       result = { ...result, ...currResults };
     }
