@@ -1,9 +1,11 @@
 import * as playwright from 'playwright-aws-lambda';
 import { Browser, Page } from 'playwright-core';
 
+const mainUrl = 'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x';
+
 const urlDict = {
-  'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x': { titles: ['הרוגים ישראלים'], numberUp: false, page: 1 },
-  'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x#': { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**'], numberUp: false, page: 5 },
+  [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', 'הרוגים בעזה (ע"פ חמאס)'], numberUp: false, page: 1 },
+  [`${mainUrl}#`]: { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**', 'הרוגים בלבנון'], numberUp: false, page: 5 },
   'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v': { titles: ['סך החטופים ההרוגים'], numberUp: true, page: 1 },
 };
 
@@ -74,6 +76,18 @@ export default async function getWarData() {
     });
     const page = await context.newPage();
     let result = {};
+    await page.goto(mainUrl);
+    const elementsWithInjuriesText = await page.getByText('פצועים').all();
+
+    for (const element of elementsWithInjuriesText) {
+      const text = await element.textContent();
+      // 23,907 פצועים
+      if (text?.match(/^\d{1,3},\d{3} פצועים$/)) {
+        const number = parseInt(text.replace(/,/g, '').split(' ')[0], 10);
+        result = { ...result, פצועים: number };
+      }
+    }
+
     for (const [url, config] of Object.entries(urlDict)) {
       await page.goto(url);
       await page.waitForSelector('.public-DraftStyleDefault-block');
