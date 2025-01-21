@@ -103,6 +103,15 @@ export async function protectBot() {
   ));
   const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים');
   needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
+  const dailyQuoteTemplates = await getTemplatesByCategory('תבניות ציטוט יומי');
+  needToProtect = needToProtect.concat(
+    dailyQuoteTemplates.filter((template) => template.match(/ציטוט יומי \d{1,2} ב[א-ת]{3,7} \d{4}/)),
+  );
+  const recomendedImages = await getTemplatesByCategory('תבניות תמונה מומלצת');
+  needToProtect = needToProtect.concat(
+    recomendedImages.filter((template) => template.match(/תמונה מומלצת \d{1,2} ב[א-ת]{3,7} \d{4}/)),
+  );
+
   const templatesByDate = await getTemplatesByDate();
   needToProtect = needToProtect.concat(templatesByDate);
 
