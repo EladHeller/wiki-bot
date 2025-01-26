@@ -39,7 +39,7 @@ function problemsInLevel(
   if (protection.level === 'autoconfirmed') {
     problems.push({
       title: page.title,
-      text: `[[${article}]]: - ${pageType} עם הגנת ${protectViewName} רק למשתמשים מאומתים`,
+      text: `[[${article}]]: - ${pageType} עם הגנת ${protectViewName} רק למשתמשים ותיקים`,
       needProtection: true,
     });
   }
