@@ -26,7 +26,7 @@ const keysMapping = {
 };
 
 function replaceData(content: string, rows: string[], fieldName: string, newData?: number): string {
-  const templateRow = rows.find((row) => row.startsWith(`|${fieldName}=`));
+  const templateRow = rows.find((row) => row.startsWith(`|${fieldName}=`) || row.startsWith(`| ${fieldName}=`));
   if (!templateRow || !newData) {
     return content;
   }
