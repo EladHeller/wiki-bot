@@ -23,7 +23,7 @@ function getNextRowDelimiterIndex(rowText, currIndex, delimiter) {
 }
 
 function getTableRow(rowText: string, isHeader: boolean): TableRow {
-  const text = rowText.replace(/\|?}/g, '');
+  const text = rowText.replace(/\n\s*\|}/g, '');
   const delimiter = isHeader ? '!' : '|';
   const row: TableRow = { fields: [], style: '' };
   let currIndex = 0;
@@ -33,9 +33,9 @@ function getTableRow(rowText: string, isHeader: boolean): TableRow {
   }
 
   let nextDelimiterIndex = nextWikiText(text, currIndex, delimiter);
-
+  const textToTheNextDelimiter = text.substring(currIndex, nextDelimiterIndex);
   // Row has style cell
-  if (text[nextDelimiterIndex + 1] !== delimiter) {
+  if (text[nextDelimiterIndex + 1] !== delimiter && !textToTheNextDelimiter.includes('\n')) {
     row.style = text.substring(currIndex, nextDelimiterIndex).trim();
     currIndex = nextDelimiterIndex + 1;
   }
