@@ -2,11 +2,15 @@ import * as playwright from 'playwright-aws-lambda';
 import { Browser, Page } from 'playwright-core';
 
 const mainUrl = 'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x';
+const KidnappedUrl = 'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v';
+
+// חטופים בשבי
+const kidnappetInGaza = 'חטופים שנותרו בשבי';
 
 const urlDict = {
-  [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', 'הרוגים בעזה (ע"פ חמאס)'], numberUp: false, page: 1 },
+  [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', 'הרוגים בעזה (ע"פ חמאס)', kidnappetInGaza], numberUp: false, page: 1 },
   [`${mainUrl}#`]: { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**', 'הרוגים בלבנון'], numberUp: false, page: 5 },
-  'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v': { titles: ['סך החטופים ההרוגים'], numberUp: true, page: 1 },
+  [KidnappedUrl]: { titles: ['סך החטופים ההרוגים'], numberUp: true, page: 1 },
 };
 
 async function getPanelData(page: Page, titles: string[], numberUp = false) {
@@ -99,6 +103,10 @@ export default async function getWarData() {
       const currResults = await getPanelData(page, config.titles, config.numberUp);
       result = { ...result, ...currResults };
     }
+    if (result[kidnappetInGaza]) {
+      result[kidnappetInGaza] -= 3; // 3 kidnapped before the war
+    }
+
     return result;
   } finally {
     await browser?.close();
