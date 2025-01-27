@@ -7,7 +7,7 @@ import parseTableText from '../wiki/wikiTableParser';
 const companyNamesPage = 'תבנית:חברות מאיה/נתונים';
 const baseIndexesTemplatePage = 'תבנית:מדד תל אביב בסיס';
 const indexesTemplatePage = `${baseIndexesTemplatePage}/נתונים`;
-const companyIndexesTemplatesBase = 'תבנית:תבניות מדדים';
+const companyIndexesTemplatesBase = 'תבנית:מדדי הבורסה לניירות ערך בתל אביב';
 const companiesIndexesTemplates = `${companyIndexesTemplatesBase}/נתונים`;
 
 const templateStart = '#switch: {{{1}}}';
@@ -46,14 +46,19 @@ async function getIndexes(api: IWikiApi) {
   };
 }
 
-async function getSupportedIndexes(api: IWikiApi) : Promise<Record<string, string>> {
+async function getSupportedIndexes(api: IWikiApi) : Promise<Record<string, {template: string, category: string}>> {
   const { content } = await api.articleContent(companyIndexesTemplatesBase);
   const tables = parseTableText(content);
   const { rows } = tables[0];
   return rows
     .filter((row) => row.fields.length === 2)
     .reduce((acc, row) => {
-      acc[row.fields[0].toString()] = row.fields[1].toString().replace(/\{\{תב\|(.*)\}\}/, '$1');
+      const templateName = row.fields[1].toString().match(/\{\{תב\|(.*)\}\}/)?.[1];
+      const category = row.fields[1].toString().match(/\[\[:קטגוריה:(.*)\]\]/)?.[1];
+      acc[row.fields[0].toString()] = {
+        template: templateName,
+        category: category ?? '',
+      };
       return acc;
     }, {});
 }
@@ -65,7 +70,8 @@ async function updateCompanyIndexes(api: IWikiApi, companyIndexesDict: Record<st
   const newData = Object.entries(companyIndexesDict).map(([companyId, indexes]) => {
     const companyIndexesTemplates = indexes
       .map((index) => suppurtedIndexes[index])
-      .filter((index) => index).map((index) => `{{${index}}}`);
+      .filter((index) => index && index.template)
+      .map(({ category, template }) => `{{${template}}} ${category ? `[[קטגוריה:${category}]]` : ''}`);
     return [companyId, companyIndexesTemplates.join(' ')];
   });
   const newTemplateText = templateFromKeyValueData(Object.fromEntries(newData), '#switch: {{{1}}}');
