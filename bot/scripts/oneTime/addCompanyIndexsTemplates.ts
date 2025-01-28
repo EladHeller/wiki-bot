@@ -86,3 +86,55 @@ export default async function addCompanyIndexsTemplates() {
     await removeOldDataAndInsertTemplate(api, companyId, name);
   }
 }
+
+const identityControl = '{{בקרת זהויות}}';
+async function fixPage(api: IWikiApi, title: string, revid?: number, content?: string) {
+  if (!content || !revid) {
+    console.log('No content or revid for', title);
+    return;
+  }
+  const identityControlIndex = content.indexOf(identityControl);
+  if (identityControlIndex === -1) {
+    console.log('No identity control for', title);
+    return;
+  }
+
+  const templateIndex = content.indexOf(`{{${baseTemplateName}`);
+
+  if (templateIndex === -1) {
+    console.log('No template for', title);
+    return;
+  }
+  if (templateIndex < identityControlIndex) {
+    console.log('Identity control is after template for', title);
+    return;
+  }
+
+  const templateText = findTemplate(content, baseTemplateName, title);
+  let newContent = content;
+  newContent = newContent.replace(`${templateText}\n\n`, '');
+  if (newContent === content) {
+    console.log('No changes in', title);
+    return;
+  }
+  newContent = newContent.replace(identityControl, `${templateText}\n${identityControl}`);
+
+  try {
+    const res = await api.edit(title, 'תיקון סדר התבניות בדף', newContent, revid);
+    console.log('Fixed', title, res);
+  } catch (e) {
+    console.error('Failed to fix', title, e);
+  }
+}
+
+export async function fixTemplateOrder() {
+  const api = NewWikiApi();
+  const generator = api.getArticlesWithTemplate(baseTemplateName);
+  for await (const batch of generator) {
+    for (const { title, revisions } of batch) {
+      const revid = revisions?.[0].revid;
+      const content = revisions?.[0].slots.main['*'];
+      await fixPage(api, title, revid, content);
+    }
+  }
+}
