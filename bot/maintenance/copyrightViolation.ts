@@ -1,9 +1,10 @@
+import { JSDOM } from 'jsdom';
 import checkCopyViolations, { CopyViolaionRank, CopyViolationResponse } from '../API/copyvios';
 import writeAdminBotLogs from '../admin/log';
 import type { ArticleLog, Paragraph } from '../admin/types';
 import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 import type { LogEvent, WikiPage } from '../types';
-import { asyncGeneratorMapWithSequence, encodeWikiUrl } from '../utilities';
+import { asyncGeneratorMapWithSequence } from '../utilities';
 import NewWikiApi from '../wiki/NewWikiApi';
 
 const violationColor: Record<CopyViolaionRank, string> = {
@@ -18,7 +19,6 @@ const violationText: Record<CopyViolaionRank, string> = {
   none: 'אין',
 };
 const HAMICHLOL_DOMAIN = 'https://www.hamichlol.org.il/';
-const WIKIPEDIA_DOMAIN = 'https://he.wikipedia.org/wiki/';
 const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
 const LAST_RUN_PAGE = `${BASE_PAGE}/ריצה אחרונה`;
 const SEARCH_ERROR_PAGE = `${BASE_PAGE}/שגיאות זמניות`;
@@ -67,14 +67,25 @@ const NOT_FOUND = 'not found';
 const DISAMBIGUATION = 'פירושונים';
 const SEARCH_ERROR = 'שגיאת חיפוש';
 
-export async function checkHamichlol(title: string, wikipediaTitle = title) {
+export async function getHamichlolPageContent(title: string) {
+  const res = await fetch(`${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
+  if (!res.ok) {
+    return null;
+  }
+  const jsdomPage = new JSDOM(await res.text());
+  return jsdomPage.window.document.body.textContent;
+}
+
+const hamichlolNotProblem = [
+  'אין באפשרותך לקרוא את הדף הזה, מהסיבה הבאה',
+  'בערך זה קיים תוכן בעייתי',
+  'הערך באדיבות ויקיפדיה העברית',
+  'המכלול: ערכים מילוניים',
+];
+
+export async function checkHamichlol(title: string, hamichlolPageText: string | null, wikipediaTitle = title) {
   try {
-    const res = await fetch(`${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
-    if (!res.ok) {
-      return null;
-    }
-    const text = await res.text();
-    if (text.includes('בערך זה קיים תוכן בעייתי') || text.includes(WIKIPEDIA_DOMAIN + encodeWikiUrl(title))) {
+    if (hamichlolPageText && hamichlolNotProblem.some((text) => hamichlolPageText.includes(text))) {
       console.log(`Hamichlol from wiki: ${wikipediaTitle}`);
       return null;
     }
@@ -113,16 +124,17 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
   }
 
   const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
+  const hamichlolContent = await getHamichlolPageContent(title);
   if (isMainNameSpace) {
-    results.push(await checkHamichlol(title));
-    results.push(await checkHamichlol(`רבי ${title}`, title));
-    results.push(await checkHamichlol(`הרב ${title}`, title));
+    results.push(await checkHamichlol(title, hamichlolContent));
+    results.push(await checkHamichlol(`רבי ${title}`, hamichlolContent, title));
+    results.push(await checkHamichlol(`הרב ${title}`, hamichlolContent, title));
   } else {
     const lastPart = title.split(/[:/]/).at(-1);
     if (lastPart && lastPart !== DRAFT) {
       results.push(await checkHamichlol(lastPart, title));
-      results.push(await checkHamichlol(`רבי ${lastPart}`, title));
-      results.push(await checkHamichlol(`הרב ${lastPart}`, title));
+      results.push(await checkHamichlol(`רבי ${lastPart}`, hamichlolContent, title));
+      results.push(await checkHamichlol(`הרב ${lastPart}`, hamichlolContent, title));
     }
   }
   results.forEach(async (res) => {
