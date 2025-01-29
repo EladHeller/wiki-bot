@@ -1,18 +1,16 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import {
-  deletePage, getRedirects, getRevisions, listCategory, login,
-} from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { promiseSequence } from '../utilities';
 import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { ArticleLog } from './types';
+import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 
 const fixBrokenRedirectsBotNames = ['EmausBot', 'Xqbot'];
 
-async function deleteRedirects(from: number, to: number, reasons: string[], delayDays = 0) {
-  const generator = getRedirects(to, [to]);
+async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons: string[], delayDays = 0) {
+  const generator = api.getRedirects(to, [to]);
   const all: WikiPage[] = [];
   const errors: string[] = [];
   const mutlyRevisions: WikiPage[] = [];
@@ -39,7 +37,7 @@ async function deleteRedirects(from: number, to: number, reasons: string[], dela
 
       await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
         try {
-          const reveisionRes = await getRevisions(p.title, 2);
+          const reveisionRes = await api.getRevisions(p.title, 2);
           const revisionsLength = reveisionRes.revisions?.length;
           const isRevisionsLengthValid = revisionsLength === 1
           || (revisionsLength === 2 && reveisionRes.revisions?.[0].user
@@ -75,8 +73,8 @@ async function deleteRedirects(from: number, to: number, reasons: string[], dela
   return logs;
 }
 
-async function deleteInCategory(category: string, reason: string, match?: RegExp) {
-  const generator = listCategory(category);
+async function deleteInCategory(api: IWikiApi, category: string, reason: string, match?: RegExp) {
+  const generator = api.listCategory(category);
   let res;
   const logs: ArticleLog[] = [];
   try {
@@ -93,7 +91,7 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
           return;
         }
         try {
-          await deletePage(p.title, reason);
+          await api.deletePage(p.title, reason);
           logs.push({
             title: p.title,
             text: `[[${p.title}]]`,
@@ -115,9 +113,10 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
 }
 
 export default async function deleteBot() {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
   console.log('logged in');
-  const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקיפדיה:בוט\/בוט ההסבה\//);
+  const convertLogs = await deleteInCategory(api, 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקיפדיה:בוט\/בוט ההסבה\//);
   // const jewishEncyclopdia = await deleteInCategory(
   //   'ויקיפדיה - ערכים למחיקה ממיזם האנציקלופדיה היהודית',
   //   'דף למחיקה - מיזם האנציקלופדיה היהודית',
@@ -125,11 +124,11 @@ export default async function deleteBot() {
   // /(מיון נושאים: לוויקי|ערכים שנוצרו באנציקלופדיה היהודית)\//,
   // );
   const logs: ArticleLog[] = [];
-  logs.push(...(await deleteRedirects(119, 1, ['הפניה ממרחב שיחת טיוטה למרחב השיחה'], 30)));
-  logs.push(...(await deleteRedirects(118, 0, ['הפניה ממרחב הטיוטה למרחב הערכים'], 30)));
-  logs.push(...(await deleteRedirects(3, 1, ['הפניה ממרחב שיחת משתמש למרחב שיחה'], 30)));
-  logs.push(...(await deleteRedirects(0, 2, ['הפניה ממרחב ראשי למרחב משתמש'])));
-  logs.push(...(await deleteRedirects(0, 118, ['הפניה ממרחב ראשי למרחב טיוטה'])));
+  logs.push(...(await deleteRedirects(api, 119, 1, ['הפניה ממרחב שיחת טיוטה למרחב השיחה'], 30)));
+  logs.push(...(await deleteRedirects(api, 118, 0, ['הפניה ממרחב הטיוטה למרחב הערכים'], 30)));
+  logs.push(...(await deleteRedirects(api, 3, 1, ['הפניה ממרחב שיחת משתמש למרחב שיחה'], 30)));
+  logs.push(...(await deleteRedirects(api, 0, 2, ['הפניה ממרחב ראשי למרחב משתמש'])));
+  logs.push(...(await deleteRedirects(api, 0, 118, ['הפניה ממרחב ראשי למרחב טיוטה'])));
   await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
   await writeAdminBotLogs(convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
   // await writeAdminBotLogs(jewishEncyclopdia,

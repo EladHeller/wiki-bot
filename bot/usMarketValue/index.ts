@@ -2,17 +2,16 @@
 import 'dotenv/config';
 import { getCompanyData, WikiPageWithGoogleFinance } from '../API/googleFinanceApi';
 import { currencyName, getLocalDate, promiseSequence } from '../utilities';
-import {
-  getArticleContent, getGoogleFinanceLinks, login, purge, updateArticle,
-} from '../wiki/wikiAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import { getGoogleFinanceLinks } from '../wiki/SharedWikiApiFunctions';
 
 const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
 const marketValueTemplate = `${baseMarketValueTemplate}/נתונים`;
 
-async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
-  const content = await getArticleContent(marketValueTemplate);
+async function updateTemplate(api: IWikiApi, marketValues: WikiPageWithGoogleFinance[]) {
+  const { content, revid } = await api.articleContent(marketValueTemplate);
   if (!content) {
     throw new Error('Failed to get template content');
   }
@@ -31,10 +30,11 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
     '#default': '',
   }, '#switch: {{{ID}}}');
   const newContent = content.replace(oldTemplate, newTemplate);
-  const res = await updateArticle(
+  const res = await api.edit(
     marketValueTemplate,
     'עדכון',
     newContent,
+    revid,
   );
 
   console.log(res);
@@ -42,14 +42,15 @@ async function updateTemplate(marketValues: WikiPageWithGoogleFinance[]) {
   if ('error' in res) {
     throw new Error(JSON.stringify(res.error));
   }
-  await purge([baseMarketValueTemplate]);
+  await api.purge([baseMarketValueTemplate]);
 }
 
 async function usMarketValueBot() {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
   console.log('Login success');
 
-  const results = await getGoogleFinanceLinks();
+  const results = await getGoogleFinanceLinks(api);
   console.log('links', Object.keys(results).length);
   const marketValues: WikiPageWithGoogleFinance[] = [];
   const pages = Object.values(results);
@@ -61,7 +62,7 @@ async function usMarketValueBot() {
     }
   }));
 
-  await updateTemplate(marketValues);
+  await updateTemplate(api, marketValues);
 }
 
 export const main = shabathProtectorDecorator(usMarketValueBot);

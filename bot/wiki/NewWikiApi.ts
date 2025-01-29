@@ -209,14 +209,13 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
-  async function* getRedirects(namespace: number, linkNamespace: number[], limit = 100, templates = '', categories = '') {
-    const props = encodeURIComponent('links|templates|categories');
-    const template = encodeURIComponent(templates);
-    const templateString = template ? `&tltemplates=${template}&tllimit=${limit}` : '';
-    const category = encodeURIComponent(categories);
-    const categoryString = category ? `&clcategories=${category}&cllimit=${limit}` : '';
-    const path = `?action=query&format=json&generator=allredirects&garlimit=${limit}&garnamespace=${namespace}&gardir=ascending`
-    + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}${templateString}${categoryString}&pllimit=${limit}`;
+ async function* getRedirects(namespace = 0, linkNamespace = [0]) { // TODO: there is a bug here
+    const props = encodeURIComponent('links|templates|categories|revisions');
+    const template = encodeURIComponent('תבנית:הפניה לא למחוק');
+    const category = encodeURIComponent('קטגוריה:הפניות לא למחוק');
+    const path = `?action=query&format=json&generator=allredirects&garlimit=500&garnamespace=${namespace}`
+  + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}&tltemplates=${template}&clcategories=${category}`
+  + '&pllimit=500&cllimit=500&tllimit=500&rvprop=timestamp';
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
