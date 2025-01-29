@@ -152,6 +152,7 @@ export type MayaMarketValue = {
   correctionDate: string;
   title?: string;
   id: number;
+  companyLongName?: string;
 };
 
 export interface SymbolResult {
@@ -252,21 +253,23 @@ export async function getMarketValue(
 ): Promise<MayaMarketValue | undefined> {
   const companyAllDetailsUrl = getMayaLinkFromWikiPage(wikiPage);
 
-  return axios(companyAllDetailsUrl, mayaGetOptions)
-    .catch((e) => {
-      console.error(
-        'companyAllDetailsUrl',
-        wikiPage.title,
-        e?.data || e?.message || e,
-      );
-      throw e;
-    })
-    .then((result) => ({
+  try {
+    const result = await axios(companyAllDetailsUrl, mayaGetOptions);
+    return {
       marketValue: result?.data?.CompanyDetails?.MarketValue,
       correctionDate: result?.data?.CompanyDetails?.CorrectionDate,
       title: wikiPage.title,
       id: result?.data?.CompanyDetails?.CompanyId,
-    }));
+      companyLongName: result?.data?.CompanyDetails?.CompanyLongName,
+    };
+  } catch (e) {
+    console.error(
+      'companyAllDetailsUrl',
+      wikiPage.title,
+      e?.data || e?.message || e,
+    );
+    throw e;
+  }
 }
 
 export async function getSymbol(
