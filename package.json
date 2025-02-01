@@ -27,7 +27,7 @@
     "@hebcal/core": "^5.6.0",
     "axios": "^1.7.8",
     "axios-cookiejar-support": "^5.0.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.4.7",
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^25.0.1",
     "openai": "^4.69.0",
