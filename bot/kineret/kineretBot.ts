@@ -17,8 +17,12 @@ interface KinneretLevelRecord {
 async function getKineretLevel1() {
   const levelRes = await fetch(apiUrl).then((res) => res.json());
   const record: KinneretLevelRecord = levelRes.result.records[0];
+  let date = new Date(record.Survey_Date);
+  if (Number.isNaN(date.getTime())) {
+    date = new Date(record.Survey_Date.split('/').reverse().join('/'));
+  }
   return {
-    date: new Date(record.Survey_Date),
+    date,
     level: record.Kinneret_Level,
   };
 }
