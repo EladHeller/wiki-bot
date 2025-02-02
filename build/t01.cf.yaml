@@ -318,7 +318,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: protect-templates-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiProtectUserName
