@@ -627,7 +627,7 @@ Resources:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
       Handler: dist/recordCharts/index.main
-      Timeout: 900
+      Timeout: 120
       MemorySize: 1024
       Code:
         S3Bucket: !Ref BucketCodeName
