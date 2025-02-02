@@ -58,7 +58,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Market-value-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -136,7 +136,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: US-stocks-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -197,7 +197,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Kineret-level-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -258,7 +258,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: purge-birthday-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -318,7 +318,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: protect-templates-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiProtectUserName
@@ -378,7 +378,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: delete-redirects-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiDeleteUserName
@@ -438,7 +438,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: copyright-violation-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -498,7 +498,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: archive-logs-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -559,7 +559,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: run-scripts-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -579,7 +579,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: indexes-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -621,7 +621,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: record-charts-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
