@@ -83,7 +83,8 @@ const hamichlolNotProblem = [
   'המכלול: ערכים מילוניים',
 ];
 
-export async function checkHamichlol(title: string, hamichlolPageText: string | null, wikipediaTitle = title) {
+export async function checkHamichlol(title: string, wikipediaTitle = title) {
+  const hamichlolPageText = await getHamichlolPageContent(title);
   try {
     if (hamichlolPageText && hamichlolNotProblem.some((text) => hamichlolPageText.includes(text))) {
       console.log(`Hamichlol from wiki: ${wikipediaTitle}`);
@@ -124,17 +125,16 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
   }
 
   const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
-  const hamichlolContent = await getHamichlolPageContent(title);
   if (isMainNameSpace) {
-    results.push(await checkHamichlol(title, hamichlolContent));
-    results.push(await checkHamichlol(`רבי ${title}`, hamichlolContent, title));
-    results.push(await checkHamichlol(`הרב ${title}`, hamichlolContent, title));
+    results.push(await checkHamichlol(title));
+    results.push(await checkHamichlol(`רבי ${title}`, title));
+    results.push(await checkHamichlol(`הרב ${title}`, title));
   } else {
     const lastPart = title.split(/[:/]/).at(-1);
     if (lastPart && lastPart !== DRAFT) {
       results.push(await checkHamichlol(lastPart, title));
-      results.push(await checkHamichlol(`רבי ${lastPart}`, hamichlolContent, title));
-      results.push(await checkHamichlol(`הרב ${lastPart}`, hamichlolContent, title));
+      results.push(await checkHamichlol(`רבי ${lastPart}`, title));
+      results.push(await checkHamichlol(`הרב ${lastPart}`, title));
     }
   }
   results.forEach(async (res) => {
