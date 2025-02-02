@@ -78,7 +78,7 @@ async function updateTable(api: IWikiApi, marketValues: MayaMarketValue[]) {
       .map((marketValue) => [
         marketValue.id.toString(),
         `[[{{חברות מאיה|ID=${marketValue.id}}}]]`,
-        `{{חברות מאיה/שם מלא|ID=${marketValue.id}}}`,
+        `[https://maya.tase.co.il/company/${marketValue.id}?view=details {{חברות מאיה/שם מלא|ID=${marketValue.id}}}]`,
       ]),
   );
   const newContent = content.replace(table.text, newTableText);
