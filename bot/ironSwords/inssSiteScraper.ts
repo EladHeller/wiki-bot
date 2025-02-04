@@ -8,7 +8,7 @@ const KidnappedUrl = 'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v'
 const kidnappetInGaza = 'חטופים שנותרו בשבי';
 
 const urlDict = {
-  [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', 'הרוגים בעזה (ע"פ חמאס)', kidnappetInGaza], numberUp: false, page: 1 },
+  [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', kidnappetInGaza], numberUp: false, page: 1 },
   [`${mainUrl}#`]: { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**', 'הרוגים בלבנון'], numberUp: false, page: 5 },
   [KidnappedUrl]: { titles: ['סך החטופים ההרוגים'], numberUp: true, page: 1 },
 };

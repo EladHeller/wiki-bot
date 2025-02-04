@@ -49,25 +49,31 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWik
   }
 
   async function request(path: string, method?: string, data?: Record<string, any>): Promise<any> {
-    if (!token) {
-      await login();
-    }
-    const queryDetails: Record<string, any> = {
-      url: config.baseUrl + path,
-      method: method ?? 'GET',
-    };
-    if (data) {
-      queryDetails.data = data;
-    }
-    const result = await client(queryDetails);
+    try {
+      if (!token) {
+        await login();
+      }
+      const queryDetails: Record<string, any> = {
+        url: config.baseUrl + path,
+        method: method ?? 'GET',
+      };
+      if (data) {
+        queryDetails.data = data;
+      }
 
-    if (result.data.error) {
-      console.error(result.data.error);
-      throw new Error(`Failed to ${method?.toUpperCase() === 'GET' ? 'get data' : 'perform action'}`);
-    } else if (result.data.warnings) {
-      console.warn(result.data.warnings);
+      const result = await client(queryDetails);
+
+      if (result.data.error) {
+        console.error(result.data.error);
+        throw new Error(`Failed to ${method?.toUpperCase() === 'GET' ? 'get data' : 'perform action'}`);
+      } else if (result.data.warnings) {
+        console.warn(result.data.warnings);
+      }
+      return result.data;
+    } catch (e) {
+      console.error(e.message || e.data || e.toString());
+      throw new Error('Failed to perform action');
     }
-    return result.data;
   }
 
   async function* continueQuery(

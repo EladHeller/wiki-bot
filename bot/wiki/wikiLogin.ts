@@ -36,7 +36,7 @@ export async function baseLogin(
   });
   if (result.data.login.result !== 'Success') {
     console.error(result.data.login);
-    throw new Error('Failed to login');
+    throw new Error(`Failed to login to: ${wikiBaseUrl}`);
   }
 
   const tokenResult = await axiosClient(`${wikiBaseUrl}?action=query&meta=tokens&format=json&assert=${assertBot ? 'bot' : 'user'}`);
