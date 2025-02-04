@@ -91,7 +91,11 @@ export async function checkHamichlol(title: string, wikipediaTitle = title) {
       return null;
     }
     console.log(`Is from Hamichlol?: ${wikipediaTitle}`);
-    return checkCopyViolations(wikipediaTitle, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
+    const res = await checkCopyViolations(wikipediaTitle, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
+    if (res.error) {
+      return null; // ignore Hamichlol errors
+    }
+    return res;
   } catch {
     return null;
   }
@@ -125,17 +129,14 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
   }
 
   const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
-  if (isMainNameSpace) {
-    results.push(await checkHamichlol(title));
-    results.push(await checkHamichlol(`רבי ${title}`, title));
-    results.push(await checkHamichlol(`הרב ${title}`, title));
-  } else {
-    const lastPart = title.split(/[:/]/).at(-1);
-    if (lastPart && lastPart !== DRAFT) {
-      results.push(await checkHamichlol(lastPart, title));
-      results.push(await checkHamichlol(`רבי ${lastPart}`, title));
-      results.push(await checkHamichlol(`הרב ${lastPart}`, title));
-    }
+  let titleForHamichlol = title;
+  if (!isMainNameSpace) {
+    titleForHamichlol = title.split(/[:/]/).at(-1) ?? '';
+  }
+  if (titleForHamichlol && titleForHamichlol !== DRAFT) {
+    results.push(await checkHamichlol(titleForHamichlol));
+    results.push(await checkHamichlol(`רבי ${titleForHamichlol}`, title));
+    results.push(await checkHamichlol(`הרב ${titleForHamichlol}`, title));
   }
   results.forEach(async (res) => {
     if (res == null) {
