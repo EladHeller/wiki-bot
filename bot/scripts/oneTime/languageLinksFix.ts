@@ -3,6 +3,7 @@ import { asyncGeneratorMapWithSequence } from '../../utilities';
 import NewWikiApi from '../../wiki/NewWikiApi';
 // import { getInnerLinks } from '../../wiki/wikiLinkParser';
 import { parseContent } from '../../maintenance/languageLinks';
+import WikiDataAPI from '../../wiki/WikidataAPI';
 
 const RELEVANT_COMMENT = 'הסרת תבנית קישור שפה';
 const BOT_NAME = 'Sapper-bot';
@@ -20,7 +21,8 @@ export async function fixMissingQuotation() {
       return;
     }
     const beforeContent = revisions[1].slots.main['*'];
-    const parsedBefore = await parseContent(api, title, beforeContent);
+    const wikiDataApi = WikiDataAPI();
+    const parsedBefore = await parseContent(api, wikiDataApi, title, beforeContent, {});
 
     await api.updateArticle(title, 'הוספת מירכאות חסרות לקישורים', parsedBefore);
   }
@@ -41,7 +43,8 @@ export default async function fixLanguageLinks() {
       }
       const beforeContent = revisions[botRevisionIndex + 1].slots.main['*'];
       const afterContent = revisions[botRevisionIndex].slots.main['*'];
-      const parsedContent = await parseContent(api, contribution.title, beforeContent);
+      const wikiDataApi = WikiDataAPI();
+      const parsedContent = await parseContent(api, wikiDataApi, contribution.title, beforeContent, {});
       if (afterContent !== parsedContent) {
         console.log(`not equal ${contribution.title}`);
         if (botRevisionIndex === 0) {
