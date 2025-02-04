@@ -2,8 +2,9 @@ import { JSDOM } from 'jsdom';
 import { getLocalDate } from '../../../utilities';
 import { getAttr, getSchemaData } from '../../../scraping';
 import templateDates from './templateDates';
+import appendDatesToTepmlate from './appendDatesToTepmlate';
 
-const TEMPLATE_NAME = 'ynet';
+const TEMPLATE_NAME = 'Ynet';
 
 async function getDateFromYnetPage(url: string, title: string) {
   try {
@@ -15,11 +16,14 @@ async function getDateFromYnetPage(url: string, title: string) {
     || '';
     return date;
   } catch (error) {
-    console.log('Failed to get date from ynet page', url, title);
+    console.log('Failed to get date from ynet page', url, title, error.message || error.data || error.toString());
     return '';
   }
 }
 
 export default async function ynetDates() {
-  await templateDates(TEMPLATE_NAME, getDateFromYnetPage, [/\[?\[?ynet\]?\]?/]);
+  // await appendDatesToTepmlate(TEMPLATE_NAME, getDateFromYnetPage);
+  await appendDatesToTepmlate(TEMPLATE_NAME, getDateFromYnetPage, 'ynet');
+  // await templateDates(TEMPLATE_NAME, getDateFromYnetPage, [/\[?\[?ynet\]?\]?/]);
+  await templateDates(TEMPLATE_NAME, getDateFromYnetPage, [/\[?\[?ynet\]?\]?/], 'ynet');
 }

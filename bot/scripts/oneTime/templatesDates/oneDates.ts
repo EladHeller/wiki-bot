@@ -18,7 +18,7 @@ async function getDateFromOnePage(id: string, title: string) {
     || '';
     return date;
   } catch (error) {
-    console.log('Failed to get date from one page', url, title);
+    console.log('Failed to get date from one page', url, title, error.message || error.data || error.toString());
     return '';
   }
 }

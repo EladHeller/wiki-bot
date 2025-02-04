@@ -49,7 +49,7 @@ export default async function innTemplate() {
             console.log(`Success fetching ${url}`, result.url, `[[${page.title}]]`, author, title);
           }
         } catch (e) {
-          console.log(`Error fetching ${url}`, `[[${page.title}]]`, author, title);
+          console.log(`Error fetching ${url}`, `[[${page.title}]]`, author, title, e.message || e.data || e.toString());
         }
       }
     }));

@@ -14,7 +14,7 @@ async function getDateFromPage(id: string, title: string, section?: string) {
     || '';
     return date;
   } catch (error) {
-    console.log('Failed to get date from sport5 page', url, title);
+    console.log('Failed to get date from sport5 page', url, title, error.message || error.data || error.toString());
     return '';
   }
 }

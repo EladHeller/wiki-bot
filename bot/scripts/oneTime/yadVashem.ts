@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import 'dotenv/config';
 import {
   login, updateArticle, externalUrl,
@@ -12,7 +13,9 @@ async function main() {
     const content = page.revisions?.[0].slots.main['*'];
     if (content && page.title) {
       let newContent = content;
-      const refMatches = content.matchAll(/{{הערה\|\s*\[https:\/\/righteous\.yadvashem\.org\/\?searchType=righteous_only&language=en(?:&ind=0)?&itemId=(\d+)(?:[^ ]*) ([^\]]*)\][^}]+}}/g);
+      const refMatches = content.matchAll(
+        /{{הערה\|\s*\[https:\/\/righteous\.yadvashem\.org\/\?searchType=righteous_only&language=en(?:&ind=0)?&itemId=(\d+)(?:[^ ]*) ([^\]]*)\][^}]+}}/g,
+      );
       for (const match of refMatches) {
         const text = match[2] ? `${decodeURIComponent(match[2])}` : match[3]?.trim();
         if (!text) {
@@ -21,7 +24,9 @@ async function main() {
         }
         newContent = newContent.replace(match[0], `{{הערה|{{מזהה חסיד אומות העולם|${match[1]}|${text}}}}}`);
       }
-      const externalUrlMatches = content.matchAll(/\*.*\[https:\/\/righteous\.yadvashem\.org\/\?searchType=righteous_only&language=en(?:&ind=0)?&itemId=(\d+)(?:[^ ]*) ([^\]]*)\].*/g);
+      const externalUrlMatches = content.matchAll(
+        /\*.*\[https:\/\/righteous\.yadvashem\.org\/\?searchType=righteous_only&language=en(?:&ind=0)?&itemId=(\d+)(?:[^ ]*) ([^\]]*)\].*/g,
+      );
       for (const match of externalUrlMatches) {
         const text = match[2] ? `${decodeURIComponent(match[2])}` : match[3]?.trim();
         if (!text) {
@@ -30,7 +35,9 @@ async function main() {
         }
         newContent = newContent.replace(match[0], `* {{מזהה חסיד אומות העולם|${match[1]}|${text}}}`);
       }
-      const generalLink = content.matchAll(/{{קישור כללי\|כתובת=https:\/\/righteous\.yadvashem\.org\/\?searchType=righteous_only&language=en(?:&ind=0)?&itemId=(\d+)(?:[^|]*)\|[^}][^}]*כותרת=([^|]+)\|[^}]+}}/g);
+      const generalLink = content.matchAll(
+        /{{קישור כללי\|כתובת=https:\/\/righteous\.yadvashem\.org\/\?searchType=righteous_only&language=en(?:&ind=0)?&itemId=(\d+)(?:[^|]*)\|[^}][^}]*כותרת=([^|]+)\|[^}]+}}/g,
+      );
       for (const match of generalLink) {
         let text = decodeURIComponent(match[2]);
         if (!text) {

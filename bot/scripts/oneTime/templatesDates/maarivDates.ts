@@ -2,6 +2,7 @@ import { JSDOM } from 'jsdom';
 import { getLocalDate } from '../../../utilities';
 import { getSchemaData } from '../../../scraping';
 import templateDates from './templateDates';
+import appendDatesToTepmlate from './appendDatesToTepmlate';
 
 async function getDateFromMaarivPage(id: string, title: string) {
   const url = `https://www.maariv.co.il/${id}`;
@@ -12,7 +13,7 @@ async function getDateFromMaarivPage(id: string, title: string) {
     || '';
     return date;
   } catch (error) {
-    console.log('Failed to get date from maariv page', url, title);
+    console.log('Failed to get date from maariv page', url, title, error.message || error.data || error.toString());
     return '';
   }
 }
@@ -20,5 +21,6 @@ async function getDateFromMaarivPage(id: string, title: string) {
 const TEMPLATE_NAME = 'מעריב אונליין';
 
 export default async function maarivDates() {
+  await appendDatesToTepmlate(TEMPLATE_NAME, getDateFromMaarivPage);
   await templateDates(TEMPLATE_NAME, getDateFromMaarivPage, [/\[?\[?מעריב( אונליין)?\]?\]?/]);
 }

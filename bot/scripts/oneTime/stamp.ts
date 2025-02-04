@@ -13,7 +13,10 @@ async function main() {
     const content = page.revisions?.[0].slots.main['*'];
     if (content && page.title) {
       let newContent = content;
-      const refMatches = content.matchAll(/{{הערה\|\s*\[http:\/\/(?:www\.)?israelphilately\.org\.il\/he\/catalog\/articles\/(\d+)\/?([^ \]]*)([^\]]+)[^}]+}}/g);
+      const refMatches = content.matchAll(
+        // eslint-disable-next-line max-len
+        /{{הערה\|\s*\[http:\/\/(?:www\.)?israelphilately\.org\.il\/he\/catalog\/articles\/(\d+)\/?([^ \]]*)([^\]]+)[^}]+}}/g,
+      );
       for (const match of refMatches) {
         const text = match[2] ? `${decodeURIComponent(match[2])}` : match[3]?.trim();
         if (!text) {
@@ -22,7 +25,9 @@ async function main() {
         }
         newContent = newContent.replace(match[0], `{{הערה|{{בול ישראלי - עלון||${match[1]}|${text}}}}}`);
       }
-      const externalUrlMatches = content.matchAll(/\*.*\[http:\/\/(?:www\.)?israelphilately\.org\.il\/he\/catalog\/articles\/(\d+)\/?([^ \]]*)([^\]]+).*/g);
+      const externalUrlMatches = content.matchAll(
+        /\*.*\[http:\/\/(?:www\.)?israelphilately\.org\.il\/he\/catalog\/articles\/(\d+)\/?([^ \]]*)([^\]]+).*/g,
+      );
       for (const match of externalUrlMatches) {
         const text = match[2] ? `${decodeURIComponent(match[2])}` : match[3]?.trim();
         if (!text) {
