@@ -17,13 +17,14 @@ async function getDateFromPage(id: string, title: string) {
     }
     return '';
   } catch (error) {
-    console.log('Failed to get date from page', url, title);
+    console.log('Failed to get date from page', url, title, error.message || error.data || error.toString());
     return '';
   }
 }
 
 const TEMPLATE_NAME = 'NFC';
 
+// eslint-disable-next-line max-len
 const filters = [/\[?\[?NFC\]?\]?/i, /\[?\[?News1( מחלקה ראשונה)?\]?\]?/i, /\[?\[?(חדשות )?מחלקה ראשונה\]?\]?/, /\[?\[?מקור ראשון\]?\]?/];
 export default async function nfcDates() {
   await templateDates(TEMPLATE_NAME, getDateFromPage, filters);

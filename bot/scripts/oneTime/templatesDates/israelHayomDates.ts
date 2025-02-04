@@ -17,7 +17,7 @@ async function getDateFromPage(id: string, title: string) {
     || '';
     return date;
   } catch (error) {
-    console.log('Failed to get date from israel hayom page', url, title);
+    console.log('Failed to get date from israel hayom page', url, title, error.message || error.data || error.toString());
     return '';
   }
 }

@@ -15,23 +15,33 @@ async function ynetEncyclopedia() {
     const content = page.revisions?.[0].slots.main['*'];
     if (content && page.title) {
       let newContent = content;
-      const refMatches = content.matchAll(/{{הערה\|\s*\[https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^ ]*) ([^\]]*)\][^}]+}}/g);
+      const refMatches = content.matchAll(
+        /{{הערה\|\s*\[https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^ ]*) ([^\]]*)\][^}]+}}/g,
+      );
       for (const match of refMatches) {
         newContent = newContent.replace(match[0], '');
       }
-      const refTagMatches = content.matchAll(/<ref>\s*\[https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^ ]*) ([^\]]*)\][^<]+<\/ref>/g);
+      const refTagMatches = content.matchAll(
+        /<ref>\s*\[https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^ ]*) ([^\]]*)\][^<]+<\/ref>/g,
+      );
       for (const match of refTagMatches) {
         newContent = newContent.replace(match[0], '');
       }
-      const externalUrlMatches = content.matchAll(/\n\*.*\[https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^ ]*) ([^\]]*)\].*/g);
+      const externalUrlMatches = content.matchAll(
+        /\n\*.*\[https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^ ]*) ([^\]]*)\].*/g,
+      );
       for (const match of externalUrlMatches) {
         newContent = newContent.replace(match[0], '');
       }
-      const generalLink = content.matchAll(/{{הערה\|{{קישור כללי\|כתובת=https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^|]*)[^}]*}}[^}]*}}/g);
+      const generalLink = content.matchAll(
+        /{{הערה\|{{קישור כללי\|כתובת=https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^|]*)[^}]*}}[^}]*}}/g,
+      );
       for (const match of generalLink) {
         newContent = newContent.replace(match[0], '');
       }
-      const generalLinkInTag = content.matchAll(/<ref>{{קישור כללי\|כתובת=https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^|]*)[^}]*}}[^<]*<\/ref>/g);
+      const generalLinkInTag = content.matchAll(
+        /<ref>{{קישור כללי\|כתובת=https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^|]*)[^}]*}}[^<]*<\/ref>/g,
+      );
       for (const match of generalLinkInTag) {
         newContent = newContent.replace(match[0], '');
       }

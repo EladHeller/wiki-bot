@@ -13,7 +13,7 @@ async function getDateFromInnPage(id: string, title: string) {
     console.log('DateFromDoc', date, title, url);
     return date ? getLocalDate(date) : '';
   } catch (error) {
-    console.log('Failed to get date from inn page', url, title);
+    console.log('Failed to get date from inn page', url, title, error.message || error.data || error.toString());
     return '';
   }
 }

@@ -3,6 +3,7 @@ import { login, externalUrl, updateArticle } from '../../wiki/wikiAPI';
 import { promiseSequence } from '../../utilities';
 
 const oldLink = 'db.yadvashem.org/righteous/';
+// eslint-disable-next-line max-len
 const regex = /http:\/\/db\.yadvashem\.org\/righteous\/(?:righteousName|family|facebookFamily)\.html\?language=en&itemId=(\d+)/g;
 const newLink = 'https://righteous.yadvashem.org/?searchType=righteous_only&language=en&ind=0&itemId=';
 async function main() {

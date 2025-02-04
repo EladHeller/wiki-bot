@@ -27,7 +27,9 @@ export default async function beshevaToInn() {
       );
       let actualDate = date;
       if (date) {
-        const withLinkMatch = date.match(/^[הב]?\[?\[?(\d{1,2})[בן,]? ?ב?([א-ת]{3,9})\]?\]?,? ?\[?\[?(\d{4})\]?\]?[.,]?$/);
+        const withLinkMatch = date.match(
+          /^[הב]?\[?\[?(\d{1,2})[בן,]? ?ב?([א-ת]{3,9})\]?\]?,? ?\[?\[?(\d{4})\]?\]?[.,]?$/,
+        );
         if (withLinkMatch) {
           actualDate = `${withLinkMatch[1]} ב${withLinkMatch[2]} ${withLinkMatch[3]}`;
         }

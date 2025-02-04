@@ -8,6 +8,11 @@
         "resolveJsonModule": true,
         "outDir": "dist"
     },
+    "include": [
+        "bot",
+        "testConfig",
+        "build"
+    ],
     "exclude": [
         "node_modules"
     ]
