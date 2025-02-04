@@ -43,7 +43,7 @@ async function getPanelData(page: Page, titles: string[], numberUp = false) {
         for (const textToRemove of textsToRemove) {
           text = text?.replace(textToRemove, '');
         }
-        return text?.match(/^(\d+,?)+$/)?.[0];
+        return text?.match(/^(\d{1,9},?)+$/)?.[0];
       });
       if (numberElements.length > 1) {
         throw new Error(`Multiple number elements related to ${key}: ${numberElements.map((el) => el.textContent ?? '').join(', ')}`);
