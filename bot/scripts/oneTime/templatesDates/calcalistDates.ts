@@ -2,6 +2,7 @@ import { JSDOM } from 'jsdom';
 import { getLocalDate } from '../../../utilities';
 import { getMetaValue, getSchemaData } from '../../../scraping';
 import templateDates from './templateDates';
+import appendDatesToTepmlate from './appendDatesToTepmlate';
 
 async function getDateFromCalcalistPage(id: string, title: string) {
   let url = `https://www.calcalist.co.il/articles/0,7340,L-${id},00.html`;
@@ -17,7 +18,7 @@ async function getDateFromCalcalistPage(id: string, title: string) {
     || '';
     return date;
   } catch (error) {
-    console.log('Failed to get date from calcalist page', url, title);
+    console.log('Failed to get date from calcalist page', url, title, error.message || error.data || error.toString());
     return '';
   }
 }
@@ -25,5 +26,6 @@ async function getDateFromCalcalistPage(id: string, title: string) {
 const TEMPLATE_NAME = 'כלכליסט';
 
 export default async function calcalistDates() {
+  await appendDatesToTepmlate(TEMPLATE_NAME, getDateFromCalcalistPage);
   await templateDates(TEMPLATE_NAME, getDateFromCalcalistPage, [/\[?\[?כלכליסט\]?\]?/]);
 }

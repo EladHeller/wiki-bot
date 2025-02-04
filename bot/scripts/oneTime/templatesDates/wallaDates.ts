@@ -21,7 +21,7 @@ async function getDateFromWallaPage(id: string, title: string, section?: string)
     || '';
     return date;
   } catch (error) {
-    console.log('Failed to get date from walla page', url, title, section);
+    console.log('Failed to get date from walla page', url, title, section, error.message || error.data || error.toString());
     return '';
   }
 }
