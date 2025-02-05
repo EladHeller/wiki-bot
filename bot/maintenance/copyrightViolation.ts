@@ -138,7 +138,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
     results.push(await checkHamichlol(`רבי ${titleForHamichlol}`, title));
     results.push(await checkHamichlol(`הרב ${titleForHamichlol}`, title));
   }
-  results.forEach(async (res) => {
+  results.forEach((res) => {
     if (res == null) {
       return;
     }
