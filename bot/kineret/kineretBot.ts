@@ -14,12 +14,15 @@ interface KinneretLevelRecord {
   Kinneret_Level: number;
   _id: number;
 }
-async function getKineretLevel1() {
+export async function getKineretLevel1() {
   const levelRes = await fetch(apiUrl).then((res) => res.json());
   const record: KinneretLevelRecord = levelRes.result.records[0];
-  let date = new Date(record.Survey_Date);
+  console.log('Kinneret level:', record);
+  let date = new Date(record.Survey_Date.split('/').reverse().join('/'));
+  console.log('date:', date);
   if (Number.isNaN(date.getTime())) {
-    date = new Date(record.Survey_Date.split('/').reverse().join('/'));
+    date = new Date(record.Survey_Date);
+    console.log('date:', date);
   }
   return {
     date,
