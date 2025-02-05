@@ -8,6 +8,6 @@
         "resolveJsonModule": true,
         "outDir": "dist"
     },
-    "include": ["bot", "testConfig"],
+    "include": ["bot"],
     "exclude": ["bot/__tests__"]
 }
