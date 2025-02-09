@@ -7,6 +7,7 @@ const defaultWikiDataConfig: Partial<WikiApiConfig> = {
   baseUrl: 'https://www.wikidata.org/w/api.php',
   password: process.env.PASSWORD,
   userName: process.env.USER_NAME,
+  assertBot: false,
 };
 
 export interface IWikiDataAPI {
