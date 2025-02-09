@@ -18,7 +18,7 @@ interface KinneretLevelRecord {
   Kinneret_Level: number;
   _id: number;
 }
-export async function getKineretLevel1() {
+export async function getKineretLevelData() {
   const levelRes = await fetch(apiUrl).then((res) => res.json());
   const record: KinneretLevelRecord = levelRes.result.records[0];
   console.log('Kinneret level:', record);
@@ -34,26 +34,8 @@ export async function getKineretLevel1() {
   };
 }
 
-// async function getKineretLevel2() {
-//   const kinneretDocument = await fetch('https://kineret.org.il/').then((res) => res.text()).then((html) => new JSDOM(html));
-//   const levelElement = kinneretDocument.window.document.querySelector('#hp_miflas');
-//   const date = levelElement?.querySelector('.hp_miflas_date')?.textContent?.match(DATE_REGEX);
-//   const level = levelElement?.querySelector('.hp_miflas_height')?.textContent;
-//   if (!date || !level) {
-//     throw new Error('Failed to get kinneret level');
-//   }
-//   const [, day, month, year] = date;
-//   return {
-//     date: new Date(`20${year}-${month}-${day}`),
-//     level,
-//   };
-// }
-
 async function getKineretLevel() {
-  // const promises = [getKineretLevel1(), getKineretLevel2()];
-  // const results = await Promise.all(promises);
-  // const updatedResult = results[0].date > results[1].date ? results[0] : results[1];
-  const updatedResult = await getKineretLevel1();
+  const updatedResult = await getKineretLevelData();
   return {
     date: updatedResult.date,
     level: updatedResult.level.toString().trim(),
@@ -80,7 +62,8 @@ export async function updateWikiData(date: Date, level: string) {
     throw new Error('No references');
   }
   const timeReference = snaks?.P813[0];
-  if (!timeReference) {
+  const urlReference = snaks?.P854[0];
+  if (!timeReference || !urlReference) {
     throw new Error('No time or url reference');
   }
   const now = new Date(date);
@@ -89,6 +72,7 @@ export async function updateWikiData(date: Date, level: string) {
   now.setSeconds(0);
   const formatted = `+${now.toISOString().replace(/\.\d{3}Z$/, 'Z')}`;
   timeReference.datavalue.value.time = formatted;
+  urlReference.datavalue.value = 'https://data.gov.il/dataset/https-www-data-gov-il-dataset-682';
 
   const setReferenceRes = await api.updateReference(
     LEVEL_PROPERTY_CLAIM_GUID,
