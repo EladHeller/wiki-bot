@@ -104,5 +104,6 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     categroyTitles:
       base.categroyTitles
       ?? jest.fn<(category: string, limit?: number) => AsyncGenerator<WikiPage[], void, void>>(),
+    getRedirecTarget: base.getRedirecTarget ?? jest.fn<(title: string) => Promise<WikiPage | null>>(),
   };
 }

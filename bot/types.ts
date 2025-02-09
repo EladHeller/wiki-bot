@@ -86,3 +86,63 @@ export type LogEvent = {
   timestamp?: string;
   comment?: string;
 }
+
+export type WikiDataSnack = {
+  snaktype: string;
+  property: string;
+  datatype: string;
+  hash?: string;
+  datavalue: {
+    value: any;
+    type: string;
+  }
+}
+
+export type WikiDataReference = {
+  hash?: string;
+  snaks: Record<string, WikiDataSnack[]>;
+  'snaks-order': string[];
+}
+
+export type WikiDataClaim = {
+  mainsnak: {
+    snaktype: string;
+    property: string;
+    datavalue: {
+      value: any;
+      type: string;
+    }
+  };
+  type: string;
+  id: string;
+  rank: string;
+  references?: WikiDataReference[];
+}
+
+export type WikiDataEntity = {
+  type: string;
+  id: string;
+  labels?: Record<string, { language: string, value: string }>;
+  descriptions?: Record<string, { language: string, value: string }>;
+  aliases?: Record<string, { language: string, value: string }[]>;
+  claims?: Record<string, WikiDataClaim[]>;
+  sitelinks?: Record<string, { site: string, title: string }>;
+}
+
+export type WikiDataSetClaimResponse = {
+  success: 1 | 0;
+  id: string;
+  type: string;
+  claim: WikiDataClaim;
+  pageinfo: {
+    lastrevid: number;
+  },
+}
+
+export type WikiDataSetReferenceResponse = {
+  success: 1 | 0;
+  pageinfo: {
+    lastrevid: number;
+  },
+  reference: WikiDataReference
+}

@@ -1,17 +1,23 @@
-import { WikiApiConfig } from '../types';
+import {
+  WikiApiConfig, WikiDataEntity, WikiDataSetClaimResponse, WikiDataSetReferenceResponse, WikiDataSnack, WikiPage,
+} from '../types';
 import BaseWikiApi from './BaseWikiApi';
 
 const defaultWikiDataConfig: Partial<WikiApiConfig> = {
   baseUrl: 'https://www.wikidata.org/w/api.php',
   password: process.env.PASSWORD,
   userName: process.env.USER_NAME,
-  assertBot: false,
 };
 
 export interface IWikiDataAPI {
   login: () => Promise<void>;
-  setClaim: (claim: string, summary: string) => Promise<any>;
-  readEntity: (qid: string, props: string, languages?: string) => Promise<any>;
+  setClaimValue: (claim: string, value: any, summary: string, baserevid: number) =>
+     Promise<WikiDataSetClaimResponse>;
+  readEntity: (qid: string, props: string, languages?: string) => Promise<WikiDataEntity>;
+  getRevId: (title: string) => Promise<number>;
+  updateReference: (claim: string, referenceHash: string,
+    snaks: Record<string, WikiDataSnack[]>, summary: string, baserevid: number) =>
+      Promise<WikiDataSetReferenceResponse>;
 }
 
 export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultWikiDataConfig): IWikiDataAPI {
@@ -27,10 +33,58 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
     return tokenPromise;
   }
 
-  function setClaim(claim: string, summary: string) {
-    return baseApi.request(`?action=wbsetclaim&format=json&claim=${claim}&summary=${summary}&bot=true`, 'POST', {
+  async function setClaimValue(claim: string, value: any, summary: string, baserevid: number) {
+    const params = new URLSearchParams({
+      action: 'wbsetclaimvalue',
+      snaktype: 'value',
+      format: 'json',
+      claim,
+      value: JSON.stringify(value),
       token,
+      summary,
+      bot: '1',
+      baserevid: baserevid.toString(),
     });
+    return baseApi.request('', 'POST', params);
+  }
+
+  async function updateReference(
+    claim: string,
+    referenceHash: string,
+    snaks: Record<string, WikiDataSnack[]>,
+    summary: string,
+    baserevid: number,
+  ) {
+    const params = new URLSearchParams({
+      action: 'wbsetreference',
+      format: 'json',
+      statement: claim,
+      reference: referenceHash,
+      snaks: JSON.stringify(snaks),
+      bot: '1',
+      token,
+      summary,
+      baserevid: baserevid.toString(),
+    });
+    return baseApi.request('', 'POST', params);
+  }
+
+  async function getRevId(title: string) {
+    const params = new URLSearchParams({
+      action: 'query',
+      titles: title,
+      format: 'json',
+      prop: 'revisions',
+      rvlimit: '1',
+      rvprop: 'ids',
+    });
+    const res = await baseApi.request(`?${params.toString()}`);
+    const page = Object.values(res.query.pages)[0] as WikiPage;
+    const revId = page?.revisions?.[0].revid;
+    if (!revId) {
+      throw new Error(`Failed to get revid for ${title}`);
+    }
+    return revId;
   }
 
   async function readEntity(qid: string, props: string, languages?: string) {
@@ -48,7 +102,9 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
 
   return {
     login,
-    setClaim,
+    setClaimValue,
     readEntity,
+    getRevId,
+    updateReference,
   };
 }

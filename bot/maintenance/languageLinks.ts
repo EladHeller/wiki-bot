@@ -1,3 +1,4 @@
+import { getLogTitleData } from '../admin/log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import BaseWikiApi, { defaultConfig } from '../wiki/BaseWikiApi';
@@ -9,6 +10,7 @@ import {
 
 const CATEGORY_NAME = 'ערכים עם קישור שפה לערך שכבר קיים בעברית';
 const LANGUAGE_LINKS_TEMPLATE = 'קישור שפה';
+const LOG_PAGE_NAME = 'ויקיפדיה:בוט/הסרת קישורי שפה';
 
 function getLinkText(template: string, articleName: string, presentName?: string) {
   const keyValueData = getTemplateKeyValueData(template);
@@ -25,8 +27,19 @@ async function getLaunguagesCode(api: IWikiApi) {
   return getTemplateKeyValueData(template);
 }
 
+type FailedReason = 'no language code' | 'no wiki data item' | 'no he wiki link' | 'he link is redirect' | 'missing language link';
+
+export type LanguageLinkLog = {
+  title: string;
+  externalLink: string;
+  template: string;
+  success: boolean;
+  newLink?: string;
+  failedReason?: FailedReason;
+};
+
 const languagesApiDict: Record<string, IWikiApi> = {};
-const logs: string[] = [];
+const logs: LanguageLinkLog[] = [];
 const alreadyChecked: Record<string, string> = {};
 
 const statistics = {
@@ -34,16 +47,28 @@ const statistics = {
   updated: 0,
   totalTemplates: 0,
   templatesUpdated: 0,
-  errors: 0,
-  noLanguageCode: 0,
+  externalRedirects: 0,
+  // noLanguageCode: 0,
   failedRequests: 0,
-  noWikiDataItem: 0,
-  noHeWikiLink: 0,
-  helinkIsRedirect: 0,
+  // noWikiDataItem: 0,
+  // noHeWikiLink: 0,
+  // helinkIsRedirect: 0,
   noInfo: 0,
   updateWrongName: 0,
   noUpdated: [] as string[],
 };
+
+export async function wrightLogs(api: IWikiApi, allLogs = logs) {
+  const { content, revid } = await api.articleContent(LOG_PAGE_NAME);
+  const { title, titleAndSummary } = getLogTitleData(content);
+
+  const logContent = allLogs.map((log) => {
+    const failed = log.success ? '' : ` (${log.failedReason}){{כ}}`;
+    return `* ${log.title}:{{כ}} ${log.template} -{{כ}} ${log.externalLink} -{{כ}} ${log.success ? 'הצליח' : 'נכשל'}${failed}${log.newLink ? ` - ${log.newLink}` : ''}`;
+  }).join('\n');
+
+  await api.edit('ויקיפדיה:בוט/הסרת קישורי שפה', titleAndSummary, logContent, revid, title);
+}
 
 export async function parseContent(
   api: IWikiApi,
@@ -54,49 +79,101 @@ export async function parseContent(
 ) {
   statistics.total += 1;
   const templates = findTemplates(content, LANGUAGE_LINKS_TEMPLATE, title);
-  const newContent = content;
-  let updated = false;
+  let newContent = content;
   await promiseSequence(1, templates.map((template) => async () => {
     try {
       statistics.totalTemplates += 1;
-      updated = true;
-      if (alreadyChecked[template]) {
-        statistics.templatesUpdated += 1;
-        // newContent = newContent.replaceAll(
-        //   template,
-        //   alreadyChecked[template],
-        // );
-        logs.push(`* [[${title}]]: ${template} -> ${alreadyChecked[template]}`);
-        return;
-      }
       const [language, externalName, articleName, presentName] = getTemplateArrayData(
         template,
         LANGUAGE_LINKS_TEMPLATE,
         title,
         true,
       );
-      const languageCode = languageCodesDict[language || 'אנגלית'];
+      const languageCode = languageCodesDict[language || 'אנגלית']
+        ?? (Object.values(languageCodesDict).includes(language) ? language : null);
+
+      if (alreadyChecked[template]) {
+        statistics.templatesUpdated += 1;
+        newContent = newContent.replaceAll(
+          template,
+          alreadyChecked[template],
+        );
+        logs.push({
+          title: `[[${title}]]`,
+          template: `<nowiki>${template}</nowiki>`,
+          externalLink: `[[:${languageCode}:${externalName}]]`,
+          success: true,
+          newLink: alreadyChecked[template],
+        });
+        return;
+      }
+
       if (!languageCode) {
-        console.error('no language code', { title, template, language });
-        statistics.noLanguageCode += 1;
+        logs.push({
+          title: `[[${title}]]`,
+          template: `<nowiki>${template}</nowiki>`,
+          externalLink: `[[:${languageCode}:${externalName}]]`,
+          success: false,
+          failedReason: 'no language code',
+        });
+        // statistics.noLanguageCode += 1;
         return;
       }
       if (!languagesApiDict[languageCode]) {
         languagesApiDict[languageCode] = NewWikiApi(BaseWikiApi({ ...defaultConfig, baseUrl: `https://${languageCode}.wikipedia.org/w/api.php`, assertBot: false }));
       }
       const languageApi = languagesApiDict[languageCode];
-      const wikiDataItem = await languageApi.getWikiDataItem(externalName);
+      let wikiDataItem = await languageApi.getWikiDataItem(externalName);
       if (!wikiDataItem) {
-        statistics.noWikiDataItem += 1;
-        return;
+        const target = await languageApi.getRedirecTarget(externalName);
+        if (target?.missing != null) {
+          logs.push({
+            title: `[[${title}]]`,
+            template: `<nowiki>${template}</nowiki>`,
+            externalLink: `[[:${languageCode}:${externalName}]]`,
+            success: false,
+            failedReason: 'missing language link',
+          });
+          return;
+        }
+        if (target?.title) {
+          wikiDataItem = await languageApi.getWikiDataItem(target.title);
+        }
+        if (!wikiDataItem) {
+          logs.push({
+            title: `[[${title}]]`,
+            template: `<nowiki>${template}</nowiki>`,
+            externalLink: `[[:${languageCode}:${externalName}]]`,
+            success: false,
+            failedReason: 'no wiki data item',
+          });
+          return;
+        }
+        statistics.externalRedirects += 1;
       }
       const wikiDataRes = await wikiDataApi.readEntity(wikiDataItem, 'sitelinks');
       if (!wikiDataRes) {
-        statistics.noWikiDataItem += 1;
+        logs.push({
+          title: `[[${title}]]`,
+          template: `<nowiki>${template}</nowiki>`,
+          externalLink: `[[:${languageCode}:${externalName}]]`,
+          success: false,
+          failedReason: 'no wiki data item',
+        });
         return;
       }
-      if (!wikiDataRes.sitelinks.hewiki?.title) {
-        statistics.noHeWikiLink += 1;
+      if (!wikiDataRes.sitelinks?.hewiki?.title) {
+        const [originHeLinkInfo] = await api.info([articleName]);
+        if (originHeLinkInfo?.missing == null) {
+          logs.push({
+            title: `[[${title}]]`,
+            template: `<nowiki>${template}</nowiki>`,
+            externalLink: `[[:${languageCode}:${externalName}]]`,
+            success: false,
+            failedReason: 'no he wiki link',
+          });
+        }
+        // statistics.noHeWikiLink += 1;
         return;
       }
       const [infoRes] = await api.info([wikiDataRes.sitelinks.hewiki.title]);
@@ -106,32 +183,40 @@ export async function parseContent(
       }
 
       if (infoRes.redirect != null) {
-        statistics.helinkIsRedirect += 1;
+        logs.push({
+          title: `[[${title}]]`,
+          template: `<nowiki>${template}</nowiki>`,
+          externalLink: `[[:${languageCode}:${externalName}]]`,
+          newLink: `[[${wikiDataRes.sitelinks.hewiki.title}]]`,
+          success: false,
+          failedReason: 'he link is redirect',
+        });
         return;
       }
 
       if (wikiDataRes.sitelinks.hewiki.title !== articleName) {
         statistics.updateWrongName += 1;
       }
-      updated = true;
       statistics.templatesUpdated += 1;
       const newLinkText = getLinkText(template, wikiDataRes.sitelinks.hewiki.title, presentName || articleName);
-      // newContent = newContent.replaceAll(
-      //   template,
-      //   getLinkText(template, wikiDataRes.sitelinks.hewiki.title, presentName || articleName),
-      // );
+      newContent = newContent.replaceAll(
+        template,
+        getLinkText(template, wikiDataRes.sitelinks.hewiki.title, presentName || articleName),
+      );
       alreadyChecked[template] = newLinkText;
-      logs.push(`* [[${title}]]: ${template} -> ${newLinkText}`);
+      logs.push({
+        title: `[[${title}]]`,
+        template: `<nowiki>${template}</nowiki>`,
+        externalLink: `[[:${languageCode}:${externalName}]]`,
+        success: true,
+        newLink: newLinkText,
+      });
     } catch (e) {
       console.log(e.message || e.data || e.toString());
       statistics.failedRequests += 1;
     }
   }));
-  if (updated) {
-    statistics.updated += 1;
-  } else {
-    statistics.noUpdated.push(title);
-  }
+
   return newContent;
 }
 
@@ -160,17 +245,16 @@ export default async function languageLinks() {
 
     const newContent = await parseContent(api, wikidataApi, page.title, content, languageCodesDict);
     if (newContent !== content) {
-      console.log(`Updating ${page.title}!!!!!!!!!`);
-      // await api.edit(page.title, 'הסרת תבנית קישור שפה', newContent, revid);
+      statistics.updated += 1;
+      // console.log(`Updating ${page.title}!!!!!!!!!`);
+      await api.edit(page.title, 'החלפת תבנית קישור שפה בקישור פנימי', newContent, revid);
+    } else {
+      // console.log(`No update for ${page.title}`);
+      statistics.noUpdated.push(page.title);
     }
   });
-  const [sandboxInfo] = await api.info(['משתמש:החבלן/Sandbox']);
-  if (!sandboxInfo?.lastrevid) {
-    console.error('No sandbox info');
-    return;
-  }
   console.log(statistics);
-  await api.edit('משתמש:החבלן/Sandbox', 'בדיקת קישורי שפה', logs.join('\n'), sandboxInfo.lastrevid);
+  await wrightLogs(api);
 }
 
 export const main = shabathProtectorDecorator(languageLinks);

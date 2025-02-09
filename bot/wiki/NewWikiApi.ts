@@ -51,6 +51,7 @@ export interface IWikiApi {
     type: string, namespaces: number[], endTimestamp: string, limit?: number
   ): AsyncGenerator<LogEvent[], void, void>;
   movePage(from: string, to: string, reason: string): Promise<void>;
+  getRedirecTarget: (title: string) => Promise<WikiPage | null>;
 }
 
 export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -381,6 +382,11 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     }));
   }
 
+  async function getRedirecTarget(title: string) {
+    const res = await request(`?action=query&format=json&redirects=1&titles=${encodeURIComponent(title)}`);
+    return Object.values(res.query?.pages ?? {})[0] as WikiPage ?? null;
+  }
+
   return {
     login,
     request: baseWikiApi.request,
@@ -412,6 +418,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     newPages,
     logs,
     movePage,
+    getRedirecTarget,
     edit,
     create,
   };
