@@ -60,7 +60,7 @@ async function getKineretLevel() {
   };
 }
 
-async function updateWikiData(date: Date, level: string) {
+export async function updateWikiData(date: Date, level: string) {
   const api = WikiDataAPI();
   await api.login();
 
@@ -103,7 +103,7 @@ async function updateWikiData(date: Date, level: string) {
 async function kineret() {
   const { date, level } = await getKineretLevel();
   await updateLevel({ date: formatDate(date), level }, articleName, '#switch: {{{מאפיין}}}');
-  await updateWikiData(date, level);
+  // await updateWikiData(date, level);
 }
 
 export default async function kinneretBot() {

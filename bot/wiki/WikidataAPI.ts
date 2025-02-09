@@ -7,7 +7,6 @@ const defaultWikiDataConfig: Partial<WikiApiConfig> = {
   baseUrl: 'https://www.wikidata.org/w/api.php',
   password: process.env.PASSWORD,
   userName: process.env.USER_NAME,
-  assertBot: false,
 };
 
 export interface IWikiDataAPI {
@@ -43,6 +42,7 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
       value: JSON.stringify(value),
       token,
       summary,
+      bot: '1',
       baserevid: baserevid.toString(),
     });
     return baseApi.request('', 'POST', params);
@@ -61,6 +61,7 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
       statement: claim,
       reference: referenceHash,
       snaks: JSON.stringify(snaks),
+      bot: '1',
       token,
       summary,
       baserevid: baserevid.toString(),
