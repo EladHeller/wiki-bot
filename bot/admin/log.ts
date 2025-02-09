@@ -121,14 +121,23 @@ function parseParagraphs(logs: Paragraph[], subParagraphCode: string) {
   return logs.reduce((acc, { content, name }) => `${acc}${subParagraphCode}${name}${subParagraphCode}\n${content}\n`, '');
 }
 
+export function getLogTitleData(content: string) {
+  const titleAndSummary = `לוג ריצה ${getLocalDate(new Date().toLocaleString())}`;
+  const nightRun = isNightRun(titleAndSummary, content);
+  const title = nightRun ? '===ריצת ערב===' : `==${titleAndSummary}==`;
+  return {
+    title,
+    nightRun,
+    titleAndSummary,
+  };
+}
+
 export default async function writeAdminBotLogs(
   logs: ArticleLog[] | Paragraph[],
   logPageTitle: string,
 ) {
   const logPageContent = await getArticleContent(logPageTitle);
-  const titleAndSummary = `לוג ריצה ${getLocalDate(new Date().toLocaleString())}`;
-  const nightRun = isNightRun(titleAndSummary, logPageContent);
-  const title = nightRun ? '===ריצת ערב===' : `==${titleAndSummary}==`;
+  const { title, nightRun, titleAndSummary } = getLogTitleData(logPageContent ?? '');
 
   const subParagraphCode = nightRun ? '====' : '===';
 
