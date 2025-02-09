@@ -162,7 +162,7 @@ export async function parseContent(
         });
         return;
       }
-      if (!wikiDataRes.sitelinks.hewiki?.title) {
+      if (!wikiDataRes.sitelinks?.hewiki?.title) {
         const [originHeLinkInfo] = await api.info([articleName]);
         if (originHeLinkInfo?.missing == null) {
           logs.push({
