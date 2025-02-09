@@ -45,7 +45,12 @@ async function getKineretLevel() {
 export async function updateWikiData(date: Date, level: string) {
   const api = WikiDataAPI();
   await api.login();
-
+  const currentClaim = await api.getClaim(LEVEL_PROPERTY_CLAIM_GUID);
+  const currentLevel = Number(currentClaim.mainsnak.datavalue.value.amount);
+  const newLevel = Number(level);
+  if (Math.abs(currentLevel - newLevel) < 0.05) {
+    console.log('No need to update wikidata');
+  }
   const revId = await api.getRevId(WIKI_DATA_ITEM);
   const updateRes = await api.setClaimValue(LEVEL_PROPERTY_CLAIM_GUID, {
     amount: level,

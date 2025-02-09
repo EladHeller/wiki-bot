@@ -1,5 +1,6 @@
 import {
-  WikiApiConfig, WikiDataEntity, WikiDataSetClaimResponse, WikiDataSetReferenceResponse, WikiDataSnack, WikiPage,
+  WikiApiConfig, WikiDataClaim, WikiDataEntity, WikiDataSetClaimResponse, WikiDataSetReferenceResponse, WikiDataSnack,
+  WikiPage,
 } from '../types';
 import BaseWikiApi from './BaseWikiApi';
 
@@ -14,6 +15,7 @@ export interface IWikiDataAPI {
   login: () => Promise<void>;
   setClaimValue: (claim: string, value: any, summary: string, baserevid: number) =>
      Promise<WikiDataSetClaimResponse>;
+  getClaim: (id: string) => Promise<WikiDataClaim>;
   readEntity: (qid: string, props: string, languages?: string) => Promise<WikiDataEntity>;
   getRevId: (title: string) => Promise<number>;
   updateReference: (claim: string, referenceHash: string,
@@ -101,9 +103,24 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
     return res.entities[qid];
   }
 
+  async function getClaim(id: string) {
+    const params = new URLSearchParams({
+      action: 'wbgetclaims',
+      claim: id,
+      format: 'json',
+    });
+    const res = await baseApi.request(`?${params.toString()}`);
+    const claim = Object.values(res.claims)[0]?.[0];
+    if (!claim) {
+      throw new Error(`Failed to get claim for ${id}`);
+    }
+    return claim;
+  }
+
   return {
     login,
     setClaimValue,
+    getClaim,
     readEntity,
     getRevId,
     updateReference,
