@@ -1,13 +1,35 @@
 import 'dotenv/config';
-import { rollbackUserContributions, undoContributions } from '../wiki/wikiAPI';
+import NewWikiApi from '../wiki/NewWikiApi';
+import { asyncGeneratorMapWithSequence } from '../utilities';
 
-const undo = false;
-export default async function main() {
-  if (undo) {
-    await undoContributions('test', 'בדיקת שחזור', 2);
-  } else {
-    await rollbackUserContributions('test', 'בדיקת שחזור', 2);
-  }
+export default async function rollback(
+  editForRollbackSummary: string,
+  rollbackSummary: string,
+  hoursAgo: number,
+  user: string,
+) {
+  const api = NewWikiApi();
+  const startTime = new Date();
+  startTime.setHours(startTime.getHours() - hoursAgo);
+  const endTime = new Date();
+  const contributionsGenereator = api.userContributes(user, startTime, endTime, 10);
+  const failedRollbacks: string[] = [];
+  let successCount = 0;
+  await asyncGeneratorMapWithSequence(1, contributionsGenereator, (contribution) => async () => {
+    if (contribution.comment !== editForRollbackSummary) {
+      return;
+    }
+    try {
+      await api.undo(contribution.title, rollbackSummary, contribution.revid);
+      successCount += 1;
+    } catch (error) {
+      failedRollbacks.push(contribution.title);
+      console.error('Failed to rollback', contribution.title, error.message || error.toString());
+    }
+  });
+  console.log('Rollback finished', {
+    successCount,
+    failedRollbacksCount: failedRollbacks.length,
+  });
+  console.log('Failed rollbacks', JSON.stringify(failedRollbacks, null, 2));
 }
-
-main().catch(console.error);

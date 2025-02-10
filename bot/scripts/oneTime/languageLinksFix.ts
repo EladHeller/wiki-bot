@@ -31,7 +31,9 @@ export async function fixMissingQuotation() {
 export default async function fixLanguageLinks() {
   const api = NewWikiApi();
   await api.login();
-  const generator = api.userContributes('sapper-bot', 380);
+  const startDate = new Date();
+  startDate.setHours(startDate.getHours() - 24);
+  const generator = api.userContributes('sapper-bot', startDate, new Date(), 380);
   const titles = await asyncGeneratorMapWithSequence(1, generator, (contribution) => async () => {
     console.log(`Checking ${contribution.title}`);
     if (contribution.comment === RELEVANT_COMMENT) {

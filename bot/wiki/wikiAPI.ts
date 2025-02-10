@@ -2,7 +2,7 @@ import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import type { WikiPage } from '../types';
-import { objectToFormData, objectToQueryString, promiseSequence } from '../utilities';
+import { objectToFormData, objectToQueryString } from '../utilities';
 import { baseLogin, getToken } from './wikiLogin';
 
 const jar = new CookieJar();
@@ -301,17 +301,6 @@ export async function* userContributes(user:string, limit = 500) {
   yield* continueQuery(path);
 }
 
-export async function rollbackUserContributions(user:string, summary: string, count = 5) {
-  if (count > 500) {
-    throw new Error('Too many titles');
-  }
-  const { value } = await userContributes(user, count).next();
-  const contributes = value.query.usercontribs;
-  await promiseSequence(30, contributes.map((contribute) => async () => {
-    await rollback(contribute.title, user, summary);
-  }));
-}
-
 export async function* listCategory(category: string, limit = 500) {
   const props = encodeURIComponent('title|sortkeyprefix');
   const path = `${baseUrl}?action=query&format=json&list=categorymembers&cmtitle=Category:${encodeURIComponent(category)}&cmlimit=${limit}&cmprop=${props}`;
@@ -331,17 +320,6 @@ export async function categroyPages(category: string, limit = 500): Promise<Wiki
 export async function* categoriesStartsWith(prefix: string) {
   const path = `${baseUrl}?action=query&format=json&list=allcategories&acprop=size&acprefix=${encodeURIComponent(prefix)}&aclimit=5000`;
   yield* continueQuery(path);
-}
-
-export async function undoContributions(user:string, summary: string, count = 5) {
-  if (count > 500) {
-    throw new Error('Too many titles');
-  }
-  const { value } = await userContributes(user, count).next();
-  const contributes = value.query.usercontribs;
-  await promiseSequence(30, contributes.map((contribute) => async () => {
-    await undo(contribute.title, summary, contribute.revid);
-  }));
 }
 
 export async function* fileUsage(pageIds: string[], limit = 500) {
