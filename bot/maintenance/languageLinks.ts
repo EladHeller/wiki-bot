@@ -49,11 +49,7 @@ const statistics = {
   totalTemplates: 0,
   templatesUpdated: 0,
   externalRedirects: 0,
-  // noLanguageCode: 0,
   failedRequests: 0,
-  // noWikiDataItem: 0,
-  // noHeWikiLink: 0,
-  // helinkIsRedirect: 0,
   noInfo: 0,
   updateWrongName: 0,
   noUpdated: 0,
@@ -118,7 +114,6 @@ export async function parseContent(
           success: false,
           failedReason: 'no language code',
         });
-        // statistics.noLanguageCode += 1;
         return;
       }
       if (!languagesApiDict[languageCode]) {
@@ -128,7 +123,7 @@ export async function parseContent(
       let wikiDataItem = await languageApi.getWikiDataItem(externalName);
       if (!wikiDataItem) {
         const target = await languageApi.getRedirecTarget(externalName);
-        if (target?.missing != null) {
+        if (target == null || target.tofragment != null || target.tosection != null || !target.to) {
           logs.push({
             title: `[[${title}]]`,
             template: `<nowiki>${template}</nowiki>`,
@@ -138,9 +133,7 @@ export async function parseContent(
           });
           return;
         }
-        if (target?.title) {
-          wikiDataItem = await languageApi.getWikiDataItem(target.title);
-        }
+        wikiDataItem = await languageApi.getWikiDataItem(target.to);
         if (!wikiDataItem) {
           logs.push({
             title: `[[${title}]]`,

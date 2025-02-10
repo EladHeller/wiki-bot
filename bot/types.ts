@@ -146,3 +146,10 @@ export type WikiDataSetReferenceResponse = {
   },
   reference: WikiDataReference
 }
+
+export type WikiRedirectData = {
+  from: string;
+  to: string;
+  tofragment?: string;
+  tosection?: string;
+}
