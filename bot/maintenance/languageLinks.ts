@@ -76,6 +76,7 @@ export async function parseContent(
   title: string,
   content: string,
   languageCodesDict: Record<string, string>,
+  checkIfThereIsHebrewLink = true,
 ) {
   statistics.total += 1;
   const templates = findTemplates(content, LANGUAGE_LINKS_TEMPLATE, title);
@@ -163,6 +164,9 @@ export async function parseContent(
         return;
       }
       if (!wikiDataRes.sitelinks?.hewiki?.title) {
+        if (!checkIfThereIsHebrewLink) {
+          return;
+        }
         const [originHeLinkInfo] = await api.info([articleName]);
         if (originHeLinkInfo?.missing == null) {
           logs.push({
@@ -173,7 +177,6 @@ export async function parseContent(
             failedReason: 'no he wiki link',
           });
         }
-        // statistics.noHeWikiLink += 1;
         return;
       }
       const [infoRes] = await api.info([wikiDataRes.sitelinks.hewiki.title]);
@@ -220,7 +223,7 @@ export async function parseContent(
   return newContent;
 }
 
-export default async function languageLinks() {
+export default async function languageLinks(byCategory = true) {
   const api = NewWikiApi();
   await api.login();
   const wikidataApi = WikiDataAPI();
@@ -228,9 +231,11 @@ export default async function languageLinks() {
 
   const languageCodesDict = await getLaunguagesCode(api);
 
-  const generator = api.categroyPages(CATEGORY_NAME);
+  const generator = byCategory
+    ? api.categroyPages(CATEGORY_NAME)
+    : api.getArticlesWithTemplate(LANGUAGE_LINKS_TEMPLATE);
 
-  await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
+  await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
     console.log(`Checking ${page.title}`);
     const content = page.revisions?.[0].slots.main['*'];
     const revid = page.revisions?.[0].revid;
@@ -243,7 +248,7 @@ export default async function languageLinks() {
       return;
     }
 
-    const newContent = await parseContent(api, wikidataApi, page.title, content, languageCodesDict);
+    const newContent = await parseContent(api, wikidataApi, page.title, content, languageCodesDict, byCategory);
     if (newContent !== content) {
       statistics.updated += 1;
       // console.log(`Updating ${page.title}!!!!!!!!!`);
