@@ -50,6 +50,7 @@ export async function updateWikiData(date: Date, level: string) {
   const newLevel = Number(level);
   if (Math.abs(currentLevel - newLevel) < 0.05) {
     console.log('No need to update wikidata');
+    return;
   }
   const revId = await api.getRevId(WIKI_DATA_ITEM);
   const updateRes = await api.setClaimValue(LEVEL_PROPERTY_CLAIM_GUID, {
