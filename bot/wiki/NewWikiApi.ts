@@ -1,6 +1,7 @@
 import {
   LogEvent,
   Revision, UserContribution, WikiPage,
+  WikiRedirectData,
 } from '../types';
 import { objectToFormData, promiseSequence } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
@@ -51,7 +52,7 @@ export interface IWikiApi {
     type: string, namespaces: number[], endTimestamp: string, limit?: number
   ): AsyncGenerator<LogEvent[], void, void>;
   movePage(from: string, to: string, reason: string): Promise<void>;
-  getRedirecTarget: (title: string) => Promise<WikiPage | null>;
+  getRedirecTarget: (title: string) => Promise<WikiRedirectData | null>;
 }
 
 export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -385,7 +386,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
 
   async function getRedirecTarget(title: string) {
     const res = await request(`?action=query&format=json&redirects=1&titles=${encodeURIComponent(title)}`);
-    return Object.values(res.query?.pages ?? {})[0] as WikiPage ?? null;
+    return res.query.redirects?.[0] ?? null;
   }
 
   return {

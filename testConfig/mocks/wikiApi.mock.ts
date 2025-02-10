@@ -3,6 +3,7 @@ import { IWikiApi } from '../../bot/wiki/NewWikiApi';
 import { Mocked } from './types';
 import {
   LogEvent, Revision, UserContribution, WikiPage,
+  WikiRedirectData,
 } from '../../bot/types';
 
 export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mocked<IWikiApi> {
@@ -104,6 +105,6 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     categroyTitles:
       base.categroyTitles
       ?? jest.fn<(category: string, limit?: number) => AsyncGenerator<WikiPage[], void, void>>(),
-    getRedirecTarget: base.getRedirecTarget ?? jest.fn<(title: string) => Promise<WikiPage | null>>(),
+    getRedirecTarget: base.getRedirecTarget ?? jest.fn<(title: string) => Promise<WikiRedirectData | null>>(),
   };
 }
