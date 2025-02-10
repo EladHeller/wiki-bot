@@ -3,7 +3,7 @@ import {
   Revision, UserContribution, WikiPage,
   WikiRedirectData,
 } from '../types';
-import { objectToFormData, promiseSequence } from '../utilities';
+import { objectToFormData } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
 
 export interface IWikiApi {
@@ -29,10 +29,8 @@ export interface IWikiApi {
   purge(titles: string[]): Promise<any>;
   rollback(title: string, user: string, summary: string): Promise<any>;
   undo(title: string, summary: string, revision: number): Promise<any>;
-  rollbackUserContributions(user: string, summary: string, count?: number): Promise<any>;
   categroyPages(category: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
   categroyTitles(category: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
-  undoContributions(user: string, summary: string, count?: number): Promise<any>;
   protect(title: string, protections: string, expiry: string, reason: string): Promise<any>;
   deletePage(title: string, reason: string): Promise<any>;
   getArticlesWithTemplate(
@@ -41,7 +39,9 @@ export interface IWikiApi {
   search(text: string): AsyncGenerator<WikiPage[], void, void>;
   getRedirects(namespace?: number, linkNamespace?: number[], limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
-  userContributes(user: string, limit?: number): AsyncGenerator<UserContribution[], void, void>;
+  userContributes(
+    user: string, startTime: Date, endTime: Date, limit?: number
+  ): AsyncGenerator<UserContribution[], void, void>;
   listCategory(category: string, limit?: number, type?: string): AsyncGenerator<WikiPage[], void, void>;
   categoriesStartsWith(prefix: string): AsyncGenerator<WikiPage[], void, void>;
   fileUsage(pageIds: string[], limit?: number): AsyncGenerator<WikiPage[], void, void>;
@@ -269,21 +269,11 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     }));
   }
 
-  async function* userContributes(user:string, limit = 500) {
+  async function* userContributes(user:string, startTime: Date, endTime: Date, limit = 500) {
     const props = encodeURIComponent('title|ids|comment');
-    const path = `?action=query&format=json&list=usercontribs&ucuser=${encodeURIComponent(user)}&uclimit=${limit}&ucprop=${props}`;
+    const path = `?action=query&format=json&list=usercontribs&ucuser=${encodeURIComponent(user)}&uclimit=${limit}&ucprop=${props}`
+    + `&ucstart=${endTime.toISOString()}&ucend=${startTime.toISOString()}`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.usercontribs ?? {}));
-  }
-
-  async function rollbackUserContributions(user:string, summary: string, count = 5) {
-    if (count > 500) {
-      throw new Error('Too many titles');
-    }
-    const { value } = await userContributes(user, count).next();
-    const contributes = value.query.usercontribs;
-    await promiseSequence(30, contributes.map((contribute) => async () => {
-      await rollback(contribute.title, user, summary);
-    }));
   }
 
   async function* listCategory(category: string, limit = 500, type = 'page|subcat|file') {
@@ -324,17 +314,6 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
   async function* categoriesStartsWith(prefix: string) {
     const path = `?action=query&format=json&list=allcategories&acprop=size&acprefix=${encodeURIComponent(prefix)}&aclimit=5000`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.allcategories ?? {}));
-  }
-
-  async function undoContributions(user:string, summary: string, count = 5) {
-    if (count > 500) {
-      throw new Error('Too many titles');
-    }
-    const { value } = await userContributes(user, count).next();
-    const contributes = value.query.usercontribs;
-    await promiseSequence(30, contributes.map((contribute) => async () => {
-      await undo(contribute.title, summary, contribute.revid);
-    }));
   }
 
   async function* fileUsage(pageIds: string[], limit = 500) {
@@ -403,9 +382,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     purge,
     rollback,
     undo,
-    rollbackUserContributions,
     categroyPages,
-    undoContributions,
     protect,
     deletePage,
     getArticlesWithTemplate,

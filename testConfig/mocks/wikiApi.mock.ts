@@ -36,15 +36,9 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     undo:
       base.undo
       ?? jest.fn<(title: string, summary: string, revision: number) => Promise<any>>(),
-    rollbackUserContributions:
-      base.rollbackUserContributions
-      ?? jest.fn<(user: string, summary: string, count?: number) => Promise<any>>(),
     categroyPages:
       base.categroyPages
       ?? jest.fn<(category: string, limit?: number) => AsyncGenerator<WikiPage[], void, void>>(),
-    undoContributions:
-      base.undoContributions
-      ?? jest.fn<(title: string, user: string) => Promise<any>>(),
     protect:
       base.protect
       ?? jest.fn<(title: string, protections: string, expiry: string, reason: string) => Promise<any>>(),
@@ -65,7 +59,8 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
         templates?: string, categories?: string) => AsyncGenerator<WikiPage[], void, void>>(),
     userContributes:
       base.userContributes
-      ?? jest.fn<(user: string, limit?: number) => AsyncGenerator<UserContribution[], void, void>>(),
+      ?? jest.fn<(user: string, startTime: Date, endTime: Date, limit?: number
+      ) => AsyncGenerator<UserContribution[], void, void>>(),
     listCategory: base.listCategory ?? jest.fn<(category: string, limit?: number, type?: string
     ) => AsyncGenerator<WikiPage[], void, void>>(),
     categoriesStartsWith:
