@@ -1,3 +1,4 @@
+import fs from 'fs/promises';
 import { getLogTitleData } from '../admin/log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
@@ -11,7 +12,7 @@ import {
 const CATEGORY_NAME = 'ערכים עם קישור שפה לערך שכבר קיים בעברית';
 const LANGUAGE_LINKS_TEMPLATE = 'קישור שפה';
 const LOG_PAGE_NAME = 'ויקיפדיה:בוט/הסרת קישורי שפה';
-
+const fileName = `logs${new Date().toJSON()}.txt`;
 function getLinkText(template: string, articleName: string, presentName?: string) {
   const keyValueData = getTemplateKeyValueData(template);
   const addApostrophes = keyValueData['מירכאות']?.trim() === 'כן';
@@ -55,7 +56,7 @@ const statistics = {
   // helinkIsRedirect: 0,
   noInfo: 0,
   updateWrongName: 0,
-  noUpdated: [] as string[],
+  noUpdated: 0,
 };
 
 export async function wrightLogs(api: IWikiApi, allLogs = logs) {
@@ -215,7 +216,7 @@ export async function parseContent(
         newLink: newLinkText,
       });
     } catch (e) {
-      console.log(e.message || e.data || e.toString());
+      await fs.appendFile(fileName, e.message || e.data || e.toString());
       statistics.failedRequests += 1;
     }
   }));
@@ -228,6 +229,7 @@ export default async function languageLinks(byCategory = true) {
   await api.login();
   const wikidataApi = WikiDataAPI();
   await wikidataApi.login();
+  await fs.appendFile(fileName, `Started at ${new Date().toISOString()}\n`);
 
   const languageCodesDict = await getLaunguagesCode(api);
 
@@ -236,29 +238,30 @@ export default async function languageLinks(byCategory = true) {
     : api.getArticlesWithTemplate(LANGUAGE_LINKS_TEMPLATE);
 
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
-    console.log(`Checking ${page.title}`);
+    if (statistics.total % 100 === 0) {
+      fs.appendFile(fileName, JSON.stringify(global.continueObject));
+    }
+    await fs.appendFile(fileName, `Checking ${page.title}`);
     const content = page.revisions?.[0].slots.main['*'];
     const revid = page.revisions?.[0].revid;
     if (!content) {
-      console.error(`No content for ${page.title}`);
+      await fs.appendFile(fileName, `No content for ${page.title}`);
       return;
     }
     if (!revid) {
-      console.error(`No revid for ${page.title}`);
+      await fs.appendFile(fileName, `No revid for ${page.title}`);
       return;
     }
 
     const newContent = await parseContent(api, wikidataApi, page.title, content, languageCodesDict, byCategory);
     if (newContent !== content) {
       statistics.updated += 1;
-      // console.log(`Updating ${page.title}!!!!!!!!!`);
       await api.edit(page.title, 'החלפת תבנית קישור שפה בקישור פנימי', newContent, revid);
     } else {
-      // console.log(`No update for ${page.title}`);
-      statistics.noUpdated.push(page.title);
+      statistics.noUpdated += 1;
     }
   });
-  console.log(statistics);
+  await fs.appendFile(fileName, JSON.stringify(statistics));
   await wrightLogs(api);
 }
 
