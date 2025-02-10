@@ -18,7 +18,7 @@ export default async function replaceLinkWithLanguageLink(
   await api.login();
   const generartor = api.backlinksTo(articleName, '0');
 
-  await asyncGeneratorMapWithSequence(10, generartor, (page) => async () => {
+  await asyncGeneratorMapWithSequence(1, generartor, (page) => async () => {
     statistics.totalPages += 1;
     const content = page.revisions?.[0].slots.main['*'];
     if (!content) {
@@ -42,7 +42,7 @@ export default async function replaceLinkWithLanguageLink(
         const textDiffers = link.text !== link.link;
         newContent = newContent.replace(
           `[[${link.link}${textDiffers ? `|${link.text}` : ''}]]`,
-          `{{קישור שפה|${externalLanguage}|${externalArticleName}|${rightArticleName || link.link}${textDiffers ? `|${link.text}` : ''}}}`,
+          `{{קישור שפה|${externalLanguage}|${externalArticleName}|${rightArticleName || link.link}${textDiffers || rightArticleName ? `|${link.text}` : ''}}}`,
         );
       }
     });
@@ -52,7 +52,7 @@ export default async function replaceLinkWithLanguageLink(
     }
     try {
       statistics.updatedPages += 1;
-    //   await api.edit(page.title, 'החלפת קישור פנימי אדום בתבנית קישור שפה', newContent, revid);
+      await api.edit(page.title, 'החלפת קישור פנימי אדום בתבנית קישור שפה', newContent, revid);
     } catch (error) {
       statistics.errorPages += 1;
       console.log(error?.data || error?.message || error?.toString());

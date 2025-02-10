@@ -2,7 +2,7 @@ import * as playwright from 'playwright-aws-lambda';
 import { Browser, Page } from 'playwright-core';
 
 const mainUrl = 'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x';
-const KidnappedUrl = 'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v';
+// const KidnappedUrl = 'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v';
 
 // חטופים בשבי
 const kidnappetInGaza = 'חטופים שנותרו בשבי';
@@ -10,7 +10,7 @@ const kidnappetInGaza = 'חטופים שנותרו בשבי';
 const urlDict = {
   [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', kidnappetInGaza], numberUp: false, page: 1 },
   [`${mainUrl}#`]: { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**', 'הרוגים בלבנון'], numberUp: false, page: 5 },
-  [KidnappedUrl]: { titles: ['סך החטופים ההרוגים'], numberUp: true, page: 1 },
+  // [KidnappedUrl]: { titles: ['סך החטופים ההרוגים'], numberUp: true, page: 1 },
 };
 
 async function getPanelData(page: Page, titles: string[], numberUp = false) {
