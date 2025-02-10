@@ -9,9 +9,9 @@ import { CiteNewsTemplate, GeneralLinkTemplateData } from '../../types';
 import { getContent } from '../../../scraping';
 import { getFullYear, getLocalDate } from '../../../utilities';
 
-const oldLink = 'www.nrg.co.il/online';
+const oldLink = 'www.makorrishon.co.il/nrg/online';
 
-const linkRegex = /https?:\/\/www\.nrg\.co\.il\/online\/(?<series>\d{1,5}|archive)\/ART(?<artNumber>\d{1,5})?\/(?<id>\d{1,5}(?:\/\d{1,5})?)\.html/i;
+const linkRegex = /https?:\/\/www\.makorrishon\.co\.il\/nrg\/online\/(?<series>\d{1,5}|archive)\/ART(?<artNumber>\d{1,5})?\/(?<id>\d{1,5}(?:\/\d{1,5})?)\.html(?:\?hp=\d{1,3}&cat=\d{1,5}&loc=\d{1,5})?/i;
 
 const notFountPage = 'https://www.makorrishon.co.il/nrg/images/stuff/404_page/404_page.html';
 
