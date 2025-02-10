@@ -102,8 +102,9 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
   }
 
   async function* backlinksTo(target: string, namespace = '0') {
+    const rvProps = encodeURIComponent('content|ids');
     const path = `?action=query&format=json&generator=backlinks&gblnamespace=${namespace}&gbltitle=${encodeURIComponent(target)}&gbllimit=500`
-    + '&gblfilterredir=nonredirects&prop=revisions&rvprop=content&rvslots=*';
+    + `&gblfilterredir=nonredirects&prop=revisions&rvprop=${rvProps}&rvslots=*`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
