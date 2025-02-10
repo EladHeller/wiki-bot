@@ -238,18 +238,15 @@ export default async function languageLinks(byCategory = true) {
     : api.getArticlesWithTemplate(LANGUAGE_LINKS_TEMPLATE);
 
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
-    if (statistics.total % 100 === 0) {
-      fs.appendFile(fileName, JSON.stringify(global.continueObject));
-    }
-    await fs.appendFile(fileName, `Checking ${page.title}`);
+    await fs.appendFile(fileName, `Checking ${page.title}\n`);
     const content = page.revisions?.[0].slots.main['*'];
     const revid = page.revisions?.[0].revid;
     if (!content) {
-      await fs.appendFile(fileName, `No content for ${page.title}`);
+      await fs.appendFile(fileName, `No content for ${page.title}\n`);
       return;
     }
     if (!revid) {
-      await fs.appendFile(fileName, `No revid for ${page.title}`);
+      await fs.appendFile(fileName, `No revid for ${page.title}\n`);
       return;
     }
 
@@ -261,7 +258,7 @@ export default async function languageLinks(byCategory = true) {
       statistics.noUpdated += 1;
     }
   });
-  await fs.appendFile(fileName, JSON.stringify(statistics));
+  await fs.appendFile(fileName, `${JSON.stringify(statistics)}\n`);
   await wrightLogs(api);
 }
 
