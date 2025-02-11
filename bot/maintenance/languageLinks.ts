@@ -122,7 +122,7 @@ export async function parseContent(
       const languageApi = languagesApiDict[languageCode];
       let wikiDataItem = await languageApi.getWikiDataItem(externalName);
       if (!wikiDataItem) {
-        const target = await languageApi.getRedirecTarget(externalName);
+        const { redirect: target } = await languageApi.getRedirecTarget(externalName);
         if (target == null || target.tofragment != null || target.tosection != null || !target.to) {
           logs.push({
             title: `[[${title}]]`,

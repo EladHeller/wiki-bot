@@ -4,7 +4,7 @@ import { IWikiApi } from '../wiki/NewWikiApi';
 // WIP
 export default async function DuplicateRedirects(api: IWikiApi) {
   await api.login();
-  const generator = api.getRedirects(0, [0], 50);
+  const generator = api.getRedirectsTo(0, [0], 50);
   let res: IteratorResult<WikiPage[], void> = { done: false, value: [] };
   do {
     try {
