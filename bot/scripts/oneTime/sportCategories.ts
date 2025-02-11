@@ -1,8 +1,6 @@
 import 'dotenv/config';
-import {
-  categoriesStartsWith, categroyPages, deletePage, updateArticle,
-} from '../../wiki/wikiAPI';
 import { promiseSequence } from '../../utilities';
+import NewWikiApi from '../../wiki/NewWikiApi';
 /**
  * [[קטגוריה:ספורטאים זרים בישראל לפי ארץ מוצא|איווארים]]
 [[קטגוריה:ספורטאים איווארים זרים לפי מדינה|ישראל]]
@@ -15,7 +13,8 @@ type Category = {
   size: number;
 }
 async function main() {
-  const generator = categoriesStartsWith('ספורטאים ');
+  const api = NewWikiApi();
+  const generator = api.categoriesStartsWith('ספורטאים ');
   let res: IteratorResult<any, void>;
   const pages: Category[] = [];
   const parents: Category[] = [];
@@ -50,7 +49,10 @@ async function main() {
   }> = {};
   for (const page of pages) {
     if (page.size < 3) {
-      const sportPages = await categroyPages(page.name, 5000);
+      const { value: sportPages } = await api.categroyPages(page.name, 5000).next();
+      if (!sportPages) {
+        throw new Error('no pages');
+      }
       await Promise.all(sportPages.map(async (p) => {
         const content = p.revisions?.[0].slots.main['*'];
         if (!content) {
@@ -76,7 +78,7 @@ async function main() {
           pagesWithCategoriesForConvert[p.title].categories.push(page.name);
         }
       }));
-      deletePage(`קטגוריה:${page.name}`, 'קטגוריה מיותרת').then(() => {
+      await api.deletePage(`קטגוריה:${page.name}`, 'קטגוריה מיותרת').then(() => {
         console.log(`deleted: ${page.name}`);
       }).catch(() => {});
     }
@@ -92,7 +94,7 @@ async function main() {
         });
         if (newContent !== content) {
           console.log(`updating: ${title}`);
-          await updateArticle(title, 'המרת קטגוריות', newContent);
+          await api.updateArticle(title, 'המרת קטגוריות', newContent);
         }
       }),
   );
@@ -100,12 +102,12 @@ async function main() {
   for (const page of allcategories) {
     if (page.size === 0) {
       console.log(`deleting: https://he.wikipedia.org/wiki/קטגוריה:${page.name.replace(/ /g, '_')}`);
-      await deletePage(`קטגוריה:${page.name}`, 'קטגוריה ריקה');
+      await api.deletePage(`קטגוריה:${page.name}`, 'קטגוריה ריקה');
     }
   }
 
   const text = [...pages, ...parents].map((p) => `* [[:קטגוריה:${p.name}]] - ${p.size} דפים וקטגוריות משנה`).join('\n');
-  await updateArticle('user:sapper-bot/קטגוריות ספורטאים לפי מדינות', 'רשימה', text);
+  await api.updateArticle('user:sapper-bot/קטגוריות ספורטאים לפי מדינות', 'רשימה', text);
 }
 
 main();

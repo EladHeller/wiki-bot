@@ -3,14 +3,14 @@ import 'dotenv/config';
 import fs from 'fs/promises';
 import { getCompanyData, googleFinanceRegex } from '../API/googleFinanceApi';
 import { promiseSequence } from '../utilities';
-import {
-  getGoogleFinanceLinksWithContent, login, updateArticle,
-} from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import NewWikiApi from '../wiki/NewWikiApi';
+import { getGoogleFinanceLinksWithContent } from '../wiki/SharedWikiApiFunctions';
 
 async function main() {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
   console.log('Login success');
 
   let dataPages: WikiPage[] = [];
@@ -22,7 +22,7 @@ async function main() {
   }
 
   if (!dataPages.length) {
-    const results = await getGoogleFinanceLinksWithContent();
+    const results = await getGoogleFinanceLinksWithContent(api);
     console.log('links', Object.keys(results).length);
     const pages = Object.values(results);
 
@@ -44,8 +44,9 @@ async function main() {
       return;
     }
     const content = page.revisions?.[0].slots.main['*'];
-    if (!content) {
-      throw new Error(`No content for page ${page.title}`);
+    const revid = page.revisions?.[0].revid;
+    if (!content || !revid) {
+      throw new Error(`No content or revid for page ${page.title}`);
     }
     const templateText = findTemplate(content, 'חברה מסחרית', page.title);
     if (!templateText) {
@@ -58,7 +59,7 @@ async function main() {
       templateData['שווי'] = `{{שווי שוק חברה בורסאית (ארצות הברית)|ID=${tiker}}}`;
       templateData['תאריך שווי שוק'] = '{{שווי שוק חברה בורסאית (ארצות הברית)|ID=timestamp}}';
       const newContent = content.replace(templateText, templateFromKeyValueData(templateData, 'חברה מסחרית'));
-      console.log(await updateArticle(page.title, 'שווי שוק', newContent));
+      console.log(await api.edit(page.title, 'שווי שוק', newContent, revid));
     }
   }));
 }

@@ -213,7 +213,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
   }
 
   async function* getRedirects(namespace: number, linkNamespace: number[], limit = 100, templates = '', categories = '') {
-    const props = encodeURIComponent('links|templates|categories');
+    const props = encodeURIComponent('links|templates|categories|revisions');
     const template = encodeURIComponent(templates);
     const templateString = template ? `&tltemplates=${template}&tllimit=${limit}` : '';
     const category = encodeURIComponent(categories);

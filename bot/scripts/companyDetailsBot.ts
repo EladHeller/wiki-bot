@@ -1,9 +1,5 @@
 /* eslint-disable no-param-reassign */
 import 'dotenv/config';
-import {
-  getArticleContent,
-  getMayaLinks, login, updateArticle,
-} from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import parseTableText, { TableRow, buildTableWithStyle } from '../wiki/wikiTableParser';
@@ -11,6 +7,8 @@ import { AllDetailsResponse, getAllDetails } from '../API/mayaAPI';
 import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getLocalDate } from '../utilities';
 import { isTwoWordsIsTheSamePerson } from '../API/openai';
+import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import { getMayaLinks } from '../wiki/SharedWikiApiFunctions';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
 const notApplicapble: JobChange[] = ['לא קיים במאי״ה', 'לא ידוע', '-'];
@@ -157,7 +155,7 @@ function getManualApprovalValue(manualApproval?: string) {
   return undefined;
 }
 
-async function saveCompanyDetails(details:ManagementDetails[]) {
+async function saveCompanyDetails(api: IWikiApi, tableRevid: number, details:ManagementDetails[]) {
   const rows = details
     .map(({
       chairman, articleChairman, CEO, articleCEO, title,
@@ -201,15 +199,12 @@ async function saveCompanyDetails(details:ManagementDetails[]) {
 {{ש}}אישור ידני משפיע רק על ערכים שאינם זהים (כנראה שכן, כנראה שלא ולא קיים בערך)
 
 `;
-  return updateArticle(LOG_ARTICLE_NAME, 'פרטי חברה', explanation + tableText);
+  return api.edit(LOG_ARTICLE_NAME, 'פרטי חברה', explanation + tableText, tableRevid);
 }
 
-async function getTableData() : Promise<ManagementDetails[]> {
-  const text = await getArticleContent(LOG_ARTICLE_NAME);
-  if (!text) {
-    throw new Error('No text');
-  }
-  const [table] = parseTableText(text);
+async function getTableData(api: IWikiApi) : Promise<{data:ManagementDetails[], tableRevid: number}> {
+  const { content, revid } = await api.articleContent(LOG_ARTICLE_NAME);
+  const [table] = parseTableText(content);
   table.rows.shift(); // remove header
   const data = table.rows.map((row) => {
     const [
@@ -228,16 +223,18 @@ async function getTableData() : Promise<ManagementDetails[]> {
     };
   });
 
-  return data;
+  return { data, tableRevid: revid };
 }
 
 async function updateIfNeeded(
+  api: IWikiApi,
   page: WikiPage,
   template: Record<string, string>,
   templateText: string,
   companyDetails: ManagementDetails,
 ) {
   const content = page.revisions?.[0].slots.main['*'];
+  const revid = page.revisions?.[0].revid;
   const cloneTemplate = { ...template };
   let needUpdate = false;
 
@@ -258,37 +255,36 @@ async function updateIfNeeded(
     companyDetails.chairmanEqual = 'כן';
   }
 
-  if (needUpdate && content) {
+  if (needUpdate && content && revid) {
     const newTemplateText = templateFromKeyValueData(cloneTemplate, TEMPLATE_NAME);
     const newContent = content.replace(templateText, newTemplateText);
     if (newContent !== content) {
       console.log('Update', page.title);
-      await updateArticle(page.title, 'פרטי חברה', newContent);
+      await api.edit(page.title, 'פרטי חברה', newContent, revid);
     }
   }
 }
 
-async function tagUsers() {
+async function tagUsers(api: IWikiApi) {
   const page = 'שיחת משתמש:Sapper-bot/פרטי חברה';
   const paragraphName = 'פסקת תיוג';
-  const content = await getArticleContent(page);
-  if (!content) {
-    throw new Error(`No content: ${page}`);
-  }
+  const { content, revid } = await api.articleContent(page);
   const users = getUsersFromTagParagraph(content, paragraphName);
   if (users.length === 0) {
     return;
   }
   const localDate = getLocalDate(new Date().toDateString());
-  console.log(await updateArticle(
+  console.log(await api.edit(
     page,
     'תיוג משתמשים',
     `${users.join(',')}, הטבלה עודכנה. ~~~~`,
+    revid,
     `ריצה בתאריך - ${localDate}`,
   ));
 }
 
-async function getManamentDetails(
+async function getManagmentDetails(
+  api: IWikiApi,
   tableData: ManagementDetails[],
   results: Record<string, WikiPage>,
 ) {
@@ -304,7 +300,7 @@ async function getManamentDetails(
       if (res && !isDeleted && template) {
         const tableRow = tableData.find(({ title }) => title === page.title);
         const companyDetails = await getCompanyDetails(res, page, template, tableRow);
-        await updateIfNeeded(page, template, templateText, companyDetails);
+        await updateIfNeeded(api, page, template, templateText, companyDetails);
         managementDetails.push(companyDetails);
       } else if (isDeleted) {
         console.log(`${page.title} is deleted`);
@@ -322,16 +318,17 @@ async function getManamentDetails(
 }
 
 export async function companyDetailsBot() {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
   console.log('Login success');
-  const tableData = await getTableData();
-  const results = await getMayaLinks(true);
-  const managementDetails = await getManamentDetails(tableData, results);
+  const { data, tableRevid } = await getTableData(api);
+  const results = await getMayaLinks(api, true);
+  const managementDetails = await getManagmentDetails(api, data, results);
 
-  const updateResult = await saveCompanyDetails(managementDetails);
+  const updateResult = await saveCompanyDetails(api, tableRevid, managementDetails);
   const isChanged = !('nochange' in updateResult.edit);
   if (isChanged) {
-    await tagUsers();
+    await tagUsers(api);
   }
 }
 

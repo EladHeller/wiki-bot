@@ -226,7 +226,7 @@ export default async function copyrightViolationBot() {
   });
   allLogs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
 
-  await writeAdminBotLogs(allLogs, BASE_PAGE);
+  await writeAdminBotLogs(api, allLogs, BASE_PAGE);
   const notFoundText = allOtherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[${title}]]`).join(' • ');
   const disambiguationText = allOtherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[${title}]]`).join(' • ');
   const quotesText = allOtherLogs.filter(({ text }) => text === SELECTED_QOUTE).map(({ title }) => `[[${title}]]`).join(' • ');
@@ -254,7 +254,7 @@ export default async function copyrightViolationBot() {
     name: 'דפים שנמחקו לפני ריצת הבוט',
     content: notFoundText,
   }].filter((p) => p.content) satisfies Paragraph[];
-  await writeAdminBotLogs(paragraphs, LOG_PAGE);
+  await writeAdminBotLogs(api, paragraphs, LOG_PAGE);
   await api.updateArticle(LAST_RUN_PAGE, 'עדכון זמן ריצה', currentRun.toJSON());
   if (searchErrorText && searchErrorPage?.revisions?.[0]?.revid) {
     await api.edit(SEARCH_ERROR_PAGE, 'עדכון שגיאות', searchErrorText, searchErrorPage.revisions[0].revid);

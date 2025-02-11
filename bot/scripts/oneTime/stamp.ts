@@ -1,17 +1,18 @@
 import 'dotenv/config';
-import { promiseSequence } from '../../utilities';
-import { login, externalUrl, updateArticle } from '../../wiki/wikiAPI';
+import { asyncGeneratorMapWithSequence } from '../../utilities';
+import NewWikiApi from '../../wiki/NewWikiApi';
 
 const link = 'israelphilately.org.il/he/catalog/articles';
 
 async function main() {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
 
-  const res = await externalUrl(link, 'http');
-  console.log(res.length);
-  await promiseSequence(10, res.map((page) => async () => {
+  const generator = api.externalUrl(link, 'http');
+  await asyncGeneratorMapWithSequence(10, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
-    if (content && page.title) {
+    const revid = page.revisions?.[0].revid;
+    if (content && page.title && revid) {
       let newContent = content;
       const refMatches = content.matchAll(
         // eslint-disable-next-line max-len
@@ -41,13 +42,13 @@ async function main() {
         return;
       }
       try {
-        await updateArticle(page.title, 'הסבה ל[[תבנית:בול ישראלי - עלון]]', newContent);
+        await api.edit(page.title, 'הסבה ל[[תבנית:בול ישראלי - עלון]]', newContent, revid);
       } catch (error) {
         console.log(error?.data || error?.message || error?.toString());
       }
       console.log(page.title);
     }
-  }));
+  });
 }
 
 main().catch(console.error);
