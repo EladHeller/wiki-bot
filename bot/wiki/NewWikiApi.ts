@@ -47,7 +47,7 @@ export interface IWikiApi {
   fileUsage(pageIds: string[], limit?: number): AsyncGenerator<WikiPage[], void, void>;
   getWikiDataItem(title: string): Promise<string | undefined>;
   newPages(namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
-  getArticleRevisions(title: string, limit: number): Promise<Revision[]>;
+  getArticleRevisions(title: string, limit: number, props?: string): Promise<Revision[]>;
   logs(
     type: string, namespaces: number[], endTimestamp: string, limit?: number
   ): AsyncGenerator<LogEvent[], void, void>;
@@ -177,9 +177,9 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     };
   }
 
-  async function getArticleRevisions(title: string, limit: number) {
-    const props = encodeURIComponent('content|user|size|comment');
-    const path = `?action=query&format=json&rvprop=${props}&rvslots=*&prop=revisions&titles=${
+  async function getArticleRevisions(title: string, limit: number, props = 'content|user|size|comment') {
+    const encodedProps = encodeURIComponent(props);
+    const path = `?action=query&format=json&rvprop=${encodedProps}&rvslots=*&prop=revisions&titles=${
       encodeURIComponent(title)
     }&rvlimit=${limit}`;
     const result = await request(path);

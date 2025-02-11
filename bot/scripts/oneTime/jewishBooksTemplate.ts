@@ -1,15 +1,17 @@
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import { getArticlesWithTemplate, updateArticle } from '../../wiki/wikiAPI';
+import NewWikiApi from '../../wiki/NewWikiApi';
 
 const TEMPLATE_NAME = 'אוצר הספרים היהודי';
 
 export default async function jewishBooks() {
-  const generator = getArticlesWithTemplate(`תבנית:${TEMPLATE_NAME}`);
+  const api = NewWikiApi();
+  const generator = api.getArticlesWithTemplate(`תבנית:${TEMPLATE_NAME}`);
 
   await asyncGeneratorMapWithSequence(10, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
-    if (!content) {
-      console.log('no content', page.title);
+    const revid = page.revisions?.[0].revid;
+    if (!content || !revid) {
+      console.log('no content or revid', page.title);
       return;
     }
     if (page.ns !== 0) {
@@ -18,7 +20,7 @@ export default async function jewishBooks() {
     }
     const newContent = content.replace(/\n{{אוצר הספרים היהודי/g, `\n* {{${TEMPLATE_NAME}`);
     if (newContent !== content) {
-      await updateArticle(page.title, 'עיצוב תבנית', newContent);
+      await api.edit(page.title, 'עיצוב תבנית', newContent, revid);
       console.log(page.ns, page.title);
     } else {
       console.log('no change', page.title);

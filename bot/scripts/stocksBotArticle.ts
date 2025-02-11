@@ -1,17 +1,17 @@
 import 'dotenv/config';
 import { getMarketValue } from '../API/mayaAPI';
 import { promiseSequence } from '../utilities';
-import {
-  login, getMayaLinks, updateArticle,
-} from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import NewWikiApi from '../wiki/NewWikiApi';
+import { getMayaLinks } from '../wiki/SharedWikiApiFunctions';
 
 async function main() {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
   console.log('Login success');
 
-  const results = await getMayaLinks(true);
+  const results = await getMayaLinks(api, true);
   const marketValues:{
     page: WikiPage,
     id: number,
@@ -32,8 +32,9 @@ async function main() {
   await promiseSequence(10, marketValues.map(({ page, id }) => async () => {
     try {
       const content = page.revisions?.[0].slots.main['*'];
-      if (!content) {
-        throw new Error(`No content for page ${page.title}`);
+      const revid = page.revisions?.[0].revid;
+      if (!content || !revid) {
+        throw new Error(`No content or no revid for page ${page.title}`);
       }
       console.log(page.title);
       const templateText = findTemplate(content, 'חברה מסחרית', page.title);
@@ -44,7 +45,7 @@ async function main() {
         templateData['שווי'] = `{{שווי שוק חברה בורסאית|ID=${id}}}`;
         templateData['תאריך שווי שוק'] = '{{שווי שוק חברה בורסאית|ID=timestamp}}';
         const newContent = content.replace(templateText, templateFromKeyValueData(templateData, 'חברה מסחרית') + (templateText ? '' : '\n'));
-        console.log(await updateArticle(page.title, 'הוספת תבנית שווי שוק חברה בורסאית', newContent));
+        console.log(await api.edit(page.title, 'הוספת תבנית שווי שוק חברה בורסאית', newContent, revid));
         console.log(page.title, 'updated');
       }
     } catch (e) {

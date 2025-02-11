@@ -1,13 +1,14 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import { getArticleContent, login, purge } from './wiki/wikiAPI';
 import shabathProtectorDecorator from './decorators/shabathProtector';
+import NewWikiApi from './wiki/NewWikiApi';
 
 async function purgeBot() {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
   console.log('Login success');
   const today = new Date().toLocaleString('he', { month: 'long', day: 'numeric' });
-  const content = await getArticleContent(today);
+  const { content } = await api.articleContent(today);
   if (!content) {
     return;
   }
@@ -21,7 +22,7 @@ async function purgeBot() {
   const articles = relevent
     .map((line) => line.match(/\* \[\[\d{4}\]\] – \[\[([^\]]+)\]\]/)?.[1])
     .filter((x) => x != null) as string[];
-  await purge(articles);
+  await api.purge(articles);
 }
 
 export const main = shabathProtectorDecorator(purgeBot);

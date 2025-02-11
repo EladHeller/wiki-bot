@@ -2,18 +2,20 @@ import 'dotenv/config';
 import fs from 'fs/promises';
 import Company from './company';
 import getMayaDetails, { MayaWithWiki } from '../API/mayaAPI';
-import {
-  getCompanies, getCompany, login, updateArticle,
-} from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { buildTable } from '../wiki/wikiTableParser';
+import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import { getMayaCompanies } from '../wiki/SharedWikiApiFunctions';
 
-async function saveTable(companies: Company[]) {
+const TABLE_PAGE = 'משתמש:Sapper-bot/tradeBootData';
+
+async function saveTable(api: IWikiApi, companies: Company[]) {
   const tableRows: string[][] = [];
 
   for (const company of companies) {
     console.log(company.name);
-    const firstRevision = Object.values(await getCompany(company.name))[0].revisions?.[0];
+    const revisions = await api.getArticleRevisions(company.name, 1, 'user|size');
+    const firstRevision = revisions?.[0];
     if (!firstRevision) {
       throw new Error(`No revision for ${company.name}`);
     }
@@ -28,10 +30,16 @@ async function saveTable(companies: Company[]) {
 
   const headers = ['קישור', 'שם החברה', 'הכנסות', 'רווח תפעולי', 'רווח', 'הון עצמי', 'סך המאזן', 'מטבע', 'תאריך הנתונים', 'מכיל [[תבנית:חברה מסחרית]]', 'משתמש יוצר', 'גודל ביצירה', 'גודל נוכחי'];
   const tableText = buildTable(headers, tableRows);
-  const res = await updateArticle(
-    'משתמש:Sapper-bot/tradeBootData',
+  const tableRevision = await api.getArticleRevisions(TABLE_PAGE, 1, 'ids');
+  const revid = tableRevision[0]?.revid;
+  if (!revid) {
+    throw new Error('No revid for table');
+  }
+  const res = await api.edit(
+    TABLE_PAGE,
     'עדכון',
     tableText,
+    revid,
   );
   console.log(res);
 }
@@ -44,10 +52,11 @@ function getRelevantCompanies(companies: Company[], year: string) {
 }
 
 export default async function yearlyReport(year: string) {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
   console.log('Login success');
 
-  const wikiResult = await getCompanies();
+  const wikiResult = await getMayaCompanies(api);
   await fs.writeFile('./res.json', JSON.stringify(wikiResult, null, 2), 'utf8');
   const pages: WikiPage[] = Object.values(wikiResult);
   // const pages: WikiPage[] = Object.values(JSON.parse(await fs.readFile('./res.json', 'utf-8')));
@@ -73,9 +82,10 @@ export default async function yearlyReport(year: string) {
       maya,
       wiki,
       companyId,
+      api,
     ));
   console.log(companies.length);
-  await saveTable(companies);
+  await saveTable(api, companies);
 
   const relevantCompanies = getRelevantCompanies(companies, year);
   console.log(relevantCompanies.length);

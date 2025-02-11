@@ -4,7 +4,7 @@ import { CurrencyCode, prettyNumericValue } from '../utilities';
 import {
   getTemplateKeyValueData, findTemplates, findTemplate, templateFromKeyValueData,
 } from '../wiki/newTemplateParser';
-import { updateArticle } from '../wiki/wikiAPI';
+import { IWikiApi } from '../wiki/NewWikiApi';
 
 const currentYear = process.env.YEAR;
 const TEMPLATE_NAME = 'חברה מסחרית';
@@ -84,19 +84,25 @@ export default class Company {
 
   revisionSize: number;
 
+  revisionId: number;
+
+  api: IWikiApi;
+
   constructor(
     name: string,
     mayData: MayaCompany,
     wikiData: WikiPage,
     companyId: number,
+    api: IWikiApi,
   ) {
     const revision = wikiData.revisions?.[0];
-    if (!revision) {
+    if (!revision || !revision.revid) {
       throw new Error(`Missing revision ${name}`);
     }
     this.revisionSize = revision.size;
     this.companyId = companyId;
     this.name = name;
+    this.api = api;
     this.currency = currencyDict[mayData.CurrencyName];
     if (!this.currency) {
       throw new Error(`${name}: Currency missing!`);
@@ -132,7 +138,7 @@ export default class Company {
         finalContent = finalContent.replace(reference, '');
       }
     });
-    return updateArticle(this.name, 'עדכון תבנית:חברה מסחרית', finalContent);
+    return this.api.edit(this.name, 'עדכון תבנית:חברה מסחרית', finalContent, this.revisionId);
   }
 
   updateWikiTemplate() {
@@ -174,6 +180,10 @@ export default class Company {
     this.reference = wikiData.extlinks[0]['*'];
     this.templateText = findTemplate(this.articleText, TEMPLATE_NAME, this.name);
     this.templateData = getTemplateKeyValueData(this.templateText);
+    if (!revision.revid) {
+      throw new Error(`Missing revid for ${this.name}`);
+    }
+    this.revisionId = revision.revid;
   }
 
   appendMayaData(mayaData: Map<string, any>, year: number) {

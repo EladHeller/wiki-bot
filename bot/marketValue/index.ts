@@ -5,8 +5,8 @@ import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 import parseTableText, { buildTable } from '../wiki/wikiTableParser';
-import { WikiPage } from '../types';
 import { getParagraphContent } from '../wiki/paragraphParser';
+import { getMayaLinks } from '../wiki/SharedWikiApiFunctions';
 
 const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 const baseCompanyNameTemplate = 'תבנית:חברות מאיה';
@@ -88,25 +88,6 @@ async function updateTable(api: IWikiApi, marketValues: MayaMarketValue[]) {
   }
   const res = await api.edit(baseCompanyNameTemplate, 'עדכון', newContent, revid);
   console.log(res);
-}
-
-export async function getMayaLinks(api: IWikiApi, withContent = false): Promise<Record<string, WikiPage>> {
-  const template = encodeURIComponent('תבנית:מידע בורסאי');
-  const props = encodeURIComponent(`extlinks|pageprops${withContent ? '|revisions' : ''}`);
-  const mayaLink = encodeURIComponent('maya.tase.co.il/company/');
-  const rvprops = encodeURIComponent('content|size');
-  const path = '?action=query&format=json'
-  // Pages with תבנית:מידע בורסאי
-  + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
-  + `&prop=${props}&ellimit=5000`
-  // wikidata identifier
-  + `&ppprop=wikibase_item&redirects=1${
-    // Get content of page
-    withContent ? `&rvprop=${rvprops}&rvslots=*` : ''
-  // Get maya link
-  }&elprotocol=https&elquery=${mayaLink}&ellimit=5000`;
-  const result = await api.request(path);
-  return result.query.pages;
 }
 
 export default async function marketValueBot() {
