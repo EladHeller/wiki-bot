@@ -4,15 +4,17 @@ import {
   AllDetailsResponse,
   getAllDetails,
 } from '../API/mayaAPI';
-import { getCompanies, login } from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import NewWikiApi from '../wiki/NewWikiApi';
+import { getMayaCompanies } from '../wiki/SharedWikiApiFunctions';
 
 async function main() {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
   console.log('Login success');
 
-  const wikiResult = await getCompanies();
+  const wikiResult = await getMayaCompanies(api);
   await fs.writeFile('./res.json', JSON.stringify(wikiResult, null, 2), 'utf8');
   const pages: WikiPage[] = Object.values(wikiResult);
   // const pages: WikiPage[] = Object.values(JSON.parse(await fs.readFile('./res.json', 'utf-8')));
@@ -30,8 +32,9 @@ async function main() {
   const results = marketValues.map(({ allDetails, wiki }) => {
     const indice = allDetails.IndicesList.find(({ IndexName }) => IndexName === 'ת"א All-Share');
     const content = wiki.revisions?.[0].slots.main['*'];
-    if (!content) {
-      throw new Error(`No content for page ${wiki.title}`);
+    const revid = wiki.revisions?.[0].revid;
+    if (!content || !revid) {
+      throw new Error(`No content or revid for page ${wiki.title}`);
     }
     const oldTemplate = findTemplate(content, 'חברה מסחרית', wiki.title);
     const templateData = getTemplateKeyValueData(oldTemplate);
@@ -41,15 +44,16 @@ async function main() {
     }
     return {
       title: wiki.title,
+      revid,
       text: content.replace(oldTemplate, templateFromKeyValueData(templateData, 'חברה מסחרית')),
     };
   });
   await fs.writeFile('./test-res.json', JSON.stringify(results, null, 2), 'utf8');
 
-  // for (let i = 10; i < results.length; i += 1) {
-  //   await updateArticle(results[i].title, 'נתוני בורסה', results[i].text);
-  //   console.log(results[i].title);
-  // }
+  for (let i = 10; i < results.length; i += 1) {
+    await api.edit(results[i].title, 'נתוני בורסה', results[i].text, results[i].revid);
+    console.log(results[i].title);
+  }
 }
 
 main().catch((error) => {
