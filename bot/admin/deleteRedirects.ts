@@ -9,8 +9,12 @@ import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 
 const fixBrokenRedirectsBotNames = ['EmausBot', 'Xqbot'];
 
+const heavyNamespaces = [0];
+
 async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons: string[], delayDays = 0) {
-  const generator = api.getRedirects(to, [to], 100, 'תבנית:הפניה לא למחוק', 'קטגוריה:הפניות לא למחוק');
+  const isHeavyToNamespace = heavyNamespaces.includes(to);
+  const generator = isHeavyToNamespace ? api.getRedirectsFrom(from, 100, 'תבנית:הפניה לא למחוק', 'קטגוריה:הפניות לא למחוק')
+    : api.getRedirectsTo(to, [to], 100, 'תבנית:הפניה לא למחוק', 'קטגוריה:הפניות לא למחוק');
   const all: WikiPage[] = [];
   const errors: string[] = [];
   const mutlyRevisions: WikiPage[] = [];
@@ -30,6 +34,12 @@ async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons:
         const isPassedDelayDays = date < now;
         if (p.links?.length !== 1 || p.templates != null || p.categories != null || !isPassedDelayDays) {
           return;
+        }
+        if (isHeavyToNamespace) { // Check if the redirect is to the correct namespace
+          const redirectTarget = await api.getRedirecTarget(p.title);
+          if (redirectTarget.redirect == null || redirectTarget.page == null || redirectTarget.page.ns !== to) {
+            return;
+          }
         }
         all.push(p);
         const revisions = await api.getArticleRevisions(p.title, 2, 'user');

@@ -53,8 +53,8 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     search:
       base.search
       ?? jest.fn<(text: string) => AsyncGenerator<WikiPage[], void, void>>(),
-    getRedirects:
-      base.getRedirects
+    getRedirectsTo:
+      base.getRedirectsTo
       ?? jest.fn<(namespace?: number, linkNamespace?: number[], limit?: number,
         templates?: string, categories?: string) => AsyncGenerator<WikiPage[], void, void>>(),
     userContributes:
@@ -100,6 +100,10 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     categroyTitles:
       base.categroyTitles
       ?? jest.fn<(category: string, limit?: number) => AsyncGenerator<WikiPage[], void, void>>(),
-    getRedirecTarget: base.getRedirecTarget ?? jest.fn<(title: string) => Promise<WikiRedirectData | null>>(),
+    getRedirecTarget: base.getRedirecTarget
+      ?? jest.fn<(title: string) => Promise<{ page?: WikiPage, redirect?: WikiRedirectData }>>(),
+    getRedirectsFrom: base.getRedirectsFrom
+      ?? jest.fn<(namespace: number, limit?: number, templates?: string, categories?: string) =>
+        AsyncGenerator<WikiPage[], void, void>>(),
   };
 }

@@ -37,7 +37,9 @@ export interface IWikiApi {
     templateName: string, continueObject?: Record<string, string>, prefix?: string, namespace?: string
   ): AsyncGenerator<WikiPage[], void, void>;
   search(text: string): AsyncGenerator<WikiPage[], void, void>;
-  getRedirects(namespace?: number, linkNamespace?: number[], limit?: number, templates?: string, categories?: string):
+  getRedirectsTo(namespace?: number, linkNamespace?: number[], limit?: number, templates?: string, categories?: string):
+    AsyncGenerator<WikiPage[], void, void>;
+  getRedirectsFrom(namespace: number, limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
   userContributes(
     user: string, startTime: Date, endTime: Date, limit?: number
@@ -52,7 +54,9 @@ export interface IWikiApi {
     type: string, namespaces: number[], endTimestamp: string, limit?: number
   ): AsyncGenerator<LogEvent[], void, void>;
   movePage(from: string, to: string, reason: string): Promise<void>;
-  getRedirecTarget: (title: string) => Promise<WikiRedirectData | null>;
+  getRedirecTarget: (title: string) => Promise<{
+    page?: WikiPage, redirect?: WikiRedirectData
+  }>;
 }
 
 export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -212,14 +216,25 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
-  async function* getRedirects(namespace: number, linkNamespace: number[], limit = 100, templates = '', categories = '') {
+  async function* getRedirectsTo(namespace: number, linkNamespace: number[], limit = 100, templates = '', categories = '') {
     const props = encodeURIComponent('links|templates|categories|revisions');
     const template = encodeURIComponent(templates);
     const templateString = template ? `&tltemplates=${template}&tllimit=${limit}` : '';
     const category = encodeURIComponent(categories);
     const categoryString = category ? `&clcategories=${category}&cllimit=${limit}` : '';
-    const path = `?action=query&format=json&generator=allredirects&garlimit=${limit}&garnamespace=${namespace}&gardir=ascending`
-    + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}${templateString}${categoryString}&pllimit=${limit}`;
+    const path = `?action=query&format=json&generator=allredirects&garlimit=${limit}&garnamespace=${namespace}`
+    + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}${templateString}${categoryString}&pllimit=${limit}&rvprop=timestamp`;
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
+  }
+
+  async function* getRedirectsFrom(namespace: number, limit = 100, templates = '', categories = '') {
+    const props = encodeURIComponent('links|templates|categories|revisions');
+    const template = encodeURIComponent(templates);
+    const templateString = template ? `&tltemplates=${template}&tllimit=${limit}` : '';
+    const category = encodeURIComponent(categories);
+    const categoryString = category ? `&clcategories=${category}&cllimit=${limit}` : '';
+    const path = `?action=query&format=json&generator=allpages&gapfilterredir=redirects&gaplimit=${limit}&gapnamespace=${namespace}`
+    + `&prop=${props}&plnamespace=${namespace}&pllimit=${limit}&rvprop=timestamp${templateString}${categoryString}`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
@@ -365,7 +380,12 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
 
   async function getRedirecTarget(title: string) {
     const res = await request(`?action=query&format=json&redirects=1&titles=${encodeURIComponent(title)}`);
-    return res.query.redirects?.[0] ?? null;
+    const page = Object.values(res.query.pages ?? {})[0] as WikiPage ?? null;
+    const redirect = res.query.redirects?.[0] ?? null;
+    return {
+      page,
+      redirect,
+    };
   }
 
   return {
@@ -387,7 +407,8 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     deletePage,
     getArticlesWithTemplate,
     search,
-    getRedirects,
+    getRedirectsTo,
+    getRedirectsFrom,
     userContributes,
     listCategory,
     categoriesStartsWith,
