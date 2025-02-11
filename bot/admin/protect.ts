@@ -1,14 +1,12 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import {
-  info, listCategory, login, protect,
-} from '../wiki/wikiAPI';
 import { getLocalDate, promiseSequence } from '../utilities';
 import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { ArticleLog } from './types';
 import pagesWithoutProtectInMainPage from './pagesWithoutProtectInMainPage';
 import pagesWithCopyrightIssuesInMainPage from './pagesWithCopyrightIssuesInMainPage';
+import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
@@ -30,8 +28,8 @@ const templates = [
 
 const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-async function needProtectFromTitles(titles :string[]): Promise<string[]> {
-  const templatesInfo = await info(titles);
+async function needProtectFromTitles(api: IWikiApi, titles :string[]): Promise<string[]> {
+  const templatesInfo = await api.info(titles);
   return templatesInfo
     .filter((templateInfo) => {
       if (('missing' in templateInfo) || !templateInfo.title) {
@@ -44,7 +42,7 @@ async function needProtectFromTitles(titles :string[]): Promise<string[]> {
     .map<string>(({ title }) => title || '');
 }
 
-async function getTemplatesByDate() {
+async function getTemplatesByDate(api: IWikiApi) {
   const needToProtect: string[] = [];
   const currMonth = new Date().getMonth() + 1;
   const currDay = new Date().getDate();
@@ -58,15 +56,15 @@ async function getTemplatesByDate() {
       month === currMonth ? currDay : 1,
     );
     await Promise.all(templates.map(async (template) => {
-      const needProtection = await needProtectFromTitles(monthDates.map((date) => `${template} ${date}`));
+      const needProtection = await needProtectFromTitles(api, monthDates.map((date) => `${template} ${date}`));
       needToProtect.push(...needProtection);
     }));
   }));
   return needToProtect;
 }
 
-async function getTemplatesByCategory(category: string, exceptCategryFormat?: string) {
-  const generator = listCategory(category);
+async function getTemplatesByCategory(api: IWikiApi, category: string, exceptCategryFormat?: string) {
+  const generator = api.listCategory(category);
   let res: IteratorResult<any, void>;
   const needToProtect: string[] = [];
   do {
@@ -79,7 +77,7 @@ async function getTemplatesByCategory(category: string, exceptCategryFormat?: st
       batches.push(releventToProtect.slice(i, i + 25));
     }
     await promiseSequence(10, batches.map((batch) => async () => {
-      const needProtection = await needProtectFromTitles(batch.map((page: any) => page.title));
+      const needProtection = await needProtectFromTitles(api, batch.map((page: any) => page.title));
       needToProtect.push(...needProtection);
     }));
     const categories = relevent
@@ -87,35 +85,36 @@ async function getTemplatesByCategory(category: string, exceptCategryFormat?: st
       .map(({ title }) => title.replace('קטגוריה:', ''));
     for (const cat of categories) {
       console.log(`Getting ${cat}`);
-      const categoryNeedToProtect = await getTemplatesByCategory(cat);
+      const categoryNeedToProtect = await getTemplatesByCategory(api, cat);
       needToProtect.push(...categoryNeedToProtect);
     }
   } while (!res?.done);
   return needToProtect;
 }
 export async function protectBot() {
-  await login();
-  const didYouKnowTemplates = await getTemplatesByCategory('תבניות הידעת?');
+  const api = NewWikiApi();
+  await api.login();
+  const didYouKnowTemplates = await getTemplatesByCategory(api, 'תבניות הידעת?');
   let needToProtect = didYouKnowTemplates.filter((template) => template.startsWith('תבנית:הידעת?'));
-  const portalTemplates = await getTemplatesByCategory('פורטלים: קטעי "ערך מומלץ"');
+  const portalTemplates = await getTemplatesByCategory(api, 'פורטלים: קטעי "ערך מומלץ"');
   needToProtect = needToProtect.concat(portalTemplates.filter(
     (template) => template.startsWith('פורטל:ערכים מומלצים/ערכים') || template.startsWith('תבנית:ערך מומלץ'),
   ));
-  const articleGroups = await getTemplatesByCategory('תבניות ניווט - מקבצי ערכים');
+  const articleGroups = await getTemplatesByCategory(api, 'תבניות ניווט - מקבצי ערכים');
   needToProtect = needToProtect.concat(articleGroups.filter((template) => template.startsWith('תבנית:מקבץ ערכים')));
-  const dailyQuoteTemplates = await getTemplatesByCategory('תבניות ציטוט יומי');
+  const dailyQuoteTemplates = await getTemplatesByCategory(api, 'תבניות ציטוט יומי');
   needToProtect = needToProtect.concat(
     dailyQuoteTemplates.filter((template) => template.match(/ציטוט יומי \d{1,2} ב[א-ת]{3,7} \d{4}/)),
   );
-  const recomendedImages = await getTemplatesByCategory('תבניות תמונה מומלצת');
+  const recomendedImages = await getTemplatesByCategory(api, 'תבניות תמונה מומלצת');
   needToProtect = needToProtect.concat(
     recomendedImages.filter((template) => template.match(/תמונה מומלצת \d{1,2} ב[א-ת]{3,7} \d{4}/)),
   );
 
-  const templatesByDate = await getTemplatesByDate();
+  const templatesByDate = await getTemplatesByDate(api);
   needToProtect = needToProtect.concat(templatesByDate);
 
-  const allConvertPages = await getTemplatesByCategory('ויקיפדיה/בוט/בוט ההסבה/דפי מפרט', 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט');
+  const allConvertPages = await getTemplatesByCategory(api, 'ויקיפדיה/בוט/בוט ההסבה/דפי מפרט', 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט');
   const convertPages = allConvertPages
     .filter((template) => template.startsWith('שיחת תבנית:')
       || template.startsWith('שיחת קטגוריה:')
@@ -136,7 +135,7 @@ export async function protectBot() {
   for (const title of needToProtect) {
     try {
       console.log(`Protecting ${title}`);
-      await protect(title, 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'מופיע בעמוד הראשי');
+      await api.protect(title, 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'מופיע בעמוד הראשי');
     } catch (e) {
       console.log(`Failed to protect ${title}`);
       console.error(e);
@@ -147,7 +146,7 @@ export async function protectBot() {
   for (const title of convertPages) {
     try {
       console.log(`Protecting ${title}`);
-      await protect(title, 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'דפי מפרט של בוט ההסבה');
+      await api.protect(title, 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'דפי מפרט של בוט ההסבה');
     } catch (e) {
       console.log(`Failed to protect ${title}`);
       console.error(e);
@@ -166,7 +165,7 @@ export async function protectBot() {
         error,
       };
     });
-    await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה');
+    await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה');
   }
   const needProtectLogs = await pagesWithoutProtectInMainPage();
   if (needToProtect.length || needProtectLogs.length) {
@@ -178,13 +177,13 @@ export async function protectBot() {
         error,
       };
     });
-    await writeAdminBotLogs([...logs, ...needProtectLogs], 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
+    await writeAdminBotLogs(api, [...logs, ...needProtectLogs], 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
   }
 
   const pagesWithCopyrightIssues = await pagesWithCopyrightIssuesInMainPage();
 
   if (pagesWithCopyrightIssues.length) {
-    await writeAdminBotLogs(pagesWithCopyrightIssues, 'משתמש:Sapper-bot/זכויות יוצרים');
+    await writeAdminBotLogs(api, pagesWithCopyrightIssues, 'משתמש:Sapper-bot/זכויות יוצרים');
   }
 }
 export const main = shabathProtectorDecorator(protectBot);

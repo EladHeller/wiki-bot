@@ -1,17 +1,17 @@
 /* eslint-disable max-len */
 import 'dotenv/config';
-import {
-  login, updateArticle, externalUrl,
-} from '../../wiki/wikiAPI';
-import { promiseSequence } from '../../utilities';
+import NewWikiApi from '../../wiki/NewWikiApi';
+import { asyncGeneratorMapWithSequence } from '../../utilities';
 
 const oldLink = 'righteous.yadvashem.org/?searchType=righteous_only&language=en';
 async function main() {
-  await login();
-  const pages = await externalUrl(oldLink);
-  await promiseSequence(1, pages.map((page) => async () => {
+  const api = NewWikiApi();
+  await api.login();
+  const generartor = api.externalUrl(oldLink);
+  await asyncGeneratorMapWithSequence(10, generartor, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
-    if (content && page.title) {
+    const revid = page.revisions?.[0].revid;
+    if (content && page.title && revid) {
       let newContent = content;
       const refMatches = content.matchAll(
         /{{הערה\|\s*\[https:\/\/righteous\.yadvashem\.org\/\?searchType=righteous_only&language=en(?:&ind=0)?&itemId=(\d+)(?:[^ ]*) ([^\]]*)\][^}]+}}/g,
@@ -54,13 +54,13 @@ async function main() {
         return;
       }
       try {
-        await updateArticle(page.title, 'הסבה ל[[תבנית:מזהה חסיד אומות העולם]]', newContent);
+        await api.edit(page.title, 'הסבה ל[[תבנית:מזהה חסיד אומות העולם]]', newContent, revid);
       } catch (error) {
         console.log(error?.data || error?.message || error?.toString());
       }
       console.log(page.title);
     }
-  }));
+  });
 }
 
 main();

@@ -1,7 +1,7 @@
 import { getLocalDate } from '../utilities';
 import { findTemplates, getTemplateArrayData } from '../wiki/newTemplateParser';
+import { IWikiApi } from '../wiki/NewWikiApi';
 import { getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
-import { getArticleContent, updateArticle } from '../wiki/wikiAPI';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import { ArticleLog, Paragraph } from './types';
 
@@ -30,9 +30,10 @@ function getContentFromNeedProtectLogs(logs: ArticleLog[]): string {
 
 let tagsPageContent: string| undefined;
 
-async function getAdminUsersToTag(users: string[] = []): Promise<string[]> {
+async function getAdminUsersToTag(api: IWikiApi, users: string[] = []): Promise<string[]> {
   if (tagsPageContent == null) {
-    tagsPageContent = await getArticleContent(tagsPage);
+    const articleContent = await api.articleContent(tagsPage);
+    tagsPageContent = articleContent.content;
   }
   if (!tagsPageContent) {
     return [];
@@ -133,10 +134,11 @@ export function getLogTitleData(content: string) {
 }
 
 export default async function writeAdminBotLogs(
+  api: IWikiApi,
   logs: ArticleLog[] | Paragraph[],
   logPageTitle: string,
 ) {
-  const logPageContent = await getArticleContent(logPageTitle);
+  const { content: logPageContent, revid } = await api.articleContent(logPageTitle);
   const { title, nightRun, titleAndSummary } = getLogTitleData(logPageContent ?? '');
 
   const subParagraphCode = nightRun ? '====' : '===';
@@ -147,13 +149,14 @@ export default async function writeAdminBotLogs(
   if (!content.length) {
     return;
   }
-  const adminUsersToTag = await getAdminUsersToTag();
+  const adminUsersToTag = await getAdminUsersToTag(api);
   const specificUsersToTag = await getUsersToTagFromSpecialPage(logPageContent);
 
   const usersToTag = `${[...new Set([...adminUsersToTag, ...specificUsersToTag])].join(', ')} לידיעתכם. ~~~~`;
-  await updateArticle(
+  await api.edit(
     logPageTitle,
     titleAndSummary,
     `${logPageContent}ֿ\n${title}\n${content}\n${usersToTag}`,
+    revid,
   );
 }

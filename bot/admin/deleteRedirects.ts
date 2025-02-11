@@ -1,62 +1,54 @@
 /* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
-import {
-  deletePage, getRedirects, getRevisions, listCategory, login,
-} from '../wiki/wikiAPI';
 import { WikiPage } from '../types';
-import { promiseSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence } from '../utilities';
 import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { ArticleLog } from './types';
+import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 
 const fixBrokenRedirectsBotNames = ['EmausBot', 'Xqbot'];
 
-async function deleteRedirects(from: number, to: number, reasons: string[], delayDays = 0) {
-  const generator = getRedirects(to, [to]);
+async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons: string[], delayDays = 0) {
+  const generator = api.getRedirects(to, [to], 100, 'תבנית:הפניה לא למחוק', 'קטגוריה:הפניות לא למחוק');
   const all: WikiPage[] = [];
   const errors: string[] = [];
   const mutlyRevisions: WikiPage[] = [];
-  let res;
   try {
-    do {
-      res = await generator.next();
-      const batch: WikiPage[] = Object.values(res.value?.query?.pages ?? {});
-      const relevent = batch.filter((x) => {
-        const timestamp = x.revisions?.[0]?.timestamp;
+    await asyncGeneratorMapWithSequence(10, generator, (p: WikiPage) => async () => {
+      try {
+        const timestamp = p.revisions?.[0]?.timestamp;
         if (!timestamp) {
-          return false;
+          return;
         }
-        if (x.ns !== from) {
-          return false;
+        if (p.ns !== from) {
+          return;
         }
         const date = new Date(timestamp);
         const now = new Date();
         date.setDate(date.getDate() + delayDays);
         const isPassedDelayDays = date < now;
-        return x.links?.length === 1 && x.templates == null && x.categories == null && isPassedDelayDays;
-      });
-      all.push(...relevent);
-
-      await promiseSequence(10, relevent.map((p: WikiPage) => async () => {
-        try {
-          const reveisionRes = await getRevisions(p.title, 2);
-          const revisionsLength = reveisionRes.revisions?.length;
-          const isRevisionsLengthValid = revisionsLength === 1
-          || (revisionsLength === 2 && reveisionRes.revisions?.[0].user
-            && fixBrokenRedirectsBotNames.includes(reveisionRes.revisions?.[0].user));
-          if (!isRevisionsLengthValid) {
-            mutlyRevisions.push(p);
-            return;
-          }
-          const reason = reasons[0];
-          const target = p.links?.[0].title;
-          await deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
-        } catch (error) {
-          errors.push(p.title);
-          console.log(error?.data || error?.message || error?.toString());
+        if (p.links?.length !== 1 || p.templates != null || p.categories != null || !isPassedDelayDays) {
+          return;
         }
-      }));
-    } while (!res.done);
+        all.push(p);
+        const revisions = await api.getArticleRevisions(p.title, 2, 'user');
+        const revisionsLength = revisions?.length;
+        const isRevisionsLengthValid = revisionsLength === 1
+          || (revisionsLength === 2 && revisions?.[0].user
+            && fixBrokenRedirectsBotNames.includes(revisions?.[0].user));
+        if (!isRevisionsLengthValid) {
+          mutlyRevisions.push(p);
+          return;
+        }
+        const reason = reasons[0];
+        const target = p.links?.[0].title;
+        await api.deletePage(p.title, reason + (target ? ` - [[${target}]]` : ''));
+      } catch (error) {
+        errors.push(p.title);
+        console.log(error?.data || error?.message || error?.toString());
+      }
+    });
   } catch (error) {
     console.log(error?.data || error?.message || error?.toString());
   }
@@ -75,39 +67,34 @@ async function deleteRedirects(from: number, to: number, reasons: string[], dela
   return logs;
 }
 
-async function deleteInCategory(category: string, reason: string, match?: RegExp) {
-  const generator = listCategory(category);
-  let res;
+async function deleteInCategory(api: IWikiApi, category: string, reason: string, match?: RegExp) {
   const logs: ArticleLog[] = [];
   try {
-    do {
-      res = await generator.next();
-      const batch: WikiPage[] = res.value?.query.categorymembers ?? [];
-      await promiseSequence(10, batch.map((p: WikiPage) => async () => {
-        if (match && !p.title.match(match)) {
-          logs.push({
-            title: p.title,
-            text: `[[${p.title}]]`,
-            skipped: true,
-          });
-          return;
-        }
-        try {
-          await deletePage(p.title, reason);
-          logs.push({
-            title: p.title,
-            text: `[[${p.title}]]`,
-          });
-        } catch (error) {
-          logs.push({
-            title: p.title,
-            text: `[[${p.title}]]`,
-            error: true,
-          });
-          console.log(error?.data || error?.message || error?.toString());
-        }
-      }));
-    } while (!res.done);
+    const generator = api.listCategory(category);
+    await asyncGeneratorMapWithSequence(10, generator, (p: WikiPage) => async () => {
+      if (match && !p.title.match(match)) {
+        logs.push({
+          title: p.title,
+          text: `[[${p.title}]]`,
+          skipped: true,
+        });
+        return;
+      }
+      try {
+        await api.deletePage(p.title, reason);
+        logs.push({
+          title: p.title,
+          text: `[[${p.title}]]`,
+        });
+      } catch (error) {
+        logs.push({
+          title: p.title,
+          text: `[[${p.title}]]`,
+          error: true,
+        });
+        console.log(error?.data || error?.message || error?.toString());
+      }
+    });
   } catch (error) {
     console.log(error?.data || error?.message || error?.toString());
   }
@@ -115,25 +102,18 @@ async function deleteInCategory(category: string, reason: string, match?: RegExp
 }
 
 export default async function deleteBot() {
-  await login();
+  const api = NewWikiApi();
+  await api.login();
   console.log('logged in');
-  const convertLogs = await deleteInCategory('ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקיפדיה:בוט\/בוט ההסבה\//);
-  // const jewishEncyclopdia = await deleteInCategory(
-  //   'ויקיפדיה - ערכים למחיקה ממיזם האנציקלופדיה היהודית',
-  //   'דף למחיקה - מיזם האנציקלופדיה היהודית',
-  //   /^(שיחת )?ויקיפדיה:מיזמי ויקיפדיה\/אתר האנציקלופדיה היהודית\
-  // /(מיון נושאים: לוויקי|ערכים שנוצרו באנציקלופדיה היהודית)\//,
-  // );
+  const convertLogs = await deleteInCategory(api, 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקיפדיה:בוט\/בוט ההסבה\//);
   const logs: ArticleLog[] = [];
-  logs.push(...(await deleteRedirects(119, 1, ['הפניה ממרחב שיחת טיוטה למרחב השיחה'], 30)));
-  logs.push(...(await deleteRedirects(118, 0, ['הפניה ממרחב הטיוטה למרחב הערכים'], 30)));
-  logs.push(...(await deleteRedirects(3, 1, ['הפניה ממרחב שיחת משתמש למרחב שיחה'], 30)));
-  logs.push(...(await deleteRedirects(0, 2, ['הפניה ממרחב ראשי למרחב משתמש'])));
-  logs.push(...(await deleteRedirects(0, 118, ['הפניה ממרחב ראשי למרחב טיוטה'])));
-  await writeAdminBotLogs(logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
-  await writeAdminBotLogs(convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
-  // await writeAdminBotLogs(jewishEncyclopdia,
-  // 'משתמש:Sapper-bot/מחיקת דפים מיותרים במיזם האנציקלופדיה היהודית');
+  logs.push(...(await deleteRedirects(api, 119, 1, ['הפניה ממרחב שיחת טיוטה למרחב השיחה'], 30)));
+  logs.push(...(await deleteRedirects(api, 118, 0, ['הפניה ממרחב הטיוטה למרחב הערכים'], 30)));
+  logs.push(...(await deleteRedirects(api, 3, 1, ['הפניה ממרחב שיחת משתמש למרחב שיחה'], 30)));
+  logs.push(...(await deleteRedirects(api, 0, 2, ['הפניה ממרחב ראשי למרחב משתמש'])));
+  logs.push(...(await deleteRedirects(api, 0, 118, ['הפניה ממרחב ראשי למרחב טיוטה'])));
+  await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
+  await writeAdminBotLogs(api, convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
 }
 
 export const main = shabathProtectorDecorator(deleteBot);
