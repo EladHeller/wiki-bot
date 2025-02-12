@@ -2,23 +2,7 @@ import 'dotenv/config';
 import shabathProtectorDecorator from './decorators/shabathProtector';
 import NewWikiApi, { IWikiApi } from './wiki/NewWikiApi';
 import WikiDataAPI from './wiki/WikidataAPI';
-
-function getWikiDataQuery(month: number, day: number) {
-  return `SELECT ?person ?personLabel ?birthDate ?hebrewArticle WHERE {
-    ?person wdt:P31 wd:Q5;  # Instance of human
-            wdt:P569 ?birthDate.  # Birthdate
-            
-    FILTER(MONTH(?birthDate) = ${month} && DAY(?birthDate) = ${day})  # Change to your date
-    
-    FILTER NOT EXISTS { ?person wdt:P570 ?deathDate }  # Exclude deceased people
-  
-    ?hebrewArticle schema:about ?person;
-                   schema:isPartOf <https://he.wikipedia.org/>.
-    
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "he". }
-  }
-  `;
-}
+import { personWithBirthdayInDay } from './wiki/WikiDataSqlQueries';
 
 async function getWikipediaBirthdays(api: IWikiApi): Promise<string[]> {
   const today = new Date().toLocaleString('he', { month: 'long', day: 'numeric' });
@@ -44,9 +28,9 @@ async function getWikiDataArticles() {
   const today = new Date();
   const month = today.getMonth() + 1;
   const day = today.getDate();
-  const query = getWikiDataQuery(month, day);
-  const result = await wikiDataApi.querySql(query);
-  return result.results.bindings.map((binding) => decodeURIComponent(binding.hebrewArticle.value.replace('https://he.wikipedia.org/wiki/', '')).replace(/_/g, ' '));
+  const query = personWithBirthdayInDay(day, month);
+  const results = await wikiDataApi.querySql(query);
+  return results.map((person) => decodeURIComponent(person.hebrewArticle.replace('https://he.wikipedia.org/wiki/', '')).replace(/_/g, ' '));
 }
 export default async function purgeBot() {
   const api = NewWikiApi();
