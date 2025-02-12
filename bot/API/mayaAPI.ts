@@ -151,6 +151,7 @@ export type MayaMarketValue = {
   marketValue: number;
   correctionDate: string;
   title?: string;
+  wikiDataId?: string;
   id: number;
   companyLongName?: string;
 };
