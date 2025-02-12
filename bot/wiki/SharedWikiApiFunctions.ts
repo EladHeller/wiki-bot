@@ -51,7 +51,7 @@ export async function getGoogleFinanceLinks(api: IWikiApi): Promise<Record<strin
   // Get google link
   + `&elprotocol=https&elquery=${googleFinanceLink}&ellimit=5000`;
   const result = await api.request(path);
-  return result.data.query.pages;
+  return result.query.pages;
 }
 
 export async function getGoogleFinanceLinksWithContent(api: IWikiApi): Promise<Record<string, WikiPage>> {
@@ -71,5 +71,5 @@ export async function getGoogleFinanceLinksWithContent(api: IWikiApi): Promise<R
   // Get google link
   + `&elprotocol=https&elquery=${googleFinanceLink}&ellimit=5000`;
   const result = await api.request(path);
-  return result.data.query.pages;
+  return result.query.pages;
 }

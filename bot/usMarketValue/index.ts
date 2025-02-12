@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 import 'dotenv/config';
 import { getCompanyData, WikiPageWithGoogleFinance } from '../API/googleFinanceApi';
 import { currencyName, getLocalDate, promiseSequence } from '../utilities';
@@ -45,7 +44,7 @@ async function updateTemplate(api: IWikiApi, marketValues: WikiPageWithGoogleFin
   await api.purge([baseMarketValueTemplate]);
 }
 
-async function usMarketValueBot() {
+export default async function usMarketValueBot() {
   const api = NewWikiApi();
   await api.login();
   console.log('Login success');
