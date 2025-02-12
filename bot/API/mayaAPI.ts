@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { WikiPage } from '../types';
+import { WikiPage } from '../types'; // TODO: This should not be here. Remove it and change all logic related to it.
 
 const mayaLinkRegex = /^https?:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/;
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';
@@ -151,6 +151,7 @@ export type MayaMarketValue = {
   marketValue: number;
   correctionDate: string;
   title?: string;
+  wikiDataId?: string;
   id: number;
   companyLongName?: string;
 };
@@ -266,6 +267,34 @@ export async function getMarketValue(
     console.error(
       'companyAllDetailsUrl',
       wikiPage.title,
+      e?.data || e?.message || e,
+    );
+    throw e;
+  }
+}
+
+export async function getMarketValueById(
+  companyId: string | number,
+): Promise<MayaMarketValue | undefined> {
+  const url = jsonAllLink + companyId;
+
+  try {
+    const response = await axios(url, mayaGetOptions);
+    const result = response.data;
+    if (!result) {
+      return undefined;
+    }
+
+    return {
+      marketValue: result.CompanyDetails?.MarketValue,
+      correctionDate: result.CompanyDetails?.CorrectionDate,
+      id: result.CompanyDetails?.CompanyId,
+      companyLongName: result.CompanyDetails?.CompanyLongName,
+    };
+  } catch (e) {
+    console.error(
+      'companyAllDetailsUrl',
+      { companyId },
       e?.data || e?.message || e,
     );
     throw e;

@@ -18,7 +18,7 @@ export interface IWikiDataAPI {
   getClaim: (id: string) => Promise<WikiDataClaim>;
   readEntity: (qid: string, props: string, languages?: string) => Promise<WikiDataEntity>;
   getRevId: (title: string) => Promise<number>;
-  querySql: (query: string) => Promise<any>;
+  querySql: (query: string) => Promise<Record<string, string>[]>;
   updateReference: (claim: string, referenceHash: string,
     snaks: Record<string, WikiDataSnack[]>, summary: string, baserevid: number) =>
       Promise<WikiDataSetReferenceResponse>;
@@ -121,7 +121,6 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
   async function querySql(query: string) {
     const res = await fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}&format=json`, {
       headers: {
-        'Api-User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
         'User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
       },
     });
@@ -129,7 +128,11 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
       throw new Error(`Failed to query sql: ${await res.text()}`);
     }
     const data = await res.json();
-    return data;
+    return data.results.bindings.map(
+      (binding: Record<string, { value: string }>) => Object.fromEntries(
+        Object.entries(binding).map((entry) => [entry[0], entry[1].value]),
+      ),
+    );
   }
 
   return {
