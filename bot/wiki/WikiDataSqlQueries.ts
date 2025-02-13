@@ -1,12 +1,13 @@
 export function companiesWithMayaId() {
-  return `SELECT ?entity ?entityLabel ?mayaId ?hebrewArticle WHERE {
-        ?entity wdt:P10817 ?mayaId.  # Has MAYA site company ID
+  return `SELECT ?entityId ?mayaId ?articleName WHERE {
+      ?entity wdt:P10817 ?mayaId.  # Has MAYA site company ID
 
-        ?hebrewArticle schema:about ?entity;
-                        schema:isPartOf <https://he.wikipedia.org/>.  # Ensures article in Hebrew Wikipedia
+      ?article schema:about ?entity ; 
+              schema:isPartOf <https://he.wikipedia.org/> ;   
+              schema:name ?articleName . 
 
-        SERVICE wikibase:label { bd:serviceParam wikibase:language "he". }
-    }`;
+      BIND(STRAFTER(STR(?entity), "entity/") AS ?entityId)  # Extract only QID
+  }`;
 }
 
 export function personWithBirthdayInDay(day: number, month: number) {
