@@ -1,14 +1,13 @@
 import 'dotenv/config';
 import { getLocalDate, prettyNumericValue } from '../utilities';
-import { MayaMarketValue, getMarketValue, getMarketValueById } from '../API/mayaAPI';
+import { MayaMarketValue, getMarketValueById } from '../API/mayaAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 import parseTableText, { buildTable } from '../wiki/wikiTableParser';
 import { getParagraphContent } from '../wiki/paragraphParser';
-import { getMayaLinks } from '../wiki/SharedWikiApiFunctions';
 import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
-import WikiDataAPI from '../wiki/WikidataAPI';
+import WikiDataAPI, { IWikiDataAPI } from '../wiki/WikidataAPI';
 
 const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 const baseCompanyNameTemplate = 'תבנית:חברות מאיה';
@@ -94,9 +93,8 @@ async function updateTable(api: IWikiApi, marketValues: MayaMarketValue[]) {
   console.log(res);
 }
 
-async function getWikiDataCompanies(api: IWikiApi) {
+async function getWikiDataCompanies(wikiDataApi: IWikiDataAPI) {
   const query = companiesWithMayaId();
-  const wikiDataApi = WikiDataAPI();
   const results = await wikiDataApi.querySql(query);
   const data: MayaMarketValue[] = [];
   for (const result of results) {
@@ -107,44 +105,27 @@ async function getWikiDataCompanies(api: IWikiApi) {
     data.push({
       wikiDataId: result.entity.replace('http://www.wikidata.org/entity/', ''),
       id: res.id,
-      companyLongName: result.entityLabel,
+      companyLongName: res.companyLongName,
       title: decodeURIComponent(result.hebrewArticle).replace('https://he.wikipedia.org/wiki/', '').replace(/_/g, ' '),
       marketValue: res.marketValue,
       correctionDate: res.correctionDate,
     });
   }
 
-  await updateTemplate(api, data, ['id', 'wikiDataId'], baseWikiDataTemplate, false, false);
   return data;
 }
 
 export default async function marketValueBot() {
   const api = NewWikiApi();
+  const wikiDataApi = WikiDataAPI();
   await api.login();
   console.log('Login success');
-  const results = await getMayaLinks(api);
-  const marketValues:MayaMarketValue[] = [];
-  for (const page of Object.values(results)) {
-    const res = await getMarketValue(page);
-    if (res) {
-      console.log(page.title);
-      marketValues.push(res);
-    }
-  }
-  const wikiDataCompanies = await getWikiDataCompanies(api);
+  const marketValues = await getWikiDataCompanies(wikiDataApi);
   await updateTemplate(api, marketValues, ['id', 'marketValue'], baseMarketValueTemplate);
   await updateTemplate(api, marketValues, ['id', 'title'], baseCompanyNameTemplate, false, false);
   await updateTemplate(api, marketValues, ['id', 'companyLongName'], baseCompanyLongNameTemplate, false, false);
-  const combinedData = [...marketValues];
-  for (const data of wikiDataCompanies) {
-    const existing = combinedData.find((x) => x.id === data.id);
-    if (existing) {
-      existing.wikiDataId = data.wikiDataId;
-    } else {
-      combinedData.push(data);
-    }
-  }
-  await updateTable(api, combinedData);
+  await updateTemplate(api, marketValues, ['id', 'wikiDataId'], baseWikiDataTemplate, false, false);
+  await updateTable(api, marketValues);
 }
 
 export const main = shabathProtectorDecorator(marketValueBot);
