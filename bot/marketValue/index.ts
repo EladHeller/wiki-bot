@@ -103,10 +103,10 @@ async function getWikiDataCompanies(wikiDataApi: IWikiDataAPI) {
       throw new Error(`Failed to get market value for ${result.mayaId}`);
     }
     data.push({
-      wikiDataId: result.entity.replace('http://www.wikidata.org/entity/', ''),
+      wikiDataId: result.entityId,
       id: res.id,
       companyLongName: res.companyLongName,
-      title: decodeURIComponent(result.hebrewArticle).replace('https://he.wikipedia.org/wiki/', '').replace(/_/g, ' '),
+      title: result.articleName,
       marketValue: res.marketValue,
       correctionDate: res.correctionDate,
     });
