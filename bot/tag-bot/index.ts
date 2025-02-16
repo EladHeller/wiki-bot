@@ -1,6 +1,6 @@
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { WikiNotification } from '../types';
-import { getLocalTimeAndDate } from '../utilities';
+import { getLocalDate } from '../utilities';
 import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 import { getAllParagraphs, getParagraphContent } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
@@ -29,7 +29,7 @@ async function getAllowedUsers(api: IWikiApi) {
   return users.map(({ link }) => link.replace('משתמש:', '').replace('user:', ''));
 }
 
-async function archiveAction(api: IWikiApi, notification: WikiNotification) {
+export async function archiveAction(api: IWikiApi, notification: WikiNotification) {
   const title = notification.title.full;
   const user = notification.agent.name;
   const url = new URL(notification['*'].links.primary.url);
@@ -41,7 +41,7 @@ async function archiveAction(api: IWikiApi, notification: WikiNotification) {
     const paragraphContent = paragraphs.find((paragraph) => paragraph.includes('@[[משתמש:Sapper-bot')
       && paragraph.includes('ארכב:')
       && paragraph.includes(user)
-      && paragraph.includes(getLocalTimeAndDate(timestamp)));
+      && paragraph.includes(getLocalDate(timestamp)));
     if (!paragraphContent) {
       const commentRes = await api.addComment(title, `תגובה ל-[[משתמש:${user}]]`, 'לא נמצאה פסקה מתאימה לארכוב', commentId);
       console.log({ commentRes });
