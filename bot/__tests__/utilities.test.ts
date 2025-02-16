@@ -1,8 +1,8 @@
 /* eslint-disable jest/no-conditional-in-test */
 import { describe, expect, it } from '@jest/globals';
 import {
-  asyncGeneratorMapWithSequence, encodeWikiUrl, getFullYear, getLocalDate, objectToFormData, objectToQueryString,
-  parseLocalDate, prettyNumericValue, promiseSequence,
+  asyncGeneratorMapWithSequence, encodeWikiUrl, getFullYear, getLocalDate, getLocalTimeAndDate, objectToFormData,
+  objectToQueryString, parseLocalDate, prettyNumericValue, promiseSequence,
 } from '../utilities';
 
 describe('prettyNumericValue', () => {
@@ -88,6 +88,20 @@ describe('getLocalDate', () => {
 
   it('should return empty string for invalid date', () => {
     const localDate = getLocalDate('2027-01-32');
+
+    expect(localDate).toBe('');
+  });
+});
+
+describe('getLocalTimeAndDate', () => {
+  it('should get local time and date', () => {
+    const localDate = getLocalTimeAndDate('2027-01-13T12:30:00');
+
+    expect(localDate).toBe('12:30, 13 בינואר 2027');
+  });
+
+  it('should return empty string for invalid date', () => {
+    const localDate = getLocalTimeAndDate('2027-01-32T12:30:00');
 
     expect(localDate).toBe('');
   });

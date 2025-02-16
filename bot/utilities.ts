@@ -48,7 +48,17 @@ export function getLocalDate(dateString: string): string {
   if (Number.isNaN(+date)) {
     return '';
   }
-  return `${date.toLocaleString('he', { month: 'long', day: 'numeric' })} ${date.getFullYear()}`;
+  return date.toLocaleString('he', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+export function getLocalTimeAndDate(dateString: string): string {
+  const date = new Date(dateString);
+  if (Number.isNaN(+date)) {
+    return '';
+  }
+  return `${date.toLocaleString('he', {
+    hour: '2-digit', minute: '2-digit',
+  })}, ${getLocalDate(dateString)}`;
 }
 
 export function getFullYear(year: string): string {

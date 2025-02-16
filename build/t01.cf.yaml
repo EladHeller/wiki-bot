@@ -697,3 +697,55 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn:  !GetAtt IronSwordsEventRule.Arn 
       FunctionName: iron-swords-function
+
+
+  TagBotLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: tag-bot-function
+      Runtime: nodejs22.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/tag-bot/index.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+
+  TagBotQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: tag-bot-queue
+      VisibilityTimeout: 900
+
+  TagBotQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref TagBotQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt TagBotQueue.Arn
+
+  TagBotSQSPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt TagBotLambda.Arn
+      Principal: sqs.amazonaws.com
+      SourceArn: !GetAtt TagBotQueue.Arn
