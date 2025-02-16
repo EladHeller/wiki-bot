@@ -26,7 +26,7 @@ export default async function archiveParagraph(
     }
     const archiveTitle = lastLink.startsWith('/') ? `${pageTitle}${lastLink}` : lastLink;
     const lastArchiveContent = await api.articleContent(archiveTitle);
-    await api.edit(archiveTitle, summary, `${lastArchiveContent}\n${paragraphContent}`, lastArchiveContent.revid);
+    await api.edit(archiveTitle, summary, `${lastArchiveContent.content}\n${paragraphContent}`, lastArchiveContent.revid);
     await api.edit(pageTitle, summary, pageContent.replace(paragraphContent, ''), pageRevId);
     return { success: 'הארכוב בוצע בהצלחה' };
   } catch (error) {

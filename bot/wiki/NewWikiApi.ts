@@ -170,7 +170,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
       data.section = 'new';
     }
 
-    return request('?action=edit&format=json&assert=bot&bot=true', 'post', objectToFormData(data));
+    return request('?action=edit&format=json&assert=bot&bot=true&nocreate=true', 'post', objectToFormData(data));
   }
 
   async function create(
