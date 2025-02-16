@@ -24,8 +24,9 @@ export default async function archiveParagraph(
     if (!lastLink) {
       return { error: 'קישור אחרון לא נמצא' };
     }
-    const lastArchiveContent = await api.articleContent(lastLink.startsWith('/') ? `${pageTitle}${lastLink}` : lastLink);
-    await api.edit(lastLink, summary, `${lastArchiveContent}\n${paragraphContent}`, lastArchiveContent.revid);
+    const archiveTitle = lastLink.startsWith('/') ? `${pageTitle}${lastLink}` : lastLink;
+    const lastArchiveContent = await api.articleContent(archiveTitle);
+    await api.edit(archiveTitle, summary, `${lastArchiveContent}\n${paragraphContent}`, lastArchiveContent.revid);
     await api.edit(pageTitle, summary, pageContent.replace(paragraphContent, ''), pageRevId);
     return { success: 'הארכוב בוצע בהצלחה' };
   } catch (error) {
