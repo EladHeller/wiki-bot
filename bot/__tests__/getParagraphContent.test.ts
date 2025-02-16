@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
+import { getAllParagraphs, getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
 
 describe('getParagraphContent', () => {
   it('should return the content of a paragraph when it exists in the article text', () => {
@@ -180,5 +180,69 @@ describe('getUsersFromTagParagraph', () => {
     const result = getUsersFromTagParagraph(articleContent, paragraphName);
 
     expect(result).toStrictEqual([]);
+  });
+});
+
+describe('getAllParagraphs', () => {
+  it('should return all paragraph contents', () => {
+    const articleText = `
+==First==
+Content 1
+==Second==
+Content 2
+===SubSection===
+Sub content
+==Third==
+Content 3
+`;
+
+    expect(getAllParagraphs(articleText, 'test')).toStrictEqual([
+      `==First==
+Content 1
+`,
+      `==Second==
+Content 2
+===SubSection===
+Sub content
+`,
+      `==Third==
+Content 3
+`,
+    ]);
+  });
+
+  it('should ignore start without end in the same line or without end at all', () => {
+    const articleText = `
+==First==
+Content 1
+==Second==
+Content 2
+===SubSection===
+Sub content
+==Third==
+Content 3
+==Fourt
+Content 4
+==Fifth
+Content 5
+`;
+
+    expect(getAllParagraphs(articleText, 'test')).toStrictEqual([
+      `==First==
+Content 1
+`,
+      `==Second==
+Content 2
+===SubSection===
+Sub content
+`,
+      `==Third==
+Content 3
+`,
+    ]);
+  });
+
+  it('should handle empty article', () => {
+    expect(getAllParagraphs('', 'test')).toStrictEqual([]);
   });
 });

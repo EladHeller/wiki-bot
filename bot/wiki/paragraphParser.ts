@@ -6,6 +6,7 @@ export function getParagraphContent(
   articleText: string,
   paragraphName: string,
   title?: string,
+  withTitle = false,
 ): string | null {
   let paragraphStartText = `==${paragraphName}==`;
   let startIndex = articleText.indexOf(paragraphStartText);
@@ -34,8 +35,44 @@ export function getParagraphContent(
   if (endIndex === -1) {
     endIndex = articleText.length;
   }
+
+  if (withTitle) {
+    return articleText.substring(startIndex, endIndex);
+  }
   const content = articleText.substring(startIndex + paragraphStartText.length, endIndex);
-  return content.replace(/^=*\n*/, '').replace(/\n*$/, '').trim();
+  return content.replace(/\n*$/, '').trim();
+}
+
+export function getAllParagraphs(articleText: string, articleTitle: string): string[] {
+  let currIndex = 0;
+  const paragraphContents: string[] = [];
+  while (currIndex !== -1) {
+    const start = nextWikiText(articleText, currIndex, '==', false);
+    if (start === -1) {
+      break;
+    }
+    if (articleText.substring(start, start + 3) === '===') {
+      currIndex = start + 3;
+    } else {
+      const nextNewLine = articleText.indexOf('\n', start);
+      currIndex = start + 2;
+
+      const end = nextWikiText(articleText, currIndex, '==', false);
+      if (end === -1) {
+        break;
+      }
+      if (nextNewLine !== -1 && nextNewLine < end) {
+        currIndex = nextNewLine;
+      } else {
+        const title = articleText.substring(currIndex, end).trim();
+        currIndex = end + 2;
+        const content = getParagraphContent(articleText, title, articleTitle, true) as string;
+        paragraphContents.push(content);
+      }
+    }
+  }
+
+  return paragraphContents;
 }
 
 export function getUsersFromTagParagraph(articleContent: string, paragraphName: string) : string[] {

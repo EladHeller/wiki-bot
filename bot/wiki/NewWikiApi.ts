@@ -57,6 +57,9 @@ export interface IWikiApi {
   getRedirecTarget: (title: string) => Promise<{
     page?: WikiPage, redirect?: WikiRedirectData
   }>;
+  markRead(): Promise<any>;
+  getNotifications(readStatus?: string): Promise<any>;
+  addComment(page: string, summary: string, content: string, commentid: string): Promise<any>;
 }
 
 export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -74,6 +77,28 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
   async function request(path: string, method?: string, data?: Record<string, any>): Promise<any> {
     await tokenPromise;
     return baseWikiApi.request(path, method, data);
+  }
+
+  async function markRead(section = 'message') {
+    return request(`?action=echomarkread&format=json&all=1&sections=${section}`, 'post', objectToFormData({
+      token,
+    }));
+  }
+
+  async function getNotifications(readStatus = '!read') {
+    return request(`?action=query&meta=notifications&format=json&notformat=model&notfilter=${readStatus}`);
+  }
+
+  async function addComment(page: string, summary: string, content: string, commentid: string) {
+    return request('?action=discussiontoolsedit&format=json', 'post', objectToFormData({
+      token,
+      paction: 'addcomment',
+      autosubscribe: 'no',
+      page,
+      summary,
+      wikitext: content,
+      commentid,
+    }));
   }
 
   async function getWikiDataItem(title: string): Promise<string | undefined> {
@@ -400,6 +425,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     categroyTitles,
     info,
     purge,
+    markRead,
     rollback,
     undo,
     categroyPages,
@@ -421,5 +447,7 @@ export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IW
     getRedirecTarget,
     edit,
     create,
+    getNotifications,
+    addComment,
   };
 }

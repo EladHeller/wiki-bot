@@ -105,5 +105,9 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     getRedirectsFrom: base.getRedirectsFrom
       ?? jest.fn<(namespace: number, limit?: number, templates?: string, categories?: string) =>
         AsyncGenerator<WikiPage[], void, void>>(),
+    markRead: base.markRead ?? jest.fn<() => Promise<any>>(),
+    getNotifications: base.getNotifications ?? jest.fn<() => Promise<any>>(),
+    addComment: base.addComment
+      ?? jest.fn<(page: string, summary: string, content: string, commentid: string) => Promise<any>>(),
   };
 }

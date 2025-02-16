@@ -153,3 +153,52 @@ export type WikiRedirectData = {
   tofragment?: string;
   tosection?: string;
 }
+
+export type WikiNotification = {
+  wiki: string;
+  id: number;
+  type: string;
+  category: string;
+  section: string;
+  timestamp: {
+    utciso8601: string;
+    utcunix: number;
+    unix: number;
+    utcmw: string;
+    mw: string;
+    date: string;
+  };
+  agent: {
+    id: number;
+    name: string;
+  };
+  title: {
+    full: string;
+    namespace: string;
+    'namespace-key': number;
+    text: string;
+  };
+  revid: number;
+  targetpages: string[];
+  '*': {
+    header: string;
+    compactHeader: string;
+    body: string;
+    icon: string;
+    links: {
+      primary: {
+        url: string;
+        label: string;
+      };
+      secondary: {
+        url: string;
+        label: string;
+        tooltip: string;
+        description: string;
+        icon: string;
+        prioritized: string;
+      }[];
+    };
+    iconUrl: string;
+  };
+}
