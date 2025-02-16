@@ -742,6 +742,14 @@ Resources:
               - sqs:GetQueueAttributes
             Resource: !GetAtt TagBotQueue.Arn
 
+  TagBotEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      Enabled: true
+      EventSourceArn: !GetAtt TagBotQueue.Arn
+      FunctionName: !GetAtt TagBotLambda.Arn
+
   TagBotSQSPermission:
     Type: AWS::Lambda::Permission
     Properties:

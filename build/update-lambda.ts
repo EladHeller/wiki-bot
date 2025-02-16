@@ -1,5 +1,4 @@
 import { LambdaClient, UpdateFunctionCodeCommand } from '@aws-sdk/client-lambda'; // eslint-disable-line import/no-extraneous-dependencies
-import 'dotenv/config';
 
 const region = process.env.REGION;
 const bucketCodeName = process.env.CODE_BUCKET;
@@ -74,6 +73,12 @@ export default async function updateLambda() {
 
   await lambda.send(new UpdateFunctionCodeCommand({
     FunctionName: 'iron-swords-function',
+    S3Bucket: bucketCodeName,
+    S3Key: 'dist.zip',
+  }));
+
+  await lambda.send(new UpdateFunctionCodeCommand({
+    FunctionName: 'tag-bot-function',
     S3Bucket: bucketCodeName,
     S3Key: 'dist.zip',
   }));
