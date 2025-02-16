@@ -26,6 +26,7 @@ const LOG_PAGE = `${BASE_PAGE}/לוג`;
 const SELECTED_QOUTE = 'ציטוט_נבחר';
 const WEBSITE_FOR_VISIT = 'אתר לביקור';
 const DRAFT = 'טיוטה';
+const TEMP_ERRORS = ['timeout', 'search_error', 'unhandled_exception'];
 
 function copyviosSearchLink(title: string) {
   return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title.replace(/ /g, '_').replace(/"/g, '%22')}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
@@ -156,7 +157,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
         return;
       }
 
-      if (res.error?.code === 'search_error') {
+      if (res.error?.code && TEMP_ERRORS.includes(res.error.code)) {
         otherLogs.push({
           text: SEARCH_ERROR,
           title,
