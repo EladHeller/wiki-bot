@@ -11,13 +11,13 @@ export default async function archiveParagraph(
   summary: string,
 ) {
   try {
-    const archiveBox = findTemplate(paragraphContent, 'תיבת ארכיון', pageTitle);
+    const archiveBox = findTemplate(pageContent, 'תיבת ארכיון', pageTitle);
     if (!archiveBox) {
       return { error: 'תיבת ארכיון לא נמצאה' };
     }
     const [archiveBoxContent] = getTemplateArrayData(archiveBox, 'תיבת ארכיון', pageTitle);
     if (!archiveBoxContent) {
-      return { error: 'תוכן תיבת ארכיון לא נמצא' };
+      return { error: 'התוכן של תיבת הארכיון לא נמצא' };
     }
     const links = getInnerLinks(archiveBoxContent);
     const lastLink = links.at(-1)?.link;
