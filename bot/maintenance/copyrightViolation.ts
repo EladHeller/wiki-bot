@@ -208,14 +208,14 @@ export default async function copyrightViolationBot() {
   const allLogs: ArticleLog[] = [];
   const allOtherLogs: ArticleLog[] = [];
 
-  await asyncGeneratorMapWithSequence(1, generator, (page: WikiPage) => async () => {
+  await asyncGeneratorMapWithSequence(3, generator, (page: WikiPage) => async () => {
     const { logs, otherLogs } = await handlePage(page.title, page.ns === 0);
     allLogs.push(...logs);
     allOtherLogs.push(...otherLogs);
   });
   const logsGenerator = api.logs('move', [0, 2, 118], lastRun);
 
-  await asyncGeneratorMapWithSequence(1, logsGenerator, (log: LogEvent) => async () => {
+  await asyncGeneratorMapWithSequence(3, logsGenerator, (log: LogEvent) => async () => {
     if (!log.title || log.params?.target_ns == null || log.params.target_title == null
        || log.params.target_ns === log.ns) {
       return;
