@@ -156,7 +156,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
         return;
       }
 
-      if (res.error?.code === 'search_error') {
+      if (res.error?.code === 'search_error' || res.error?.code === 'unhandled_exception') {
         otherLogs.push({
           text: SEARCH_ERROR,
           title,
