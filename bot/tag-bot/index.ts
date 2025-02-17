@@ -1,5 +1,6 @@
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { WikiNotification } from '../types';
+import { getLocalTimeAndDate } from '../utilities';
 import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 import { getAllParagraphs, getParagraphContent } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
@@ -35,7 +36,7 @@ function getTimeStampOptions(timestamp: string) { // TODO: it's assumed that the
   const israelSummerDate = new Date(timestamp);
   israelSummerDate.setHours(israelSummerDate.getHours() + 3);
   const israelSummerTimestamp = israelSummerDate.toJSON();
-  return [israelWinterTimestamp, israelSummerTimestamp, timestamp];
+  return [israelWinterTimestamp, israelSummerTimestamp, timestamp].map((time) => getLocalTimeAndDate(time));
 }
 
 export async function archiveAction(api: IWikiApi, notification: WikiNotification) {
