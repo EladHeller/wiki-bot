@@ -30,6 +30,9 @@ async function getAllowedConfiguration(api: IWikiApi): Promise<AllowedConfigurat
   const pages: string[] = [];
   if (pagesParagraphContent) {
     pagesParagraphContent.split('\n').forEach((line) => {
+      if (!line.trim().startsWith('*')) {
+        return;
+      }
       const page = line.replace(/^\s*\*/, '').trim();
       if (page.startsWith('[[')) {
         const links = getInnerLinks(page);
