@@ -1,5 +1,5 @@
 import { WikiPage } from '../types';
-import { IWikiApi } from './NewWikiApi';
+import { IWikiApi } from './WikiApi';
 
 export async function getMayaLinks(api: IWikiApi, withContent = false): Promise<Record<string, WikiPage>> {
   const template = encodeURIComponent('תבנית:מידע בורסאי');

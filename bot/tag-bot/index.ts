@@ -1,7 +1,7 @@
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { WikiNotification } from '../types';
 import { getLocalTimeAndDate } from '../utilities';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getAllParagraphs, getParagraphContent } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import archiveParagraph from './actions/archive';
@@ -30,6 +30,9 @@ async function getAllowedConfiguration(api: IWikiApi): Promise<AllowedConfigurat
   const pages: string[] = [];
   if (pagesParagraphContent) {
     pagesParagraphContent.split('\n').forEach((line) => {
+      if (!line.trim().startsWith('*')) {
+        return;
+      }
       const page = line.replace(/^\s*\*/, '').trim();
       if (page.startsWith('[[')) {
         const links = getInnerLinks(page);
@@ -160,7 +163,7 @@ async function handleNotification(
 }
 
 export default async function tagBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const allowedConfiguration = await getAllowedConfiguration(api);
   const notificationsRes = await api.getNotifications();

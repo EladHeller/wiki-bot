@@ -6,7 +6,7 @@ import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { ArticleLog } from './types';
 import pagesWithoutProtectInMainPage from './pagesWithoutProtectInMainPage';
 import pagesWithCopyrightIssuesInMainPage from './pagesWithCopyrightIssuesInMainPage';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
@@ -92,7 +92,7 @@ async function getTemplatesByCategory(api: IWikiApi, category: string, exceptCat
   return needToProtect;
 }
 export async function protectBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const didYouKnowTemplates = await getTemplatesByCategory(api, 'תבניות הידעת?');
   let needToProtect = didYouKnowTemplates.filter((template) => template.startsWith('תבנית:הידעת?'));

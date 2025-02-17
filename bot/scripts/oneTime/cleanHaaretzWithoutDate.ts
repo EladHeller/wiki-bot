@@ -1,10 +1,10 @@
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 import { getParagraphContent } from '../../wiki/paragraphParser';
 
 export default async function cleanHaaretzWithoutDate() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
 
   await asyncGeneratorMapWithSequence(10, api.categroyPages('שגיאות פרמטריות בתבנית הארץ - ללא תאריך'), (page) => async () => {

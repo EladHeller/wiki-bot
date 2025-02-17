@@ -1,7 +1,7 @@
 {
     "coveragePathIgnorePatterns": [
       "BaseWikiApi.ts",
-      "NewWikiApi.ts",
+      "WikiApi.ts",
       "wikiLogin.ts"
     ],
     "coverageThreshold": {

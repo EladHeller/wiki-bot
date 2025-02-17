@@ -4,7 +4,7 @@ import Company from './company';
 import getMayaDetails, { MayaWithWiki } from '../API/mayaAPI';
 import { WikiPage } from '../types';
 import { buildTable } from '../wiki/wikiTableParser';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getMayaCompanies } from '../wiki/SharedWikiApiFunctions';
 
 const TABLE_PAGE = 'משתמש:Sapper-bot/tradeBootData';
@@ -52,7 +52,7 @@ function getRelevantCompanies(companies: Company[], year: string) {
 }
 
 export default async function yearlyReport(year: string) {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   console.log('Login success');
 

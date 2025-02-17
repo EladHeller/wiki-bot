@@ -1,5 +1,5 @@
 import { WikiPage } from '../types';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 import { ArticleLog } from './types';
 
 const articles = [
@@ -8,7 +8,7 @@ const articles = [
 ];
 
 export default async function pagesWithCopyrightIssuesInMainPage(): Promise<ArticleLog[]> {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const suspectedCopyrightInfringement: ArticleLog[] = [];
 

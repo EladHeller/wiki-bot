@@ -1,7 +1,7 @@
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 import DuplicateRedirects from './DuplicateRedirects';
 
 export default async function main() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await DuplicateRedirects(api);
 }

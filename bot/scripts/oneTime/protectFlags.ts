@@ -1,6 +1,6 @@
 import { ArticleLog } from '../../admin/types';
 import { WikiPage } from '../../types';
-import NewWikiApi, { IWikiApi } from '../../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const prefix = 'דגל/';
 
@@ -13,7 +13,7 @@ async function* getPages(api: IWikiApi): AsyncGenerator<WikiPage[], void, void> 
 const levels = ['sysop', 'editautopatrolprotected'];
 
 export default async function protectFlags() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   try {
     const pagesGenerator = getPages(api);
     const logContent = await api.articleContent('משתמש:Sapper-bot/הגנת תבניות דגל');

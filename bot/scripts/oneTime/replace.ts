@@ -1,11 +1,11 @@
 import 'dotenv/config';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 
 const link = '%d7%';
 
 async function main() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const generartor = api.search(link);
 

@@ -1,5 +1,5 @@
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 import {
   findTemplates, getTemplateArrayData, getTemplateKeyValueData, templateFromKeyValueData,
 } from '../../wiki/newTemplateParser';
@@ -48,7 +48,7 @@ const quoteRegex = /^\s*"(.*)"\s*$/;
 const doubleCheckQuoteRegex = /"/g;
 
 export async function first(templateName = 'סינגלי אלבום') {
-  const api = NewWikiApi();
+  const api = WikiApi();
   let number = 0;
   await api.login();
   const generator = api.getArticlesWithTemplate(templateName);
@@ -114,7 +114,7 @@ export async function first(templateName = 'סינגלי אלבום') {
 }
 
 export async function second(templateName = 'אלבום') {
-  const api = NewWikiApi();
+  const api = WikiApi();
   let number = 0;
   await api.login();
   const generator = api.getArticlesWithTemplate(templateName);
@@ -181,7 +181,7 @@ export async function second(templateName = 'אלבום') {
 }
 
 export async function third(templateName = 'סינגל') {
-  const api = NewWikiApi();
+  const api = WikiApi();
   let number = 0;
   await api.login();
   const generator = api.getArticlesWithTemplate(templateName);

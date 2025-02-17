@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { IWikiApi } from '../../bot/wiki/NewWikiApi';
+import { IWikiApi } from '../../bot/wiki/WikiApi';
 import { Mocked } from './types';
 import {
   LogEvent, Revision, UserContribution, WikiPage,

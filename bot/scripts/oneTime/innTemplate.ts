@@ -1,12 +1,12 @@
 import { WikiPage } from '../../types';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
 
 const TEMPLATE_NAME = 'ערוץ7';
 
 export default async function innTemplate() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const generator = api.getArticlesWithTemplate(TEMPLATE_NAME);
   let number = 0;

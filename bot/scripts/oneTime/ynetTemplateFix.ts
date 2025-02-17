@@ -1,11 +1,11 @@
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
 
 const TEMPLATE_NAME = 'ynet';
 
 export default async function ynetTemplateFix() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
 
   const generator = api.getArticlesWithTemplate(TEMPLATE_NAME);

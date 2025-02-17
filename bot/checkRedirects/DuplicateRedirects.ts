@@ -1,5 +1,5 @@
 import { WikiPage } from '../types';
-import { IWikiApi } from '../wiki/NewWikiApi';
+import { IWikiApi } from '../wiki/WikiApi';
 
 // WIP
 export default async function DuplicateRedirects(api: IWikiApi) {

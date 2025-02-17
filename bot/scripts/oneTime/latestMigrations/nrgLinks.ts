@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { asyncGeneratorMapWithSequence } from '../../../utilities';
-import NewWikiApi, { IWikiApi } from '../../../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../../../wiki/WikiApi';
 
 const oldLink = 'www.nrg.co.il/online/';
 // eslint-disable-next-line max-len
@@ -40,7 +40,7 @@ async function updateLinks(api: IWikiApi, protocol: 'http' | 'https') {
 }
 
 export default async function nrgLinksFix() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   await updateLinks(api, 'http');
   console.log('Pages:', pages.length);

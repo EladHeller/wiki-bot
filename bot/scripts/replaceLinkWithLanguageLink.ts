@@ -1,5 +1,5 @@
 import { asyncGeneratorMapWithSequence } from '../utilities';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 
 const statistics = {
@@ -14,7 +14,7 @@ export default async function replaceLinkWithLanguageLink(
   externalArticleName: string,
   rightArticleName?: string,
 ) {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const generartor = api.backlinksTo(articleName, '0');
 

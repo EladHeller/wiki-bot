@@ -1,5 +1,5 @@
 import { parseLocalDate } from '../utilities';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 
 const dateFormater = new Intl.DateTimeFormat('he-IL', {
@@ -55,7 +55,7 @@ function datesDiffereceInDays(date1: Date, date2: Date) {
   return `{{הפרש תאריכים|${date1.getDate()}|${date1.getMonth() + 1}|${date1.getFullYear()}|${date2.getDate()}|${date2.getMonth() + 1}|${date2.getFullYear()}}}`;
 }
 
-const api = NewWikiApi();
+const api = WikiApi();
 
 export async function updateLevel(
   levelData: LevelData,

@@ -5,7 +5,7 @@ import { asyncGeneratorMapWithSequence } from '../utilities';
 import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { ArticleLog } from './types';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 
 const fixBrokenRedirectsBotNames = ['EmausBot', 'Xqbot'];
 
@@ -112,7 +112,7 @@ async function deleteInCategory(api: IWikiApi, category: string, reason: string,
 }
 
 export default async function deleteBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   console.log('logged in');
   const convertLogs = await deleteInCategory(api, 'ויקיפדיה/בוט/בוט ההסבה/דפי פלט/למחיקה', 'דף פלט של בוט ההסבה', /\/דוגמאות|\/פלט|^שיחת ויקיפדיה:בוט\/בוט ההסבה\//);

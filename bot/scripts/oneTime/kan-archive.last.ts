@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi, { IWikiApi } from '../../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
 
 const converted: string[] = [];
@@ -61,7 +61,7 @@ async function convert(page: WikiPage, api: IWikiApi) {
 }
 
 async function kanArchive() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const httpGenerator = api.externalUrl(BASE_LINK, 'http');
   await asyncGeneratorMapWithSequence(1, httpGenerator, (page) => async () => convert(page, api));

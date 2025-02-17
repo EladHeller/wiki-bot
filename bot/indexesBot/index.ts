@@ -1,7 +1,7 @@
 import { getIndexStocks, getIndicesList } from '../API/mayaAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import parseTableText from '../wiki/wikiTableParser';
 
 const companyNamesPage = 'תבנית:חברות מאיה/נתונים';
@@ -85,7 +85,7 @@ async function updateCompanyIndexes(api: IWikiApi, companyIndexesDict: Record<st
 }
 
 export default async function indexesBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   const { content, revid } = await api.articleContent(indexesTemplatePage);
   if (!content) {
     throw new Error('Failed to get template content');

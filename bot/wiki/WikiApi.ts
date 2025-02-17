@@ -62,7 +62,7 @@ export interface IWikiApi {
   addComment(page: string, summary: string, content: string, commentid: string): Promise<any>;
 }
 
-export default function NewWikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
+export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
   let token: string;
 
   async function init() {

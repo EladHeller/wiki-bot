@@ -4,7 +4,7 @@ import {
   asyncGeneratorMapWithSequence, promiseSequence,
 } from '../../../utilities';
 import formalizedDateFormat from '../../../utilities/formalizedDateFormat';
-import NewWikiApi from '../../../wiki/NewWikiApi';
+import WikiApi from '../../../wiki/WikiApi';
 import { findTemplates, getTemplateArrayData } from '../../../wiki/newTemplateParser';
 
 const hebrewDateRegex = /\s*(?:[א-ת]['׳] |[א-ת]["״][א-ת] )?[א-ת]{3,10}(?: [אב]['׳])? (?:ה['׳]?)?[א-ת]{2,3}(?:["״][א-ת])? ?[.,/]?\s*/;
@@ -33,7 +33,7 @@ export default async function templateDates(
   templateNameVersion = templateName,
   getTemplateData: (data: string[]) => TemplateData = defaultGetTemplateData,
 ) {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const generator = api.categroyPages(`שגיאות פרמטריות בתבנית ${templateName}`);
   await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {

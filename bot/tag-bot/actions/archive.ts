@@ -1,5 +1,5 @@
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
-import { IWikiApi } from '../../wiki/NewWikiApi';
+import { IWikiApi } from '../../wiki/WikiApi';
 import { getInnerLinks } from '../../wiki/wikiLinkParser';
 
 export default async function archiveParagraph(

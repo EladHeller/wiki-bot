@@ -1,13 +1,13 @@
 import 'dotenv/config';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 
 const oldLink = 'db.yadvashem.org/righteous/';
 // eslint-disable-next-line max-len
 const regex = /http:\/\/db\.yadvashem\.org\/righteous\/(?:righteousName|family|facebookFamily)\.html\?language=en&itemId=(\d+)/g;
 const newLink = 'https://righteous.yadvashem.org/?searchType=righteous_only&language=en&ind=0&itemId=';
 async function main() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const generartor = api.externalUrl(oldLink, 'http');
   await asyncGeneratorMapWithSequence(10, generartor, (page) => async () => {

@@ -1,4 +1,4 @@
-import { IWikiApi } from '../../wiki/NewWikiApi';
+import { IWikiApi } from '../../wiki/WikiApi';
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
 import { getParagraphContent } from '../../wiki/paragraphParser';
 

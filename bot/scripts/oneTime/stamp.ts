@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 
 const link = 'israelphilately.org.il/he/catalog/articles';
 
 async function main() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
 
   const generator = api.externalUrl(link, 'http');

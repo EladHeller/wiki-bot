@@ -1,12 +1,12 @@
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 
 const TEMPLATE_NAME = 'צ-ספר';
 const targetReplace = 'אוצר הכתובות|';
 const regex = /צ-ספר\|מחבר=\[\[נחום סלושץ\]\]\|שם=אוצר הכתובות הפניקיות\|מו"ל=דביר\|שנת הוצאה=(1942|תש"ב)\|עמ=/g;
 
 export default async function replaceToOtzarHaktovot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
 
   await asyncGeneratorMapWithSequence(10, api.getArticlesWithTemplate(TEMPLATE_NAME), (page) => async () => {
