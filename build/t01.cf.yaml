@@ -667,10 +667,9 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: iron-swords-function
-      Runtime: nodejs18.x
-      RuntimeManagementConfig:
-        UpdateRuntimeOn: Manual
-        RuntimeVersionArn: arn:aws:lambda:us-east-1::runtime:0cdcfbdefbc5e7d3343f73c2e2dd3cba17d61dea0686b404502a0c9ce83931b9
+      PackageType: Image
+      Code:
+        ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/my-wiki-bot:latest'
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -678,9 +677,6 @@ Resources:
       Handler: dist/ironSwords/index.main
       Timeout: 900
       MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
   IronSwordsEventRule:
     DependsOn:
       - IronSwordsLambda
