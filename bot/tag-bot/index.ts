@@ -41,11 +41,11 @@ function getTimeStampOptions(timestamp: string) { // TODO: it's assumed that the
 }
 
 function getArchiveSummary(user: string) {
-  return `${SUMMARY_PREFIX}ארכוב לבקשת [[משתמש:${user}]]`;
+  return `${SUMMARY_PREFIX}ארכוב לבקשת [[משתמש:${user}|${user}]]`;
 }
 
 function getCommentSummary(user: string) {
-  return `${SUMMARY_PREFIX}תגובה ל-[[משתמש:${user}]]`;
+  return `${SUMMARY_PREFIX}תגובה ל-[[משתמש:${user}|${user}]]`;
 }
 
 function getCommentPrefix(user: string) {
