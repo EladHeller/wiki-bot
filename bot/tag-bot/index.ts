@@ -1,6 +1,5 @@
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { WikiNotification } from '../types';
-import { getLocalDate } from '../utilities';
 import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
 import { getAllParagraphs, getParagraphContent } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
@@ -29,6 +28,16 @@ async function getAllowedUsers(api: IWikiApi) {
   return users.map(({ link }) => link.replace('משתמש:', '').replace('user:', ''));
 }
 
+function getTimeStampOptions(timestamp: string) { // TODO: it's assumed that the Wikipedia is Hebrew
+  const israelWinterDate = new Date(timestamp);
+  israelWinterDate.setHours(israelWinterDate.getHours() + 2);
+  const israelWinterTimestamp = israelWinterDate.toJSON();
+  const israelSummerDate = new Date(timestamp);
+  israelSummerDate.setHours(israelSummerDate.getHours() + 3);
+  const israelSummerTimestamp = israelSummerDate.toJSON();
+  return [israelWinterTimestamp, israelSummerTimestamp, timestamp];
+}
+
 export async function archiveAction(api: IWikiApi, notification: WikiNotification) {
   const title = notification.title.full;
   const user = notification.agent.name;
@@ -41,7 +50,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
     const paragraphContent = paragraphs.find((paragraph) => paragraph.includes('@[[משתמש:Sapper-bot')
       && paragraph.includes('ארכב:')
       && paragraph.includes(user)
-      && paragraph.includes(getLocalDate(timestamp)));
+      && getTimeStampOptions(timestamp).some((time) => paragraph.includes(time)));
     if (!paragraphContent) {
       const commentRes = await api.addComment(title, `תגובה ל-[[משתמש:${user}]]`, 'לא נמצאה פסקה מתאימה לארכוב', commentId);
       console.log({ commentRes });
