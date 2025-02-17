@@ -666,7 +666,7 @@ Resources:
     Type: 'AWS::Lambda::Function'
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
-      FunctionName: iron-swords-function
+      FunctionName: iron-swords-function-new
       PackageType: Image
       Code:
         ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/my-wiki-bot:latest'
@@ -684,7 +684,7 @@ Resources:
       Name: iron-swords-scheduler
       ScheduleExpression: cron(0 18 ? * * *)
       Targets:
-        - Id: iron-swords-function
+        - Id: iron-swords-function-new
           Arn: !GetAtt IronSwordsLambdaNew.Arn
   IronSwordsInvokePermission:
     DependsOn:
@@ -695,7 +695,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
       SourceArn:  !GetAtt IronSwordsEventRule.Arn 
-      FunctionName: iron-swords-function
+      FunctionName: iron-swords-function-new
 
 
   TagBotLambda:
