@@ -66,6 +66,7 @@ async function main() {
     ParameterValue: bucketCodeName,
   }]);
 
+  await $`sh ./build/docker-build.sh`;
   await $`sh ./build/build.sh`;
 
   await updateS3();
