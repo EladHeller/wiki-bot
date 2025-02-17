@@ -669,7 +669,7 @@ Resources:
       FunctionName: iron-swords-function-new
       PackageType: Image
       Code:
-        ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/my-wiki-bot:latest'
+        ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:latest'
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -697,7 +697,7 @@ Resources:
       SourceArn:  !GetAtt IronSwordsEventRule.Arn 
       FunctionName: iron-swords-function-new
 
-
+# Tag bot lambda
   TagBotLambda:
     DependsOn:
       - MarketValueLambdaIamRole
