@@ -6,13 +6,6 @@ import { getAllParagraphs, getParagraphContent } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import archiveParagraph from './actions/archive';
 
-const whiteListPages = [
-  'משתמש:החבלן',
-  'שיחת משתמש:החבלן',
-  'משתמש:Sapper-bot',
-  'שיחת משתמש:Sapper-bot',
-];
-
 const TAG_PAGE_NAME = 'משתמש:Sapper-bot/בוט התיוג';
 const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
 
@@ -20,14 +13,38 @@ const notAllowedUserMessage = `אני מצטער, אבל אינך מורשה ל�
 const notSupportedCommandMessage = `מצטער, אבל הפקודה שהזנת לא נתמכת. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ונסה שוב.`;
 const supportedActions = ['ארכב'];
 
-async function getAllowedUsers(api: IWikiApi) {
+type AllowedConfiguration = {
+  users: string[];
+  pages: string[];
+};
+
+async function getAllowedConfiguration(api: IWikiApi): Promise<AllowedConfiguration> {
   const { content } = await api.articleContent(TAG_PAGE_NAME);
-  const paragraphContent = getParagraphContent(content, 'רשימת משתמשים');
-  if (!paragraphContent) {
-    return [];
+  const usersParagraphContent = getParagraphContent(content, 'רשימת משתמשים');
+  let users: string[] = [];
+  if (usersParagraphContent) {
+    users = getInnerLinks(usersParagraphContent).map(({ link }) => link.replace('משתמש:', '').replace('user:', ''));
   }
-  const users = getInnerLinks(paragraphContent);
-  return users.map(({ link }) => link.replace('משתמש:', '').replace('user:', ''));
+
+  const pagesParagraphContent = getParagraphContent(content, 'דפים נתמכים');
+  const pages: string[] = [];
+  if (pagesParagraphContent) {
+    pagesParagraphContent.split('\n').forEach((line) => {
+      const page = line.replace(/^\s*\*/, '').trim();
+      if (page.startsWith('[[')) {
+        const links = getInnerLinks(page);
+        if (links.length === 1) {
+          pages.push(links[0].link);
+        }
+      } else {
+        pages.push(page);
+      }
+    });
+  }
+  return {
+    users,
+    pages,
+  };
 }
 
 function getTimeStampOptions(timestamp: string) { // TODO: it's assumed that the Wikipedia is Hebrew
@@ -41,11 +58,11 @@ function getTimeStampOptions(timestamp: string) { // TODO: it's assumed that the
 }
 
 function getArchiveSummary(user: string) {
-  return `${SUMMARY_PREFIX}ארכוב לבקשת [[משתמש:${user}]]`;
+  return `${SUMMARY_PREFIX}ארכוב לבקשת [[משתמש:${user}|${user}]]`;
 }
 
 function getCommentSummary(user: string) {
-  return `${SUMMARY_PREFIX}תגובה ל-[[משתמש:${user}]]`;
+  return `${SUMMARY_PREFIX}תגובה ל-[[משתמש:${user}|${user}]]`;
 }
 
 function getCommentPrefix(user: string) {
@@ -96,7 +113,11 @@ const actions = {
   ארכב: archiveAction,
 };
 
-async function handleNotification(api: IWikiApi, notification: WikiNotification, allowedUsers: string[]) {
+async function handleNotification(
+  api: IWikiApi,
+  notification: WikiNotification,
+  allowedConfiguration: AllowedConfiguration,
+) {
   if (notification.type !== 'mention' || notification.wiki !== 'hewiki') {
     return;
   }
@@ -107,7 +128,7 @@ async function handleNotification(api: IWikiApi, notification: WikiNotification,
   }
   const title = notification.title.full;
   console.log({ title });
-  const isInWhiteList = whiteListPages.some((whiteListTitle) => title.startsWith(whiteListTitle));
+  const isInWhiteList = allowedConfiguration.pages.some((whiteListTitle) => title.startsWith(whiteListTitle));
   if (!isInWhiteList) {
     console.log('Not in white list');
     return;
@@ -121,7 +142,7 @@ async function handleNotification(api: IWikiApi, notification: WikiNotification,
   const user = notification.agent.name;
   const commentSummary = getCommentSummary(user);
   const commentPrefix = getCommentPrefix(user);
-  if (!allowedUsers.includes(user)) {
+  if (!allowedConfiguration.users.includes(user)) {
     const commentRes = await api.addComment(title, commentSummary, commentPrefix + notAllowedUserMessage, decodeURIComponent(url.hash.replace('#', '')));
     console.log({ commentRes });
 
@@ -141,13 +162,13 @@ async function handleNotification(api: IWikiApi, notification: WikiNotification,
 export default async function tagBot() {
   const api = NewWikiApi();
   await api.login();
-  const allowedUsers = await getAllowedUsers(api);
+  const allowedConfiguration = await getAllowedConfiguration(api);
   const notificationsRes = await api.getNotifications();
   const markReadRes = await api.markRead();
   console.log({ markReadRes });
   const { notifications } = notificationsRes.query;
   for (const notification of notifications.list) {
-    await handleNotification(api, notification, allowedUsers);
+    await handleNotification(api, notification, allowedConfiguration);
   }
 }
 
