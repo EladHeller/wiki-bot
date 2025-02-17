@@ -1,6 +1,5 @@
-import * as playwright from 'playwright-aws-lambda';
 import { JSDOM } from 'jsdom';
-import { Browser } from 'playwright-core';
+import { Browser, chromium } from 'playwright';
 
 const url = 'https://www.idf.il/אתרי-יחידות/יומן-המלחמה/חללי-ופצועי-צה-ל-במלחמה/';
 
@@ -28,8 +27,7 @@ function getCounter(
 export default async function getCasualties() {
   let browser: Browser | null = null;
   try {
-    browser = await playwright.launchChromium({
-      headless: false,
+    browser = await chromium.launch({
       timeout: 10 * 1000,
     });
     const context = await browser.newContext();
