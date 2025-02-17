@@ -9,7 +9,8 @@ const kidnappetInGaza = 'חטופים שנותרו בשבי';
 
 const urlDict = {
   [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', kidnappetInGaza], numberUp: false, page: 1 },
-  [`${mainUrl}#`]: { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**', 'הרוגים בלבנון'], numberUp: false, page: 5 },
+  [`${mainUrl}#`]: { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**'], numberUp: false, page: 5 },
+  [`${mainUrl}#1`]: { titles: ['הרוגים בלבנון'], numberUp: false, page: 3 },
   // [KidnappedUrl]: { titles: ['סך החטופים ההרוגים'], numberUp: true, page: 1 },
 };
 
@@ -93,6 +94,7 @@ export default async function getWarData() {
     }
 
     for (const [url, config] of Object.entries(urlDict)) {
+      await page.goto('about:blank');
       await page.goto(url);
       await page.waitForSelector('.public-DraftStyleDefault-block');
       for (let i = 1; i < config.page; i += 1) {
