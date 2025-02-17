@@ -1,6 +1,6 @@
 FROM public.ecr.aws/lambda/nodejs:22
 
-# Install Playwright dependencies
+# Install Playwright dependencies (required for Chromium, WebKit, and Firefox)
 RUN dnf -y update && \
     dnf -y install \
         libX11 \
@@ -28,6 +28,23 @@ RUN dnf -y update && \
         cairo \
         cups-libs \
         dbus-glib \
+        libicu \
+        libatomic \
+        libxslt \
+        woff2 \
+        opus \
+        harfbuzz \
+        libjpeg-turbo \
+        libwebp \
+        enchant2 \
+        libsecret \
+        hyphen \
+        mesa-libGL \
+        gudev \
+        libevdev \
+        libffi \
+        mesa-libGLES \
+        x264-libs \
     && dnf clean all
 
 # Copy the source code
@@ -39,7 +56,7 @@ RUN npm run build && \
     cp ./package-lock.json ./dist/package-lock.json && \
     cd ./dist && \
     npm --quiet ci --omit=dev --no-bin-links && \
-    rm -rf ./bot/__tests__ ./package-lock.json ./bot/scripts && \
+    rm -rf ./package-lock.json ./scripts && \
     cd ..
 
 RUN npx playwright install
