@@ -674,7 +674,6 @@ Resources:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
-      Handler: dist/ironSwords/index.main
       Timeout: 900
       MemorySize: 1024
   IronSwordsEventRule:
