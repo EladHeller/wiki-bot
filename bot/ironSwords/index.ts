@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { getLocalDate } from '../utilities';
 import getCasualties from './idfSiteScraper';
@@ -47,7 +47,7 @@ function updateDate(content: string, rows: string[], fieldName: string): string 
 }
 
 export default async function ironSwordsBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   const casualties = await getCasualties();
   const warData = await getWarData();
   const allData = { ...casualties, ...warData };

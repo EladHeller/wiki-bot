@@ -5,7 +5,7 @@ import type { ArticleLog, Paragraph } from '../admin/types';
 import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 import type { LogEvent, WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence } from '../utilities';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 
 const violationColor: Record<CopyViolaionRank, string> = {
   suspected: 'אדום',
@@ -49,7 +49,7 @@ function textFromMatch(
   return `: ${link}, ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
 }
 
-async function getLastRun(api: ReturnType<typeof NewWikiApi>): Promise<string> {
+async function getLastRun(api: ReturnType<typeof WikiApi>): Promise<string> {
   const lastRunResult = await api.articleContent(LAST_RUN_PAGE);
   if (lastRunResult) {
     return lastRunResult.content;
@@ -199,7 +199,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
 }
 
 export default async function copyrightViolationBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   const currentRun = new Date();
   const lastRun = await getLastRun(api);
   const [searchErrorPage] = await api.info([SEARCH_ERROR_PAGE]);

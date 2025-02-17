@@ -1,11 +1,11 @@
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getArguments } from './getArguments';
 
 export interface CallbackArgs {
     wikiApi?: IWikiApi;
 }
 const injetionDictionary = {
-  wikiApi: () => NewWikiApi(),
+  wikiApi: () => WikiApi(),
 } satisfies Record<keyof CallbackArgs, (...args: any[]) => any>;
 
 const implemtationDictionary: Partial<Record<keyof CallbackArgs, any>> = {};

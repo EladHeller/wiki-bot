@@ -1,5 +1,5 @@
 import { WikiPage } from '../../types';
-import type { IWikiApi } from '../../wiki/NewWikiApi';
+import type { IWikiApi } from '../../wiki/WikiApi';
 
 const changes: string[][] = [];
 const pagesToChange = new Map<string, WikiPage>();

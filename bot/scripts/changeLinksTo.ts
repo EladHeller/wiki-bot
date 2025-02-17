@@ -1,6 +1,6 @@
 import { WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence } from '../utilities';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 
 export default async function changeLinksTo(
@@ -9,7 +9,7 @@ export default async function changeLinksTo(
   reason: string,
   saveText = true,
 ) {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const generator = api.backlinksTo(currentTarget, '0|2|100|118');
 

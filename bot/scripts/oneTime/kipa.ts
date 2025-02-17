@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { promiseSequence } from '../../utilities';
 import { findTemplates } from '../../wiki/newTemplateParser';
 import { WikiPage } from '../../types';
-import NewWikiApi, { IWikiApi } from '../../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const TEMPLATE_NAME = 'כיפה';
 const url = 'https://www.kipa.co.il/';
@@ -57,7 +57,7 @@ async function fixParameters(content: string, title: string): Promise<string> {
 }
 
 async function main() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const results = await getArticleWithKipaTemplate(api);
   console.log(results.length);

@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import { JSDOM } from 'jsdom';
 import fs from 'fs/promises';
-import NewWikiApi from '../../../wiki/NewWikiApi';
+import WikiApi from '../../../wiki/WikiApi';
 import linksToTemplates, { basicConverter, PageData } from '../../linksToTemplates';
 import { WikiLink } from '../../../wiki/wikiLinkParser';
 import { CiteNewsTemplate, GeneralLinkTemplateData } from '../../types';
@@ -166,7 +166,7 @@ async function externalLinkConverter(originalText: string, { link, text }: WikiL
 }
 
 export default async function nrgTemplate() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   await linksToTemplates({
     url: oldLink,

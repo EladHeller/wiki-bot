@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 // import { getInnerLinks } from '../../wiki/wikiLinkParser';
 import { parseContent } from '../../maintenance/languageLinks';
 import WikiDataAPI from '../../wiki/WikidataAPI';
@@ -9,7 +9,7 @@ const RELEVANT_COMMENT = 'הסרת תבנית קישור שפה';
 const BOT_NAME = 'Sapper-bot';
 
 export async function fixMissingQuotation() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
 
   const pages = ['בילבורד הוט 100 (2023)', 'בילבורד הוט 100 (2020 ואילך)', 'Face Yourself'];
@@ -29,7 +29,7 @@ export async function fixMissingQuotation() {
 }
 
 export default async function fixLanguageLinks() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const startDate = new Date();
   startDate.setHours(startDate.getHours() - 24);

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { writeFile } from 'fs/promises';
 import findHebrewFullNames from 'find-hebrew-names';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { WikiPage } from '../types';
 import { findTemplates, getTemplateArrayData, getTemplateKeyValueData } from '../wiki/newTemplateParser';
 import type { CiteNewsTemplate, GeneralLinkTemplateData } from './types';
@@ -354,7 +354,7 @@ async function linksToTemplatesLogic(
 export default async function linksToTemplates(
   config: ConvertionConfig,
 ) {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   all.splice(0, all.length);
   updated.splice(0, updated.length);

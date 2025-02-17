@@ -1,5 +1,5 @@
 import { findTemplate, getTemplateKeyValueData } from '../../wiki/newTemplateParser';
-import NewWikiApi, { IWikiApi } from '../../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const existingTemplates = [
   'מדד תל אביב 35',
@@ -71,7 +71,7 @@ async function removeOldDataAndInsertTemplate(api: IWikiApi, companyId: string, 
 }
 
 export default async function addCompanyIndexsTemplates() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   const companyTemplates = await getCompanyTemplates(api);
   const companyIdToName = await getCompanyIdNameMapping(api);
   const companiesWithArticle: string[][] = Object.keys(companyTemplates).map((companyId) => {
@@ -128,7 +128,7 @@ async function fixPage(api: IWikiApi, title: string, revid?: number, content?: s
 }
 
 export async function fixTemplateOrder() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   const generator = api.getArticlesWithTemplate(baseTemplateName);
   for await (const batch of generator) {
     for (const { title, revisions } of batch) {

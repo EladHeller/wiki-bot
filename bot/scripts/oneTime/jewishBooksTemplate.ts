@@ -1,10 +1,10 @@
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 
 const TEMPLATE_NAME = 'אוצר הספרים היהודי';
 
 export default async function jewishBooks() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   const generator = api.getArticlesWithTemplate(`תבנית:${TEMPLATE_NAME}`);
 
   await asyncGeneratorMapWithSequence(10, generator, (page) => async () => {

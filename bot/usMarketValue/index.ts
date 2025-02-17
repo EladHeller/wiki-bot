@@ -3,7 +3,7 @@ import { getCompanyData, WikiPageWithGoogleFinance } from '../API/googleFinanceA
 import { currencyName, getLocalDate, promiseSequence } from '../utilities';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getGoogleFinanceLinks } from '../wiki/SharedWikiApiFunctions';
 
 const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
@@ -45,7 +45,7 @@ async function updateTemplate(api: IWikiApi, marketValues: WikiPageWithGoogleFin
 }
 
 export default async function usMarketValueBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   console.log('Login success');
 

@@ -1,12 +1,12 @@
 import 'dotenv/config';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 
 const link = 'no666.wordpress.com';
 const link2 = 'www.no-666.com';
 
 async function main() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
 
   const generator = api.externalUrl(link);

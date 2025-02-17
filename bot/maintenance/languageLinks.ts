@@ -3,7 +3,7 @@ import { getLogTitleData } from '../admin/log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import BaseWikiApi, { defaultConfig } from '../wiki/BaseWikiApi';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import WikiDataAPI, { IWikiDataAPI } from '../wiki/WikidataAPI';
 import {
   findTemplate, findTemplates, getTemplateArrayData, getTemplateKeyValueData,
@@ -117,7 +117,7 @@ export async function parseContent(
         return;
       }
       if (!languagesApiDict[languageCode]) {
-        languagesApiDict[languageCode] = NewWikiApi(BaseWikiApi({ ...defaultConfig, baseUrl: `https://${languageCode}.wikipedia.org/w/api.php`, assertBot: false }));
+        languagesApiDict[languageCode] = WikiApi(BaseWikiApi({ ...defaultConfig, baseUrl: `https://${languageCode}.wikipedia.org/w/api.php`, assertBot: false }));
       }
       const languageApi = languagesApiDict[languageCode];
       let wikiDataItem = await languageApi.getWikiDataItem(externalName);
@@ -218,7 +218,7 @@ export async function parseContent(
 }
 
 export default async function languageLinks(byCategory = true) {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const wikidataApi = WikiDataAPI();
   await wikidataApi.login();

@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import { promiseSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
 
 // const oldLink = 'www.ynet.co.il/yaan/';
 async function ynetEncyclopedia() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   // old api
   // const httpPages = await api.externalUrl(oldLink, 'http');
   // const httpsPages = await api.externalUrl(oldLink, 'https');

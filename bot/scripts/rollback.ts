@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 import { asyncGeneratorMapWithSequence } from '../utilities';
 
 export default async function rollback(
@@ -8,7 +8,7 @@ export default async function rollback(
   hoursAgo: number,
   user: string,
 ) {
-  const api = NewWikiApi();
+  const api = WikiApi();
   const startTime = new Date();
   startTime.setHours(startTime.getHours() - hoursAgo);
   const endTime = new Date();

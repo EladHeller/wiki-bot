@@ -1,5 +1,5 @@
 import shabathProtectorDecorator from '../decorators/shabathProtector';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 import MediaForestBotModel from './MediaForestModel';
 
 const defaultDataFetcher = async (url: string) => {
@@ -13,7 +13,7 @@ const defaultDataFetcher = async (url: string) => {
 
 export default async function mdeiaForestBot() {
   console.log('Starting media forest bot');
-  const model = MediaForestBotModel(NewWikiApi(), {
+  const model = MediaForestBotModel(WikiApi(), {
     baseUrl: 'https://mediaforest-group.com/',
     page: 'ויקיפדיה:בוט/בוט מצעדים/מדיה פורסט',
   }, defaultDataFetcher);

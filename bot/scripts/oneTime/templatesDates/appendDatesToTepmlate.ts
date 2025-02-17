@@ -1,6 +1,6 @@
 import { WikiPage } from '../../../types';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../../../utilities';
-import NewWikiApi from '../../../wiki/NewWikiApi';
+import WikiApi from '../../../wiki/WikiApi';
 import { findTemplates, getTemplateDate, templateFromTemplateData } from '../../../wiki/newTemplateParser';
 
 type DateFromPageCallback = (id: string, title: string, section?: string) => Promise<string>;
@@ -34,7 +34,7 @@ export default async function appendDatesToTepmlate(
 ) {
   let successCount = 0;
   let allCount = 0;
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const generator = api.categroyPages(`שגיאות פרמטריות בתבנית ${templateName} - ללא תאריך`);
 

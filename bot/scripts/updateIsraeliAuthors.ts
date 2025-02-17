@@ -1,8 +1,8 @@
 import fs from 'fs/promises';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 
 export default async function updateIsraeliAuthors() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const generator = api.recursiveSubCategories('סגל כלי תקשורת בישראל');
   const pages = new Set<string>();

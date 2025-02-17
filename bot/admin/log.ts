@@ -1,6 +1,6 @@
 import { getLocalDate } from '../utilities';
 import { findTemplates, getTemplateArrayData } from '../wiki/newTemplateParser';
-import { IWikiApi } from '../wiki/NewWikiApi';
+import { IWikiApi } from '../wiki/WikiApi';
 import { getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import { ArticleLog, Paragraph } from './types';

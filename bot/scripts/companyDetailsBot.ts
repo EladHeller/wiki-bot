@@ -7,7 +7,7 @@ import { AllDetailsResponse, getAllDetails } from '../API/mayaAPI';
 import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getLocalDate } from '../utilities';
 import { isTwoWordsIsTheSamePerson } from '../API/openai';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getMayaLinks } from '../wiki/SharedWikiApiFunctions';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
@@ -318,7 +318,7 @@ async function getManagmentDetails(
 }
 
 export async function companyDetailsBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   console.log('Login success');
   const { data, tableRevid } = await getTableData(api);

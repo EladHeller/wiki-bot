@@ -1,5 +1,5 @@
 import shabathProtectorDecorator from '../../decorators/shabathProtector';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 import ArchiveBotModel from './ArchiveBotModel';
 
 const pages = [
@@ -11,7 +11,7 @@ const pages = [
 
 export default async function archiveBot() {
   console.log('Starting archive bot');
-  const model = ArchiveBotModel(NewWikiApi());
+  const model = ArchiveBotModel(WikiApi());
   for (const page of pages) {
     await model.updateArchiveTemplate(page);
     await model.archiveContent(page);

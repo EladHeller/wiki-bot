@@ -5,11 +5,11 @@ import { getCompanyData, googleFinanceRegex } from '../API/googleFinanceApi';
 import { promiseSequence } from '../utilities';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 import { getGoogleFinanceLinksWithContent } from '../wiki/SharedWikiApiFunctions';
 
 async function main() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   console.log('Login success');
 

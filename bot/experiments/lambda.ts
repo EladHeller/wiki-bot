@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import NewWikiApi from '../wiki/NewWikiApi';
+import WikiApi from '../wiki/WikiApi';
 
 export async function main() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const { content } = await api.articleContent('שיחת משתמש:החבלן/test');
   console.log(content);

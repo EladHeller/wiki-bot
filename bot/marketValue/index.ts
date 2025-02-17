@@ -3,7 +3,7 @@ import { getLocalDate, prettyNumericValue } from '../utilities';
 import { MayaMarketValue, getMarketValueById } from '../API/mayaAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
-import NewWikiApi, { IWikiApi } from '../wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import parseTableText, { buildTable } from '../wiki/wikiTableParser';
 import { getParagraphContent } from '../wiki/paragraphParser';
 import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
@@ -116,7 +116,7 @@ async function getWikiDataCompanies(wikiDataApi: IWikiDataAPI) {
 }
 
 export default async function marketValueBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   const wikiDataApi = WikiDataAPI();
   await api.login();
   console.log('Login success');

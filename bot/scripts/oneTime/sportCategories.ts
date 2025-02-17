@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { promiseSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 /**
  * [[קטגוריה:ספורטאים זרים בישראל לפי ארץ מוצא|איווארים]]
 [[קטגוריה:ספורטאים איווארים זרים לפי מדינה|ישראל]]
@@ -13,7 +13,7 @@ type Category = {
   size: number;
 }
 async function main() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   const generator = api.categoriesStartsWith('ספורטאים ');
   let res: IteratorResult<any, void>;
   const pages: Category[] = [];

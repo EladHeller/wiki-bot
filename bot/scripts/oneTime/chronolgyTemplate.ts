@@ -1,5 +1,5 @@
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../../wiki/newTemplateParser';
 import { replaceValueWithDesignTemplate } from '../utils';
 
@@ -13,7 +13,7 @@ const quoteRegex = /^\s*"(.*)"\s*$/;
 const doubleCheckQuoteRegex = /"/g;
 
 export default async function chronologyTemplate() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   let number = 0;
   await api.login();
   const generator = api.getArticlesWithTemplate(TEMPLATE_NAME);

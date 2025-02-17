@@ -4,7 +4,7 @@ import { CurrencyCode, prettyNumericValue } from '../utilities';
 import {
   getTemplateKeyValueData, findTemplates, findTemplate, templateFromKeyValueData,
 } from '../wiki/newTemplateParser';
-import { IWikiApi } from '../wiki/NewWikiApi';
+import { IWikiApi } from '../wiki/WikiApi';
 
 const currentYear = process.env.YEAR;
 const TEMPLATE_NAME = 'חברה מסחרית';

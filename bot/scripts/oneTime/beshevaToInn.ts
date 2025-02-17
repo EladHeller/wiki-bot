@@ -1,11 +1,11 @@
 import { WikiPage } from '../../types';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../../utilities';
-import NewWikiApi from '../../wiki/NewWikiApi';
+import WikiApi from '../../wiki/WikiApi';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
 
 const templateName = 'בשבע';
 export default async function beshevaToInn() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   const generator = api.getArticlesWithTemplate(templateName, undefined, 'תבנית', '*');
 

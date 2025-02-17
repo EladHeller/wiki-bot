@@ -1,4 +1,4 @@
-import { IWikiApi } from '../wiki/NewWikiApi';
+import { IWikiApi } from '../wiki/WikiApi';
 import parseTableText, { buildTableWithStyle } from '../wiki/wikiTableParser';
 
 interface SongData {

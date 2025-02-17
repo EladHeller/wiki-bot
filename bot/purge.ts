@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import shabathProtectorDecorator from './decorators/shabathProtector';
-import NewWikiApi, { IWikiApi } from './wiki/NewWikiApi';
+import WikiApi, { IWikiApi } from './wiki/WikiApi';
 import WikiDataAPI from './wiki/WikidataAPI';
 import { personWithBirthdayInDay } from './wiki/WikiDataSqlQueries';
 
@@ -33,7 +33,7 @@ async function getWikiDataArticles() {
   return results.map((person) => decodeURIComponent(person.hebrewArticle.replace('https://he.wikipedia.org/wiki/', '')).replace(/_/g, ' '));
 }
 export default async function purgeBot() {
-  const api = NewWikiApi();
+  const api = WikiApi();
   await api.login();
   console.log('Login success');
   const wikipediaArticles = await getWikipediaBirthdays(api);
