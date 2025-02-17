@@ -5,7 +5,39 @@ Parameters:
     Type: String
 
 Resources:
+  MyWikiBotRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: wiki-bot-playwright
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep only recent images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 10
+                },
+                "action": {
+                  "type": "expire"
+                }
+              }
+            ]
+          }
   MarketValueLambdaCode:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Ref BucketCodeName
+
+
+Outputs:
+  WikiBotRepoUrl:
+    Description: "Ecr repo url"
+    Value: !GetAtt MyWikiBotRepository.RepositoryUri

@@ -25,32 +25,6 @@ Parameters:
 
 
 Resources:
-  MyWikiBotRepository:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: my-wiki-bot
-      ImageScanningConfiguration:
-        ScanOnPush: true
-      EncryptionConfiguration:
-        EncryptionType: AES256
-      LifecyclePolicy:
-        LifecyclePolicyText: |
-          {
-            "rules": [
-              {
-                "rulePriority": 1,
-                "description": "Keep only recent images",
-                "selection": {
-                  "tagStatus": "any",
-                  "countType": "imageCountMoreThan",
-                  "countNumber": 10
-                },
-                "action": {
-                  "type": "expire"
-                }
-              }
-            ]
-          }
 
   MarketValueLambdaIamRole:
     Type: 'AWS::IAM::Role'
