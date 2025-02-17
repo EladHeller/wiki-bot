@@ -660,7 +660,7 @@ Resources:
       FunctionName: record-charts-function
 
 # Iron swords
-  IronSwordsLambda:
+  IronSwordsLambdaNew:
     DependsOn:
       - MarketValueLambdaIamRole
     Type: 'AWS::Lambda::Function'
@@ -678,18 +678,18 @@ Resources:
       MemorySize: 1024
   IronSwordsEventRule:
     DependsOn:
-      - IronSwordsLambda
+      - IronSwordsLambdaNew
     Type: 'AWS::Events::Rule'
     Properties:
       Name: iron-swords-scheduler
       ScheduleExpression: cron(0 18 ? * * *)
       Targets:
         - Id: iron-swords-function
-          Arn: !GetAtt IronSwordsLambda.Arn
+          Arn: !GetAtt IronSwordsLambdaNew.Arn
   IronSwordsInvokePermission:
     DependsOn:
       - IronSwordsEventRule
-      - IronSwordsLambda
+      - IronSwordsLambdaNew
     Type: AWS::Lambda::Permission
     Properties: 
       Action: lambda:InvokeFunction
