@@ -9,6 +9,7 @@
     "test": "jest --coverage",
     "build": "rm -rf dist && tsc --project tsconfig.build.json",
     "update-env": "tsx ./build/update-env.ts",
+    "docker-build": "docker build -t wiki-bot-playwright -f ./build/wiki-bot-playwright/Dockerfile .",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "rollback": "tsx bot/scripts/rollback.ts",
     "experiments": "tsx bot/experiments/index.ts"
@@ -31,8 +32,7 @@
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^25.0.1",
     "openai": "^4.69.0",
-    "playwright-aws-lambda": "^0.11.0",
-    "playwright-core": "^1.49.1",
+    "playwright": "^1.50.1",
     "tough-cookie": "^5.0.0"
   },
   "devDependencies": {

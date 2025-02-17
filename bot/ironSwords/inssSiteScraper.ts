@@ -1,5 +1,4 @@
-import * as playwright from 'playwright-aws-lambda';
-import { Browser, Page } from 'playwright-core';
+import { Browser, Page, chromium } from 'playwright';
 
 const mainUrl = 'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x';
 // const KidnappedUrl = 'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v';
@@ -71,8 +70,7 @@ async function getPanelData(page: Page, titles: string[], numberUp = false) {
 export default async function getWarData() {
   let browser: Browser | null = null;
   try {
-    browser = await playwright.launchChromium({
-      headless: false,
+    browser = await chromium.launch({
       timeout: 10 * 1000,
     });
     const context = await browser.newContext({
