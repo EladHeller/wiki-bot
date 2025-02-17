@@ -14,6 +14,7 @@ const whiteListPages = [
 ];
 
 const TAG_PAGE_NAME = 'משתמש:Sapper-bot/בוט התיוג';
+const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
 
 const notAllowedUserMessage = `אני מצטער, אבל אינך מורשה להשתמש בבוט. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ולאחר מכן הוסף את שמך בפסקה "רשימת משתמשים".`;
 const notSupportedCommandMessage = `מצטער, אבל הפקודה שהזנת לא נתמכת. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ונסה שוב.`;
@@ -39,12 +40,27 @@ function getTimeStampOptions(timestamp: string) { // TODO: it's assumed that the
   return [israelWinterTimestamp, israelSummerTimestamp, timestamp].map((time) => getLocalTimeAndDate(time));
 }
 
+function getArchiveSummary(user: string) {
+  return `${SUMMARY_PREFIX}ארכוב לבקשת [[משתמש:${user}]]`;
+}
+
+function getCommentSummary(user: string) {
+  return `${SUMMARY_PREFIX}תגובה ל-[[משתמש:${user}]]`;
+}
+
+function getCommentPrefix(user: string) {
+  return `@[[משתמש:${user}|${user}]] `;
+}
+
 export async function archiveAction(api: IWikiApi, notification: WikiNotification) {
   const title = notification.title.full;
   const user = notification.agent.name;
   const url = new URL(notification['*'].links.primary.url);
   const commentId = decodeURIComponent(url.hash.replace('#', ''));
   const timestamp = notification.timestamp.utciso8601;
+  const archiveSummary = getArchiveSummary(user);
+  const commentSummary = getCommentSummary(user);
+  const commentPrefix = getCommentPrefix(user);
   try {
     const pageContent = await api.articleContent(title);
     const paragraphs = getAllParagraphs(pageContent.content, title);
@@ -53,18 +69,25 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       && paragraph.includes(user)
       && getTimeStampOptions(timestamp).some((time) => paragraph.includes(time)));
     if (!paragraphContent) {
-      const commentRes = await api.addComment(title, `תגובה ל-[[משתמש:${user}]]`, 'לא נמצאה פסקה מתאימה לארכוב', commentId);
+      const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}לא נמצאה פסקה מתאימה לארכוב`, commentId);
       console.log({ commentRes });
       return;
     }
-    const res = await archiveParagraph(api, pageContent.content, pageContent.revid, title, paragraphContent, `ארכוב לבקשת [[משתמש:${user}]]`);
+    const res = await archiveParagraph(
+      api,
+      pageContent.content,
+      pageContent.revid,
+      title,
+      paragraphContent,
+      archiveSummary,
+    );
     if (res.error) {
-      const commentRes = await api.addComment(title, `תגובה ל-[[משתמש:${user}]]`, `הארכוב נכשל: ${res.error}.`, commentId);
+      const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}הארכוב נכשל: ${res.error}.`, commentId);
       console.log({ commentRes });
     }
   } catch (error) {
     console.error(error.message || error.data || error.toString());
-    const commentRes = await api.addComment(title, `תגובה ל-[[משתמש:${user}]]`, notSupportedCommandMessage, commentId);
+    const commentRes = await api.addComment(title, commentSummary, notSupportedCommandMessage, commentId);
     console.log({ commentRes });
   }
 }
@@ -96,8 +119,10 @@ async function handleNotification(api: IWikiApi, notification: WikiNotification,
     return;
   }
   const user = notification.agent.name;
+  const commentSummary = getCommentSummary(user);
+  const commentPrefix = getCommentPrefix(user);
   if (!allowedUsers.includes(user)) {
-    const commentRes = await api.addComment(title, `תגובה ל-[[משתמש:${user}]]`, notAllowedUserMessage, decodeURIComponent(url.hash.replace('#', '')));
+    const commentRes = await api.addComment(title, commentSummary, commentPrefix + notAllowedUserMessage, decodeURIComponent(url.hash.replace('#', '')));
     console.log({ commentRes });
 
     return;
@@ -105,7 +130,7 @@ async function handleNotification(api: IWikiApi, notification: WikiNotification,
   const withoutTag = body.replace(/@?Sapper-bot/i, '').trim();
   const command = withoutTag.split(':')[0];
   if (!supportedActions.includes(command)) {
-    const commentRes = await api.addComment(title, `תגובה ל-[[משתמש:${user}]]`, notSupportedCommandMessage, decodeURIComponent(url.hash.replace('#', '')));
+    const commentRes = await api.addComment(title, commentSummary, commentPrefix + notSupportedCommandMessage, decodeURIComponent(url.hash.replace('#', '')));
     console.log({ commentRes });
     return;
   }
