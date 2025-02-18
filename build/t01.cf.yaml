@@ -21,6 +21,9 @@ Parameters:
   WikiDeletePassword:
     Description: The password of wiki user.
     Type: String
+  ImageVersion:
+    Description: Trick for force deploy
+    Type: String
 
 
 
@@ -669,7 +672,7 @@ Resources:
       FunctionName: iron-swords-function-new
       PackageType: Image
       Code:
-        ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:latest'
+        ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:latest?version=${ImageVersion}'
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName

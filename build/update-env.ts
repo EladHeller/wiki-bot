@@ -72,6 +72,8 @@ async function main() {
   await updateS3();
   console.log('finnish deploy!');
 
+  const randomString = Math.random().toString(36).substring(2, 8);
+
   await runTemplate(
     './build/t01.cf.yaml',
     'Market-value',
@@ -97,6 +99,9 @@ async function main() {
     }, {
       ParameterKey: 'WikiDeletePassword',
       ParameterValue: process.env.DELETE_PASSWORD,
+    }, {
+      ParameterKey: 'ImageVersion',
+      ParameterValue: randomString,
     }],
     ['CAPABILITY_NAMED_IAM'],
   );

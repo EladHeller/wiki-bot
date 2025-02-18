@@ -72,11 +72,6 @@ export default async function updateLambda() {
   }));
 
   await lambda.send(new UpdateFunctionCodeCommand({
-    FunctionName: 'iron-swords-function-new',
-    ImageUri: `${process.env.AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:latest`,
-  }));
-
-  await lambda.send(new UpdateFunctionCodeCommand({
     FunctionName: 'tag-bot-function',
     S3Bucket: bucketCodeName,
     S3Key: 'dist.zip',
