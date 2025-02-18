@@ -1,53 +1,49 @@
-import fs from 'fs/promises';
 import {
-  AllDetailsResponse,
   getAllDetails,
 } from '../API/mayaAPI';
-import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi from '../wiki/WikiApi';
-import { getMayaCompanies } from '../wiki/SharedWikiApiFunctions';
+import WikiDataAPI from '../wiki/WikidataAPI';
+import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
+import { promiseSequence } from '../utilities';
+
+type CompanyData = {
+  title: string;
+  revid: number;
+  text: string;
+};
 
 async function main() {
   const api = WikiApi();
   await api.login();
   console.log('Login success');
-
-  const wikiResult = await getMayaCompanies(api);
-  await fs.writeFile('./res.json', JSON.stringify(wikiResult, null, 2), 'utf8');
-  const pages: WikiPage[] = Object.values(wikiResult);
-  // const pages: WikiPage[] = Object.values(JSON.parse(await fs.readFile('./res.json', 'utf-8')));
-
-  const mayaResults: AllDetailsResponse[] = [];
-  for (const page of pages) {
-    const res = await getAllDetails(page);
-    if (res) {
-      console.log(`success ${page.title}`);
-      mayaResults.push(res);
+  const wikiDataApi = WikiDataAPI();
+  const query = companiesWithMayaId();
+  const wikiDataResults = await wikiDataApi.querySql(query);
+  const results: CompanyData[] = [];
+  await promiseSequence(1, wikiDataResults.map((result) => async () => {
+    const allDetails = await getAllDetails(result.mayaId);
+    if (!allDetails) {
+      console.error(`No details for company ${result.companyName}`);
+      return;
     }
-  }
-  await fs.writeFile('./maya-res.json', JSON.stringify(mayaResults, null, 2), 'utf8');
-  const marketValues:AllDetailsResponse[] = JSON.parse(await fs.readFile('./maya-res.json', 'utf8'));
-  const results = marketValues.map(({ allDetails, wiki }) => {
+    const { content, revid } = await api.articleContent(result.articleName);
     const indice = allDetails.IndicesList.find(({ IndexName }) => IndexName === 'ת"א All-Share');
-    const content = wiki.revisions?.[0].slots.main['*'];
-    const revid = wiki.revisions?.[0].revid;
     if (!content || !revid) {
-      throw new Error(`No content or revid for page ${wiki.title}`);
+      throw new Error(`No content or revid for page ${result.articleName}`);
     }
-    const oldTemplate = findTemplate(content, 'חברה מסחרית', wiki.title);
+    const oldTemplate = findTemplate(content, 'חברה מסחרית', result.articleName);
     const templateData = getTemplateKeyValueData(oldTemplate);
     templateData['בורסה'] = '[[הבורסה לניירות ערך בתל אביב]]';
     if (indice?.Symbol) {
       templateData['סימול'] = indice?.Symbol;
     }
-    return {
-      title: wiki.title,
+    results.push({
+      title: result.articleName,
       revid,
       text: content.replace(oldTemplate, templateFromKeyValueData(templateData, 'חברה מסחרית')),
-    };
-  });
-  await fs.writeFile('./test-res.json', JSON.stringify(results, null, 2), 'utf8');
+    });
+  }));
 
   for (let i = 10; i < results.length; i += 1) {
     await api.edit(results[i].title, 'נתוני בורסה', results[i].text, results[i].revid);

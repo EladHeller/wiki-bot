@@ -1,13 +1,13 @@
 /* eslint-disable no-param-reassign */
-import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import parseTableText, { TableRow, buildTableWithStyle } from '../wiki/wikiTableParser';
-import { AllDetailsResponse, getAllDetails } from '../API/mayaAPI';
+import { getAllDetails, MayaAllDetails } from '../API/mayaAPI';
 import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getLocalDate } from '../utilities';
 import { isTwoWordsIsTheSamePerson } from '../API/openai';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
-import { getMayaLinks } from '../wiki/SharedWikiApiFunctions';
+import WikiDataAPI from '../wiki/WikidataAPI';
+import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
 const notApplicapble: JobChange[] = ['לא קיים במאי״ה', 'לא ידוע', '-'];
@@ -24,7 +24,6 @@ interface ManagementDetails {
   CEOEqual?: JobChange;
   address?: string;
   title: string;
-  id: number;
   isCrosslisted?: boolean;
   manualApproval?: boolean;
  }
@@ -58,12 +57,12 @@ async function getJobChange(articleJob: string, mayaJob: string): Promise<JobCha
 }
 
 async function getCompanyDetails(
-  allDetails: AllDetailsResponse,
-  page: WikiPage,
+  allDetails: MayaAllDetails,
+  title: string,
   template: Record<string, string>,
   tableRow?: ManagementDetails,
 ): Promise<Promise<ManagementDetails>> {
-  const chairman = allDetails.allDetails.ManagementDetails.ManagementAndSeniorExecutives
+  const chairman = allDetails.ManagementDetails.ManagementAndSeniorExecutives
     .filter(({ RoleType }) => RoleType === 'יו"ר דירקטוריון'
      || RoleType.match(/^יו"ר דירקטוריון\sו/)
      || RoleType.match(/^יו"ר דירקטוריון\sפעיל/)
@@ -74,7 +73,7 @@ async function getCompanyDetails(
     .join(', ')
     .trim()
     .replace(/\n/g, '');
-  const CEO = allDetails.allDetails.ManagementDetails.ManagementAndSeniorExecutives
+  const CEO = allDetails.ManagementDetails.ManagementAndSeniorExecutives
     .filter(({ RoleType }) => RoleType === 'מנהל כללי'
     || RoleType === 'מנכ"ל'
     || RoleType.match(/^מנכ"ל\sו/)
@@ -86,7 +85,7 @@ async function getCompanyDetails(
     .join(', ')
     .trim()
     .replace(/\n/g, '');
-  const address = `${allDetails.allDetails.CompanyDetails.Address}, ${allDetails.allDetails.CompanyDetails.City}`;
+  const address = `${allDetails.CompanyDetails.Address}, ${allDetails.CompanyDetails.City}`;
   const articleChairman = template['יו"ר']?.trim().replace(/\n/g, '');
   const articleCEO = template['מנכ"ל']?.trim().replace(/\n/g, '');
   const chairmenChanged = chairman !== tableRow?.chairman
@@ -101,9 +100,8 @@ async function getCompanyDetails(
     articleCEO,
     CEOEqual: !CEOChanged ? tableRow.CEOEqual : await getJobChange(articleCEO, CEO),
     address,
-    title: page.title,
-    id: page.pageid,
-    isCrosslisted: allDetails.allDetails.CompanyDetails.CompanyIndicators
+    title,
+    isCrosslisted: allDetails.CompanyDetails.CompanyIndicators
       .find(({ Key }) => Key === 'DUALI')?.Value ?? false,
     manualApproval: (chairmenChanged || CEOChanged) ? undefined : tableRow?.manualApproval,
   };
@@ -227,13 +225,13 @@ async function getTableData(api: IWikiApi) : Promise<{data:ManagementDetails[], 
 
 async function updateIfNeeded(
   api: IWikiApi,
-  page: WikiPage,
+  title: string,
+  content: string,
+  revid: number,
   template: Record<string, string>,
   templateText: string,
   companyDetails: ManagementDetails,
 ) {
-  const content = page.revisions?.[0].slots.main['*'];
-  const revid = page.revisions?.[0].revid;
   const cloneTemplate = { ...template };
   let needUpdate = false;
 
@@ -258,8 +256,8 @@ async function updateIfNeeded(
     const newTemplateText = templateFromKeyValueData(cloneTemplate, TEMPLATE_NAME);
     const newContent = content.replace(templateText, newTemplateText);
     if (newContent !== content) {
-      console.log('Update', page.title);
-      await api.edit(page.title, 'פרטי חברה', newContent, revid);
+      console.log('Update', title);
+      await api.edit(title, 'פרטי חברה', newContent, revid);
     }
   }
 }
@@ -285,28 +283,29 @@ async function tagUsers(api: IWikiApi) {
 async function getManagmentDetails(
   api: IWikiApi,
   tableData: ManagementDetails[],
-  results: Record<string, WikiPage>,
+  wikiDataResults: Record<string, string>[],
 ) {
   const managementDetails:ManagementDetails[] = [];
-  for (const page of Object.values(results)) {
+  for (const result of wikiDataResults) {
     try {
-      const res = await getAllDetails(page);
-      const isDeleted = res?.allDetails?.CompanyDetails?.CompanyIndicators.some(({ Key, Value }) => Key === 'DELETED' && Value === true);
-      const content = page.revisions?.[0].slots.main['*'];
-      const templateText = content && findTemplate(content, TEMPLATE_NAME, page.title);
+      const { mayaId, articleName } = result;
+      const res = await getAllDetails(mayaId);
+      const isDeleted = res?.CompanyDetails?.CompanyIndicators.some(({ Key, Value }) => Key === 'DELETED' && Value === true);
+      const { content, revid } = await api.articleContent(articleName);
+      const templateText = content && findTemplate(content, TEMPLATE_NAME, articleName);
       const template = templateText && getTemplateKeyValueData(templateText);
 
       if (res && !isDeleted && template) {
-        const tableRow = tableData.find(({ title }) => title === page.title);
-        const companyDetails = await getCompanyDetails(res, page, template, tableRow);
-        await updateIfNeeded(api, page, template, templateText, companyDetails);
+        const tableRow = tableData.find(({ title }) => title === articleName);
+        const companyDetails = await getCompanyDetails(res, articleName, template, tableRow);
+        await updateIfNeeded(api, articleName, content, revid, template, templateText, companyDetails);
         managementDetails.push(companyDetails);
       } else if (isDeleted) {
-        console.log(`${page.title} is deleted`);
+        console.log(`${articleName} is deleted`);
       } else if (!template) {
-        console.log(`${page.title} has no template`);
+        console.log(`${articleName} has no template`);
       } else {
-        console.log(`${page.title} has no data`);
+        console.log(`${articleName} has no data`);
       }
     } catch (error) {
       console.log(error?.data ?? error?.message ?? error);
@@ -321,8 +320,10 @@ export async function companyDetailsBot() {
   await api.login();
   console.log('Login success');
   const { data, tableRevid } = await getTableData(api);
-  const results = await getMayaLinks(api, true);
-  const managementDetails = await getManagmentDetails(api, data, results);
+  const wikiDataApi = WikiDataAPI();
+  const query = companiesWithMayaId();
+  const wikiDataResults = await wikiDataApi.querySql(query);
+  const managementDetails = await getManagmentDetails(api, data, wikiDataResults);
 
   const updateResult = await saveCompanyDetails(api, tableRevid, managementDetails);
   const isChanged = !('nochange' in updateResult.edit);
