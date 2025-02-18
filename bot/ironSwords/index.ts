@@ -47,30 +47,45 @@ function updateDate(content: string, rows: string[], fieldName: string): string 
 }
 
 export default async function ironSwordsBot() {
-  const api = WikiApi();
-  const casualties = await getCasualties();
-  const warData = await getWarData();
-  const allData = { ...casualties, ...warData };
+  try {
+    const api = WikiApi();
+    const casualties = await getCasualties();
+    const warData = await getWarData();
+    const allData = { ...casualties, ...warData };
 
-  const { revid, content } = await api.articleContent(templatePageName);
-  if (!content) {
-    throw new Error('Failed to get template content');
+    const { revid, content } = await api.articleContent(templatePageName);
+    if (!content) {
+      throw new Error('Failed to get template content');
+    }
+    const rows = content.split('\n').filter((row) => row.trim().startsWith('|'));
+    let newContent = content;
+    Object.entries(keysMapping).forEach(([key, value]) => {
+      newContent = replaceData(newContent, rows, key, allData[value]);
+    });
+    if (newContent === content) {
+      console.log('No changes');
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ message: 'Success', data: 'no changes' }),
+      };
+    }
+    Object.keys(keysMapping).forEach((key) => {
+      newContent = updateDate(newContent, rows, key);
+    });
+    const editResult = await api.edit(templatePageName, 'בוט: עדכון נתוני אבדות', newContent, revid);
+    console.log(editResult);
+    await api.purge([baseTemplatePageName]);
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: 'Success', data: editResult }),
+    };
+  } catch (error) {
+    console.error(error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: 'Error', error: error.toString() }),
+    };
   }
-  const rows = content.split('\n').filter((row) => row.trim().startsWith('|'));
-  let newContent = content;
-  Object.entries(keysMapping).forEach(([key, value]) => {
-    newContent = replaceData(newContent, rows, key, allData[value]);
-  });
-  if (newContent === content) {
-    console.log('No changes');
-    return;
-  }
-  Object.keys(keysMapping).forEach((key) => {
-    newContent = updateDate(newContent, rows, key);
-  });
-  const editResult = await api.edit(templatePageName, 'בוט: עדכון נתוני אבדות', newContent, revid);
-  console.log(editResult);
-  await api.purge([baseTemplatePageName]);
 }
 
 export const main = shabathProtectorDecorator(ironSwordsBot);
