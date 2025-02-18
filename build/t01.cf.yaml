@@ -668,8 +668,6 @@ Resources:
       - MarketValueLambdaIamRole
     Type: 'AWS::Lambda::Function'
     Properties:
-      Architectures:
-        - arm64
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: iron-swords-function-new
       PackageType: Image
