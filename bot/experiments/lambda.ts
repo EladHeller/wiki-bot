@@ -1,11 +1,8 @@
 import 'dotenv/config';
-import WikiApi from '../wiki/WikiApi';
+import ironSwordsBot from '../ironSwords';
 
 export async function main() {
-  const api = WikiApi();
-  await api.login();
-  const { content } = await api.articleContent('שיחת משתמש:החבלן/test');
-  console.log(content);
+  await ironSwordsBot();
 }
 
 export default main;
