@@ -37,7 +37,8 @@ RUN npm run build && \
     rm -rf ./package-lock.json ./scripts && \
     cd ..
 
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright-browsers
+RUN mkdir -p /ms-playwright-browsers
 RUN npx playwright install chromium
-RUN ls -R /root/.cache/ms-playwright/
 
 CMD ["node", "dist/ironSwords/index"]
