@@ -65,14 +65,13 @@ async function main() {
     ParameterKey: 'BucketCodeName',
     ParameterValue: bucketCodeName,
   }]);
-
+  const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  process.env.IMAGE_VERSION = randomString;
   await $`sh ./build/docker-build.sh`;
   await $`sh ./build/build.sh`;
 
   await updateS3();
   console.log('finnish deploy!');
-
-  const randomString = Math.random().toString(36).substring(2, 8);
 
   await runTemplate(
     './build/t01.cf.yaml',
