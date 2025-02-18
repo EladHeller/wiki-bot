@@ -67,8 +67,11 @@ async function main() {
   }]);
   const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   process.env.IMAGE_VERSION = randomString;
+  console.log('randomString', randomString);
   await $`sh ./build/docker-build.sh`;
+  console.log('finnish docker-build!');
   await $`sh ./build/build.sh`;
+  console.log('finnish build!');
 
   await updateS3();
   console.log('finnish deploy!');

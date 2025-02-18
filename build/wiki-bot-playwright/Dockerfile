@@ -38,5 +38,7 @@ RUN npm run build && \
     cd ..
 
 RUN npx playwright install chromium
+RUN ls -R /root/.cache/ms-playwright/
+
 
 CMD ["node", "dist/ironSwords/index"]
