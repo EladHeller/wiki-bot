@@ -1,56 +1,34 @@
-FROM public.ecr.aws/lambda/nodejs:22
+FROM node:22
 
-# Install Playwright dependencies (required for Chromium, WebKit, and Firefox)
-RUN dnf -y update && \
-    dnf -y install \
-        libX11 \
-        libXcomposite \
-        libXcursor \
-        libXdamage \
-        libXext \
-        libXi \
-        libXrender \
-        libXfixes \
-        libXrandr \
-        atk \
-        gtk3 \
-        xz \
-        wget \
-        alsa-lib \
-        glibc-langpack-en \
-        ipa-gothic-fonts \
-        nss \
-        nspr \
-        libX11-xcb \
-        mesa-dri-drivers \
-        mesa-libEGL \
-        pango \
-        cairo \
-        cups-libs \
-        dbus-glib \
-        libicu \
-        libatomic \
-        libxslt \
-        woff2 \
-        opus \
-        harfbuzz \
-        libjpeg-turbo \
-        libwebp \
-        enchant2 \
-        libsecret \
-        hyphen \
-        mesa-libGL \
-        gudev \
-        libevdev \
-        libffi \
-        mesa-libGLES \
-        x264-libs \
-    && dnf clean all
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libgtk-3-0 \
+    libgbm1 \
+    libnss3 \
+    libnspr4 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libxrender1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libpango-1.0-0 \
+    wget \
+    xz-utils \
+    # (Optional) Some fonts for better rendering
+    fonts-liberation \
+    # Clean up
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the source code
+WORKDIR /app
 COPY . .
 
-# Build the project
 RUN npm run build && \
     cp ./package.json ./dist/package.json && \
     cp ./package-lock.json ./dist/package-lock.json && \
@@ -59,7 +37,6 @@ RUN npm run build && \
     rm -rf ./package-lock.json ./scripts && \
     cd ..
 
-RUN npx playwright install
+RUN npx playwright install chromium
 
-# Lambda entrypoint
-CMD [ "dist/ironSwords/index.main" ]
+CMD ["node", "dist/ironSwords/index.main"]
