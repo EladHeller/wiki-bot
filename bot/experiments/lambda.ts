@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import ironSwordsBot from '../ironSwords';
 
 export async function main() {

@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { getMarketValue } from '../API/mayaAPI';
 import { promiseSequence } from '../utilities';
 import { WikiPage } from '../types';

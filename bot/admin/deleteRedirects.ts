@@ -1,5 +1,4 @@
 /* eslint-disable import/prefer-default-export */
-import 'dotenv/config';
 import { WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence } from '../utilities';
 import writeAdminBotLogs from './log';

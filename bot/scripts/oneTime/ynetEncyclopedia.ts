@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { promiseSequence } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';

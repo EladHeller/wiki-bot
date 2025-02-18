@@ -1,5 +1,4 @@
 /* eslint-disable max-len */
-import 'dotenv/config';
 import WikiApi from '../../wiki/WikiApi';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 

@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import fs from 'fs/promises';
 import Company from './company';
 import getMayaDetails, { MayaWithWiki } from '../API/mayaAPI';

@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import updateDeadSeaLevel from './deadSeaBot';
 import {
   formatDate, updateLevel,

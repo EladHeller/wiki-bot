@@ -1,5 +1,3 @@
-import 'dotenv/config';
-
 import WikiApi from '../wiki/WikiApi';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { getLocalDate } from '../utilities';

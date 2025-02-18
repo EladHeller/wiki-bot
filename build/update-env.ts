@@ -3,7 +3,6 @@ import {
   CloudFormation, Parameter, Capability,
   waitUntilStackUpdateComplete, waitUntilStackCreateComplete,
 } from '@aws-sdk/client-cloudformation';
-import 'dotenv/config';
 import fs from 'fs/promises';
 import { $ } from 'zx';
 import updateS3 from './update-s3';

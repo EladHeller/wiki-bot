@@ -43,4 +43,4 @@ jobs:
           PROTECT_PASSWORD: ${{ secrets.WIKI_PROTECT_USER_PASSWORD }}
           DELETE_USER_NAME: ${{ secrets.WIKI_DELETE_USER_NAME }}
           DELETE_PASSWORD: ${{ secrets.WIKI_DELETE_USER_PASSWORD }}
-        run: npm run update-env
+        run: touch .env && npm run update-env

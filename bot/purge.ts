@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import shabathProtectorDecorator from './decorators/shabathProtector';
 import WikiApi, { IWikiApi } from './wiki/WikiApi';
 import WikiDataAPI from './wiki/WikidataAPI';
