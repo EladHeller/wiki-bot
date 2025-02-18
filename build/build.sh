@@ -2,8 +2,8 @@ npm run build && \
 cp ./package.json ./dist/package.json && \
 cp ./package-lock.json ./dist/package-lock.json && \
 cd ./dist && \
-npm --quiet ci --omit=dev --no-bin-links && \
 npm un -S playwright && \
+npm --quiet ci --omit=dev --no-bin-links && \
 rm -rf ./package-lock.json ./scripts ./ironSwords && \
 cd .. && \
 rm -f dist.zip && \
