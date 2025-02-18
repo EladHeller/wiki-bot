@@ -64,6 +64,7 @@ export default async function ironSwordsBot() {
     });
     if (newContent === content) {
       console.log('No changes');
+      return;
     }
     Object.keys(keysMapping).forEach((key) => {
       newContent = updateDate(newContent, rows, key);
@@ -79,5 +80,9 @@ export default async function ironSwordsBot() {
 export const main = shabathProtectorDecorator(ironSwordsBot);
 
 if (require.main === module) {
-  main().then(() => process.exit(0));
+  main().then(() => {
+    process.stderr.end();
+    process.stdout.end();
+    process.exit(0);
+  });
 }
