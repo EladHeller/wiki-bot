@@ -64,10 +64,6 @@ export default async function ironSwordsBot() {
     });
     if (newContent === content) {
       console.log('No changes');
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: 'Success', data: 'no changes' }),
-      };
     }
     Object.keys(keysMapping).forEach((key) => {
       newContent = updateDate(newContent, rows, key);
@@ -75,21 +71,13 @@ export default async function ironSwordsBot() {
     const editResult = await api.edit(templatePageName, 'בוט: עדכון נתוני אבדות', newContent, revid);
     console.log(editResult);
     await api.purge([baseTemplatePageName]);
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: 'Success', data: editResult }),
-    };
   } catch (error) {
     console.error(error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: 'Error', error: error.toString() }),
-    };
   }
 }
 
 export const main = shabathProtectorDecorator(ironSwordsBot);
 
 if (require.main === module) {
-  main();
+  main().then(() => process.exit(0));
 }
