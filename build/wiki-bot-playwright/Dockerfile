@@ -39,4 +39,4 @@ RUN npm run build && \
 
 RUN npx playwright install chromium
 
-CMD ["node", "dist/ironSwords/index.main"]
+CMD ["node", "dist/ironSwords/index"]
