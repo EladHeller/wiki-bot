@@ -71,7 +71,16 @@ export default async function getWarData() {
   let browser: Browser | null = null;
   try {
     browser = await chromium.launch({
+      headless: true,
       timeout: 10 * 1000,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote',
+      ],
     });
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',

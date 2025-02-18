@@ -28,7 +28,16 @@ export default async function getCasualties() {
   let browser: Browser | null = null;
   try {
     browser = await chromium.launch({
+      headless: true,
       timeout: 10 * 1000,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote',
+      ],
     });
     const context = await browser.newContext();
     const page = await context.newPage();
