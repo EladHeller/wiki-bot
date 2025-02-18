@@ -1,4 +1,6 @@
-import { Browser, Page, chromium } from 'playwright';
+import {
+  Browser, BrowserContext, Page, chromium,
+} from 'playwright';
 
 const mainUrl = 'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x';
 // const KidnappedUrl = 'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v';
@@ -69,6 +71,8 @@ async function getPanelData(page: Page, titles: string[], numberUp = false) {
 
 export default async function getWarData() {
   let browser: Browser | null = null;
+  let context: BrowserContext | null = null;
+  let page: Page | null = null;
   try {
     browser = await chromium.launch({
       headless: true,
@@ -82,11 +86,11 @@ export default async function getWarData() {
         '--no-zygote',
       ],
     });
-    const context = await browser.newContext({
+    context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
 
     });
-    const page = await context.newPage();
+    page = await context.newPage();
     let result = {};
     await page.goto(mainUrl);
     const elementsWithInjuriesText = await page.getByText('פצועים').all();
@@ -118,6 +122,8 @@ export default async function getWarData() {
 
     return result;
   } finally {
+    await page?.close();
+    await context?.close();
     await browser?.close();
   }
 }

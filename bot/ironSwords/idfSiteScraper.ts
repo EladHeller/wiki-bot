@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import { Browser, chromium } from 'playwright';
+import { Browser, chromium, Page } from 'playwright';
 
 const url = 'https://www.idf.il/אתרי-יחידות/יומן-המלחמה/חללי-ופצועי-צה-ל-במלחמה/';
 
@@ -26,6 +26,7 @@ function getCounter(
 
 export default async function getCasualties() {
   let browser: Browser | null = null;
+  let page: Page | null = null;
   try {
     browser = await chromium.launch({
       headless: true,
@@ -39,8 +40,7 @@ export default async function getCasualties() {
         '--no-zygote',
       ],
     });
-    const context = await browser.newContext();
-    const page = await context.newPage();
+    page = await browser.newPage();
     await page.goto(url);
     const content = await page.content();
     const { window } = new JSDOM(content);
@@ -56,6 +56,7 @@ export default async function getCasualties() {
       soldiersWoundedManeuver,
     };
   } finally {
+    await page?.close();
     await browser?.close();
   }
 }

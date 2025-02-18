@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { promiseSequence } from '../../utilities';
 import { findTemplates } from '../../wiki/newTemplateParser';
 import { WikiPage } from '../../types';

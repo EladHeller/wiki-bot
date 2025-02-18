@@ -9,13 +9,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
           lfs: true
 
       - name: Cache node modules
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-node-modules-v1
         with:
@@ -43,4 +43,4 @@ jobs:
           PROTECT_PASSWORD: ${{ secrets.WIKI_PROTECT_USER_PASSWORD }}
           DELETE_USER_NAME: ${{ secrets.WIKI_DELETE_USER_NAME }}
           DELETE_PASSWORD: ${{ secrets.WIKI_DELETE_USER_PASSWORD }}
-        run: npm run update-env
+        run: touch .env && npm run update-env

@@ -1,5 +1,4 @@
 /* eslint-disable no-param-reassign */
-import 'dotenv/config';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import parseTableText, { TableRow, buildTableWithStyle } from '../wiki/wikiTableParser';

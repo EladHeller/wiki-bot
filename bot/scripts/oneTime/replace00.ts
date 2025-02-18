@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 

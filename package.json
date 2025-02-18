@@ -8,11 +8,11 @@
     "type-check": "tsc --noEmit",
     "test": "jest --coverage",
     "build": "rm -rf dist && tsc --project tsconfig.build.json",
-    "update-env": "tsx ./build/update-env.ts",
+    "update-env": "tsx --env-file=.env ./build/update-env.ts",
     "docker-build": "docker build -t wiki-bot-playwright -f ./build/wiki-bot-playwright/Dockerfile .",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
-    "rollback": "tsx bot/scripts/rollback.ts",
-    "experiments": "tsx bot/experiments/index.ts"
+    "rollback": "tsx --env-file=.env bot/scripts/rollback.ts",
+    "experiments": "tsx --env-file=.env bot/experiments/index.ts"
   },
   "repository": {
     "type": "git",
@@ -28,7 +28,6 @@
     "@hebcal/core": "^5.6.0",
     "axios": "^1.7.8",
     "axios-cookiejar-support": "^5.0.5",
-    "dotenv": "^16.4.7",
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^25.0.1",
     "openai": "^4.69.0",

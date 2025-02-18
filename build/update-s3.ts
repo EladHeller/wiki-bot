@@ -1,5 +1,4 @@
 import { S3 } from '@aws-sdk/client-s3'; // eslint-disable-line import/no-extraneous-dependencies
-import 'dotenv/config';
 import fs from 'fs/promises';
 import crypto from 'crypto';
 

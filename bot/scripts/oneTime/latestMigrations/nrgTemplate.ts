@@ -1,5 +1,4 @@
 /* eslint-disable max-len */
-import 'dotenv/config';
 import { JSDOM } from 'jsdom';
 import fs from 'fs/promises';
 import WikiApi from '../../../wiki/WikiApi';

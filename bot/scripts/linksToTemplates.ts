@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { writeFile } from 'fs/promises';
 import findHebrewFullNames from 'find-hebrew-names';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';

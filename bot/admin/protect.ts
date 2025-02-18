@@ -1,5 +1,4 @@
 /* eslint-disable import/prefer-default-export */
-import 'dotenv/config';
 import { getLocalDate, promiseSequence } from '../utilities';
 import writeAdminBotLogs from './log';
 import shabathProtectorDecorator from '../decorators/shabathProtector';

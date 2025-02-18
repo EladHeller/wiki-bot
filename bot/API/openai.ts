@@ -1,4 +1,3 @@
-import 'dotenv/config';
 // import { ChatCompletionRequestMessageRoleEnum, Configuration, OpenAIApi } from 'openai';
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/index.mjs';

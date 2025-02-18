@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { getLocalDate, prettyNumericValue } from '../utilities';
 import { MayaMarketValue, getMarketValueById } from '../API/mayaAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
