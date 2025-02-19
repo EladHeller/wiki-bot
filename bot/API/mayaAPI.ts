@@ -157,8 +157,6 @@ export type MayaMarketValue = {
 };
 
 export interface SymbolResult {
-  qValue?: string;
-  title?: string;
   id: string;
   symbol?: string;
   englishSymbol?: string;
@@ -302,13 +300,13 @@ export async function getMarketValueById(
 }
 
 export async function getSymbol(
-  wikiPage: Partial<WikiPage>,
+  companyId: string | number,
 ): Promise<SymbolResult> {
-  const companyAllDetailsUrl = getMayaLinkFromWikiPage(wikiPage);
+  const url = jsonAllLink + companyId;
 
   try {
-    const result = await axios(companyAllDetailsUrl, mayaGetOptions);
-    const enResult = await axios(companyAllDetailsUrl, {
+    const result = await axios(url, mayaGetOptions);
+    const enResult = await axios(url, {
       ...mayaGetOptions,
       headers: {
         ...mayaGetOptions.headers,
@@ -321,8 +319,6 @@ export async function getSymbol(
     const enIndice = enAllDetails.IndicesList.find(({ IndexName }) => IndexName === 'TA-All-Share');
 
     return {
-      title: wikiPage.title,
-      qValue: wikiPage.pageprops?.wikibase_item,
       id: result?.data?.CompanyDetails?.CompanyId,
       symbol: indice?.Symbol,
       englishSymbol: enIndice?.Symbol,
@@ -332,36 +328,28 @@ export async function getSymbol(
   } catch (e) {
     console.error(
       'companyAllDetailsUrl',
-      wikiPage.title,
+      { companyId },
       e?.data || e?.message || e,
     );
     throw e;
   }
 }
 
-export type AllDetailsResponse = {
-  wiki: WikiPage;
-  allDetails: MayaAllDetails;
-}
-
 export async function getAllDetails(
-  wikiPage: WikiPage,
-): Promise<AllDetailsResponse | undefined> {
-  const companyAllDetailsUrl = getMayaLinkFromWikiPage(wikiPage);
-
-  return axios(companyAllDetailsUrl, mayaGetOptions)
-    .then((result) => ({
-      allDetails: result?.data,
-      wiki: wikiPage,
-    }))
-    .catch((e) => {
-      console.error(
-        'companyAllDetailsUrl',
-        wikiPage.title,
-        e?.data || e?.message || e,
-      );
-      throw e;
-    });
+  companyId: string | number,
+): Promise<MayaAllDetails | undefined> {
+  const url = jsonAllLink + companyId;
+  try {
+    const results = await axios(url, mayaGetOptions);
+    return results?.data;
+  } catch (e) {
+    console.error(
+      'companyAllDetailsUrl',
+      { companyId },
+      e?.data || e?.message || e,
+    );
+    throw e;
+  }
 }
 
 export default async function getMayaDetails(
