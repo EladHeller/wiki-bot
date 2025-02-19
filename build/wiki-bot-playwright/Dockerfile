@@ -1,6 +1,9 @@
-FROM node:22
+FROM node:20
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    cmake \
+    make \
+    g++ \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
     libcups2 \
@@ -35,15 +38,13 @@ RUN npm run build && \
     rm -rf ./package-lock.json ./scripts && \
     cd ..
 
+RUN npm install aws-lambda-ric
+
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright-browsers
 RUN mkdir -p /ms-playwright-browsers
 RUN npx playwright install chromium
 
-# local testing like lambda with  curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \  
-#  -H 'Content-Type: application/json' \
-#  -d '{ "some": "eventData" }'
-# ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/local/bin/aws-lambda-rie
-# RUN chmod +x /usr/local/bin/aws-lambda-rie
-# CMD ["/usr/local/bin/aws-lambda-rie", "node", "dist/ironSwords/index"]
 
-CMD ["node", "dist/ironSwords/index"]
+ENTRYPOINT ["/usr/local/bin/npx", "aws-lambda-ric"]
+
+CMD ["dist/ironSwords/index.main"]
