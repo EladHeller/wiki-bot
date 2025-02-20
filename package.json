@@ -9,7 +9,9 @@
     "test": "jest --coverage",
     "build": "rm -rf dist && tsc --project tsconfig.build.json",
     "update-env": "tsx --env-file=.env ./build/update-env.ts",
-    "docker-build": "docker build -t wiki-bot-playwright -f ./build/wiki-bot-playwright/Dockerfile .",
+    "docker-build": "docker buildx build --platform=linux/arm64 --provenance=false -t wiki-bot-playwright -f ./build/wiki-bot-playwright/Dockerfile .",
+    "docker-run": "sh ./build/wiki-bot-playwright/run.sh",
+    "docker-test": "sh ./build/wiki-bot-playwright/test.sh",
     "test:ci": "npm run type-check && npm test && npm run lint:test",
     "rollback": "tsx --env-file=.env bot/scripts/rollback.ts",
     "experiments": "tsx --env-file=.env bot/experiments/index.ts"
