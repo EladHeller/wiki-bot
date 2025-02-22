@@ -117,7 +117,7 @@ export default async function getWarData() {
       result = { ...result, ...currResults };
     }
     if (result[kidnappetInGaza]) {
-      result[kidnappetInGaza] -= 3; // 3 kidnapped before the war
+      result[kidnappetInGaza] -= 1; // 1 kidnapped before the war
     }
 
     return result;

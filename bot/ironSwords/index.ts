@@ -76,11 +76,3 @@ export default async function ironSwordsBot() {
 }
 
 export const main = shabathProtectorDecorator(ironSwordsBot);
-
-// if (require.main === module) {
-//   main().then(() => {
-//     process.stderr.end();
-//     process.stdout.end();
-//     process.exit(0);
-//   });
-// }
