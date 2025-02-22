@@ -21,3 +21,20 @@ SELECT ?person ?personLabel ?birthDate ?hebrewArticle WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "he". }
 }`;
 }
+
+export function companiesWithTicker() {
+  return `SELECT ?companyId ?companyLabel ?exchangeLabel ?exchangeShortName ?ticker ?articleName WHERE {
+    ?company p:P414 ?statement.
+    ?statement ps:P414 ?exchange.
+    OPTIONAL { ?statement pq:P249 ?ticker. }
+    OPTIONAL { ?exchange wdt:P1813 ?exchangeShortName. }
+
+    ?article schema:about ?company;
+            schema:isPartOf <https://he.wikipedia.org/>;
+            schema:name ?articleName.
+
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "he,en". }
+
+    BIND(STRAFTER(STR(?company), "entity/") AS ?companyId)
+  }`;
+}

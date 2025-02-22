@@ -85,6 +85,14 @@ export async function currencyExchange(from: string, to: string): Promise<number
   return Number(prevClose?.textContent?.replace(/,/g, '') ?? 0);
 }
 
+export function getTickerFromWikiPage(page: WikiPage): string | undefined {
+  const extLink = page.extlinks?.find((link) => link['*'].match(googleFinanceRegex))?.['*'];
+  if (!extLink) {
+    return undefined;
+  }
+  return extLink.split('?q=')[1];
+}
+
 export async function getCompanyData(
   page: WikiPage,
 ): Promise<WikiPageWithGoogleFinance | undefined> {

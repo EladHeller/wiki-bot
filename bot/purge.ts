@@ -1,6 +1,6 @@
 import shabathProtectorDecorator from './decorators/shabathProtector';
 import WikiApi, { IWikiApi } from './wiki/WikiApi';
-import WikiDataAPI from './wiki/WikidataAPI';
+import { querySql } from './wiki/WikidataAPI';
 import { personWithBirthdayInDay } from './wiki/WikiDataSqlQueries';
 
 async function getWikipediaBirthdays(api: IWikiApi): Promise<string[]> {
@@ -23,12 +23,11 @@ async function getWikipediaBirthdays(api: IWikiApi): Promise<string[]> {
 }
 
 async function getWikiDataArticles() {
-  const wikiDataApi = WikiDataAPI();
   const today = new Date();
   const month = today.getMonth() + 1;
   const day = today.getDate();
   const query = personWithBirthdayInDay(day, month);
-  const results = await wikiDataApi.querySql(query);
+  const results = await querySql(query);
   return results.map((person) => decodeURIComponent(person.hebrewArticle.replace('https://he.wikipedia.org/wiki/', '')).replace(/_/g, ' '));
 }
 export default async function purgeBot() {
