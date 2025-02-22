@@ -6,7 +6,7 @@ import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import parseTableText, { buildTable } from '../wiki/wikiTableParser';
 import { getParagraphContent } from '../wiki/paragraphParser';
 import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
-import WikiDataAPI, { IWikiDataAPI } from '../wiki/WikidataAPI';
+import { querySql } from '../wiki/WikidataAPI';
 
 const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 const baseCompanyNameTemplate = 'תבנית:חברות מאיה';
@@ -92,9 +92,9 @@ async function updateTable(api: IWikiApi, marketValues: MayaMarketValue[]) {
   console.log(res);
 }
 
-async function getWikiDataCompanies(wikiDataApi: IWikiDataAPI) {
+async function getWikiDataCompanies() {
   const query = companiesWithMayaId();
-  const results = await wikiDataApi.querySql(query);
+  const results = await querySql(query);
   const data: MayaMarketValue[] = [];
   for (const result of results) {
     const res = await getMarketValueById(result.mayaId);
@@ -116,10 +116,9 @@ async function getWikiDataCompanies(wikiDataApi: IWikiDataAPI) {
 
 export default async function marketValueBot() {
   const api = WikiApi();
-  const wikiDataApi = WikiDataAPI();
   await api.login();
   console.log('Login success');
-  const marketValues = await getWikiDataCompanies(wikiDataApi);
+  const marketValues = await getWikiDataCompanies();
   await updateTemplate(api, marketValues, ['id', 'marketValue'], baseMarketValueTemplate);
   await updateTemplate(api, marketValues, ['id', 'title'], baseCompanyNameTemplate, false, false);
   await updateTemplate(api, marketValues, ['id', 'companyLongName'], baseCompanyLongNameTemplate, false, false);

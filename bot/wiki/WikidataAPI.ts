@@ -15,13 +15,30 @@ export interface IWikiDataAPI {
   login: () => Promise<void>;
   setClaimValue: (claim: string, value: any, summary: string, baserevid: number) =>
      Promise<WikiDataSetClaimResponse>;
-  getClaim: (id: string) => Promise<WikiDataClaim>;
+  setClaim: (claim: WikiDataClaim, summary: string, baserevid: number) => Promise<WikiDataSetClaimResponse>;
+  getClaim: (entity: string, property:string) => Promise<WikiDataClaim[]>;
   readEntity: (qid: string, props: string, languages?: string) => Promise<WikiDataEntity>;
   getRevId: (title: string) => Promise<number>;
-  querySql: (query: string) => Promise<Record<string, string>[]>;
   updateReference: (claim: string, referenceHash: string,
     snaks: Record<string, WikiDataSnack[]>, summary: string, baserevid: number) =>
       Promise<WikiDataSetReferenceResponse>;
+}
+
+export async function querySql(query: string): Promise<Record<string, string>[]> {
+  const res = await fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}&format=json`, {
+    headers: {
+      'User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to query sql: ${await res.text()}`);
+  }
+  const data = await res.json();
+  return data.results.bindings.map(
+    (binding: Record<string, { value: string }>) => Object.fromEntries(
+      Object.entries(binding).map((entry) => [entry[0], entry[1].value]),
+    ),
+  );
 }
 
 export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultWikiDataConfig): IWikiDataAPI {
@@ -44,6 +61,19 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
       format: 'json',
       claim,
       value: JSON.stringify(value),
+      token,
+      summary,
+      bot: '1',
+      baserevid: baserevid.toString(),
+    });
+    return baseApi.request('', 'POST', params);
+  }
+
+  async function setClaim(claim: WikiDataClaim, summary: string, baserevid: number) {
+    const params = new URLSearchParams({
+      action: 'wbsetclaim',
+      format: 'json',
+      claim: JSON.stringify(claim),
       token,
       summary,
       bot: '1',
@@ -104,44 +134,28 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
     return res.entities[qid];
   }
 
-  async function getClaim(id: string) {
+  async function getClaim(entity: string, property: string) {
     const params = new URLSearchParams({
       action: 'wbgetclaims',
-      claim: id,
+      entity,
+      property,
       format: 'json',
     });
     const res = await baseApi.request(`?${params.toString()}`);
-    const claim = Object.values(res.claims)[0]?.[0];
-    if (!claim) {
-      throw new Error(`Failed to get claim for ${id}`);
+    const claims = res.claims[property];
+    if (!claims || claims.length === 0) {
+      throw new Error(`Failed to get claim for ${entity}:${property}`);
     }
-    return claim;
-  }
-
-  async function querySql(query: string) {
-    const res = await fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}&format=json`, {
-      headers: {
-        'User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
-      },
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to query sql: ${await res.text()}`);
-    }
-    const data = await res.json();
-    return data.results.bindings.map(
-      (binding: Record<string, { value: string }>) => Object.fromEntries(
-        Object.entries(binding).map((entry) => [entry[0], entry[1].value]),
-      ),
-    );
+    return claims;
   }
 
   return {
     login,
     setClaimValue,
+    setClaim,
     getClaim,
     readEntity,
     getRevId,
-    querySql,
     updateReference,
   };
 }
