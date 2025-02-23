@@ -95,7 +95,11 @@ export async function checkHamichlol(title: string, wikipediaTitle = title) {
     console.log(`Is from Hamichlol?: ${wikipediaTitle}`);
     const res = await checkCopyViolations(wikipediaTitle, 'he', `${HAMICHLOL_DOMAIN}${encodeURIComponent(title)}`);
     if (res.error) {
+      console.error('Error in Hamichlol.', res.error);
       return null; // ignore Hamichlol errors
+    }
+    if (res.best?.violation === 'none') {
+      return null; // ignore Hamichlol if violation confidence is low
     }
     return res;
   } catch {
