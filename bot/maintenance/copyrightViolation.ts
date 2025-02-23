@@ -4,8 +4,9 @@ import writeAdminBotLogs from '../admin/log';
 import type { ArticleLog, Paragraph } from '../admin/types';
 import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 import type { LogEvent, WikiPage } from '../types';
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import WikiApi from '../wiki/WikiApi';
+import { getInnerLinks } from '../wiki/wikiLinkParser';
 
 const violationColor: Record<CopyViolaionRank, string> = {
   suspected: 'אדום',
@@ -21,7 +22,7 @@ const violationText: Record<CopyViolaionRank, string> = {
 const HAMICHLOL_DOMAIN = 'https://www.hamichlol.org.il/';
 const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
 const LAST_RUN_PAGE = `${BASE_PAGE}/ריצה אחרונה`;
-const SEARCH_ERROR_PAGE = `${BASE_PAGE}/שגיאות זמניות`;
+const TEMP_ERRORS_PAGE = `${BASE_PAGE}/שגיאות זמניות`;
 const LOG_PAGE = `${BASE_PAGE}/לוג`;
 const SELECTED_QOUTE = 'ציטוט_נבחר';
 const WEBSITE_FOR_VISIT = 'אתר לביקור';
@@ -202,8 +203,8 @@ export default async function copyrightViolationBot() {
   const api = WikiApi();
   const currentRun = new Date();
   const lastRun = await getLastRun(api);
-  const [searchErrorPage] = await api.info([SEARCH_ERROR_PAGE]);
-
+  const { content: tempErrorsContent, revid: tempErrorsRevid } = await api.articleContent(TEMP_ERRORS_PAGE);
+  const tempErrors = getInnerLinks(tempErrorsContent);
   const generator = api.newPages([0, 2, 118], lastRun);
 
   const allLogs: ArticleLog[] = [];
@@ -225,6 +226,13 @@ export default async function copyrightViolationBot() {
     allLogs.push(...logs);
     allOtherLogs.push(...otherLogs);
   });
+
+  await promiseSequence(3, tempErrors.map(({ link }) => async () => {
+    const [pageInfo] = await api.info([link]);
+    const { logs, otherLogs } = await handlePage(link, pageInfo.ns === 0);
+    allLogs.push(...logs);
+    allOtherLogs.push(...otherLogs);
+  }));
   allLogs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
 
   await writeAdminBotLogs(api, allLogs, BASE_PAGE);
@@ -257,8 +265,8 @@ export default async function copyrightViolationBot() {
   }].filter((p) => p.content) satisfies Paragraph[];
   await writeAdminBotLogs(api, paragraphs, LOG_PAGE);
   await api.updateArticle(LAST_RUN_PAGE, 'עדכון זמן ריצה', currentRun.toJSON());
-  if (searchErrorText && searchErrorPage?.revisions?.[0]?.revid) {
-    await api.edit(SEARCH_ERROR_PAGE, 'עדכון שגיאות', searchErrorText, searchErrorPage.revisions[0].revid);
+  if (searchErrorText !== tempErrorsContent) {
+    await api.edit(TEMP_ERRORS_PAGE, 'עדכון שגיאות', searchErrorText, tempErrorsRevid);
   }
 }
 
