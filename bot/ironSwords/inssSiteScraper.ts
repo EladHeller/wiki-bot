@@ -3,22 +3,23 @@ import {
 } from 'playwright';
 
 const mainUrl = 'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x';
-// const KidnappedUrl = 'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v';
+const KidnappedUrl = 'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v';
 
 // חטופים בשבי
 const kidnappetInGaza = 'חטופים שנותרו בשבי';
+const releasedKidnapped = 'שוחררו או חולצו';
 
 const urlDict = {
   [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', kidnappetInGaza], numberUp: false, page: 1 },
   [`${mainUrl}#`]: { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**'], numberUp: false, page: 5 },
   [`${mainUrl}#1`]: { titles: ['הרוגים בלבנון'], numberUp: false, page: 3 },
-  // [KidnappedUrl]: { titles: ['סך החטופים ההרוגים'], numberUp: true, page: 1 },
+  [KidnappedUrl]: { titles: [releasedKidnapped], numberUp: true, page: 1 },
 };
 
 async function getPanelData(page: Page, titles: string[], numberUp = false) {
   return page.evaluate((config) => {
     const textsToRemove = ['מעל ל-'];
-    const blocks = Array.from(globalThis.document.querySelectorAll('.public-DraftStyleDefault-block '));
+    const blocks = Array.from(globalThis.document.querySelectorAll('.public-DraftStyleDefault-block'));
     const data = config.titles.reduce((acc, key) => {
       const elements = blocks.filter((counter) => {
         const text = counter.textContent?.trim();
@@ -26,6 +27,9 @@ async function getPanelData(page: Page, titles: string[], numberUp = false) {
       });
       if (elements.length > 1) {
         throw new Error(`Multiple blocks with title ${key}`);
+      }
+      if (elements.length === 0) {
+        throw new Error(`No blocks with title ${key}`);
       }
       const element = elements[0];
       const elementRect = element.getBoundingClientRect();
@@ -35,10 +39,13 @@ async function getPanelData(page: Page, titles: string[], numberUp = false) {
         }
 
         const blockRect = block.getBoundingClientRect();
+        const horizontalOverlapSize = Math.min(elementRect.right, blockRect.right)
+        - Math.max(elementRect.left, blockRect.left);
         return (config.numberUp
           ? (elementRect.top - 40 < blockRect.bottom && elementRect.top > blockRect.top)
           : (blockRect.top - 40 < elementRect.bottom && blockRect.top > elementRect.top))
-        && elementRect.left < blockRect.right && elementRect.right > blockRect.left;
+        // && elementRect.left < blockRect.right && elementRect.right > blockRect.left
+        && elementRect.width * 0.7 < horizontalOverlapSize;
       });
       const numberElements = relatedElements.filter((block) => {
         let text = block.textContent?.trim();
@@ -119,7 +126,9 @@ export default async function getWarData() {
     if (result[kidnappetInGaza]) {
       result[kidnappetInGaza] -= 1; // 1 kidnapped before the war
     }
-
+    if (result[releasedKidnapped]) {
+      result[releasedKidnapped] -= 3; // 3 of the released were kidnapped before the war
+    }
     return result;
   } finally {
     await page?.close();
