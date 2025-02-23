@@ -20,6 +20,7 @@ const keysMapping = {
   'פצועים פלסטינים בעזה': 'פצועים בעזה (ע"פ חמאס)',
   'סהכ לבנון': 'הרוגים בלבנון',
   'חטופים בעזה': 'חטופים שנותרו בשבי',
+  'חטופים ששוחררו': 'שוחררו או חולצו',
 };
 
 function replaceData(content: string, rows: string[], fieldName: string, newData?: number): string {
