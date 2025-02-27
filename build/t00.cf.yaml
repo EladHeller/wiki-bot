@@ -35,7 +35,14 @@ Resources:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Ref BucketCodeName
-
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 5
 
 Outputs:
   WikiBotRepoUrl:
