@@ -18,7 +18,7 @@ const urlDict = {
 
 async function getPanelData(page: Page, titles: string[], numberUp = false) {
   return page.evaluate((config) => {
-    const textsToRemove = ['מעל ל-'];
+    const textsToRemove = ['מעל ל-', 'כ-'];
     const blocks = Array.from(globalThis.document.querySelectorAll('.public-DraftStyleDefault-block'));
     const data = config.titles.reduce((acc, key) => {
       const elements = blocks.filter((counter) => {
