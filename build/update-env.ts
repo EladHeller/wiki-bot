@@ -6,7 +6,6 @@ import {
 import fs from 'fs/promises';
 import { $ } from 'zx';
 import updateS3 from './update-s3';
-import updateLambda from './update-lambda';
 
 const region = process.env.REGION;
 const bucketCodeName = process.env.CODE_BUCKET;
@@ -72,7 +71,7 @@ async function main() {
   await $`sh ./build/build.sh`;
   console.log('finnish build!');
 
-  await updateS3();
+  const { distVersion, emailVersion } = await updateS3();
   console.log('finnish deploy!');
 
   await runTemplate(
@@ -103,11 +102,15 @@ async function main() {
     }, {
       ParameterKey: 'ImageVersion',
       ParameterValue: randomString,
+    }, {
+      ParameterKey: 'DistCodeVersionId',
+      ParameterValue: distVersion,
+    }, {
+      ParameterKey: 'EmailCodeVersionId',
+      ParameterValue: emailVersion,
     }],
     ['CAPABILITY_NAMED_IAM'],
   );
-
-  await updateLambda();
 }
 
 main().then(() => {

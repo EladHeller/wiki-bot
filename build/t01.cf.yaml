@@ -24,11 +24,13 @@ Parameters:
   ImageVersion:
     Description: Trick for force deploy
     Type: String
-
+  DistCodeVersionId:
+    Type: String
+  EmailCodeVersionId:
+    Type: String
 
 
 Resources:
-
   MarketValueLambdaIamRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -76,6 +78,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   SendEmailLambda:
     DependsOn:
@@ -93,6 +96,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: email.zip
+        S3ObjectVersion: !Ref EmailCodeVersionId
   
   LogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -154,6 +158,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   UsStockLogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -215,6 +220,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   KineretLevelLogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -276,6 +282,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   PurgeBirthdayLogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -336,6 +343,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   ProtectTemplatesLogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -396,6 +404,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   DeleteRedirectsLogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -456,6 +465,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   CopyrighViolationEventRule:
     DependsOn:
@@ -516,6 +526,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   ArchiveLogsEventRule:
     DependsOn:
@@ -577,6 +588,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
 # Indexes
   IndexesBotLambda:
@@ -597,6 +609,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   IndexesBotEventRule:
     DependsOn:
@@ -639,6 +652,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   RecordChartsEventRule:
     DependsOn:
@@ -721,6 +735,7 @@ Resources:
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
 
   TagBotQueue:
     Type: AWS::SQS::Queue
