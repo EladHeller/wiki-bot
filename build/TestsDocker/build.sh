@@ -1,0 +1,1 @@
+docker buildx build --platform=linux/arm64 --provenance=false -t tests-docker -f ./build/TestsDocker/Dockerfile .
