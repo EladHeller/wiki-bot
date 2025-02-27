@@ -64,7 +64,7 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWik
       const result = await client(queryDetails);
 
       if (result.data.error) {
-        console.error(result.data.error);
+        console.error(JSON.stringify(result.data.error, null, 2));
         throw new Error(`Failed to ${method?.toUpperCase() === 'GET' ? 'get data' : 'perform action'}`);
       } else if (result.data.warnings) {
         console.warn(result.data.warnings);
