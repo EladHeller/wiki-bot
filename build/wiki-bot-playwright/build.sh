@@ -1,0 +1,1 @@
+docker buildx build --platform=linux/arm64 --provenance=false -t wiki-bot-playwright -f ./build/wiki-bot-playwright/Dockerfile .
