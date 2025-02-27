@@ -16,7 +16,7 @@ function sendMail(to, subject, html) {
       },
       Subject: { Charset: 'UTF-8', Data: subject },
     },
-    Source: 'Sapper-Bot <eladheller@gmail.com>',
+    Source: 'Sapper-Bot <sapper-bot@eladheller.com>',
   });
 
   return ses.send(command);
