@@ -71,7 +71,8 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWik
       }
       return result.data;
     } catch (e) {
-      console.error(e.message || e.data || e.toString());
+      const error = e.message || e.data || e.toString();
+      console.error(JSON.stringify(error, null, 2));
       throw new Error('Failed to perform action');
     }
   }
