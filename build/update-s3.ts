@@ -25,7 +25,7 @@ async function getEtagOfFile(stream: Buffer) {
   return `${md5(Buffer.from(md5Chunks.join(''), 'hex'))}-${chunksNumber}`;
 }
 
-async function upload(bucket: string, key: string, filePath: string) {
+async function upload(bucket: string, key: string, filePath: string) : Promise<string | undefined> {
   const s3Object = await s3.headObject({
     Bucket: bucket,
     Key: key,
@@ -36,15 +36,17 @@ async function upload(bucket: string, key: string, filePath: string) {
   console.log(etag, JSON.parse(s3Object.ETag ?? '""'));
   if (etag === JSON.parse(s3Object.ETag ?? '""')) {
     console.log(`${key} already up to date`);
-    return;
+    return s3Object.VersionId;
   }
 
-  await s3.putObject({
+  const res = await s3.putObject({
     Bucket: bucket,
     Key: key,
     Body: file,
   });
+  console.log({ res });
   console.log(`${key} updated`);
+  return res.VersionId;
 }
 
 export default async function updateS3() {
@@ -52,6 +54,8 @@ export default async function updateS3() {
     throw new Error('Bucket code variable is empty!');
   }
 
-  await upload(bucketCodeName, 'dist.zip', './dist.zip');
-  await upload(bucketCodeName, 'email.zip', './email.zip');
+  const distVersion = await upload(bucketCodeName, 'dist.zip', './dist.zip');
+  const emailVersion = await upload(bucketCodeName, 'email.zip', './email.zip');
+  return { distVersion, emailVersion };
 }
+await updateS3();
