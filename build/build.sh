@@ -7,9 +7,11 @@ npm --quiet ci --omit=dev --no-bin-links && \
 rm -rf ./package-lock.json ./scripts ./ironSwords && \
 cd .. && \
 rm -f dist.zip && \
+find dist -exec touch -t 202401010000 {} + && \
 zip -rq9 dist.zip ./dist && \
 cd ./send-email && \
 npm --quiet ci --omit=dev && \
 cd .. && \
 rm -f email.zip && \
+find send-email -exec touch -t 202401010000 {} + && \
 zip -rq9 email.zip ./send-email
