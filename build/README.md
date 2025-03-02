@@ -10,3 +10,6 @@ aws lambda invoke \
 ``` sh
 aws lambda put-function-concurrency --function-name run-scripts-function --reserved-concurrent-executions 0
 ```
+
+## TODO
+Check docker before it
