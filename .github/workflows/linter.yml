@@ -17,6 +17,7 @@ jobs:
         run: echo "**--GITHUB_REF=${GITHUB_REF}--**"
 
       - name: Cache node modules
+        id: cache-node-modules
         uses: actions/cache@v4
         env:
           cache-name: cache-node-modules-v1
@@ -28,8 +29,11 @@ jobs:
             ${{ runner.os }}-build-
 
       - name: Install modules
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: |
           npm ci
+      - name: Install xmlbot modules
+        run: |
           cd xmlbot
           npm ci
           cd ..
