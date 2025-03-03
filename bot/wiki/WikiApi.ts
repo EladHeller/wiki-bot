@@ -60,6 +60,7 @@ export interface IWikiApi {
   markRead(): Promise<any>;
   getNotifications(readStatus?: string): Promise<any>;
   addComment(page: string, summary: string, content: string, commentid: string): Promise<any>;
+  allPages(namespace?: number, from?: string): AsyncGenerator<WikiPage[], void, void>;
 }
 
 export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -99,6 +100,15 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
       wikitext: content,
       commentid,
     }));
+  }
+  async function* allPages(namespace = 0, from = '') {
+    const props = encodeURIComponent('revisions');
+    const rvprops = encodeURIComponent('content|ids');
+    const path = `?action=query&format=json&generator=allpages&gapnamespace=${namespace}&gaplimit=50${from ? `&gapfrom=${from}` : ''}`
+    + `&prop=${props}`
+    + `&rvprop=${rvprops}&rvslots=*`;
+
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
   async function getWikiDataItem(title: string): Promise<string | undefined> {
@@ -449,5 +459,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     create,
     getNotifications,
     addComment,
+    allPages,
   };
 }
