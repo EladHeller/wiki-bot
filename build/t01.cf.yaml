@@ -29,10 +29,9 @@ Parameters:
   EmailCodeVersionId:
     Type: String
 
-
 Resources:
   MarketValueLambdaIamRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -42,7 +41,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - sts:AssumeRole
       RoleName: Market-value-lambda-role
       Policies:
         - PolicyName: Lambda-execution-basic
@@ -51,19 +50,19 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                  - 'ses:SendEmail'
-                  - 'sqs:ReceiveMessage'
-                  - 'sqs:DeleteMessage'
-                  - 'sqs:GetQueueAttributes'
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - ses:SendEmail
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
                 Resource: '*'
 
   MarketValueLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Market-value-function
@@ -83,43 +82,43 @@ Resources:
   SendEmailLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Send-email-function
       Runtime: nodejs22.x
       Environment:
         Variables:
-          REGION: !Ref "AWS::Region"
+          REGION: !Ref AWS::Region
       Handler: send-email/index.handler
       Timeout: 15
       Code:
         S3Bucket: !Ref BucketCodeName
         S3Key: email.zip
         S3ObjectVersion: !Ref EmailCodeVersionId
-  
+
   LogGroupInvokeLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !GetAtt SendEmailLambda.Arn
       Action: lambda:InvokeFunction
       Principal: logs.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Market-value-function:*'
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Market-value-function:*
 
   LogGroupFailedSubscription:
     DependsOn:
       - SendEmailLambda
     Type: AWS::Logs::SubscriptionFilter
-    Properties: 
+    Properties:
       DestinationArn: !GetAtt SendEmailLambda.Arn
       FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/Market-value-function'
+      LogGroupName: /aws/lambda/Market-value-function
 
   MarketValueEventRule:
     DependsOn:
       - MarketValueLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: Market-value-scheduler
       ScheduleExpression: cron(0 19 ? * * *)
@@ -132,18 +131,18 @@ Resources:
       - MarketValueEventRule
       - MarketValueLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt MarketValueEventRule.Arn 
+      SourceArn: !GetAtt MarketValueEventRule.Arn
       FunctionName: Market-value-function
 
-# US stocks
+  # US stocks
 
   UsStocksLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: US-stocks-function
@@ -166,22 +165,22 @@ Resources:
       FunctionName: !GetAtt SendEmailLambda.Arn
       Action: lambda:InvokeFunction
       Principal: logs.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/US-stocks-function:*'
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/US-stocks-function:*
 
   UsStockLogGroupFailedSubscription:
     DependsOn:
       - SendEmailLambda
     Type: AWS::Logs::SubscriptionFilter
-    Properties: 
+    Properties:
       DestinationArn: !GetAtt SendEmailLambda.Arn
       FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/US-stocks-function'
+      LogGroupName: /aws/lambda/US-stocks-function
 
   UsStocksEventRule:
     DependsOn:
       - UsStocksLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: US-stocks-scheduler
       ScheduleExpression: cron(0 22 ? * * *)
@@ -194,18 +193,17 @@ Resources:
       - UsStocksEventRule
       - UsStocksLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt UsStocksEventRule.Arn 
+      SourceArn: !GetAtt UsStocksEventRule.Arn
       FunctionName: US-stocks-function
 
-  
-# Kineret level
+  # Kineret level
   KineretLevelLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Kineret-level-function
@@ -228,22 +226,22 @@ Resources:
       FunctionName: !GetAtt SendEmailLambda.Arn
       Action: lambda:InvokeFunction
       Principal: logs.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Kineret-level-function:*'
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Kineret-level-function:*
 
   KineretLevelLogGroupFailedSubscription:
     DependsOn:
       - SendEmailLambda
     Type: AWS::Logs::SubscriptionFilter
-    Properties: 
+    Properties:
       DestinationArn: !GetAtt SendEmailLambda.Arn
       FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/Kineret-level-function'
+      LogGroupName: /aws/lambda/Kineret-level-function
 
   KineretLevelEventRule:
     DependsOn:
       - KineretLevelLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: Kineret-level-scheduler
       ScheduleExpression: cron(0 10,11 ? * * *)
@@ -256,18 +254,17 @@ Resources:
       - KineretLevelEventRule
       - KineretLevelLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt KineretLevelEventRule.Arn 
+      SourceArn: !GetAtt KineretLevelEventRule.Arn
       FunctionName: Kineret-level-function
 
-  
-# purge birthday
+  # purge birthday
   PurgeBirthdayLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: purge-birthday-function
@@ -290,13 +287,13 @@ Resources:
       FunctionName: !GetAtt SendEmailLambda.Arn
       Action: lambda:InvokeFunction
       Principal: logs.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/purge-birthday-function:*'
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/purge-birthday-function:*
 
   PurgeBirthdayEventRule:
     DependsOn:
       - PurgeBirthdayLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: purge-birthday-scheduler
       ScheduleExpression: cron(0 0 ? * * *)
@@ -309,26 +306,26 @@ Resources:
       - PurgeBirthdayEventRule
       - PurgeBirthdayLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt PurgeBirthdayEventRule.Arn 
+      SourceArn: !GetAtt PurgeBirthdayEventRule.Arn
       FunctionName: purge-birthday-function
 
   PurgeBirthdayLogGroupFailedSubscription:
     DependsOn:
       - SendEmailLambda
     Type: AWS::Logs::SubscriptionFilter
-    Properties: 
+    Properties:
       DestinationArn: !GetAtt SendEmailLambda.Arn
       FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/purge-birthday-function'
+      LogGroupName: /aws/lambda/purge-birthday-function
 
-# protect templates
+  # protect templates
   ProtectTemplatesLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: protect-templates-function
@@ -351,22 +348,22 @@ Resources:
       FunctionName: !GetAtt SendEmailLambda.Arn
       Action: lambda:InvokeFunction
       Principal: logs.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/protect-templates-function:*'
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/protect-templates-function:*
 
   ProtectTemplatesLogGroupFailedSubscription:
     DependsOn:
       - SendEmailLambda
     Type: AWS::Logs::SubscriptionFilter
-    Properties: 
+    Properties:
       DestinationArn: !GetAtt SendEmailLambda.Arn
       FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/protect-templates-function'
+      LogGroupName: /aws/lambda/protect-templates-function
 
   ProtectTemplatesEventRule:
     DependsOn:
       - ProtectTemplatesLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: protect-templates-scheduler
       ScheduleExpression: cron(0 6,18 ? * * *)
@@ -379,17 +376,17 @@ Resources:
       - ProtectTemplatesEventRule
       - ProtectTemplatesLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt ProtectTemplatesEventRule.Arn 
+      SourceArn: !GetAtt ProtectTemplatesEventRule.Arn
       FunctionName: protect-templates-function
 
-# delete redirects
+  # delete redirects
   DeleteRedirectsLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: delete-redirects-function
@@ -412,22 +409,22 @@ Resources:
       FunctionName: !GetAtt SendEmailLambda.Arn
       Action: lambda:InvokeFunction
       Principal: logs.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/delete-redirects-function:*'
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/delete-redirects-function:*
 
   DeleteRedirectsLogGroupFailedSubscription:
     DependsOn:
       - SendEmailLambda
     Type: AWS::Logs::SubscriptionFilter
-    Properties: 
+    Properties:
       DestinationArn: !GetAtt SendEmailLambda.Arn
       FilterPattern: Invoke Error
-      LogGroupName: '/aws/lambda/delete-redirects-function'
+      LogGroupName: /aws/lambda/delete-redirects-function
 
   DeleteRedirectsEventRule:
     DependsOn:
       - DeleteRedirectsLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: delete-redirects-scheduler
       ScheduleExpression: cron(0 6,18 ? * * *)
@@ -440,17 +437,17 @@ Resources:
       - DeleteRedirectsEventRule
       - DeleteRedirectsLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt DeleteRedirectsEventRule.Arn 
+      SourceArn: !GetAtt DeleteRedirectsEventRule.Arn
       FunctionName: delete-redirects-function
 
-# Copyrigh violation
+  # Copyrigh violation
   CopyrighViolationLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: copyright-violation-function
@@ -470,7 +467,7 @@ Resources:
   CopyrighViolationEventRule:
     DependsOn:
       - CopyrighViolationLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: copyright-violation-scheduler
       ScheduleExpression: cron(0 6,18 ? * * *)
@@ -483,10 +480,10 @@ Resources:
       - CopyrighViolationEventRule
       - CopyrighViolationLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt CopyrighViolationEventRule.Arn 
+      SourceArn: !GetAtt CopyrighViolationEventRule.Arn
       FunctionName: copyright-violation-function
 
   # CopyrighViolationsLogGroupInvokeLambdaPermission:
@@ -507,11 +504,11 @@ Resources:
   #     FilterPattern: Invoke Error
   #     LogGroupName: '/aws/lambda/copyright-violation-function'
 
-# Arcive logs
+  # Arcive logs
   ArchiveLogsLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: archive-logs-function
@@ -531,7 +528,7 @@ Resources:
   ArchiveLogsEventRule:
     DependsOn:
       - ArchiveLogsLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: archive-logs-scheduler
       ScheduleExpression: cron(0 6 3 * ? *)
@@ -544,10 +541,10 @@ Resources:
       - ArchiveLogsEventRule
       - ArchiveLogsLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt ArchiveLogsEventRule.Arn 
+      SourceArn: !GetAtt ArchiveLogsEventRule.Arn
       FunctionName: archive-logs-function
 
   # TODO:
@@ -569,11 +566,11 @@ Resources:
   #     FilterPattern: Invoke Error
   #     LogGroupName: '/aws/lambda/archive-logs-function'
 
-# Scripts lambda
+  # Scripts lambda
   RunScriptsLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: run-scripts-function
@@ -590,11 +587,11 @@ Resources:
         S3Key: dist.zip
         S3ObjectVersion: !Ref DistCodeVersionId
 
-# Indexes
+  # Indexes
   IndexesBotLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: indexes-function
@@ -614,7 +611,7 @@ Resources:
   IndexesBotEventRule:
     DependsOn:
       - IndexesBotLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: indexes-bot-scheduler
       ScheduleExpression: cron(0 18 ? * * *)
@@ -627,17 +624,17 @@ Resources:
       - IndexesBotEventRule
       - IndexesBotLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt IndexesBotEventRule.Arn 
+      SourceArn: !GetAtt IndexesBotEventRule.Arn
       FunctionName: indexes-function
 
-# Record carts
+  # Record carts
   RecordChartsLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: record-charts-function
@@ -657,7 +654,7 @@ Resources:
   RecordChartsEventRule:
     DependsOn:
       - RecordChartsLambda
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: record-charts-scheduler
       ScheduleExpression: cron(0 18 ? * * *)
@@ -670,23 +667,23 @@ Resources:
       - RecordChartsEventRule
       - RecordChartsLambda
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt RecordChartsEventRule.Arn 
+      SourceArn: !GetAtt RecordChartsEventRule.Arn
       FunctionName: record-charts-function
 
-# Iron swords
+  # Iron swords
   IronSwordsLambdaNew:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: iron-swords-function-new
       PackageType: Image
       Code:
-        ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:${ImageVersion}'
+        ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:${ImageVersion}
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
@@ -698,7 +695,7 @@ Resources:
   IronSwordsEventRule:
     DependsOn:
       - IronSwordsLambdaNew
-    Type: 'AWS::Events::Rule'
+    Type: AWS::Events::Rule
     Properties:
       Name: iron-swords-scheduler
       ScheduleExpression: cron(0 18 ? * * *)
@@ -710,17 +707,17 @@ Resources:
       - IronSwordsEventRule
       - IronSwordsLambdaNew
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
-      SourceArn:  !GetAtt IronSwordsEventRule.Arn 
+      SourceArn: !GetAtt IronSwordsEventRule.Arn
       FunctionName: iron-swords-function-new
 
-# Tag bot lambda
+  # Tag bot lambda
   TagBotLambda:
     DependsOn:
       - MarketValueLambdaIamRole
-    Type: 'AWS::Lambda::Function'
+    Type: AWS::Lambda::Function
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: tag-bot-function
@@ -749,7 +746,7 @@ Resources:
       Queues:
         - !Ref TagBotQueue
       PolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
