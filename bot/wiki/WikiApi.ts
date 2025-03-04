@@ -104,7 +104,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
   async function* allPages(namespace = 0, from = '') {
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content|ids');
-    const path = `?action=query&format=json&generator=allpages&gapnamespace=${namespace}&gaplimit=50${from ? `&gapfrom=${from}` : ''}`
+    const path = `?action=query&format=json&generator=allpages&gapnamespace=${namespace}&gaplimit=500${from ? `&gapfrom=${from}` : ''}`
     + `&prop=${props}`
     + `&rvprop=${rvprops}&rvslots=*`;
 
