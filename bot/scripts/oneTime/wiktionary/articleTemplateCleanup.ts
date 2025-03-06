@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import fs from 'fs/promises';
-import BaseWikiApi, { defaultConfig } from '../../wiki/BaseWikiApi';
-import WikiApi from '../../wiki/WikiApi';
+import BaseWikiApi, { defaultConfig } from '../../../wiki/BaseWikiApi';
+import WikiApi from '../../../wiki/WikiApi';
 /**
  *  <nowiki>===צירופים===</nowiki>
  <nowiki>* [[צירוף מילים]]</nowiki>

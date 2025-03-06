@@ -61,6 +61,7 @@ export interface IWikiApi {
   getNotifications(readStatus?: string): Promise<any>;
   addComment(page: string, summary: string, content: string, commentid: string): Promise<any>;
   allPages(namespace?: number, from?: string): AsyncGenerator<WikiPage[], void, void>;
+  parsePage(title: string): Promise<string>;
 }
 
 export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -423,6 +424,11 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     };
   }
 
+  async function parsePage(title: string) {
+    const res = await request(`?action=parse&format=json&page=${encodeURIComponent(title)}`);
+    return res.parse.text['*'];
+  }
+
   return {
     login,
     request: baseWikiApi.request,
@@ -460,5 +466,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     getNotifications,
     addComment,
     allPages,
+    parsePage,
   };
 }

@@ -110,5 +110,6 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     addComment: base.addComment
       ?? jest.fn<(page: string, summary: string, content: string, commentid: string) => Promise<any>>(),
     allPages: base.allPages ?? jest.fn<(namespace: number) => AsyncGenerator<WikiPage[], void, void>>(),
+    parsePage: base.parsePage ?? jest.fn<(title: string) => Promise<string>>(),
   };
 }
