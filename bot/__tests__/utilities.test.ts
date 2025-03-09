@@ -327,6 +327,10 @@ describe('hebrewGimetriya', () => {
     expect(hebrewGimetriya(15)).toBe('טו');
   });
 
+  it('should convert 16 to טז', () => {
+    expect(hebrewGimetriya(16)).toBe('טז');
+  });
+
   it('should convert 123 to קכג', () => {
     expect(hebrewGimetriya(123)).toBe('קכג');
   });
