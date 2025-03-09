@@ -2,6 +2,7 @@
 import fs from 'fs/promises';
 import BaseWikiApi, { defaultConfig } from '../../../wiki/BaseWikiApi';
 import WikiApi from '../../../wiki/WikiApi';
+import { asyncGeneratorMapWithSequence } from '../../../utilities';
 /**
  *  <nowiki>===צירופים===</nowiki>
  <nowiki>* [[צירוף מילים]]</nowiki>
@@ -149,4 +150,39 @@ export async function cleanupArticles() {
     }
   }
   console.log(JSON.stringify(resultsDict, null, 2));
+}
+
+export async function cleanupArticlesBySearch(serachText: string) {
+  const api = WikiApi(BaseWikiApi({
+    ...defaultConfig,
+    baseUrl: 'https://he.wiktionary.org/w/api.php',
+  }));
+
+  await api.login();
+  const generator = api.search(serachText);
+  const results = await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
+    const content = page.revisions?.[0].slots.main['*'];
+    if (content?.includes(serachText)) {
+      return page.title;
+    }
+    return null;
+  });
+  await fs.writeFile('wikitionaryArticleTemplateCleanup_search.json', JSON.stringify(results.filter((x) => x), null, 2));
+}
+
+export async function cleanupSearch(replaceText: string) {
+  const api = WikiApi(BaseWikiApi({
+    ...defaultConfig,
+    baseUrl: 'https://he.wiktionary.org/w/api.php',
+  }));
+  await api.login();
+  const pages = JSON.parse(await fs.readFile('wikitionaryArticleTemplateCleanup_search.json', 'utf-8'));
+  for (const page of pages) {
+    const { content, revid } = await api.articleContent(page);
+    const newContent = content.replaceAll(replaceText, '');
+    if (newContent !== content) {
+      console.log(`About to edit ${page}.`);
+      await api.edit(page, 'הסרת מחרוזות שמקורן ב[[תבנית:תבנית הערך]]', newContent, revid);
+    }
+  }
 }
