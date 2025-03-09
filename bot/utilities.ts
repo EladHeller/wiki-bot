@@ -154,3 +154,32 @@ export async function asyncGeneratorMapWithSequence<T, R = any>(
 export function encodeWikiUrl(title: string): string {
   return encodeURIComponent(title.replace(/ /g, '_')).replace(/'/g, '%27');
 }
+
+const tensHebrewMapping: Record<number, string> = {
+  10: 'י',
+  20: 'כ',
+  30: 'ל',
+  40: 'מ',
+  50: 'נ',
+  60: 'ס',
+  70: 'ע',
+  80: 'פ',
+  90: 'צ',
+};
+
+export function hebrewGimetriya(number: number): string {
+  if (number < 1 || number > 499) {
+    throw new Error('Number should be between 1 and 499');
+  }
+  const unity = number % 10;
+  let unityHebrew = unity > 0 ? String.fromCharCode('א'.charCodeAt(0) + unity - 1) : '';
+  const tens = (number % 100) - unity;
+  let tensHebrew = tens ? tensHebrewMapping[tens] : '';
+  if (tens === 10 && (unity === 5 || unity === 6)) {
+    tensHebrew = 'ט';
+    unityHebrew = unity === 5 ? 'ו' : 'ז';
+  }
+  const hundreds = number - tens - unity;
+  const hundredsHebrew = hundreds ? `${String.fromCharCode('ק'.charCodeAt(0) + hundreds / 100 - 1)}` : '';
+  return `${hundredsHebrew}${tensHebrew}${unityHebrew}`;
+}

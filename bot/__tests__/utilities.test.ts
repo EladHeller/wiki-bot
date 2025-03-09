@@ -1,8 +1,8 @@
 /* eslint-disable jest/no-conditional-in-test */
 import { describe, expect, it } from '@jest/globals';
 import {
-  asyncGeneratorMapWithSequence, encodeWikiUrl, getFullYear, getLocalDate, getLocalTimeAndDate, objectToFormData,
-  objectToQueryString, parseLocalDate, prettyNumericValue, promiseSequence,
+  asyncGeneratorMapWithSequence, encodeWikiUrl, getFullYear, getLocalDate, getLocalTimeAndDate, hebrewGimetriya,
+  objectToFormData, objectToQueryString, parseLocalDate, prettyNumericValue, promiseSequence,
 } from '../utilities';
 
 describe('prettyNumericValue', () => {
@@ -307,5 +307,47 @@ describe('encodeWikiUrl', () => {
     const encodedUrl = encodeWikiUrl('גוגל\'ישראל');
 
     expect(encodedUrl).toBe('%D7%92%D7%95%D7%92%D7%9C%27%D7%99%D7%A9%D7%A8%D7%90%D7%9C');
+  });
+});
+
+describe('hebrewGimetriya', () => {
+  it('should convert 1 to א', () => {
+    expect(hebrewGimetriya(1)).toBe('א');
+  });
+
+  it('should convert 10 to י', () => {
+    expect(hebrewGimetriya(10)).toBe('י');
+  });
+
+  it('should convert 100 to ק', () => {
+    expect(hebrewGimetriya(100)).toBe('ק');
+  });
+
+  it('should convert 15 to טו', () => {
+    expect(hebrewGimetriya(15)).toBe('טו');
+  });
+
+  it('should convert 16 to טז', () => {
+    expect(hebrewGimetriya(16)).toBe('טז');
+  });
+
+  it('should convert 123 to קכג', () => {
+    expect(hebrewGimetriya(123)).toBe('קכג');
+  });
+
+  it('should convert 499 to תצט', () => {
+    expect(hebrewGimetriya(499)).toBe('תצט');
+  });
+
+  it('should throw error for 0', () => {
+    expect(() => hebrewGimetriya(0)).toThrow('Number should be between 1 and 499');
+  });
+
+  it('should throw error for 500', () => {
+    expect(() => hebrewGimetriya(500)).toThrow('Number should be between 1 and 499');
+  });
+
+  it('should throw error for negative numbers', () => {
+    expect(() => hebrewGimetriya(-1)).toThrow('Number should be between 1 and 499');
   });
 });
