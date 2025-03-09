@@ -23,7 +23,7 @@ Resources:
                 "selection": {
                   "tagStatus": "any",
                   "countType": "imageCountMoreThan",
-                  "countNumber": 10
+                  "countNumber": 1
                 },
                 "action": {
                   "type": "expire"
@@ -42,7 +42,7 @@ Resources:
           - Id: DeleteOldVersions
             Status: Enabled
             NoncurrentVersionExpiration:
-              NoncurrentDays: 5
+              NoncurrentDays: 1
 
 Outputs:
   WikiBotRepoUrl:
