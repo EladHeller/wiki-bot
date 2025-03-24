@@ -25,7 +25,7 @@ export function findTemplates(text: string, templateName: string, title: string)
     const templateText = text.substring(templateStartIndex, templateEndIndex + 2);
 
     // prevent templates that starts with the same template name like הארץ and הארץ1
-    if (templateText.match(new RegExp(`{{${templateName.replaceAll('{', '\\{')}\\s*\\|`))) {
+    if (templateText.match(new RegExp(`{{${templateName.replaceAll('{', '\\{')}\\s*[|}]`))) {
       templates.push(text.substring(templateStartIndex, templateEndIndex + 2));
     }
     currIndex = templateEndIndex + 2;
