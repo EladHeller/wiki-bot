@@ -1,8 +1,10 @@
 import { JSDOM } from 'jsdom';
-import { hebrewGimetriya } from '../../../utilities';
+import { hebrewGimetriya, promiseSequence } from '../../../utilities';
 import BaseWikiApi, { defaultConfig } from '../../../wiki/BaseWikiApi';
 import { findTemplates, getTemplateArrayData, templateFromArrayData } from '../../../wiki/newTemplateParser';
-import WikiApi from '../../../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../../../wiki/WikiApi';
+
+const ERRORS_PAGE = 'משתמש:Sapper-bot/שגיאות קריאה לתבניות ספרי קודש';
 
 const TANACH_CITE_TEMPLATE = 'צט/תנ"ך';
 const MISHNA_CITE_TEMPLATE = 'צט/משנה';
@@ -115,13 +117,199 @@ export async function listAllErrors() {
   );
 }
 
+async function getWikisourceText(wikisourceAPI: IWikiApi, title: string): Promise<string> {
+  try {
+    const parsedContent = await wikisourceAPI.parsePage(title);
+    const dom = new JSDOM(parsedContent);
+    return dom.window.document.body.textContent?.replaceAll(/ [א-ת]+ \[([^\]]+)\]/g, ' $1') || '';
+  } catch {
+    console.error('Failed to get content', title);
+    return '';
+  }
+}
+
+export async function textExistsInTitle(wikisourceAPI: IWikiApi, title: string, text: string): Promise<boolean> {
+  const content = await getWikisourceText(wikisourceAPI, title);
+  return content.includes(text);
+}
+
+export async function tryTanachReplaces(
+  wikisourceAPI: IWikiApi,
+  title: string,
+  content: string,
+  errors: string[],
+): Promise<string> {
+  const relevantErrors = errors.filter((error) => error.includes(`[[${title}]]`));
+  if (relevantErrors.length === 0) {
+    return content;
+  }
+  let newContent = content;
+  let replaceChapter = false;
+  let replaceTemplate = false;
+  let aOrB = false;
+  if (relevantErrors.some((error) => error.includes('בקריאה לתבנית:תנ"ך') && (error.includes('אין פסוק') || error.includes('אין פרק')))) {
+    replaceChapter = true;
+  }
+  if (relevantErrors.some((error) => error.includes('בקריאה לתבנית:תנ"ך') && error.includes('אין ספר') && error.includes(' א או '))) {
+    aOrB = true;
+  }
+  if (relevantErrors.some((error) => error.includes('בקריאה לתבנית:תנ"ך') && error.includes('אין ספר') && !error.includes(' א או '))) {
+    replaceTemplate = true;
+  }
+  if (!replaceChapter && !replaceTemplate && !aOrB) {
+    return content;
+  }
+  const templates = findTemplates(content, TANACH_CITE_TEMPLATE, title);
+  await promiseSequence(10, templates.map((template) => async () => {
+    const arrayData = getTemplateArrayData(template, TANACH_CITE_TEMPLATE, title);
+    const bareText = arrayData[0].replace(/["'().,;:]/g, '').replace(/[־-]/g, ' ').replace(/[\u0591-\u05C7]/g, '');
+    if (arrayData.length !== 4) {
+      return;
+    }
+
+    let exists = await textExistsInTitle(wikisourceAPI, `קטגוריה:${arrayData[1]} ${arrayData[2]} ${arrayData[3]}`, bareText);
+    if (exists) {
+      return;
+    }
+    if (aOrB) {
+      const existsA = await textExistsInTitle(wikisourceAPI, `קטגוריה:${arrayData[1]} א ${arrayData[2]} ${arrayData[3]}`, bareText);
+      const existsB = await textExistsInTitle(wikisourceAPI, `קטגוריה:${arrayData[1]} ב ${arrayData[2]} ${arrayData[3]}`, bareText);
+      if (existsA || existsB) {
+        const newTemplate = templateFromArrayData(
+          [
+            arrayData[0],
+            arrayData[1] + (existsA ? ' א' : ' ב'),
+            arrayData[2],
+            arrayData[3],
+          ],
+          TANACH_CITE_TEMPLATE,
+        );
+        newContent = newContent.replace(template, newTemplate);
+      }
+      return;
+    }
+    if (replaceChapter) {
+      exists = await textExistsInTitle(wikisourceAPI, `קטגוריה:${arrayData[1]} ${arrayData[3]} ${arrayData[2]}`, bareText);
+      if (exists) {
+        const newTemplate = templateFromArrayData(
+          [
+            arrayData[0],
+            arrayData[1],
+            arrayData[3],
+            arrayData[2],
+          ],
+          TANACH_CITE_TEMPLATE,
+        );
+        newContent = newContent.replace(template, newTemplate);
+        return;
+      }
+    }
+    if (replaceTemplate) {
+      exists = await textExistsInTitle(wikisourceAPI, `משנה ${arrayData[1]} ${arrayData[2]} ${arrayData[3]}`, bareText);
+      if (exists) {
+        const newTemplate = templateFromArrayData(
+          [
+            arrayData[0],
+            arrayData[1],
+            arrayData[2],
+            arrayData[3],
+          ],
+          MISHNA_CITE_TEMPLATE,
+        );
+        newContent = newContent.replace(template, newTemplate);
+        return;
+      }
+      exists = await textExistsInTitle(wikisourceAPI, `${arrayData[1]} ${arrayData[2]} ${arrayData[3]}`, bareText);
+      if (exists) {
+        const newTemplate = templateFromArrayData(
+          [
+            arrayData[0],
+            arrayData[1],
+            arrayData[2],
+            arrayData[3],
+          ],
+          BAVLI_CITE_TEMPLATE,
+        );
+        newContent = newContent.replace(template, newTemplate);
+      }
+    }
+  }));
+  return newContent;
+}
+
+async function tryMishnaReplaces(
+  wikisourceAPI: IWikiApi,
+  title: string,
+  content: string,
+  errors: string[],
+): Promise<string> {
+  const relevantErrors = errors.filter((error) => error.includes(`[[${title}]]`));
+  if (relevantErrors.length === 0) {
+    return content;
+  }
+  let newContent = content;
+  const thereAreErrors = relevantErrors.some((error) => error.includes('בקריאה לתבנית:משנה'));
+  if (!thereAreErrors) {
+    return content;
+  }
+  const templates = findTemplates(content, MISHNA_CITE_TEMPLATE, title);
+  await promiseSequence(10, templates.map((template) => async () => {
+    const arrayData = getTemplateArrayData(template, MISHNA_CITE_TEMPLATE, title);
+    const bareText = arrayData[0].replace(/["'().,;:]/g, '').replace(/[־-]/g, ' ').replace(/[\u0591-\u05C7]/g, '');
+    if (arrayData.length !== 4) {
+      return;
+    }
+
+    let exists = await textExistsInTitle(wikisourceAPI, `משנה ${arrayData[1]} ${arrayData[2]} ${arrayData[3]}`, bareText);
+    if (exists) {
+      return;
+    }
+    exists = await textExistsInTitle(wikisourceAPI, `משנה ${arrayData[1]} ${arrayData[3]} ${arrayData[2]}`, bareText);
+    if (exists) {
+      const newTemplate = templateFromArrayData(
+        [
+          arrayData[0],
+          arrayData[1],
+          arrayData[3],
+          arrayData[2],
+        ],
+        MISHNA_CITE_TEMPLATE,
+      );
+      newContent = newContent.replace(template, newTemplate);
+      return;
+    }
+    exists = await textExistsInTitle(wikisourceAPI, `${arrayData[1]} ${arrayData[2]} ${arrayData[3]}`, bareText);
+    if (exists) {
+      const newTemplate = templateFromArrayData(
+        [
+          arrayData[0],
+          arrayData[1],
+          arrayData[2],
+          arrayData[3],
+        ],
+        BAVLI_CITE_TEMPLATE,
+      );
+      newContent = newContent.replace(template, newTemplate);
+    }
+  }));
+  return newContent;
+}
+
 export default async function fixCiteTemplateErrors() {
   const baseWiki = BaseWikiApi({
     ...defaultConfig,
     baseUrl: 'https://he.wiktionary.org/w/api.php',
   });
+
   const api = WikiApi(baseWiki);
-  await api.login();
+  const wikisourceBaseApi = BaseWikiApi({
+    ...defaultConfig,
+    assertBot: false,
+    baseUrl: 'https://he.wikisource.org/w/api.php',
+  });
+  const wikisourceApi = WikiApi(wikisourceBaseApi);
+  const { content: errorPageContent } = await api.articleContent(ERRORS_PAGE);
+  const errors = errorPageContent.split('\n');
   const generator = api.categroyPages('שגיאות קריאה לתבניות ספרי קודש', 10);
   for await (const pages of generator) {
     for (const page of pages) {
@@ -130,7 +318,8 @@ export default async function fixCiteTemplateErrors() {
       if (!content || !revid) {
         throw new Error(`Missing content or revid ${page.title}`);
       }
-      const newContent = fixGeneralErrors(page.title, content);
+      let newContent = fixGeneralErrors(page.title, content);
+      newContent = await tryMishnaReplaces(wikisourceApi, page.title, newContent, errors);
       if (newContent !== content) {
         console.log('Updating', page.title);
         await api.edit(page.title, 'תיקון שגיאות קריאה לתבניות ספרי קודש', newContent, revid);
