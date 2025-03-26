@@ -14,6 +14,15 @@ describe('findTemplates', () => {
     expect(result).toStrictEqual([]);
   });
 
+  it('should handle templates without paramaters', () => {
+    const text = 'text with {{template}}';
+    const templateName = 'template';
+    const title = 'test';
+    const result = findTemplates(text, templateName, title);
+
+    expect(result).toStrictEqual(['{{template}}']);
+  });
+
   it('should return array of templates if templates found', () => {
     const text = 'hello world {{template| test}}';
     const templateName = 'template';
