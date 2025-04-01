@@ -1,10 +1,16 @@
 import fs from 'fs/promises';
 import Company from './company';
-import getMayaDetails, { MayaWithWiki } from '../API/mayaAPI';
+import { getFinanceReport, MayaCompany } from '../API/mayaAPI';
 import { WikiPage } from '../types';
 import { buildTable } from '../wiki/wikiTableParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
-import { getMayaCompanies } from '../wiki/SharedWikiApiFunctions';
+import { getMayaCompanies, getMayaCompanyIdFromWikiPage } from '../wiki/SharedWikiApiFunctions';
+
+type MayaWithWiki = {
+  maya: MayaCompany;
+  wiki: WikiPage;
+  companyId: string;
+};
 
 const TABLE_PAGE = 'משתמש:Sapper-bot/tradeBootData';
 
@@ -62,10 +68,19 @@ export default async function yearlyReport(year: string) {
 
   const mayaResults: MayaWithWiki[] = [];
   for (const page of pages) {
-    const mayDetails = await getMayaDetails(page);
-    if (mayDetails) {
-      console.log(`success ${page.title}`);
-      mayaResults.push(mayDetails);
+    const companyId = getMayaCompanyIdFromWikiPage(page);
+    if (!companyId) {
+      console.error(`no maya id ${page.title}`);
+    } else {
+      const companyReport = await getFinanceReport(companyId);
+      if (companyReport) {
+        console.log(`success ${page.title}`);
+        mayaResults.push({
+          companyId,
+          wiki: page,
+          maya: companyReport,
+        });
+      }
     }
   }
   await fs.writeFile('./maya-res.json', JSON.stringify(mayaResults, null, 2), 'utf8');

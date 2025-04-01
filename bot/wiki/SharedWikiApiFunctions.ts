@@ -1,6 +1,8 @@
 import { WikiPage } from '../types';
 import { IWikiApi } from './WikiApi';
 
+const mayaLinkRegex = /^https?:\/\/maya\.tase\.co\.il\/company\/(\d*)\?view=reports$/;
+
 export async function getMayaLinks(api: IWikiApi, withContent = false): Promise<Record<string, WikiPage>> {
   const template = encodeURIComponent('תבנית:מידע בורסאי');
   const props = encodeURIComponent(`extlinks|pageprops${withContent ? '|revisions' : ''}`);
@@ -72,4 +74,9 @@ export async function getGoogleFinanceLinksWithContent(api: IWikiApi): Promise<R
   + `&elprotocol=https&elquery=${googleFinanceLink}&ellimit=5000`;
   const result = await api.request(path);
   return result.query.pages;
+}
+
+export function getMayaCompanyIdFromWikiPage(wikiPage: Partial<WikiPage>): string | undefined {
+  const companyId = wikiPage.extlinks?.map((link) => link['*'].match(mayaLinkRegex)?.[1]).find((x) => x);
+  return companyId;
 }

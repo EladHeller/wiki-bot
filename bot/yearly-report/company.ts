@@ -78,7 +78,7 @@ export default class Company {
 
   hasData: boolean;
 
-  companyId: number;
+  companyId: string;
 
   currency: CurrencyCode;
 
@@ -92,7 +92,7 @@ export default class Company {
     name: string,
     mayData: MayaCompany,
     wikiData: WikiPage,
-    companyId: number,
+    companyId: string,
     api: IWikiApi,
   ) {
     const revision = wikiData.revisions?.[0];
