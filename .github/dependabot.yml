@@ -11,11 +11,17 @@ updates:
     commit-message:
       prefix: "[dependabot]"
     assignees:
-      - eladheller
+      - EladHeller
     reviewers:
-      - eladheller
+      - EladHeller
+    open-pull-requests-limit: 10 
     groups:
       typescript-eslint:
         applies-to: version-updates
         patterns:
           - "*typescript-eslint*"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 10 
