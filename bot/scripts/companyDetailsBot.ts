@@ -6,7 +6,7 @@ import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getLocalDate } from '../utilities';
 import { isTwoWordsIsTheSamePerson } from '../API/openai';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
-import { querySql } from '../wiki/WikidataAPI';
+import { querySparql } from '../wiki/WikidataAPI';
 import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
@@ -321,7 +321,7 @@ export async function companyDetailsBot() {
   console.log('Login success');
   const { data, tableRevid } = await getTableData(api);
   const query = companiesWithMayaId();
-  const wikiDataResults = await querySql(query);
+  const wikiDataResults = await querySparql(query);
   const managementDetails = await getManagmentDetails(api, data, wikiDataResults);
 
   const updateResult = await saveCompanyDetails(api, tableRevid, managementDetails);

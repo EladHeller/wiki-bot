@@ -6,7 +6,7 @@ import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import parseTableText, { buildTable } from '../wiki/wikiTableParser';
 import { getParagraphContent } from '../wiki/paragraphParser';
 import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
-import { querySql } from '../wiki/WikidataAPI';
+import { querySparql } from '../wiki/WikidataAPI';
 
 const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית';
 const baseCompanyNameTemplate = 'תבנית:חברות מאיה';
@@ -94,7 +94,7 @@ async function updateTable(api: IWikiApi, marketValues: MayaMarketValue[]) {
 
 async function getWikiDataCompanies() {
   const query = companiesWithMayaId();
-  const results = await querySql(query);
+  const results = await querySparql(query);
   const data: MayaMarketValue[] = [];
   for (const result of results) {
     const res = await getMarketValueById(result.mayaId);
