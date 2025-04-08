@@ -6,7 +6,6 @@ import {
 } from '../wiki/newTemplateParser';
 import { IWikiApi } from '../wiki/WikiApi';
 
-const currentYear = process.env.YEAR;
 const TEMPLATE_NAME = 'חברה מסחרית';
 const lossStr = 'הפסד של';
 
@@ -88,17 +87,21 @@ export default class Company {
 
   api: IWikiApi;
 
+  currentYear: string;
+
   constructor(
     name: string,
     mayData: MayaCompany,
     wikiData: WikiPage,
     companyId: string,
     api: IWikiApi,
+    year: string,
   ) {
     const revision = wikiData.revisions?.[0];
     if (!revision || !revision.revid) {
       throw new Error(`Missing revision ${name}`);
     }
+    this.currentYear = year;
     this.revisionSize = revision.size;
     this.companyId = companyId;
     this.name = name;
@@ -110,10 +113,10 @@ export default class Company {
     const mayaDetails = new Map();
     let rowsField = '';
     let periodField = 'CurrentPeriod';
-    if (mayData.PreviousYear.Title === `שנתי ${currentYear}`) {
+    if (mayData.PreviousYear.Title === `שנתי ${this.currentYear}`) {
       rowsField = 'PrevYearValue';
       periodField = 'PreviousYear';
-    } else if (mayData.CurrentPeriod.Title === `שנתי ${currentYear}`) {
+    } else if (mayData.CurrentPeriod.Title === `שנתי ${this.currentYear}`) {
       periodField = 'CurrentPeriod';
       rowsField = 'CurrPeriodValue';
     }
@@ -133,12 +136,12 @@ export default class Company {
     references.forEach((reference) => {
       const referenceData = getTemplateKeyValueData(reference);
       const referenceKey = referenceData.שם;
-      const previousYear = Number(currentYear) - 1;
+      const previousYear = Number(this.currentYear) - 1;
       if (referenceKey && referenceKey.startsWith(`דוח${previousYear}-${this.templateData[NAME_FIELD] || NAME_STRING}`)) {
         finalContent = finalContent.replace(reference, '');
       }
     });
-    return this.api.edit(this.name, 'עדכון תבנית:חברה מסחרית', finalContent, this.revisionId);
+    return this.api.edit(this.name, 'עדכון נתוני דוח שנתי לבורסה', finalContent, this.revisionId);
   }
 
   updateWikiTemplate() {
@@ -171,14 +174,14 @@ export default class Company {
   }
 
   appendWikiData(wikiData: WikiPage) {
-    this.isContainsTemplate = 'templates' in wikiData;
     const revision = wikiData.revisions?.[0];
     if (!revision) {
       throw new Error(`Missing revision for ${this.name}`);
     }
     this.articleText = revision.slots.main['*'];
-    this.reference = wikiData.extlinks[0]['*'];
+    this.reference = `https://market.tase.co.il/he/market_data/company/${this.companyId}/financial_reports`;
     this.templateText = findTemplate(this.articleText, TEMPLATE_NAME, this.name);
+    this.isContainsTemplate = !!this.templateText;
     this.templateData = getTemplateKeyValueData(this.templateText);
     if (!revision.revid) {
       throw new Error(`Missing revid for ${this.name}`);
