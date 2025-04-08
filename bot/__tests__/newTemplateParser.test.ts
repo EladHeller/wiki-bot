@@ -59,6 +59,26 @@ describe('findTemplates', () => {
     expect(result).toStrictEqual([]);
   });
 
+  it('regression test edge case: template starts with template name and includes the template', () => {
+    const text = `{{תרגומים|
+* איטלקית: {{ת|איטלקית|barbiere}}
+* אנגלית: {{ת|אנגלית|barber}}
+* גרמנית: {{ת|גרמנית|Friseur}}
+* לטינית: {{ת|לטינית|tonsor}}
+|
+* ספרדית: '''{{ת|ספרדית|peluquero}}''' <small>(זכר; נקבה: '''{{ת|ספרדית|peluquera}}''')</small>
+* ערבית: {{ת|ערבית|مزين|حلاق}}
+* צרפתית: {{ת|צרפתית|coiffeur}}
+* רוסית: {{ת|רוסית|брадобрей}}
+}}
+`;
+    const templateName = 'ת';
+    const title = 'test';
+    const result = findTemplates(text, templateName, title);
+
+    expect(result).toStrictEqual([]);
+  });
+
   it('should manage broken template', () => {
     const text = 'hello {{test|text=hello}} {{test|text=world';
 
