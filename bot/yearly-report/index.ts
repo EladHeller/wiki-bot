@@ -5,6 +5,8 @@ import { buildTable } from '../wiki/wikiTableParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
 import { querySparql } from '../wiki/WikidataAPI';
+// https://market.tase.co.il/he/market_data/company/1691/financial_reports
+// https://market.tase.co.il/he/market_data/company/1480/financial_reports
 
 const TABLE_PAGE = 'משתמש:Sapper-bot/tradeBootData';
 
