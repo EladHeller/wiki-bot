@@ -10,7 +10,7 @@ const kidnappetInGaza = 'חטופים שנותרו בשבי';
 const releasedKidnapped = 'שוחררו או חולצו';
 
 const urlDict = {
-  [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', kidnappetInGaza], numberUp: false, page: 1 },
+  [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', 'הרוגים בעזה (ע"פ חמאס)', kidnappetInGaza], numberUp: false, page: 1 },
   [`${mainUrl}#`]: { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**'], numberUp: false, page: 5 },
   [`${mainUrl}#1`]: { titles: ['הרוגים בלבנון'], numberUp: false, page: 3 },
   [KidnappedUrl]: { titles: [releasedKidnapped], numberUp: true, page: 1 },
