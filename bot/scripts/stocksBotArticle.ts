@@ -1,9 +1,9 @@
-import { getMarketValue } from '../API/mayaAPI';
+import { getMarketValueById } from '../API/mayaAPI';
 import { promiseSequence } from '../utilities';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi from '../wiki/WikiApi';
-import { getMayaLinks } from '../wiki/SharedWikiApiFunctions';
+import { getMayaCompanyIdFromWikiPage, getMayaLinks } from '../wiki/SharedWikiApiFunctions';
 
 async function main() {
   const api = WikiApi();
@@ -16,13 +16,18 @@ async function main() {
     id: number,
   }[] = [];
   for (const page of Object.values(results)) {
-    const res = await getMarketValue(page);
-    if (res?.marketValue) {
-      console.log(page.title);
-      marketValues.push({
-        page,
-        id: res.id,
-      });
+    const companyId = getMayaCompanyIdFromWikiPage(page);
+    if (!companyId) {
+      console.error(`no maya id ${page.title}`);
+    } else {
+      const res = await getMarketValueById(companyId);
+      if (res?.marketValue) {
+        console.log(page.title);
+        marketValues.push({
+          page,
+          id: res.id,
+        });
+      }
     }
   }
 

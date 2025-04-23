@@ -3,7 +3,7 @@ import {
 } from '../API/mayaAPI';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi from '../wiki/WikiApi';
-import { querySql } from '../wiki/WikidataAPI';
+import { querySparql } from '../wiki/WikidataAPI';
 import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
 import { promiseSequence } from '../utilities';
 
@@ -18,7 +18,7 @@ async function main() {
   await api.login();
   console.log('Login success');
   const query = companiesWithMayaId();
-  const wikiDataResults = await querySql(query);
+  const wikiDataResults = await querySparql(query);
   const results: CompanyData[] = [];
   await promiseSequence(1, wikiDataResults.map((result) => async () => {
     const allDetails = await getAllDetails(result.mayaId);

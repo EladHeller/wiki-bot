@@ -4,7 +4,7 @@ import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getGoogleFinanceLinks } from '../wiki/SharedWikiApiFunctions';
-import { querySql } from '../wiki/WikidataAPI';
+import { querySparql } from '../wiki/WikidataAPI';
 import { companiesWithTicker } from '../wiki/WikiDataSqlQueries';
 import { buildTable } from '../wiki/wikiTableParser';
 
@@ -50,7 +50,7 @@ export async function checkWikidata() {
   const api = WikiApi();
   await api.login();
   console.log('Login success');
-  const wikidataResults = await querySql(companiesWithTicker());
+  const wikidataResults = await querySparql(companiesWithTicker());
   const results = await getGoogleFinanceLinks(api);
   const companiesWithTickers: Record<string, {
     wikiDataTickers: {companyId: string, exchange: string, ticker}[], templateTicker: string

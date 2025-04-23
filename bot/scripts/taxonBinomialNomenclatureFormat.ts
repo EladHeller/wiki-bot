@@ -1,6 +1,6 @@
 import { asyncGeneratorMapWithSequence } from '../utilities';
-import WikiApi from '../wiki/WikiApi';
-import WikiDataAPI from '../wiki/WikidataAPI';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
+import WikiDataAPI, { IWikiDataAPI } from '../wiki/WikidataAPI';
 
 const TEMPLATE_NAME = 'מיון';
 const TAXON_RANK_PROPERTY = 'P105';
@@ -53,106 +53,125 @@ const TAXON_ABOVE_GENUS = {
   Q10296147: 'epifamily',
 };
 
+export async function handlePage(
+  title: string,
+  content:string,
+  revid: number,
+  api: IWikiApi,
+  wikiDataApi: IWikiDataAPI,
+) {
+  const logs: string[] = [];
+  try {
+    const containsBinomialNomenclature = content.match(REGEX);
+    const binomialNomenclatureText = containsBinomialNomenclature?.[0];
+    const names = containsBinomialNomenclature?.groups?.name?.split(/[,או]/)
+      ?.map((name) => name.trim())
+      .filter((name) => name);
+    if (!binomialNomenclatureText || !names || !names.length) {
+      logs.push(`* [[${title}]]: Binomial nomenclature not found`);
+      return { logs };
+    }
+    const wikiDataItem = await api.getWikiDataItem(title);
+    if (!wikiDataItem) {
+      logs.push(`* [[${title}]]: No WikiData item`);
+      return { logs };
+    }
+    const taxonRankClaim = await wikiDataApi.getClaim(wikiDataItem, TAXON_RANK_PROPERTY);
+    const taxonRankId = taxonRankClaim[0]?.mainsnak?.datavalue?.value?.id;
+    if (!taxonRankId) {
+      logs.push(`* [[${title}]]: No taxon rank in WikiData`);
+      return { logs };
+    }
+    const taxonNameClaim = await wikiDataApi.getClaim(wikiDataItem, TAXON_NAME_PROPERTY);
+    const taxonNames = taxonNameClaim?.map((claim) => claim?.mainsnak?.datavalue?.value);
+    const taxonNamesInArticle = names.filter((name) => {
+      const bareName = name.replace(/'/g, '');
+      return taxonNames.includes(bareName);
+    });
+    if (taxonNamesInArticle.length === 0) {
+      logs.push(`* [[${title}]]: Taxon names in article (${names.join(', ')}) not matching WikiData taxon names (${taxonNames.join(', ')})`);
+      return { logs };
+    }
+    const startAndEndNotMatched = taxonNamesInArticle.filter((name) => {
+      const match = name.match(/^(?<start>'*)[^']*(?<end>'*)$/);
+      return match?.groups?.start !== match?.groups?.end;
+    });
+    if (startAndEndNotMatched.length > 0) {
+      logs.push(`* [[${title}]]: Taxon names in article start and end not matched (${startAndEndNotMatched.join(', ')})`);
+      return { logs };
+    }
+    let newContent = content;
+    let newBinomialNomenclatureText = binomialNomenclatureText;
+    if (taxonRankId in TAXON_FROM_GENUS_DOWN && taxonNamesInArticle.some((name) => !name.match(/^''[^']+''$/))) {
+      taxonNamesInArticle.forEach((name) => {
+        const newName = `''${name.replace(/'/g, '')}''`;
+        const newText = newBinomialNomenclatureText.replace(name, newName);
+        newContent = newContent.replace(newBinomialNomenclatureText, newText);
+        newBinomialNomenclatureText = newText;
+        logs.push(`* [[${title}]]: Taxon rank (${taxonRankId}) is from genus down, adding quotes to ${name}`);
+      });
+    }
+    if (taxonRankId in TAXON_ABOVE_GENUS && taxonNamesInArticle.some((name) => name.includes("'"))) {
+      taxonNamesInArticle.forEach((name) => {
+        const newName = name.replace(/'/g, '');
+        const newText = newBinomialNomenclatureText.replace(name, newName);
+        newContent = newContent.replace(newBinomialNomenclatureText, newText);
+        newBinomialNomenclatureText = newText;
+        logs.push(`* [[${title}]]: Taxon rank (${taxonRankId}) is above genus, removing quotes from ${name}`);
+      });
+    }
+    if (!(taxonRankId in TAXON_FROM_GENUS_DOWN) && !(taxonRankId in TAXON_ABOVE_GENUS)) {
+      console.log(`Taxon rank ${title} isn't known`, { taxonRankId });
+      logs.push(`* [[${title}]]: Taxon rank (${taxonRankId}) isn't known`);
+      return { logs };
+    }
+    if (newContent === content) {
+      return { logs };
+    }
+    console.log(`Updating ${title}...`);
+    const link = '[[ויקיפדיה:מדריך לעיצוב ערכים/בעלי חיים#הטיית שמות מרמת הסוג ומטה|דף המדיניות]]';
+    await api.edit(title, `תיקון שם מדעי על פי ${link}`, newContent, revid);
+    return { logs, edited: true };
+  } catch (error) {
+    //   console.error(`Error processing ${title}:`, error);
+    logs.push(`* [[${title}]]: ${error.message || error}`);
+  }
+  return { logs };
+}
+
 export default async function taxonBinomialNomenclatureFormat() {
   const api = WikiApi();
   await api.login();
   const wikiDataApi = WikiDataAPI();
-  const taxonBinomialNomenclature = api.getArticlesWithTemplate(TEMPLATE_NAME);
+  await wikiDataApi.login();
+  const taxonBinomialNomenclature = api.getArticlesWithTemplate(TEMPLATE_NAME, { geicontinue: '0|1998512', continue: 'geicontinue||' });
   const logs: string[] = [];
   let pagesCount = 0;
   let editsCount = 0;
+
   try {
     await asyncGeneratorMapWithSequence(50, taxonBinomialNomenclature, (page) => async () => {
       pagesCount += 1;
-      try {
-        const revid = page.revisions?.[0].revid;
-        const content = page.revisions?.[0].slots.main['*'];
-        if (!revid || !content) {
-          console.log(`No revid or content for ${page.title}`, { revid: !!revid, content: !!content });
-          logs.push(`* [[${page.title}]]: No revid or content`);
-          return;
-        }
-        const containsBinomialNomenclature = content.match(REGEX);
-        const binomialNomenclatureText = containsBinomialNomenclature?.[0];
-        const names = containsBinomialNomenclature?.groups?.name?.split(/[,או]/)
-          ?.map((name) => name.trim())
-          .filter((name) => name);
-        if (!binomialNomenclatureText || !names || !names.length) {
-          logs.push(`* [[${page.title}]]: Binomial nomenclature not found`);
-          return;
-        }
-        const wikiDataItem = await api.getWikiDataItem(page.title);
-        if (!wikiDataItem) {
-          logs.push(`* [[${page.title}]]: No WikiData item`);
-          return;
-        }
-        const taxonRankClaim = await wikiDataApi.getClaim(wikiDataItem, TAXON_RANK_PROPERTY);
-        const taxonRankId = taxonRankClaim[0]?.mainsnak?.datavalue?.value?.id;
-        if (!taxonRankId) {
-          logs.push(`* [[${page.title}]]: No taxon rank in WikiData`);
-          return;
-        }
-        const taxonNameClaim = await wikiDataApi.getClaim(wikiDataItem, TAXON_NAME_PROPERTY);
-        const taxonNames = taxonNameClaim?.map((claim) => claim?.mainsnak?.datavalue?.value);
-        const taxonNamesInArticle = names.filter((name) => {
-          const bareName = name.replace(/'/g, '');
-          return taxonNames.includes(bareName);
-        });
-        if (taxonNamesInArticle.length === 0) {
-          logs.push(`* [[${page.title}]]: Taxon names in article not matching WikiData taxon names (${taxonNames.join(', ')})`);
-          return;
-        }
-        const startAndEndNotMatched = taxonNamesInArticle.filter((name) => {
-          const match = name.match(/^(?<start>'*)[^']*(?<end>'*)$/);
-          return match?.groups?.start !== match?.groups?.end;
-        });
-        if (startAndEndNotMatched.length > 0) {
-          logs.push(`* [[${page.title}]]: Taxon names in article start and end not matched (${startAndEndNotMatched.join(', ')})`);
-          return;
-        }
-        let newContent = content;
-        let newBinomialNomenclatureText = binomialNomenclatureText;
-        if (taxonRankId in TAXON_FROM_GENUS_DOWN && taxonNamesInArticle.some((name) => !name.match(/^''.*''$/))) {
-          taxonNamesInArticle.forEach((name) => {
-            const newName = `''${name.replace(/'/g, '')}''`;
-            const newText = newBinomialNomenclatureText?.replace(name, newName);
-            newContent = newContent.replace(newBinomialNomenclatureText, newText);
-            newBinomialNomenclatureText = newText;
-            logs.push(`* [[${page.title}]]: Taxon rank (${taxonRankId}) is from genus down, adding quotes to ${name}`);
-          });
-        }
-        if (taxonRankId in TAXON_ABOVE_GENUS && taxonNamesInArticle.some((name) => name.includes("'"))) {
-          taxonNamesInArticle.forEach((name) => {
-            const newName = name.replace(/'/g, '');
-            const newText = newBinomialNomenclatureText?.replace(name, newName);
-            newContent = newContent.replace(newBinomialNomenclatureText, newText);
-            newBinomialNomenclatureText = newText;
-            logs.push(`* [[${page.title}]]: Taxon rank (${taxonRankId}) is above genus, removing quotes from ${name}`);
-          });
-        }
-        if (!(taxonRankId in TAXON_FROM_GENUS_DOWN) && !(taxonRankId in TAXON_ABOVE_GENUS)) {
-          console.log(`Taxon rank ${page.title} isn't known`, { taxonRankId });
-          logs.push(`* [[${page.title}]]: Taxon rank (${taxonRankId}) isn't known`);
-          return;
-        }
-        if (newContent === content) {
-          return;
-        }
-        console.log(`Updating ${page.title}...`);
+      const revid = page.revisions?.[0].revid;
+      const content = page.revisions?.[0].slots.main['*'];
+      if (!revid || !content) {
+        console.log(`No revid or content for ${page.title}`, { revid: !!revid, content: !!content });
+        logs.push(`* [[${page.title}]]: No revid or content`);
+        return;
+      }
+      const pageResults = await handlePage(page.title, content, revid, api, wikiDataApi);
+      if (pageResults.logs.length > 0) {
+        logs.push(...pageResults.logs);
+      }
+      if (pageResults.edited) {
         editsCount += 1;
-        const link = '[[ויקיפדיה:מדריך לעיצוב ערכים/בעלי חיים#הטיית שמות מרמת הסוג ומטה|דף המדיניות]]';
-        await api.edit(page.title, `תיקון שם מדעי על פי ${link}`, newContent, revid);
-      } catch (error) {
-        //   console.error(`Error processing ${page.title}:`, error);
-        logs.push(`* [[${page.title}]]: ${error.message || error}`);
       }
     });
   } catch (error) {
     console.error('Error processing pages:', error);
     logs.push(`* Error processing pages: ${error.message || error}`);
   }
-  logs.unshift(`Found ${pagesCount} pages with the template ${TEMPLATE_NAME}
-    Updated ${editsCount} pages.\n`);
+  logs.unshift(`נמצאו ${pagesCount} דפים עם {{תב|${TEMPLATE_NAME}}}, עודכנו ${editsCount} דפים ב-${logs.length} דפים נמצאו בעיות.\n`);
 
-  await api.create('user:Sapper-bot/תיקון שם מדעי1', 'תיקון שם מדעי', logs.join('\n'));
+  await api.create('user:Sapper-bot/תיקון שם מדעי2', 'תיקון שם מדעי', logs.join('\n'));
 }
