@@ -46,6 +46,8 @@ import { asyncGeneratorMapWithSequence } from '../../../utilities';
 * רוסית: {{ת|רוסית|слово}}
 }}
   */
+const EXAMPLE_ARTICLE = 'ערך לדוגמה';
+
 const regexesToRemove = [
   /===\s*צירופים\s*===\s*\*\s*\[\[צירוף\s*מילים\]\]\n?/g,
   /===\s*גיזרון\s*===\s*\*\s*כאן\s*יש\s*לכתוב\s*את\s*מקור\s*המילה\s*\(?או\s*הצרף\)\?.\n?/g,
@@ -136,7 +138,7 @@ export async function cleanupArticles() {
     if (content.endsWith('{{מיזמים|ויקיפדיה=ערך בוויקיפדיה|ויקישיתוף=ערך בוויקישיתוף}}')) {
       newContent = newContent.replace(/===\s*קישורים\s*חיצוניים\s*===\s*{{מיזמים\|ויקיפדיה=ערך\s*בוויקיפדיה\|ויקישיתוף=ערך\s*בוויקישיתוף}}/g, '');
     }
-    if (content !== newContent) {
+    if (content !== newContent && page !== EXAMPLE_ARTICLE) {
       console.log(`About to edit ${page}. Continue? (y/n)`);
       const answer = await new Promise((resolve) => {
         process.stdin.once('data', (data) => {
@@ -181,7 +183,7 @@ export async function cleanupSearch(replaceText: string) {
   for (const page of pages) {
     const { content, revid } = await api.articleContent(page);
     const newContent = content.replaceAll(replaceText, '');
-    if (newContent !== content) {
+    if (newContent !== content && page !== EXAMPLE_ARTICLE) {
       console.log(`About to edit ${page}.`);
       await api.edit(page, 'הסרת מחרוזות שמקורן ב[[תבנית:תבנית הערך]]', newContent, revid);
     }
