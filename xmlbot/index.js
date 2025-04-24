@@ -36,10 +36,14 @@ function readLargeFile(path) {
 }
 
 async function main() {
-  await readLargeFile('hewiki-20230420-pages-articles.xml');
+  try {
+    await readLargeFile('hewiki-latest-pages-articles.xml');
+  } catch {
+    throw new Error('Failed to read file.');
+  }
   let botEdits = 0;
   let userEdits = 0;
-  for (let i = 0; i <= 9; i += 1) {
+  for (let i = 0; i <= 11; i += 1) {
     const chunk = fs.readFileSync(`./data${i}.xml`, 'utf-8');
     const xml = await parseStringPromise(`<xml>${chunk}</xml>`);
     xml.xml.page.forEach((page) => {

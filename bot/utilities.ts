@@ -183,3 +183,7 @@ export function hebrewGimetriya(number: number): string {
   const hundredsHebrew = hundreds ? `${String.fromCharCode('ק'.charCodeAt(0) + hundreds / 100 - 1)}` : '';
   return `${hundredsHebrew}${tensHebrew}${unityHebrew}`;
 }
+
+export function escapeRegex(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

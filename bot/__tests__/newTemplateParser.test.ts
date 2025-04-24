@@ -79,6 +79,15 @@ describe('findTemplates', () => {
     expect(result).toStrictEqual([]);
   });
 
+  it('regression test should find swtich template', () => {
+    const text = `{{#switch: {{{1}}}
+|data=value
+}}`;
+    const template = findTemplate(text, '#switch: {{{1}}}', 'test');
+
+    expect(template).toStrictEqual(text);
+  });
+
   it('should manage broken template', () => {
     const text = 'hello {{test|text=hello}} {{test|text=world';
 
