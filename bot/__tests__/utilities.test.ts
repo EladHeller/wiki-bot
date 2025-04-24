@@ -1,8 +1,8 @@
 /* eslint-disable jest/no-conditional-in-test */
 import { describe, expect, it } from '@jest/globals';
 import {
-  asyncGeneratorMapWithSequence, encodeWikiUrl, getFullYear, getLocalDate, getLocalTimeAndDate, hebrewGimetriya,
-  objectToFormData, objectToQueryString, parseLocalDate, prettyNumericValue, promiseSequence,
+  asyncGeneratorMapWithSequence, encodeWikiUrl, escapeRegex, getFullYear, getLocalDate, getLocalTimeAndDate,
+  hebrewGimetriya, objectToFormData, objectToQueryString, parseLocalDate, prettyNumericValue, promiseSequence,
 } from '../utilities';
 
 describe('prettyNumericValue', () => {
@@ -349,5 +349,33 @@ describe('hebrewGimetriya', () => {
 
   it('should throw error for negative numbers', () => {
     expect(() => hebrewGimetriya(-1)).toThrow('Number should be between 1 and 499');
+  });
+});
+
+describe('escapeRegex', () => {
+  it('should escape all regex special characters', () => {
+    const input = '.*+?^${}()|[]\\';
+    const expected = '\\.\\*\\+\\?\\^\\$\\{\\}\\(\\)\\|\\[\\]\\\\';
+
+    expect(escapeRegex(input)).toBe(expected);
+  });
+
+  it('should leave normal characters unchanged', () => {
+    expect(escapeRegex('abc123')).toBe('abc123');
+  });
+
+  it('should handle mixed input', () => {
+    const input = 'foo(bar)[baz]?';
+    const expected = 'foo\\(bar\\)\\[baz\\]\\?';
+
+    expect(escapeRegex(input)).toBe(expected);
+  });
+
+  it('should escape curly braces', () => {
+    expect(escapeRegex('{{test}}')).toBe('\\{\\{test\\}\\}');
+  });
+
+  it('should work with empty string', () => {
+    expect(escapeRegex('')).toBe('');
   });
 });
