@@ -46,7 +46,7 @@
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.14",
     "@types/jsdom": "^21.1.7",
-    "@types/node": "^22.13.17",
+    "@types/node": "^22.15.3",
     "@types/tough-cookie": "^4.0.5",
     "@typescript-eslint/eslint-plugin": "^8.29.0",
     "@typescript-eslint/parser": "^8.29.0",
