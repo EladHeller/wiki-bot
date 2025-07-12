@@ -9,5 +9,5 @@
         "outDir": "dist",
         "sourceMap": true
     },
-    "include": ["bot", "testConfig"]
+    "include": ["bot", "testConfig", "xmlbot"]
 }
