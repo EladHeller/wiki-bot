@@ -11,7 +11,8 @@
     "include": [
         "bot",
         "testConfig",
-        "build"
+        "build",
+        "xmlbot"
     ],
     "exclude": [
         "node_modules"

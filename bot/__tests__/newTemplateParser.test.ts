@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import {
-  findTemplate, findTemplates, getTemplateArrayData, getTemplateDate, getTemplateKeyValueData,
+  findTemplate, findTemplates, getTemplateArrayData, getTemplateData, getTemplateKeyValueData,
   templateFromArrayData, templateFromKeyValueData, templateFromTemplateData,
 } from '../wiki/newTemplateParser';
 
@@ -228,12 +228,12 @@ describe('getTemplateKeyValueData', () => {
   });
 });
 
-describe('getTemplateDate', () => {
+describe('getTemplateData', () => {
   it('should return an empty object for a template without valid content', () => {
     const templateText = '{{templateName}}';
     const templateName = 'name';
     const title = 'Title';
-    const result = getTemplateDate(templateText, templateName, title);
+    const result = getTemplateData(templateText, templateName, title);
 
     expect(result).toStrictEqual({});
   });
@@ -242,7 +242,7 @@ describe('getTemplateDate', () => {
     const templateText = '{{name|key1=value1|key2=value2}}';
     const templateName = 'name';
     const title = 'Title';
-    const result = getTemplateDate(templateText, templateName, title);
+    const result = getTemplateData(templateText, templateName, title);
 
     expect(result.keyValueData).toStrictEqual({
       key1: 'value1',
@@ -255,7 +255,7 @@ describe('getTemplateDate', () => {
     const templateText = '{{name|value1|value2|value3|}}';
     const templateName = 'name';
     const title = 'Title';
-    const result = getTemplateDate(templateText, templateName, title);
+    const result = getTemplateData(templateText, templateName, title);
 
     expect(result.keyValueData).toStrictEqual({});
     expect(result.arrayData).toStrictEqual(['value1', 'value2', 'value3', '']);
@@ -265,7 +265,7 @@ describe('getTemplateDate', () => {
     const templateText = '{{name|1=value1|2=value2|3=value3|otherValue1}}';
     const templateName = 'name';
     const title = 'Title';
-    const result = getTemplateDate(templateText, templateName, title);
+    const result = getTemplateData(templateText, templateName, title);
 
     expect(result.keyValueData).toStrictEqual({});
     expect(result.arrayData).toStrictEqual(['otherValue1', 'value2', 'value3']);
@@ -275,7 +275,7 @@ describe('getTemplateDate', () => {
     const templateText = '{{name|key1=value1|value1|2=value2}}';
     const templateName = 'name';
     const title = 'Title';
-    const result = getTemplateDate(templateText, templateName, title);
+    const result = getTemplateData(templateText, templateName, title);
 
     expect(result.keyValueData).toStrictEqual({
       key1: 'value1',

@@ -2,14 +2,18 @@
   "name": "xmlbot",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
-    "start": "node index.js"
+    "start": "tsx index.ts",
+    "read": "tsx readLargeFile.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "xml2js": "^0.5.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.4"
   }
 }

@@ -100,12 +100,12 @@ export default async function getWarData() {
     page = await context.newPage();
     let result = {};
     await page.goto(mainUrl);
-    const elementsWithInjuriesText = await page.getByText('פצועים').all();
+    const elementsWithInjuriesText = await page.getByText('נפגעים').all();
 
     for (const element of elementsWithInjuriesText) {
       const text = await element.textContent();
       // 23,907 פצועים
-      if (text?.match(/^\d{1,3},\d{3} פצועים$/)) {
+      if (text?.match(/^\d{1,3},\d{3} נפגעים$/)) {
         const number = parseInt(text.replace(/,/g, '').split(' ')[0], 10);
         result = { ...result, פצועים: number };
       }
@@ -116,7 +116,7 @@ export default async function getWarData() {
       await page.goto(url);
       await page.waitForSelector('.public-DraftStyleDefault-block');
       for (let i = 1; i < config.page; i += 1) {
-        await page.click('[aria-label="Next page"]');
+        await page.click('[aria-label="Next page"],[aria-label="Next slide"]');
         await page.waitForTimeout(200);
       }
 

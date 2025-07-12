@@ -123,7 +123,7 @@ export function templateFromArrayData(data: string[], templateName: string): str
   return `{{${templateName}|${data.join('|')}}}`;
 }
 
-export function getTemplateDate(
+export function getTemplateData(
   templateText: string,
   templateName: string,
   title: string,
