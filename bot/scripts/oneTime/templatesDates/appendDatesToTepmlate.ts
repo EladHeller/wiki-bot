@@ -1,7 +1,7 @@
 import { WikiPage } from '../../../types';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../../../utilities';
 import WikiApi from '../../../wiki/WikiApi';
-import { findTemplates, getTemplateDate, templateFromTemplateData } from '../../../wiki/newTemplateParser';
+import { findTemplates, getTemplateData, templateFromTemplateData } from '../../../wiki/newTemplateParser';
 
 type DateFromPageCallback = (id: string, title: string, section?: string) => Promise<string>;
 type TemplateData = {
@@ -52,7 +52,7 @@ export default async function appendDatesToTepmlate(
       return;
     }
     await promiseSequence(5, templates.map((template) => async () => {
-      const { arrayData, keyValueData } = getTemplateDate(
+      const { arrayData, keyValueData } = getTemplateData(
         template,
         templateNameVersion,
         page.title,
