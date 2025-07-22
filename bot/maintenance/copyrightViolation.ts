@@ -50,10 +50,10 @@ function textFromMatch(
   return `: ${link}, ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
 }
 
-async function getLastRun(api: ReturnType<typeof WikiApi>): Promise<string> {
+async function getLastRun(api: ReturnType<typeof WikiApi>): Promise<{revid: number, content: string}> {
   const lastRunResult = await api.articleContent(LAST_RUN_PAGE);
   if (lastRunResult) {
-    return lastRunResult.content;
+    return lastRunResult;
   }
   const hours = isAfterShabathOrHolliday() ? 36 : 12;
 
@@ -62,7 +62,10 @@ async function getLastRun(api: ReturnType<typeof WikiApi>): Promise<string> {
   lastRunFromDate.setMinutes(0);
   lastRunFromDate.setSeconds(0);
   lastRunFromDate.setMilliseconds(0);
-  return lastRunFromDate.toJSON();
+  return {
+    content: lastRunFromDate.toJSON(),
+    revid: -1,
+  };
 }
 
 const NOT_FOUND = 'not found';
@@ -173,7 +176,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
       console.log(res.error);
       logs.push({
         title,
-        text: `[[${title}]] - ${res.error?.info}`,
+        text: `[[:${title}]] - ${res.error?.info}`,
         error: true,
       });
 
@@ -184,7 +187,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
     if (violation === 'none') {
       otherLogs.push({
         title,
-        text: `[[${title}]] ${confidence.toFixed(2)} [${copyviosSearchLink(title)}]`,
+        text: `[[:${title}]] ${confidence.toFixed(2)} [${copyviosSearchLink(title)}]`,
         rank: confidence,
       });
       return;
@@ -192,7 +195,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
     const matchText = textFromMatch(confidence, violation, url, title);
     logs.push({
       title,
-      text: `[[${title}]]{{כ}}${matchText}`,
+      text: `[[:${title}]]{{כ}}${matchText}`,
       rank: confidence,
     });
   });
@@ -209,7 +212,7 @@ export default async function copyrightViolationBot() {
   const lastRun = await getLastRun(api);
   const { content: tempErrorsContent, revid: tempErrorsRevid } = await api.articleContent(TEMP_ERRORS_PAGE);
   const tempErrors = getInnerLinks(tempErrorsContent);
-  const generator = api.newPages([0, 2, 118], lastRun);
+  const generator = api.newPages([0, 2, 118], lastRun.content);
 
   const allLogs: ArticleLog[] = [];
   const allOtherLogs: ArticleLog[] = [];
@@ -219,7 +222,7 @@ export default async function copyrightViolationBot() {
     allLogs.push(...logs);
     allOtherLogs.push(...otherLogs);
   });
-  const logsGenerator = api.logs('move', [0, 2, 118], lastRun);
+  const logsGenerator = api.logs('move', [0, 2, 118], lastRun.content);
 
   await asyncGeneratorMapWithSequence(3, logsGenerator, (log: LogEvent) => async () => {
     if (!log.title || log.params?.target_ns == null || log.params.target_title == null
@@ -240,11 +243,11 @@ export default async function copyrightViolationBot() {
   allLogs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
 
   await writeAdminBotLogs(api, allLogs, BASE_PAGE);
-  const notFoundText = allOtherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[${title}]]`).join(' • ');
-  const disambiguationText = allOtherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[${title}]]`).join(' • ');
-  const quotesText = allOtherLogs.filter(({ text }) => text === SELECTED_QOUTE).map(({ title }) => `[[${title}]]`).join(' • ');
-  const websiteText = allOtherLogs.filter(({ text }) => text === WEBSITE_FOR_VISIT).map(({ title }) => `[[${title}]]`).join(' • ');
-  const searchErrorText = allOtherLogs.filter(({ text }) => text === SEARCH_ERROR).map(({ title }) => `[[${title}]]`).join(' • ');
+  const notFoundText = allOtherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[:${title}]]`).join(' • ');
+  const disambiguationText = allOtherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[:${title}]]`).join(' • ');
+  const quotesText = allOtherLogs.filter(({ text }) => text === SELECTED_QOUTE).map(({ title }) => `[[:${title}]]`).join(' • ');
+  const websiteText = allOtherLogs.filter(({ text }) => text === WEBSITE_FOR_VISIT).map(({ title }) => `[[:${title}]]`).join(' • ');
+  const searchErrorText = allOtherLogs.filter(({ text }) => text === SEARCH_ERROR).map(({ title }) => `[[:${title}]]`).join(' • ');
   const otherText = allOtherLogs.filter(({ error }) => !error)
     .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))
     .map(({ text }) => text).join(' • ');
@@ -268,7 +271,7 @@ export default async function copyrightViolationBot() {
     content: notFoundText,
   }].filter((p) => p.content) satisfies Paragraph[];
   await writeAdminBotLogs(api, paragraphs, LOG_PAGE);
-  await api.updateArticle(LAST_RUN_PAGE, 'עדכון זמן ריצה', currentRun.toJSON());
+  await api.edit(LAST_RUN_PAGE, 'עדכון זמן ריצה', currentRun.toJSON(), lastRun.revid);
   if (searchErrorText !== tempErrorsContent) {
     await api.edit(TEMP_ERRORS_PAGE, 'עדכון שגיאות', searchErrorText, tempErrorsRevid);
   }
