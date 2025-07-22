@@ -773,3 +773,25 @@ Resources:
       FunctionName: !GetAtt TagBotLambda.Arn
       Principal: sqs.amazonaws.com
       SourceArn: !GetAtt TagBotQueue.Arn
+
+  TagBotEventRule:
+    DependsOn:
+      - TagBotLambda
+    Type: AWS::Events::Rule
+    Properties:
+      Name: tag-bot-scheduler
+      ScheduleExpression: cron(0 18 ? * 7 *)
+      Targets:
+        - Id: tag-bot-function
+          Arn: !GetAtt TagBotLambda.Arn
+
+  TagBotInvokePermission:
+    DependsOn:
+      - TagBotEventRule
+      - TagBotLambda
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt TagBotEventRule.Arn
+      FunctionName: tag-bot-function

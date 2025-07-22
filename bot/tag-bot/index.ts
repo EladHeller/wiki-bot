@@ -84,7 +84,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
   try {
     const pageContent = await api.articleContent(title);
     const paragraphs = getAllParagraphs(pageContent.content, title);
-    const paragraphContent = paragraphs.find((paragraph) => paragraph.match(/@(?:(?:משתמש|user):)?Sapper-bot/i)
+    const paragraphContent = paragraphs.find((paragraph) => paragraph.match(/@\[\[(?:(?:משתמש|user):)?Sapper-bot/i)
       && paragraph.includes('ארכב:')
       && paragraph.includes(user)
       && getTimeStampOptions(timestamp).some((time) => paragraph.includes(time)));
