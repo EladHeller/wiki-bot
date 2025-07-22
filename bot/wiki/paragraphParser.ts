@@ -1,3 +1,4 @@
+import { escapeRegex } from '../utilities';
 import { nextWikiText } from './WikiParser';
 import { findTemplates } from './newTemplateParser';
 import { getInnerLinks } from './wikiLinkParser';
@@ -8,23 +9,13 @@ export function getParagraphContent(
   title?: string,
   withTitle = false,
 ): string | null {
-  let paragraphStartText = `==${paragraphName}==`;
-  let startIndex = articleText.indexOf(paragraphStartText);
-  if (startIndex === -1) {
-    paragraphStartText = `== ${paragraphName} ==`;
-    startIndex = articleText.indexOf(paragraphStartText);
-  }
-  if (startIndex === -1) {
-    paragraphStartText = `==${paragraphName} ==`;
-    startIndex = articleText.indexOf(paragraphStartText);
-  }
-  if (startIndex === -1) {
-    paragraphStartText = `== ${paragraphName}==`;
-    startIndex = articleText.indexOf(paragraphStartText);
-    if (startIndex === -1) {
-      return null;
-    }
-  }
+  const headingRegex = new RegExp(`^[ \\t]*==[ \\t]*${escapeRegex(paragraphName)}[ \\t]*==[ \\t]*$`, 'm');
+  const match = articleText.match(headingRegex);
+  if (!match || match.index == null) return null;
+
+  const startIndex = match.index;
+  const paragraphStartText = match[0];
+
   let endIndex = nextWikiText(articleText, startIndex + paragraphStartText.length, '==', false, title);
   while (articleText.substring(endIndex, endIndex + 3) === '===') {
     while (articleText[endIndex] === '=') {

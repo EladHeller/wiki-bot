@@ -19,6 +19,23 @@ describe('getParagraphContent', () => {
     expect(result).toStrictEqual(expectedContent);
   });
 
+  it('should return the content of a paragraph when it has strange spaces pattern', () => {
+    const articleText = `
+      Some text before
+      ==   Introduction==
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+      ==Conclusion==
+      Donec nec enim sed metus consequat aliquet.
+      Some text after
+    `;
+    const paragraphName = 'Introduction';
+    const expectedContent = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
+
+    const result = getParagraphContent(articleText, paragraphName);
+
+    expect(result).toStrictEqual(expectedContent);
+  });
+
   it('should return the content of a paragraph when it at the end of the article', () => {
     const articleText = `
       Some text before
