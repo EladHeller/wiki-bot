@@ -15,7 +15,9 @@ export default async function changeLinksTo(
 
   await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
-    if (!content) {
+    const revid = page.revisions?.[0].revid;
+    if (!content || !revid) {
+      console.error('Missing content or revid', page.title);
       return;
     }
     const innerLinks = getInnerLinks(content);
@@ -36,7 +38,7 @@ export default async function changeLinksTo(
       return;
     }
     try {
-      await api.updateArticle(page.title, reason, newContent);
+      await api.edit(page.title, reason, newContent, revid);
       console.log('Edited', page.title);
     } catch (error) {
       console.log('Error', page.title, error?.data || error?.message || error?.toString());
