@@ -152,7 +152,9 @@ async function handleNotification(
     return;
   }
   const withoutTag = body.replace(/@?Sapper-bot/i, '').trim();
+  console.log({ withoutTag });
   const command = withoutTag.split(':')[0];
+  console.log({ command });
   if (!supportedActions.includes(command)) {
     const commentRes = await api.addComment(title, commentSummary, commentPrefix + notSupportedCommandMessage, decodeURIComponent(url.hash.replace('#', '')));
     console.log({ commentRes });
