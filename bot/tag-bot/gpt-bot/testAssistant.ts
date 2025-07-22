@@ -1,58 +1,28 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 const assistantId = process.env.ASSISTANT_ID;
+const openai = new OpenAI();
 
-async function poll(thread: OpenAI.Beta.Threads.Thread, run: OpenAI.Beta.Threads.Runs.Run) {
-  let status = 'in_progress';
-  let runResult: OpenAI.Beta.Threads.Runs.Run;
-  while (status === 'in_progress' || status === 'queued') {
-    runResult = await openai.beta.threads.runs.retrieve(run.id, {
-      thread_id: thread.id,
-    });
-    status = runResult.status;
-    if (status === 'in_progress' || status === 'queued') {
-      console.log('⏳ Waiting for run to complete...');
-      await new Promise((resolve) => {
-        setTimeout(resolve, 1000);
-      }); // wait 1 second
-    } else if (status === 'completed') {
-      return runResult;
-    }
-  }
-
-  if (status !== 'completed') {
-    throw new Error(`Run failed with status: ${status}`);
-  }
-  return null;
-}
-
-export default async function testAssistant() {
+// 'האם יש חשש שהבוט בטעות ימחק דפים בלי כוונה?
+export default async function testAssistant(question: string) {
   if (!assistantId) {
-    throw new Error('Missing assitant ID');
+    throw new Error('No assistant ID');
   }
-  const thread = await openai.beta.threads.create();
-
-  await openai.beta.threads.messages.create(thread.id, {
-    role: 'user',
-    content: 'האם יש חשש שהבוט בטעות ימחק דפים בלי כוונה?',
-  });
-
-  const run = await openai.beta.threads.runs.create(thread.id, {
+  /* Helper creates thread + run and waits until the run is DONE */
+  const run = await openai.beta.threads.createAndRunPoll({
     assistant_id: assistantId,
+    model: 'gpt-4-turbo',
+    thread: { messages: [{ role: 'user', content: question }] },
+    temperature: 1,
   });
 
-  const result = await poll(thread, run);
-  if (!result) {
-    throw new Error('Failed to get result');
-  }
-  const messages = await openai.beta.threads.messages.list(thread.id);
-  const reply = messages.data.find((msg) => msg.role === 'assistant');
-  if (reply?.content[0].type === 'text') {
-    console.log('💬 Bot says:', reply?.content[0].text.value);
-  } else {
-    throw new Error('Not supported reply type');
+  /* createAndRunPoll() gives us only the Run – now pull the last reply */
+  const messages = await openai.beta.threads.messages.list(run.thread_id!, {
+    order: 'desc',
+    limit: 1,
+  });
+  const content = messages.data[0].content[0];
+  if (content.type === 'text') {
+    console.log(`\n🗨️  Reply:\n${content.text.value}`);
   }
 }
