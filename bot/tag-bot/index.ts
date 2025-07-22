@@ -5,10 +5,12 @@ import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getAllParagraphs, getParagraphContent } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import archiveParagraph from './actions/archive';
+import askGPT from './gpt-bot/askGPT';
 
 const TAG_PAGE_NAME = 'משתמש:Sapper-bot/בוט התיוג';
 const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
 
+const failedMessage = 'שגיאה לא ידועה: [[משתמש:החבלן]], שים לב ותקן.';
 const notAllowedUserMessage = `אני מצטער, אבל אינך מורשה להשתמש בבוט. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ולאחר מכן הוסף את שמך בפסקה "רשימת משתמשים".`;
 const notSupportedCommandMessage = `מצטער, אבל הפקודה שהזנת לא נתמכת. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ונסה שוב.`;
 const supportedActions = ['ארכב'];
@@ -107,13 +109,35 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
     }
   } catch (error) {
     console.error(error.message || error.data || error.toString());
-    const commentRes = await api.addComment(title, commentSummary, notSupportedCommandMessage, commentId);
+    const commentRes = await api.addComment(title, commentSummary, failedMessage, commentId);
+    console.log({ commentRes });
+  }
+}
+
+async function askAction(api: IWikiApi, notification: WikiNotification) {
+  const title = notification.title.full;
+  const user = notification.agent.name;
+  const commentSummary = getCommentSummary(user);
+  const commentPrefix = getCommentPrefix(user);
+  const url = new URL(notification['*'].links.primary.url);
+  const commentId = decodeURIComponent(url.hash.replace('#', ''));
+
+  try {
+    const question = notification['*'].body.split(':')[1].trim();
+    const response = await askGPT(question);
+
+    const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}\n${response}.`, commentId);
+    console.log({ commentRes });
+  } catch (error) {
+    console.error('Failed to ask gpt', error.message || error.data || error.toString());
+    const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}${failedMessage}`, commentId);
     console.log({ commentRes });
   }
 }
 
 const actions = {
   ארכב: archiveAction,
+  ענה: askAction,
 };
 
 async function handleNotification(
