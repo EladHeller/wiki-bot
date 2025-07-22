@@ -48,5 +48,7 @@ jobs:
           PROTECT_USER_NAME: ${{ secrets.WIKI_PROTECT_USER_NAME }}
           PROTECT_PASSWORD: ${{ secrets.WIKI_PROTECT_USER_PASSWORD }}
           DELETE_USER_NAME: ${{ secrets.WIKI_DELETE_USER_NAME }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          VECTOR_STORE_ID: ${{ secrets.VECTOR_STORE_ID }}
           DELETE_PASSWORD: ${{ secrets.WIKI_DELETE_USER_PASSWORD }}
         run: touch .env && npm run update-env

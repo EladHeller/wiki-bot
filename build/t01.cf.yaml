@@ -28,6 +28,10 @@ Parameters:
     Type: String
   EmailCodeVersionId:
     Type: String
+  OpenAPIKey:
+    Type: String
+  VectorStoreID:
+    Type: String
 
 Resources:
   MarketValueLambdaIamRole:
@@ -726,6 +730,8 @@ Resources:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
+          OPENAI_API_KEY: !Ref OpenAPIKey
+          VECTOR_STORE_ID: !Ref VectorStoreID
       Handler: dist/tag-bot/index.main
       Timeout: 900
       MemorySize: 1024
