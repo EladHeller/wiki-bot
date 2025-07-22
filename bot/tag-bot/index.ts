@@ -13,7 +13,6 @@ const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
 const failedMessage = 'שגיאה לא ידועה: [[משתמש:החבלן]], שים לב ותקן.';
 const notAllowedUserMessage = `אני מצטער, אבל אינך מורשה להשתמש בבוט. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ולאחר מכן הוסף את שמך בפסקה "רשימת משתמשים".`;
 const notSupportedCommandMessage = `מצטער, אבל הפקודה שהזנת לא נתמכת. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ונסה שוב.`;
-const supportedActions = ['ארכב'];
 
 type AllowedConfiguration = {
   users: string[];
@@ -139,6 +138,7 @@ const actions = {
   ארכב: archiveAction,
   ענה: askAction,
 };
+const supportedActions = Object.keys(actions);
 
 async function handleNotification(
   api: IWikiApi,
