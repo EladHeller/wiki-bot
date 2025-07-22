@@ -9,7 +9,9 @@ async function poll(thread: OpenAI.Beta.Threads.Thread, run: OpenAI.Beta.Threads
   let status = 'in_progress';
   let runResult: OpenAI.Beta.Threads.Runs.Run;
   while (status === 'in_progress' || status === 'queued') {
-    runResult = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    runResult = await openai.beta.threads.runs.retrieve(run.id, {
+      thread_id: thread.id,
+    });
     status = runResult.status;
     if (status === 'in_progress' || status === 'queued') {
       console.log('⏳ Waiting for run to complete...');
