@@ -100,6 +100,12 @@ async function main() {
       ParameterKey: 'WikiDeletePassword',
       ParameterValue: process.env.DELETE_PASSWORD,
     }, {
+      ParameterKey: 'OpenAPIKey',
+      ParameterValue: process.env.OPENAI_API_KEY,
+    }, {
+      ParameterKey: 'VectorStoreID',
+      ParameterValue: process.env.VECTOR_STORE_ID,
+    }, {
       ParameterKey: 'ImageVersion',
       ParameterValue: randomString,
     }, {
