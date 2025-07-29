@@ -188,6 +188,16 @@ async function handleNotification(
   await action(api, notification);
 }
 
+async function saveNotification(api: IWikiApi, notification: WikiNotification) {
+  try {
+    const content = `[${notification['*'].links.primary.url} ${notification['*'].links.primary.label}]`;
+    const title = notification['*'].header;
+    await api.edit('user:Sapper-bot/אימיילים', title, content, -1, title);
+  } catch (e) {
+    console.error('Failed to save notification', e);
+  }
+}
+
 export default async function tagBot() {
   const api = WikiApi();
   await api.login();
@@ -198,6 +208,7 @@ export default async function tagBot() {
   const { notifications } = notificationsRes.query;
   for (const notification of notifications.list) {
     await handleNotification(api, notification, allowedConfiguration);
+    await saveNotification(api, notification);
   }
 }
 
