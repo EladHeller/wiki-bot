@@ -190,7 +190,7 @@ async function handleNotification(
 
 async function saveNotification(api: IWikiApi, notification: WikiNotification) {
   try {
-    const content = `[${notification['*'].links.primary.url} ${notification['*'].links.primary.label}]`;
+    const content = `@[[משתמש:החבלן]], שים לב: [${notification['*'].links.primary.url} ${notification['*'].links.primary.label}]  {{#זמןמ:G:i:s - j/m/Y|${notification.timestamp.utciso8601}}}`;
     const title = notification['*'].header;
     await api.edit('user:Sapper-bot/אימיילים', title, content, -1, title);
   } catch (e) {
