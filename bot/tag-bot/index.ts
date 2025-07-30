@@ -54,11 +54,23 @@ async function getAllowedConfiguration(api: IWikiApi): Promise<AllowedConfigurat
 function getTimeStampOptions(timestamp: string) { // TODO: it's assumed that the Wikipedia is Hebrew
   const israelWinterDate = new Date(timestamp);
   israelWinterDate.setHours(israelWinterDate.getHours() + 2);
-  const israelWinterTimestamp = israelWinterDate.toJSON();
   const israelSummerDate = new Date(timestamp);
   israelSummerDate.setHours(israelSummerDate.getHours() + 3);
-  const israelSummerTimestamp = israelSummerDate.toJSON();
-  return [israelWinterTimestamp, israelSummerTimestamp, timestamp].map((time) => getLocalTimeAndDate(time));
+
+  const winterDateMinusMinute = new Date(israelWinterDate);
+  winterDateMinusMinute.setMinutes(winterDateMinusMinute.getMinutes() - 1);
+  const summerDateMinusMinute = new Date(israelSummerDate);
+  summerDateMinusMinute.setMinutes(summerDateMinusMinute.getMinutes() - 1);
+  const timestampMinusMinute = new Date(timestamp);
+  timestampMinusMinute.setMinutes(timestampMinusMinute.getMinutes() - 1);
+  return [
+    israelWinterDate.toJSON(),
+    israelSummerDate.toJSON(),
+    winterDateMinusMinute.toJSON(),
+    summerDateMinusMinute.toJSON(),
+    timestampMinusMinute.toJSON(),
+    timestamp,
+  ].map((time) => getLocalTimeAndDate(time));
 }
 
 function getArchiveSummary(user: string) {
@@ -101,6 +113,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       title,
       paragraphContent,
       archiveSummary,
+      user,
     );
     if (res.error) {
       const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}הארכוב נכשל: ${res.error}.`, commentId);
@@ -190,7 +203,7 @@ async function handleNotification(
 
 async function saveNotification(api: IWikiApi, notification: WikiNotification) {
   try {
-    const content = `@[[משתמש:החבלן]], שים לב: [${notification['*'].links.primary.url} ${notification['*'].links.primary.label}]  ~~~~`;
+    const content = `@[[משתמש:החבלן]], שים לב: [${notification['*'].links.primary.url} ${notification['*'].links.primary.label}]. ~~~~`;
     const title = notification['*'].header;
     await api.edit('user:Sapper-bot/אימיילים', title, content, -1, title);
   } catch (e) {

@@ -21,6 +21,8 @@ async function getLastActiveLink(
   return null;
 }
 
+const archiveCommandRegex = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב:.*/im;
+const archiveCommandRegexGlobal = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב:.*/gim;
 export default async function archiveParagraph(
   api: IWikiApi,
   pageContent: string,
@@ -28,6 +30,7 @@ export default async function archiveParagraph(
   pageTitle: string,
   paragraphContent: string,
   summary: string,
+  requestedUser: string,
 ) {
   try {
     const archiveBox = findTemplate(pageContent, 'תיבת ארכיון', pageTitle);
@@ -43,7 +46,10 @@ export default async function archiveParagraph(
       return { error: 'לא נמצא דף ארכיון פעיל' };
     }
     const lastArchiveContent = await api.articleContent(archiveTitle);
-    await api.edit(archiveTitle, summary, `${lastArchiveContent.content}\n${paragraphContent}`, lastArchiveContent.revid);
+    let newContent = paragraphContent.replace(archiveCommandRegex, `$1אורכב לבקשת משתמש ${requestedUser} ~~~~`);
+    newContent = newContent.replaceAll(archiveCommandRegexGlobal, '');
+    newContent = newContent.replace(/\n{3,}/g, '\n\n');
+    await api.edit(archiveTitle, summary, `${lastArchiveContent.content}\n${newContent}`, lastArchiveContent.revid);
     await api.edit(pageTitle, summary, pageContent.replace(paragraphContent, ''), pageRevId);
     return { success: 'הארכוב בוצע בהצלחה' };
   } catch (error) {
