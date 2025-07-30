@@ -14,7 +14,7 @@ describe('archiveParagraph', () => {
   });
 
   it('should return an error if the archive box is not found', async () => {
-    const result = await archiveParagraph(api, 'pageContent', 123, 'pageTitle', 'paragraphContent', 'summary');
+    const result = await archiveParagraph(api, 'pageContent', 123, 'pageTitle', 'paragraphContent', 'summary', 'user');
 
     expect(result).toStrictEqual({ error: 'תיבת ארכיון לא נמצאה' });
   });
@@ -22,7 +22,7 @@ describe('archiveParagraph', () => {
   it('should return an error if the archive box content is not found', async () => {
     const archiveBox = '{{תיבת ארכיון}}';
 
-    const result = await archiveParagraph(api, archiveBox, 123, 'pageTitle', 'paragraphContent', 'summary');
+    const result = await archiveParagraph(api, archiveBox, 123, 'pageTitle', 'paragraphContent', 'summary', 'user');
 
     expect(result).toStrictEqual({ error: 'התוכן של תיבת הארכיון לא נמצא' });
   });
@@ -31,7 +31,7 @@ describe('archiveParagraph', () => {
     api.info.mockResolvedValue([{ missing: '' }]);
     const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
 
-    const result = await archiveParagraph(api, archiveBox, 123, 'pageTitle', 'paragraphContent', 'summary');
+    const result = await archiveParagraph(api, archiveBox, 123, 'pageTitle', 'paragraphContent', 'summary', 'user');
 
     expect(result).toStrictEqual({ error: 'לא נמצא דף ארכיון פעיל' });
   });
@@ -44,7 +44,7 @@ describe('archiveParagraph', () => {
     const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
     const paragraphContent = 'paragraphContent';
     const pageContent = `${archiveBox}\n${paragraphContent}`;
-    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary');
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'user');
 
     expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
 
@@ -71,7 +71,7 @@ describe('archiveParagraph', () => {
     const archiveBox = '{{תיבת ארכיון|תוכן=[[/archiveBoxContent]]}}';
     const paragraphContent = 'paragraphContent';
     const pageContent = `${archiveBox}\n${paragraphContent}`;
-    const result = await archiveParagraph(api, pageContent, 123, pageTitle, paragraphContent, 'summary');
+    const result = await archiveParagraph(api, pageContent, 123, pageTitle, paragraphContent, 'summary', 'user');
 
     expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
 
@@ -92,7 +92,7 @@ describe('archiveParagraph', () => {
   it('should return an error if an exception occurs', async () => {
     api.info.mockRejectedValue(new Error('Test error'));
     const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
-    const result = await archiveParagraph(api, archiveBox, 123, 'pageTitle', 'paragraphContent', 'summary');
+    const result = await archiveParagraph(api, archiveBox, 123, 'pageTitle', 'paragraphContent', 'summary', 'user');
 
     expect(result).toStrictEqual({ error: 'ארעה שגיאה במהלך האירכוב' });
   });
