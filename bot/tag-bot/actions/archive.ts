@@ -46,7 +46,7 @@ export default async function archiveParagraph(
       return { error: 'לא נמצא דף ארכיון פעיל' };
     }
     const lastArchiveContent = await api.articleContent(archiveTitle);
-    let newContent = paragraphContent.replace(archiveCommandRegex, `$אורכב לבקשת [[משתמש:${requestedUser}]].{{כ}} ~~~~`);
+    let newContent = paragraphContent.replace(archiveCommandRegex, `אורכב לבקשת [[משתמש:${requestedUser}]].{{כ}} ~~~~`);
     newContent = newContent.replaceAll(archiveCommandRegexGlobal, '');
     newContent = newContent.replace(/\n{3,}/g, '\n\n');
     await api.edit(archiveTitle, summary, `${lastArchiveContent.content}\n${newContent}`, lastArchiveContent.revid);
