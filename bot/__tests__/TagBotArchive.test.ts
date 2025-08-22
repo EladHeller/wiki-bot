@@ -165,4 +165,60 @@ ${stateTemplate}
       123,
     );
   });
+
+  it('should archive template with state template when target is not link', async () => {
+    api.info.mockResolvedValue([{ }]);
+    api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
+    api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
+    api.edit.mockResolvedValue({});
+
+    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const paragraphContent = `==paragraph headline==
+${stateTemplate}
+paragraphContent
+:@[[משתמש:Sapper-bot]] ארכב:תבנית:שיחת תבנית:ספרינגפילד ${userSign}`;
+    const pageContent = `${archiveBox}\n${paragraphContent}`;
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['תבנית', 'שיחת תבנית:ספרינגפילד']);
+
+    expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'archiveBoxContent',
+      'summary',
+      `existingContent\n==paragraph headline==
+${stateTemplate}
+{{הועבר|ל=שיחת תבנית:ספרינגפילד}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
+      456,
+    );
+    expect(api.edit).toHaveBeenCalledWith(
+      'שיחת תבנית:ספרינגפילד',
+      'summary',
+      `targetContent\n==paragraph headline==\n{{הועבר|מ=pageTitle}}\n${stateTemplate}\nparagraphContent\n\n{{סוף העברה}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
+      678,
+    );
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'pageTitle',
+      'summary. הועבר ל-שיחת תבנית:ספרינגפילד',
+      pageContent.replace(paragraphContent, ''),
+      123,
+    );
+  });
+
+  it('should return error when there is wring arguments', async () => {
+    api.info.mockResolvedValue([{ }]);
+    api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
+    api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
+    api.edit.mockResolvedValue({});
+
+    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const paragraphContent = `==paragraph headline==
+${stateTemplate}
+paragraphContent
+:@[[משתמש:Sapper-bot]] ארכב:תבני:שיחת תבנית:ספרינגפילד ${userSign}`;
+    const pageContent = `${archiveBox}\n${paragraphContent}`;
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['תבני', 'שיחת תבנית:ספרינגפילד']);
+
+    expect(result).toStrictEqual({ error: 'הועברו פרמטרים לא תקינים' });
+  });
 });
