@@ -96,4 +96,73 @@ describe('archiveParagraph', () => {
 
     expect(result).toStrictEqual({ error: 'ארעה שגיאה במהלך האירכוב' });
   });
+
+  const userSign = '[[user:Homer Simpson|Homer]] [[user talk:Homer Simpson|Mmmm donats!]] 12:23 7 במאי 2025.';
+
+  it('should replace archive command with bot comment', async () => {
+    api.info.mockResolvedValue([{ }]);
+    api.articleContent.mockResolvedValue({ content: 'existingContent', revid: 456 });
+    api.edit.mockResolvedValue({});
+
+    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const paragraphContent = `paragraphContent\n:@[[משתמש:Sapper-bot]] ארכב: ${userSign}`;
+    const pageContent = `${archiveBox}\n${paragraphContent}`;
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson');
+
+    expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'archiveBoxContent',
+      'summary',
+      'existingContent\nparagraphContent\nאורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~',
+      456,
+    );
+    expect(api.edit).toHaveBeenCalledWith(
+      'pageTitle',
+      'summary',
+      pageContent.replace(paragraphContent, ''),
+      123,
+    );
+  });
+
+  const stateTemplate = '{{מצב|טופל|Lisa|ליזה}}';
+
+  it('should archive template with state template', async () => {
+    api.info.mockResolvedValue([{ }]);
+    api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
+    api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
+    api.edit.mockResolvedValue({});
+
+    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const paragraphContent = `==paragraph headline==
+${stateTemplate}
+paragraphContent
+:@[[משתמש:Sapper-bot]] ארכב:תבנית:[[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+    const pageContent = `${archiveBox}\n${paragraphContent}`;
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['תבנית', '[[שיחת תבנית:ספרינגפילד]]']);
+
+    expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'archiveBoxContent',
+      'summary',
+      `existingContent\n==paragraph headline==
+${stateTemplate}
+{{הועבר|ל=שיחת תבנית:ספרינגפילד}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
+      456,
+    );
+    expect(api.edit).toHaveBeenCalledWith(
+      'שיחת תבנית:ספרינגפילד',
+      'summary',
+      `targetContent\n==paragraph headline==\n{{הועבר|מ=pageTitle}}\n${stateTemplate}\nparagraphContent\n\n{{סוף העברה}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
+      678,
+    );
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'pageTitle',
+      'summary. הועבר ל-שיחת תבנית:ספרינגפילד',
+      pageContent.replace(paragraphContent, ''),
+      123,
+    );
+  });
 });

@@ -106,6 +106,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       console.log({ commentRes });
       return;
     }
+    const [, type, target] = notification['*'].body.split(':');
     const res = await archiveParagraph(
       api,
       pageContent.content,
@@ -114,6 +115,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       paragraphContent,
       archiveSummary,
       user,
+      [type?.trim(), target?.trim()],
     );
     if (res.error) {
       const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}הארכוב נכשל: ${res.error}.`, commentId);
@@ -182,15 +184,21 @@ async function handleNotification(
   const user = notification.agent.name;
   const commentSummary = getCommentSummary(user);
   const commentPrefix = getCommentPrefix(user);
+  const withoutTag = body.replace(/@?Sapper-bot/i, '').trim();
+  console.log({ withoutTag });
+  if (!withoutTag.includes(':')) {
+    console.log('Probably it is just mention?');
+    return;
+  }
+
   if (!allowedConfiguration.users.includes(user)) {
     const commentRes = await api.addComment(title, commentSummary, commentPrefix + notAllowedUserMessage, decodeURIComponent(url.hash.replace('#', '')));
     console.log({ commentRes });
 
     return;
   }
-  const withoutTag = body.replace(/@?Sapper-bot/i, '').trim();
-  console.log({ withoutTag });
-  const command = withoutTag.split(':')[0];
+
+  const [command] = withoutTag.split(':');
   console.log({ command });
   if (!supportedActions.includes(command)) {
     const commentRes = await api.addComment(title, commentSummary, commentPrefix + notSupportedCommandMessage, decodeURIComponent(url.hash.replace('#', '')));
