@@ -74,11 +74,11 @@ async function archiveWithState(
   const targetPage = getInnerLink(target)?.link || target;
   const [title] = paragraphContent.trim().split('\n');
   const stateTemplate = findTemplate(paragraphContent, 'מצב', pageTitle);
+  const targetPageContent = await api.articleContent(targetPage);
 
   const newArchivePageContent = `${title}\n${stateTemplate}\n{{הועבר|ל=${targetPage}}} אורכב לבקשת [[משתמש:${requestedUser}]].{{כ}} ~~~~`;
   await api.edit(archiveTitle, summary, `${archiveContent.content}\n${newArchivePageContent}`, archiveContent.revid);
 
-  const targetPageContent = await api.articleContent(targetPage);
   let targetNewContent = paragraphContent.replaceAll(archiveCommandRegexGlobal, '');
   targetNewContent = targetNewContent.replace(`${title}\n`, '');
   targetNewContent = targetNewContent.replace(/\n{3,}/g, '\n\n');
