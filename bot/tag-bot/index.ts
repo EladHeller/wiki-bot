@@ -115,7 +115,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       paragraphContent,
       archiveSummary,
       user,
-      [type?.trim(), target.join('').trim()],
+      [type?.trim(), target.join(':').trim()],
     );
     if (res.error) {
       const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}הארכוב נכשל: ${res.error}.`, commentId);
