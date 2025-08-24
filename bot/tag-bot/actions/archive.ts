@@ -85,7 +85,7 @@ async function archiveWithState(
   const targetNewParagraphContent = `${title}\n{{הועבר|מ=${pageTitle}}}\n${targetNewContent}\n{{סוף העברה}} אורכב לבקשת [[משתמש:${requestedUser}]].{{כ}} ~~~~`;
   await api.edit(targetPage, summary, `${targetPageContent.content}\n${targetNewParagraphContent}`, targetPageContent.revid);
 
-  await api.edit(pageTitle, `${summary}. הועבר ל-${targetPage}`, pageContent.replace(paragraphContent, ''), pageRevId);
+  await api.edit(pageTitle, `${summary}. הועבר ל-[[${targetPage}]]`, pageContent.replace(paragraphContent, ''), pageRevId);
 }
 
 export default async function archiveParagraph(
