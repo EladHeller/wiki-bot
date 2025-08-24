@@ -160,7 +160,7 @@ ${stateTemplate}
 
     expect(api.edit).toHaveBeenCalledWith(
       'pageTitle',
-      'summary. הועבר ל-שיחת תבנית:ספרינגפילד',
+      'summary. הועבר ל-[[שיחת תבנית:ספרינגפילד]]',
       pageContent.replace(paragraphContent, ''),
       123,
     );
@@ -199,7 +199,7 @@ ${stateTemplate}
 
     expect(api.edit).toHaveBeenCalledWith(
       'pageTitle',
-      'summary. הועבר ל-שיחת תבנית:ספרינגפילד',
+      'summary. הועבר ל-[[שיחת תבנית:ספרינגפילד]]',
       pageContent.replace(paragraphContent, ''),
       123,
     );
