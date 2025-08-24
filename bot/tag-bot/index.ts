@@ -106,7 +106,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       console.log({ commentRes });
       return;
     }
-    const [, type, target] = notification['*'].body.split(':');
+    const [, type, ...target] = notification['*'].body.split(':');
     const res = await archiveParagraph(
       api,
       pageContent.content,
@@ -115,7 +115,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       paragraphContent,
       archiveSummary,
       user,
-      [type?.trim(), target?.trim()],
+      [type?.trim(), target.join('').trim()],
     );
     if (res.error) {
       const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}הארכוב נכשל: ${res.error}.`, commentId);
