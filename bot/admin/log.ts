@@ -1,9 +1,9 @@
 import { getLocalDate } from '../utilities';
 import { findTemplates, getTemplateArrayData } from '../wiki/newTemplateParser';
 import { IWikiApi } from '../wiki/WikiApi';
-import { getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
+import { getParagraphContent, getUsersFromTagParagraph, Paragraph } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
-import { ArticleLog, Paragraph } from './types';
+import { ArticleLog } from './types';
 
 const tagsPage = 'משתמש:Sapper-bot/תיוג משתמשים';
 
