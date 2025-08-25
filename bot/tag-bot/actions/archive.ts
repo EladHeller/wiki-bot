@@ -59,7 +59,7 @@ async function getArchiveTitle(api: IWikiApi, pageContent: string, pageTitle: st
   return { archiveTitle };
 }
 
-async function archiveWithState(
+async function archiveTo(
   api: IWikiApi,
   archiveTitle: string,
   requestedUser: string,
@@ -105,7 +105,7 @@ export default async function archiveParagraph(
     }
     const lastArchiveContent = await api.articleContent(archiveTitle);
     if (type === 'יעד' && target) {
-      await archiveWithState(
+      await archiveTo(
         api,
         archiveTitle,
         requestedUser,
