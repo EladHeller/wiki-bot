@@ -139,7 +139,7 @@ ${stateTemplate}
 paragraphContent
 :@[[משתמש:Sapper-bot]] ארכב:תבנית:[[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
-    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['תבנית', '[[שיחת תבנית:ספרינגפילד]]']);
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['יעד', '[[שיחת תבנית:ספרינגפילד]]']);
 
     expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
 
@@ -153,14 +153,14 @@ ${stateTemplate}
     );
     expect(api.edit).toHaveBeenCalledWith(
       'שיחת תבנית:ספרינגפילד',
-      'summary',
+      'summary. הועבר מ[[pageTitle]]',
       `targetContent\n==paragraph headline==\n{{הועבר|מ=pageTitle}}\n${stateTemplate}\nparagraphContent\n\n{{סוף העברה}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
       678,
     );
 
     expect(api.edit).toHaveBeenCalledWith(
       'pageTitle',
-      'summary. הועבר ל-[[שיחת תבנית:ספרינגפילד]]',
+      'summary. הועבר ל[[שיחת תבנית:ספרינגפילד]]',
       pageContent.replace(paragraphContent, ''),
       123,
     );
@@ -178,7 +178,7 @@ ${stateTemplate}
 paragraphContent
 :@[[משתמש:Sapper-bot]] ארכב:תבנית:שיחת תבנית:ספרינגפילד ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
-    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['תבנית', 'שיחת תבנית:ספרינגפילד']);
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['יעד', 'שיחת תבנית:ספרינגפילד']);
 
     expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
 
@@ -192,14 +192,14 @@ ${stateTemplate}
     );
     expect(api.edit).toHaveBeenCalledWith(
       'שיחת תבנית:ספרינגפילד',
-      'summary',
+      'summary. הועבר מ[[pageTitle]]',
       `targetContent\n==paragraph headline==\n{{הועבר|מ=pageTitle}}\n${stateTemplate}\nparagraphContent\n\n{{סוף העברה}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
       678,
     );
 
     expect(api.edit).toHaveBeenCalledWith(
       'pageTitle',
-      'summary. הועבר ל-[[שיחת תבנית:ספרינגפילד]]',
+      'summary. הועבר ל[[שיחת תבנית:ספרינגפילד]]',
       pageContent.replace(paragraphContent, ''),
       123,
     );

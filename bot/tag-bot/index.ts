@@ -2,7 +2,7 @@ import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { WikiNotification } from '../types';
 import { getLocalTimeAndDate } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
-import { getAllParagraphs, getParagraphContent } from '../wiki/paragraphParser';
+import { getAllParagraphs, getParagraphContent, parseParagraph } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import archiveParagraph from './actions/archive';
 import askGPT from './gpt-bot/askGPT';
@@ -73,8 +73,8 @@ function getTimeStampOptions(timestamp: string) { // TODO: it's assumed that the
   ].map((time) => getLocalTimeAndDate(time));
 }
 
-function getArchiveSummary(user: string) {
-  return `${SUMMARY_PREFIX}ארכוב לבקשת [[משתמש:${user}|${user}]]`;
+function getArchiveSummary(user: string, title: string) {
+  return `${SUMMARY_PREFIX}ארכוב הנושא ''${title}'' לבקשת [[משתמש:${user}|${user}]]`;
 }
 
 function getCommentSummary(user: string) {
@@ -91,7 +91,6 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
   const url = new URL(notification['*'].links.primary.url);
   const commentId = decodeURIComponent(url.hash.replace('#', ''));
   const timestamp = notification.timestamp.utciso8601;
-  const archiveSummary = getArchiveSummary(user);
   const commentSummary = getCommentSummary(user);
   const commentPrefix = getCommentPrefix(user);
   try {
@@ -106,6 +105,8 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       console.log({ commentRes });
       return;
     }
+    const { name: paragraphName } = parseParagraph(paragraphContent);
+    const archiveSummary = getArchiveSummary(user, paragraphName);
     const [, type, ...target] = notification['*'].body.split(':');
     const res = await archiveParagraph(
       api,

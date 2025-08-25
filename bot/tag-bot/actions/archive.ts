@@ -83,9 +83,9 @@ async function archiveWithState(
   targetNewContent = targetNewContent.replace(`${title}\n`, '');
   targetNewContent = targetNewContent.replace(/\n{3,}/g, '\n\n');
   const targetNewParagraphContent = `${title}\n{{הועבר|מ=${pageTitle}}}\n${targetNewContent}\n{{סוף העברה}} אורכב לבקשת [[משתמש:${requestedUser}]].{{כ}} ~~~~`;
-  await api.edit(targetPage, summary, `${targetPageContent.content}\n${targetNewParagraphContent}`, targetPageContent.revid);
+  await api.edit(targetPage, `${summary}. הועבר מ[[${pageTitle}]]`, `${targetPageContent.content}\n${targetNewParagraphContent}`, targetPageContent.revid);
 
-  await api.edit(pageTitle, `${summary}. הועבר ל-[[${targetPage}]]`, pageContent.replace(paragraphContent, ''), pageRevId);
+  await api.edit(pageTitle, `${summary}. הועבר ל[[${targetPage}]]`, pageContent.replace(paragraphContent, ''), pageRevId);
 }
 
 export default async function archiveParagraph(
@@ -104,7 +104,7 @@ export default async function archiveParagraph(
       return { error };
     }
     const lastArchiveContent = await api.articleContent(archiveTitle);
-    if (type === 'תבנית' && target) {
+    if (type === 'יעד' && target) {
       await archiveWithState(
         api,
         archiveTitle,
