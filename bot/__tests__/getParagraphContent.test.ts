@@ -1,5 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
-import { getAllParagraphs, getParagraphContent, getUsersFromTagParagraph } from '../wiki/paragraphParser';
+import {
+  getAllParagraphs, getParagraphContent, getUsersFromTagParagraph, parseParagraph,
+} from '../wiki/paragraphParser';
 
 describe('getParagraphContent', () => {
   it('should return the content of a paragraph when it exists in the article text', () => {
@@ -261,5 +263,79 @@ Content 3
 
   it('should handle empty article', () => {
     expect(getAllParagraphs('', 'test')).toStrictEqual([]);
+  });
+});
+
+describe('parseParagraph', () => {
+  it('should parse paragraph title and content correctly', () => {
+    const paragraph = `==Test Title==
+Some content here`;
+
+    const result = parseParagraph(paragraph);
+
+    expect(result).toStrictEqual({
+      name: 'Test Title',
+      content: 'Some content here',
+    });
+  });
+
+  it('should handle titles with extra spaces', () => {
+    const paragraph = `== Test  Title  ==
+Content`;
+
+    const result = parseParagraph(paragraph);
+
+    expect(result).toStrictEqual({
+      name: 'Test  Title',
+      content: 'Content',
+    });
+  });
+
+  it('should handle multiline content', () => {
+    const paragraph = `==Title==
+Line 1
+Line 2
+Line 3`;
+
+    const result = parseParagraph(paragraph);
+
+    expect(result).toStrictEqual({
+      name: 'Title',
+      content: `Line 1
+Line 2
+Line 3`,
+    });
+  });
+
+  it('should handle empty content', () => {
+    const paragraph = `==Title==
+`;
+
+    const result = parseParagraph(paragraph);
+
+    expect(result).toStrictEqual({
+      name: 'Title',
+      content: '',
+    });
+  });
+
+  it('should return null for invalid paragraph format', () => {
+    const paragraph = 'Invalid paragraph without proper title';
+
+    const callToParseParagraph = parseParagraph.bind(null, paragraph);
+
+    expect(callToParseParagraph).toThrow('Invalid paragraph format: missing title');
+  });
+
+  it('should handle titles with special characters', () => {
+    const paragraph = `==Title!@#$%^&*()_+-==
+Content`;
+
+    const result = parseParagraph(paragraph);
+
+    expect(result).toStrictEqual({
+      name: 'Title!@#$%^&*()_+-',
+      content: 'Content',
+    });
   });
 });

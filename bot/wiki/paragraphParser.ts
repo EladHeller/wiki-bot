@@ -3,6 +3,11 @@ import { nextWikiText } from './WikiParser';
 import { findTemplates } from './newTemplateParser';
 import { getInnerLinks } from './wikiLinkParser';
 
+export interface Paragraph {
+    name: string;
+    content: string;
+}
+
 export function getParagraphContent(
   articleText: string,
   paragraphName: string,
@@ -32,6 +37,19 @@ export function getParagraphContent(
   }
   const content = articleText.substring(startIndex + paragraphStartText.length, endIndex);
   return content.replace(/\n*$/, '').trim();
+}
+
+export function parseParagraph(paragraphText: string): Paragraph {
+  const titleMatch = paragraphText.match(/^[ \t]*={2,4}[ \t]*([^=]+?)[ \t]*={2,4}[ \t]*$/m);
+  if (!titleMatch) {
+    throw new Error('Invalid paragraph format: missing title');
+  }
+
+  const name = titleMatch[1].trim();
+  const startIndex = titleMatch.index! + titleMatch[0].length;
+  const content = paragraphText.substring(startIndex).trim();
+
+  return { name, content };
 }
 
 export function getAllParagraphs(articleText: string, articleTitle: string): string[] {
