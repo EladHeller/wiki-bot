@@ -1,12 +1,13 @@
 import { JSDOM } from 'jsdom';
 import checkCopyViolations, { CopyViolaionRank, CopyViolationResponse } from '../API/copyvios';
 import writeAdminBotLogs from '../admin/log';
-import type { ArticleLog, Paragraph } from '../admin/types';
+import type { ArticleLog } from '../admin/types';
 import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 import type { LogEvent, WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
+import { Paragraph } from '../wiki/paragraphParser';
 
 const violationColor: Record<CopyViolaionRank, string> = {
   suspected: 'אדום',
