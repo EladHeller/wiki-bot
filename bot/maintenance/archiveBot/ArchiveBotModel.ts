@@ -3,12 +3,12 @@ import { IWikiApi } from '../../wiki/WikiApi';
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
 import { getAllParagraphs, getParagraphContent } from '../../wiki/paragraphParser';
 
+type ArchiveMode = 'titles' | 'signatureDate';
+
 export interface IArchiveBotModel {
   updateArchiveTemplate(logPage: string): Promise<void>;
-  archiveContent(logPage: string): Promise<void>;
+  archiveContent(logPage: string, archiveMode?: ArchiveMode): Promise<void>;
 }
-
-type ArchiveMode = 'titles' | 'signatureDate';
 
 type ArchiveConfig = {
   archiveTemplatePath: string;
@@ -18,7 +18,6 @@ type ArchiveConfig = {
   logParagraphTitlePrefix: string;
   archiveTemplate: string;
   archiveMonthDate?: Date;
-  archiveMode?: ArchiveMode;
 };
 
 export const defaultConfig: ArchiveConfig = {
@@ -28,7 +27,6 @@ export const defaultConfig: ArchiveConfig = {
   languageCode: 'he-IL',
   logParagraphTitlePrefix: 'לוג ריצה ',
   archiveTemplate: 'ארכיון',
-  archiveMode: 'titles',
 };
 
 async function getContent(wikiApi: IWikiApi, title: string) {
@@ -135,12 +133,10 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
     );
   }
 
-  async function archiveContent(logPage: string) {
+  async function archiveContent(logPage: string, archiveMode: ArchiveMode = 'titles') {
     const { content, revid } = await getContent(wikiApi, logPage);
 
-    const mode: ArchiveMode = config.archiveMode ?? 'titles';
-
-    const { newContent, text } = mode === 'signatureDate'
+    const { newContent, text } = archiveMode === 'signatureDate'
       ? getArchiveContentBySignatureDate(archiveMonthDate, config, content, logPage)
       : getArchiveContentByTitles(archiveMonthDate, config, content);
 

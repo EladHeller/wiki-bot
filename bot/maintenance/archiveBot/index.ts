@@ -9,12 +9,19 @@ const pages = [
   'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים/לוג',
 ];
 
+const archiveBySignatureDatePages = ['משתמש:Sapper-bot/אימיילים'];
+
 export default async function archiveBot() {
   console.log('Starting archive bot');
   const model = ArchiveBotModel(WikiApi());
   for (const page of pages) {
     await model.updateArchiveTemplate(page);
     await model.archiveContent(page);
+  }
+
+  for (const page of archiveBySignatureDatePages) {
+    await model.updateArchiveTemplate(page);
+    await model.archiveContent(page, 'signatureDate');
   }
 }
 

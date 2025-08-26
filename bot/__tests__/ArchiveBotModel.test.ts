@@ -17,7 +17,6 @@ describe('archiveBotModel', () => {
 
   afterEach(() => {
     jest.setSystemTime(jest.getRealSystemTime());
-    jest.clearAllMocks();
   });
 
   describe('updateArchiveTemplate', () => {
@@ -156,14 +155,7 @@ adasd
 שגשדג`,
         revid: 1,
       });
-      archiveBotModel = ArchiveBotModel(wikiApi, {
-        archiveTemplatePath: '/ארכיונים',
-        archiveBoxTemplate: 'תיבת ארכיון',
-        monthArchivePath: (monthAndYear) => `ארכיון ${monthAndYear}`,
-        languageCode: 'he-IL',
-        logParagraphTitlePrefix: 'לוג ריצה ',
-        archiveTemplate: 'ארכיון',
-      });
+      archiveBotModel = ArchiveBotModel(wikiApi);
 
       await archiveBotModel.archiveContent('logPage');
 
@@ -245,12 +237,9 @@ adasd
 
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 10 });
 
-      archiveBotModel = ArchiveBotModel(wikiApi, {
-        ...defaultConfig,
-        archiveMode: 'signatureDate',
-      });
+      archiveBotModel = ArchiveBotModel(wikiApi);
 
-      await archiveBotModel.archiveContent('logPage');
+      await archiveBotModel.archiveContent('logPage', 'signatureDate');
 
       expect(wikiApi.create).toHaveBeenCalledTimes(1);
       expect(wikiApi.create).toHaveBeenCalledWith(
@@ -304,9 +293,9 @@ adasd
 `;
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 11 });
 
-      archiveBotModel = ArchiveBotModel(wikiApi, { ...defaultConfig, archiveMode: 'signatureDate' });
+      archiveBotModel = ArchiveBotModel(wikiApi);
 
-      await archiveBotModel.archiveContent('logPage');
+      await archiveBotModel.archiveContent('logPage', 'signatureDate');
 
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalled();
@@ -329,11 +318,10 @@ adasd
 
       archiveBotModel = ArchiveBotModel(wikiApi, {
         ...defaultConfig,
-        archiveMode: 'signatureDate',
         archiveMonthDate,
       });
 
-      await archiveBotModel.archiveContent('logPage');
+      await archiveBotModel.archiveContent('logPage', 'signatureDate');
 
       expect(wikiApi.create).toHaveBeenCalledWith(
         'logPage/ארכיון יולי 2025',
