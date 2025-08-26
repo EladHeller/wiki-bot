@@ -1,7 +1,7 @@
 import {
   afterEach, beforeEach, describe, expect, it, jest,
 } from '@jest/globals';
-import ArchiveBotModel, { IArchiveBotModel } from '../maintenance/archiveBot/ArchiveBotModel';
+import ArchiveBotModel, { defaultConfig, IArchiveBotModel } from '../maintenance/archiveBot/ArchiveBotModel';
 import { IWikiApi } from '../wiki/WikiApi';
 import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
@@ -207,6 +207,141 @@ adasd
       expect(wikiApi.articleContent).toHaveBeenCalledWith('logPage');
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('archiveContent (signatureDate mode)', () => {
+    it('archives only paragraphs whose content contains a signature in the target month (he-IL, default config)', async () => {
+      fakerTimers.setSystemTime(new Date('2020-03-02T00:00:00Z'));
+
+      const pageContent = `
+==A (no signature)==
+אין חתימה כאן
+
+==B (Feb 2020, with TZ)==
+טקסט
+12:42, 1 בפברואר 2020 (IDT)
+עוד טקסט
+==C (Jan 2020)==
+משהו
+09:00, 31 בינואר 2020 (IDT)
+
+==D (Feb 2020, no TZ)==
+עוד פסקה
+23:59, 28 בפברואר 2020
+טקסט סיום
+==E (Mar 2020)==
+תוכן
+08:00, 1 במרץ 2020 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 10 });
+
+      archiveBotModel = ArchiveBotModel(wikiApi);
+
+      await archiveBotModel.archiveContent('logPage', 'signatureDate');
+
+      expect(wikiApi.create).toHaveBeenCalledTimes(1);
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'logPage/ארכיון פברואר 2020',
+        'ארכוב פברואר 2020',
+        `{{ארכיון}}\n==B (Feb 2020, with TZ)==
+טקסט
+12:42, 1 בפברואר 2020 (IDT)
+עוד טקסט
+==D (Feb 2020, no TZ)==
+עוד פסקה
+23:59, 28 בפברואר 2020
+טקסט סיום
+`,
+      );
+
+      // It should edit the source page, removing B and D, leaving A, C, E intact.
+      expect(wikiApi.edit).toHaveBeenCalledTimes(1);
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'logPage',
+        'ארכוב פברואר 2020',
+        `
+==A (no signature)==
+אין חתימה כאן
+
+==C (Jan 2020)==
+משהו
+09:00, 31 בינואר 2020 (IDT)
+
+==E (Mar 2020)==
+תוכן
+08:00, 1 במרץ 2020 (IDT)
+`,
+        10,
+      );
+    });
+
+    it('does nothing when no paragraph contains a signature for the target month', async () => {
+      fakerTimers.setSystemTime(new Date('2020-03-02T00:00:00Z')); // target month: Feb 2020
+
+      const pageContent = `
+==Only January==
+12:00, 31 בינואר 2020 (IDT)
+
+==Only March==
+12:00, 1 במרץ 2020 (IDT)
+
+==No signature==
+פסקה בלי חתימה
+`;
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 11 });
+
+      archiveBotModel = ArchiveBotModel(wikiApi);
+
+      await archiveBotModel.archiveContent('logPage', 'signatureDate');
+
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
+    it('respects explicit archiveMonthDate (e.g., יולי 2025)', async () => {
+      const archiveMonthDate = new Date('2025-07-01T00:00:00Z');
+
+      const pageContent = `
+
+
+==July match==
+משהו
+05:55, 30 ביולי 2025 (IDT)
+סוף
+==August not match==
+01:00, 1 באוגוסט 2025 (IDT)
+`;
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 12 });
+
+      archiveBotModel = ArchiveBotModel(wikiApi, {
+        ...defaultConfig,
+        archiveMonthDate,
+      });
+
+      await archiveBotModel.archiveContent('logPage', 'signatureDate');
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'logPage/ארכיון יולי 2025',
+        'ארכוב יולי 2025',
+        `{{ארכיון}}\n==July match==
+משהו
+05:55, 30 ביולי 2025 (IDT)
+סוף
+`,
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'logPage',
+        'ארכוב יולי 2025',
+        `
+
+==August not match==
+01:00, 1 באוגוסט 2025 (IDT)
+`,
+        12,
+      );
     });
   });
 });

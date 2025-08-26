@@ -1,10 +1,13 @@
+import { escapeRegex } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
-import { getParagraphContent } from '../../wiki/paragraphParser';
+import { getAllParagraphs, getParagraphContent } from '../../wiki/paragraphParser';
+
+type ArchiveMode = 'titles' | 'signatureDate';
 
 export interface IArchiveBotModel {
   updateArchiveTemplate(logPage: string): Promise<void>;
-  archiveContent(logPage: string): Promise<void>;
+  archiveContent(logPage: string, archiveMode?: ArchiveMode): Promise<void>;
 }
 
 type ArchiveConfig = {
@@ -17,7 +20,7 @@ type ArchiveConfig = {
   archiveMonthDate?: Date;
 };
 
-const defaultConfig: ArchiveConfig = {
+export const defaultConfig: ArchiveConfig = {
   archiveTemplatePath: '/ארכיונים',
   archiveBoxTemplate: 'תיבת ארכיון',
   monthArchivePath: (monthAndYear) => `ארכיון ${monthAndYear}`,
@@ -34,6 +37,61 @@ async function getContent(wikiApi: IWikiApi, title: string) {
   return result;
 }
 
+function getArchiveContentByTitles(archiveMonthDate: Date, config: ArchiveConfig, pageContent: string) {
+  let text = '';
+  const dayDate = new Date(archiveMonthDate);
+  let newContent = pageContent;
+  for (let i = 1; i <= 31; i += 1) {
+    dayDate.setDate(i);
+    if (dayDate.getMonth() === archiveMonthDate.getMonth()) {
+      const day = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric', day: 'numeric' }).format(dayDate);
+      const paragraphContent = getParagraphContent(newContent, config.logParagraphTitlePrefix + day);
+      if (paragraphContent) {
+        text += `==${config.logParagraphTitlePrefix}${day}==\n${paragraphContent}\n`;
+        newContent = newContent
+          .replace(paragraphContent, '\n')
+          .replace(`\n== ${config.logParagraphTitlePrefix}${day} ==\n`, '')
+          .replace(`\n==${config.logParagraphTitlePrefix}${day}==\n`, '');
+      }
+    }
+  }
+  while (newContent.includes('\n\n\n')) {
+    newContent = newContent.replace(/\n\n\n/g, '\n\n');
+  }
+  return { newContent, text };
+}
+
+function getArchiveContentBySignatureDate(
+  archiveMonthDate: Date,
+  config: ArchiveConfig,
+  pageContent: string,
+  pageTitle: string,
+) {
+  let text = '';
+  const targetMonthName = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(archiveMonthDate);
+  const targetYear = archiveMonthDate.getFullYear();
+
+  const signatureRegex = new RegExp(
+    String.raw`\b\d{1,2}:\d{2},\s+\d{1,2}\s+ב${escapeRegex(targetMonthName)}\s+${targetYear}\b`,
+    'u',
+  );
+
+  let newContent = pageContent;
+  const paragraphs = getAllParagraphs(pageContent, pageTitle);
+
+  const paragraphsToArchive = paragraphs.filter((p) => signatureRegex.test(p));
+  paragraphsToArchive.forEach((p) => {
+    text += p;
+    newContent = newContent.replace(p, '');
+  });
+
+  while (newContent.includes('\n\n\n')) {
+    newContent = newContent.replace(/\n\n\n/g, '\n\n');
+  }
+
+  return { newContent, text };
+}
+
 export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig = defaultConfig): IArchiveBotModel {
   const lastMonth = new Date();
   lastMonth.setMonth(lastMonth.getMonth() - 1);
@@ -41,6 +99,7 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
   const monthAndYear = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric' }).format(archiveMonthDate);
   const month = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(archiveMonthDate);
   const year = archiveMonthDate.getFullYear();
+
   function getLastMonthTitle(logPage: string) {
     return `${logPage}/${config.monthArchivePath(monthAndYear)}`;
   }
@@ -66,34 +125,25 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
       return;
     }
 
-    await wikiApi.edit(archivePage, 'הוספת חודש נוכחי לתבנית ארכיון', archivePageContent.replace(parameter, newParameter), archivePageRevid);
+    await wikiApi.edit(
+      archivePage,
+      'הוספת חודש נוכחי לתבנית ארכיון',
+      archivePageContent.replace(parameter, newParameter),
+      archivePageRevid,
+    );
   }
 
-  async function archiveContent(logPage: string) {
+  async function archiveContent(logPage: string, archiveMode: ArchiveMode = 'titles') {
     const { content, revid } = await getContent(wikiApi, logPage);
-    let text = '';
-    let newContent = content;
-    const dayDate = new Date(archiveMonthDate);
-    for (let i = 1; i <= 31; i += 1) {
-      dayDate.setDate(i);
-      if (dayDate.getMonth() === archiveMonthDate.getMonth()) {
-        const day = new Intl.DateTimeFormat(config.languageCode, { month: 'long', year: 'numeric', day: 'numeric' }).format(dayDate);
-        const paragraphContent = getParagraphContent(newContent, config.logParagraphTitlePrefix + day);
-        if (paragraphContent) {
-          text += `==${config.logParagraphTitlePrefix}${day}==\n${paragraphContent}\n`;
-          newContent = newContent
-            .replace(paragraphContent, '\n')
-            .replace(`\n== ${config.logParagraphTitlePrefix}${day} ==\n`, '')
-            .replace(`\n==${config.logParagraphTitlePrefix}${day}==\n`, '');
-        }
-      }
-    }
+
+    const { newContent, text } = archiveMode === 'signatureDate'
+      ? getArchiveContentBySignatureDate(archiveMonthDate, config, content, logPage)
+      : getArchiveContentByTitles(archiveMonthDate, config, content);
+
     if (text === '') {
       return;
     }
-    while (newContent.includes('\n\n\n')) {
-      newContent = newContent.replace(/\n\n\n/g, '\n\n');
-    }
+
     await wikiApi.create(getLastMonthTitle(logPage), `ארכוב ${month} ${year}`, `{{${config.archiveTemplate}}}\n${text}`);
     await wikiApi.edit(logPage, `ארכוב ${month} ${year}`, newContent, revid);
   }
