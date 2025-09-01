@@ -34,7 +34,7 @@
     "jsdom": "^26.1.0",
     "openai": "^5.11.0",
     "playwright": "^1.55.0",
-    "tough-cookie": "^5.1.2"
+    "tough-cookie": "^6.0.0"
   },
   "devDependencies": {
     "@aws-sdk/client-cloudformation": "^3.858.0",
