@@ -37,7 +37,7 @@
     "tough-cookie": "^6.0.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudformation": "^3.858.0",
+    "@aws-sdk/client-cloudformation": "^3.879.0",
     "@aws-sdk/client-lambda": "^3.879.0",
     "@aws-sdk/client-s3": "^3.858.0",
     "@aws-sdk/client-ses": "^3.879.0",
