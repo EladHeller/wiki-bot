@@ -34,15 +34,20 @@ async function regularArchive(
   pageTitle: string,
   archiveContent: {content: string, revid: number},
   summary: string,
-) {
+): Promise<{error: string} | {success: string}> {
   let newContent = paragraphContent.replace(archiveCommandRegex, `אורכב לבקשת [[משתמש:${requestedUser}]].{{כ}} ~~~~`);
   newContent = newContent.replaceAll(archiveCommandRegexGlobal, '');
   newContent = newContent.replace(/\n{3,}/g, '\n\n');
   await api.edit(archiveTitle, summary, `${archiveContent.content}\n${newContent}`, archiveContent.revid);
   await api.edit(pageTitle, summary, pageContent.replace(paragraphContent, ''), pageRevId);
+  return { success: 'הארכוב בוצע בהצלחה' };
 }
 
-async function getArchiveTitle(api: IWikiApi, pageContent: string, pageTitle: string) {
+async function getArchiveTitle(
+  api: IWikiApi,
+  pageContent: string,
+  pageTitle: string,
+): Promise<{ archiveTitle: string } | { error: string }> {
   const archiveBox = findTemplate(pageContent, 'תיבת ארכיון', pageTitle);
   if (!archiveBox) {
     return { error: 'תיבת ארכיון לא נמצאה' };
@@ -70,22 +75,39 @@ async function archiveTo(
   archiveContent: {content: string, revid: number},
   summary: string,
   target: string,
-) {
+  create = false,
+): Promise<{error: string} | {success: string}> {
   const targetPage = getInnerLink(target)?.link || target;
   const [title] = paragraphContent.trim().split('\n');
-  const stateTemplate = findTemplate(paragraphContent, 'מצב', pageTitle);
-  const targetPageContent = await api.articleContent(targetPage);
+  const statusTemplate = findTemplate(paragraphContent, 'מצב', pageTitle);
+  let targetPageContent: {
+    content: string;
+    revid: number;
+  } | null = null;
+  if (!create) {
+    try {
+      targetPageContent = await api.articleContent(targetPage);
+    } catch (e) {
+      console.error(e.message);
+      return { error: 'הבוט לא הצליח למצוא את דף היעד' };
+    }
+  }
 
-  const newArchivePageContent = `${title}\n${stateTemplate}\n{{הועבר|ל=${targetPage}}} אורכב לבקשת [[משתמש:${requestedUser}]].{{כ}} ~~~~`;
+  const newArchivePageContent = `${title}\n${statusTemplate}\n{{הועבר|ל=${targetPage}}} אורכב לבקשת [[משתמש:${requestedUser}]].{{כ}} ~~~~`;
   await api.edit(archiveTitle, summary, `${archiveContent.content}\n${newArchivePageContent}`, archiveContent.revid);
 
   let targetNewContent = paragraphContent.replaceAll(archiveCommandRegexGlobal, '');
   targetNewContent = targetNewContent.replace(`${title}\n`, '');
   targetNewContent = targetNewContent.replace(/\n{3,}/g, '\n\n');
   const targetNewParagraphContent = `${title}\n{{הועבר|מ=${pageTitle}}}\n${targetNewContent}\n{{סוף העברה}} אורכב לבקשת [[משתמש:${requestedUser}]].{{כ}} ~~~~`;
-  await api.edit(targetPage, `${summary}. הועבר מ[[${pageTitle}]]`, `${targetPageContent.content}\n${targetNewParagraphContent}`, targetPageContent.revid);
+  if (!create && targetPageContent != null) {
+    await api.edit(targetPage, `${summary}. הועבר מ[[${pageTitle}]]`, `${targetPageContent.content}\n${targetNewParagraphContent}`, targetPageContent.revid);
+  } else {
+    await api.create(targetPage, `${summary}. הועבר מ[[${pageTitle}]]`, targetNewParagraphContent);
+  }
 
   await api.edit(pageTitle, `${summary}. הועבר ל[[${targetPage}]]`, pageContent.replace(paragraphContent, ''), pageRevId);
+  return { success: 'הארכוב בוצע בהצלחה' };
 }
 
 export default async function archiveParagraph(
@@ -97,15 +119,16 @@ export default async function archiveParagraph(
   summary: string,
   requestedUser: string,
   [type, target]: (string | null)[] = [],
-) {
+): Promise<{error: string} | {success: string}> {
   try {
-    const { archiveTitle, error } = await getArchiveTitle(api, pageContent, pageTitle);
-    if (!archiveTitle) {
-      return { error };
+    const archiveTitleResult = await getArchiveTitle(api, pageContent, pageTitle);
+    if ('error' in archiveTitleResult) {
+      return { error: archiveTitleResult.error };
     }
+    const { archiveTitle } = archiveTitleResult;
     const lastArchiveContent = await api.articleContent(archiveTitle);
-    if (type === 'יעד' && target) {
-      await archiveTo(
+    if (type != null && ['יעד', 'יעדחדש'].includes(type) && target) {
+      return archiveTo(
         api,
         archiveTitle,
         requestedUser,
@@ -116,9 +139,11 @@ export default async function archiveParagraph(
         lastArchiveContent,
         summary,
         target,
+        type === 'יעדחדש',
       );
-    } else if (!target) {
-      await regularArchive(
+    }
+    if (!target) {
+      return regularArchive(
         api,
         archiveTitle,
         requestedUser,
@@ -129,10 +154,8 @@ export default async function archiveParagraph(
         lastArchiveContent,
         summary,
       );
-    } else {
-      return { error: 'הועברו פרמטרים לא תקינים' };
     }
-    return { success: 'הארכוב בוצע בהצלחה' };
+    return { error: 'הועברו פרמטרים לא תקינים' };
   } catch (error) {
     console.error(error.message);
 
