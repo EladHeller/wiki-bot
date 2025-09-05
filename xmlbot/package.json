@@ -4,16 +4,17 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "start": "tsx index.ts",
+    "start": "tsx --max-old-space-size=8192 --trace-gc index.ts ",
     "read": "tsx readLargeFile.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "xml2js": "^0.5.0"
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
+    "@types/sax": "^1.2.7",
     "tsx": "^4.19.4"
   }
 }
