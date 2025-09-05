@@ -56,7 +56,7 @@ async function main() {
         if (params[2] !== '+') {
           const name = params[0];
           if (newText.includes(`${template} [[${name}]]`) || newText.includes(`${template}  [[${name}]]`) || newText.includes(`${template}[[${name}]] `)) {
-            articles.push(title || '');
+            // articles.push(title || '');
             return;
           }
         }
@@ -64,7 +64,7 @@ async function main() {
     });
     console.log('chunk', i, 'done');
   }
-  await fs.promises.writeFile('articlesWithFlags.json', JSON.stringify(articles, null, 2));
+  // await fs.promises.writeFile('articlesWithFlags.json', JSON.stringify(articles, null, 2));
   console.log('Done! Articles with flags saved to articlesWithFlags.json');
 }
 

@@ -125,9 +125,9 @@ describe('archiveParagraph', () => {
     );
   });
 
-  const stateTemplate = '{{מצב|טופל|Lisa|ליזה}}';
+  const statusTemplate = '{{מצב|טופל|Lisa|ליזה}}';
 
-  it('should archive template with state template', async () => {
+  it('should archive template with status template', async () => {
     api.info.mockResolvedValue([{ }]);
     api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
@@ -135,7 +135,7 @@ describe('archiveParagraph', () => {
 
     const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
-${stateTemplate}
+${statusTemplate}
 paragraphContent
 :@[[משתמש:Sapper-bot]] ארכב:תבנית:[[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
@@ -147,14 +147,14 @@ paragraphContent
       'archiveBoxContent',
       'summary',
       `existingContent\n==paragraph headline==
-${stateTemplate}
+${statusTemplate}
 {{הועבר|ל=שיחת תבנית:ספרינגפילד}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
       456,
     );
     expect(api.edit).toHaveBeenCalledWith(
       'שיחת תבנית:ספרינגפילד',
       'summary. הועבר מ[[pageTitle]]',
-      `targetContent\n==paragraph headline==\n{{הועבר|מ=pageTitle}}\n${stateTemplate}\nparagraphContent\n\n{{סוף העברה}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
+      `targetContent\n==paragraph headline==\n{{הועבר|מ=pageTitle}}\n${statusTemplate}\nparagraphContent\n\n{{סוף העברה}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
       678,
     );
 
@@ -166,7 +166,62 @@ ${stateTemplate}
     );
   });
 
-  it('should archive template with state template when target is not link', async () => {
+  it('should return explained error where target page not exists', async () => {
+    api.info.mockResolvedValue([{ }]);
+    api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
+    api.articleContent.mockRejectedValueOnce(new Error('Not found'));
+    api.edit.mockResolvedValue({});
+
+    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const paragraphContent = `==paragraph headline==
+${statusTemplate}
+paragraphContent
+:@[[משתמש:Sapper-bot]] ארכב:תבנית:[[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+    const pageContent = `${archiveBox}\n${paragraphContent}`;
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['יעד', '[[שיחת תבנית:ספרינגפילד]]']);
+
+    expect(result).toStrictEqual({ error: 'הבוט לא הצליח למצוא את דף היעד' });
+  });
+
+  it('should return create new page where user ask explicit', async () => {
+    api.info.mockResolvedValue([{ }]);
+    api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
+    api.articleContent.mockRejectedValueOnce(new Error('Not found'));
+    api.edit.mockResolvedValue({});
+
+    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const paragraphContent = `==paragraph headline==
+${statusTemplate}
+paragraphContent
+:@[[משתמש:Sapper-bot]] ארכב:תבנית:[[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+    const pageContent = `${archiveBox}\n${paragraphContent}`;
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['יעדחדש', '[[שיחת תבנית:ספרינגפילד]]']);
+
+    expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'archiveBoxContent',
+      'summary',
+      `existingContent\n==paragraph headline==
+${statusTemplate}
+{{הועבר|ל=שיחת תבנית:ספרינגפילד}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
+      456,
+    );
+    expect(api.create).toHaveBeenCalledWith(
+      'שיחת תבנית:ספרינגפילד',
+      'summary. הועבר מ[[pageTitle]]',
+      `==paragraph headline==\n{{הועבר|מ=pageTitle}}\n${statusTemplate}\nparagraphContent\n\n{{סוף העברה}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
+    );
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'pageTitle',
+      'summary. הועבר ל[[שיחת תבנית:ספרינגפילד]]',
+      pageContent.replace(paragraphContent, ''),
+      123,
+    );
+  });
+
+  it('should archive template with status template when target is not link', async () => {
     api.info.mockResolvedValue([{ }]);
     api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
@@ -174,7 +229,7 @@ ${stateTemplate}
 
     const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
-${stateTemplate}
+${statusTemplate}
 paragraphContent
 :@[[משתמש:Sapper-bot]] ארכב:תבנית:שיחת תבנית:ספרינגפילד ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
@@ -186,14 +241,14 @@ paragraphContent
       'archiveBoxContent',
       'summary',
       `existingContent\n==paragraph headline==
-${stateTemplate}
+${statusTemplate}
 {{הועבר|ל=שיחת תבנית:ספרינגפילד}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
       456,
     );
     expect(api.edit).toHaveBeenCalledWith(
       'שיחת תבנית:ספרינגפילד',
       'summary. הועבר מ[[pageTitle]]',
-      `targetContent\n==paragraph headline==\n{{הועבר|מ=pageTitle}}\n${stateTemplate}\nparagraphContent\n\n{{סוף העברה}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
+      `targetContent\n==paragraph headline==\n{{הועבר|מ=pageTitle}}\n${statusTemplate}\nparagraphContent\n\n{{סוף העברה}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
       678,
     );
 
@@ -205,7 +260,7 @@ ${stateTemplate}
     );
   });
 
-  it('should return error when there is wring arguments', async () => {
+  it('should return error when there is wrong arguments', async () => {
     api.info.mockResolvedValue([{ }]);
     api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
@@ -213,7 +268,7 @@ ${stateTemplate}
 
     const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
-${stateTemplate}
+${statusTemplate}
 paragraphContent
 :@[[משתמש:Sapper-bot]] ארכב:תבני:שיחת תבנית:ספרינגפילד ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
