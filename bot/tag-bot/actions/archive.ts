@@ -75,7 +75,7 @@ async function archiveTo(
   archiveContent: {content: string, revid: number},
   summary: string,
   target: string,
-  create = false,
+  create: boolean,
 ): Promise<{error: string} | {success: string}> {
   const targetPage = getInnerLink(target)?.link || target;
   const [title] = paragraphContent.trim().split('\n');
