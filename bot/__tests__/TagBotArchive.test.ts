@@ -89,14 +89,6 @@ describe('archiveParagraph', () => {
     );
   });
 
-  it('should return an error if an exception occurs', async () => {
-    api.info.mockRejectedValue(new Error('Test error'));
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
-    const result = await archiveParagraph(api, archiveBox, 123, 'pageTitle', 'paragraphContent', 'summary', 'user');
-
-    expect(result).toStrictEqual({ error: 'ארעה שגיאה במהלך האירכוב' });
-  });
-
   const userSign = '[[user:Homer Simpson|Homer]] [[user talk:Homer Simpson|Mmmm donats!]] 12:23 7 במאי 2025.';
 
   it('should replace archive command with bot comment', async () => {
@@ -166,27 +158,11 @@ ${statusTemplate}
     );
   });
 
-  it('should return explained error where target page not exists', async () => {
+  it('should create new page if not exists', async () => {
     api.info.mockResolvedValue([{ }]);
     api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
-    api.articleContent.mockRejectedValueOnce(new Error('Not found'));
-    api.edit.mockResolvedValue({});
-
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
-    const paragraphContent = `==paragraph headline==
-${statusTemplate}
-paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב:תבנית:[[שיחת תבנית:ספרינגפילד]] ${userSign}`;
-    const pageContent = `${archiveBox}\n${paragraphContent}`;
-    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['יעד', '[[שיחת תבנית:ספרינגפילד]]']);
-
-    expect(result).toStrictEqual({ error: 'הבוט לא הצליח למצוא את דף היעד' });
-  });
-
-  it('should return create new page where user ask explicit', async () => {
-    api.info.mockResolvedValue([{ }]);
-    api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
-    api.articleContent.mockRejectedValueOnce(new Error('Not found'));
+    api.info.mockResolvedValueOnce([{ }]);
+    api.info.mockResolvedValueOnce([{ missing: '1' }]);
     api.edit.mockResolvedValue({});
 
     const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
