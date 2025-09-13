@@ -28,7 +28,7 @@
   "homepage": "https://github.com/EladHeller/wiki-bot#readme",
   "dependencies": {
     "@hebcal/core": "^5.10.1",
-    "axios": "^1.11.0",
+    "axios": "^1.12.1",
     "axios-cookiejar-support": "^5.0.5",
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^26.1.0",
