@@ -27,6 +27,8 @@ const templates = [
 
 const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
+const runChecks = false;
+
 async function needProtectFromTitles(api: IWikiApi, titles :string[]): Promise<string[]> {
   const templatesInfo = await api.info(titles);
   return templatesInfo
@@ -166,7 +168,7 @@ export async function protectBot() {
     });
     await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה');
   }
-  const needProtectLogs = await pagesWithoutProtectInMainPage();
+  const needProtectLogs = runChecks ? await pagesWithoutProtectInMainPage() : [];
   if (needToProtect.length || needProtectLogs.length) {
     const logs: ArticleLog[] = needToProtect.map((title) => {
       const error = errors.includes(title);
@@ -178,11 +180,12 @@ export async function protectBot() {
     });
     await writeAdminBotLogs(api, [...logs, ...needProtectLogs], 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
   }
+  if (runChecks) {
+    const pagesWithCopyrightIssues = await pagesWithCopyrightIssuesInMainPage();
 
-  const pagesWithCopyrightIssues = await pagesWithCopyrightIssuesInMainPage();
-
-  if (pagesWithCopyrightIssues.length) {
-    await writeAdminBotLogs(api, pagesWithCopyrightIssues, 'משתמש:Sapper-bot/זכויות יוצרים');
+    if (pagesWithCopyrightIssues.length) {
+      await writeAdminBotLogs(api, pagesWithCopyrightIssues, 'משתמש:Sapper-bot/זכויות יוצרים');
+    }
   }
 }
 export const main = shabathProtectorDecorator(protectBot);
