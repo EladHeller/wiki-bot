@@ -84,7 +84,7 @@ async function archiveTo(
     revid: number;
   } | null = null;
   const info = await api.info([targetPage]);
-  if (!info[0].missing) {
+  if (info[0].missing == null) {
     targetPageContent = await api.articleContent(targetPage);
   }
 
