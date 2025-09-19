@@ -34,6 +34,13 @@ function copyviosSearchLink(title: string) {
   return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title.replace(/ /g, '_').replace(/"/g, '%22')}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
 }
 
+function escapeTitle(title: string) {
+  if (title.startsWith('קובץ:') || title.startsWith('קטגוריה:')) {
+    return `:${title}`;
+  }
+  return title;
+}
+
 function textFromMatch(
   confidence: number,
   violation: CopyViolaionRank,
@@ -177,7 +184,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
       console.log(res.error);
       logs.push({
         title,
-        text: `[[:${title}]] - ${res.error?.info}`,
+        text: `[[${escapeTitle(title)}]] - ${res.error?.info}`,
         error: true,
       });
 
@@ -188,7 +195,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
     if (violation === 'none') {
       otherLogs.push({
         title,
-        text: `[[:${title}]] ${confidence.toFixed(2)} [${copyviosSearchLink(title)}]`,
+        text: `[[${escapeTitle(title)}]] ${confidence.toFixed(2)}`,
         rank: confidence,
       });
       return;
@@ -196,7 +203,7 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
     const matchText = textFromMatch(confidence, violation, url, title);
     logs.push({
       title,
-      text: `[[:${title}]]{{כ}}${matchText}`,
+      text: `[[${escapeTitle(title)}]]{{כ}}${matchText}`,
       rank: confidence,
     });
   });
@@ -244,11 +251,11 @@ export default async function copyrightViolationBot() {
   allLogs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
 
   await writeAdminBotLogs(api, allLogs, BASE_PAGE);
-  const notFoundText = allOtherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[:${title}]]`).join(' • ');
-  const disambiguationText = allOtherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[:${title}]]`).join(' • ');
-  const quotesText = allOtherLogs.filter(({ text }) => text === SELECTED_QOUTE).map(({ title }) => `[[:${title}]]`).join(' • ');
-  const websiteText = allOtherLogs.filter(({ text }) => text === WEBSITE_FOR_VISIT).map(({ title }) => `[[:${title}]]`).join(' • ');
-  const searchErrorText = allOtherLogs.filter(({ text }) => text === SEARCH_ERROR).map(({ title }) => `[[:${title}]]`).join(' • ');
+  const notFoundText = allOtherLogs.filter(({ text }) => text === NOT_FOUND).map(({ title }) => `[[${escapeTitle(title)}]]`).join(' • ');
+  const disambiguationText = allOtherLogs.filter(({ text }) => text === DISAMBIGUATION).map(({ title }) => `[[${escapeTitle(title)}]]`).join(' • ');
+  const quotesText = allOtherLogs.filter(({ text }) => text === SELECTED_QOUTE).map(({ title }) => `[[${escapeTitle(title)}]]`).join(' • ');
+  const websiteText = allOtherLogs.filter(({ text }) => text === WEBSITE_FOR_VISIT).map(({ title }) => `[[${escapeTitle(title)}]]`).join(' • ');
+  const searchErrorText = allOtherLogs.filter(({ text }) => text === SEARCH_ERROR).map(({ title }) => `[[${escapeTitle(title)}]]`).join(' • ');
   const otherText = allOtherLogs.filter(({ error }) => !error)
     .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))
     .map(({ text }) => text).join(' • ');
