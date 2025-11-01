@@ -33,7 +33,7 @@
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^26.1.0",
     "openai": "^6.0.1",
-    "playwright": "^1.55.1",
+    "playwright": "^1.56.1",
     "tough-cookie": "^6.0.0"
   },
   "devDependencies": {
