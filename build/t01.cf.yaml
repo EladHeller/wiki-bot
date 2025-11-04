@@ -570,6 +570,67 @@ Resources:
   #     FilterPattern: Invoke Error
   #     LogGroupName: '/aws/lambda/archive-logs-function'
 
+  # Archive closed discussions
+  ArchiveClosedDiscussionsLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: archive-closed-discussions-function
+      Runtime: nodejs22.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/maintenance/closedDiscussionsArchiveBot/index.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
+
+  ArchiveClosedDiscussionsEventRule:
+    DependsOn:
+      - ArchiveClosedDiscussionsLambda
+    Type: AWS::Events::Rule
+    Properties:
+      Name: archive-closed-discussions-scheduler
+      ScheduleExpression: cron(0 7 ? * 1-5,7 *)
+      Targets:
+        - Id: archive-closed-discussions-function
+          Arn: !GetAtt ArchiveClosedDiscussionsLambda.Arn
+
+  ArchiveClosedDiscussionsInvokePermission:
+    DependsOn:
+      - ArchiveClosedDiscussionsEventRule
+      - ArchiveClosedDiscussionsLambda
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ArchiveClosedDiscussionsEventRule.Arn
+      FunctionName: archive-closed-discussions-function
+  # TODO:
+  # ArchiveClosedDiscussionsLogGroupInvokeLambdaPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !GetAtt SendEmailLambda.Arn
+  #     Action: lambda:InvokeFunction
+  #     Principal: logs.amazonaws.com
+  #     SourceAccount: !Ref AWS::AccountId
+  #     SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/archive-closed-discussions-function:*
+
+  # ArchiveClosedDiscussionsLogGroupFailedSubscription:
+  #   DependsOn:
+  #     - SendEmailLambda
+  #   Type: AWS::Logs::SubscriptionFilter
+  #   Properties:
+  #     DestinationArn: !GetAtt SendEmailLambda.Arn
+  #     FilterPattern: Invoke Error
+  #     LogGroupName: /aws/lambda/archive-closed-discussions-function
+
   # Scripts lambda
   RunScriptsLambda:
     DependsOn:
