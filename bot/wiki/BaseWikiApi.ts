@@ -21,7 +21,12 @@ function validateConfig(config: Partial<WikiApiConfig> = defaultConfig): config 
 
 export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWikiApi {
   const jar = new CookieJar();
-  const client = wrapper(axios.create({ jar }));
+  const client = wrapper(axios.create({
+    jar,
+    headers: {
+      'User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
+    },
+  }));
 
   const actualConfig = { ...defaultConfig, ...apiConfig };
   let token: string;
