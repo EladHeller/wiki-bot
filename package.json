@@ -30,7 +30,7 @@
   "dependencies": {
     "@hebcal/core": "^5.10.1",
     "axios": "^1.12.2",
-    "axios-cookiejar-support": "^5.0.5",
+    "axios-cookiejar-support": "^6.0.4",
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^26.1.0",
     "openai": "^6.0.1",
