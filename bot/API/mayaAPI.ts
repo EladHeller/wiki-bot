@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosResponse } from 'axios';
 
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';
 const jsonAllLink = 'https://mayaapi.tase.co.il/api/company/alldetails?companyId=';
@@ -201,7 +201,7 @@ export async function getIndicesList(): Promise<Index[]> {
 export async function getIndexStocks(indexId: string): Promise<Stock[]> {
   try {
     const items: Array<any> = [];
-    let response: axios.AxiosResponse<any, any> | null = null;
+    let response: AxiosResponse<any, any> | null = null;
     let pageNum = 1;
     while (!response || response.data?.Items?.length === 30) {
       response = await axios(indexComponentsApiUrl, {

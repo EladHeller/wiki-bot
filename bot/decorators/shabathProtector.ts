@@ -1,7 +1,7 @@
 /* eslint-disable no-bitwise */
-const {
+import {
   HDate, HebrewCalendar, Zmanim, flags, Location,
-} = require('@hebcal/core');
+} from '@hebcal/core';
 
 const JERUSALEM_LATITUDE = 31.7784;
 const JERUSALEM_LONGITUDE = 35.2354;
@@ -9,7 +9,7 @@ const JERUSALEM_LONGITUDE = 35.2354;
 export function isAfterShabathOrHolliday() {
   const jerusalemGeo = new Location(JERUSALEM_LATITUDE, JERUSALEM_LONGITUDE, true, 'Asia/Jerusalem');
   const now = new Date();
-  const zman = new Zmanim(jerusalemGeo, now);
+  const zman = new Zmanim(jerusalemGeo, now, false);
   // 60 minutes after sunset to be on the safe side
   const isBeforeEnd = now < zman.sunsetOffset(60);
   const day = new HDate(new Date(now));
@@ -31,7 +31,7 @@ export default function shabathProtectorDecorator(cb: (...args: any[]) => any) {
   return async function shabathProtector(...args: any[]) {
     const jerusalemGeo = new Location(JERUSALEM_LATITUDE, JERUSALEM_LONGITUDE, true, 'Asia/Jerusalem');
     const now = new Date();
-    const zman = new Zmanim(jerusalemGeo, now);
+    const zman = new Zmanim(jerusalemGeo, now, false);
     // 60 minutes before sunset to be on the safe side
     const isAfterStart = now > zman.sunsetOffset(-60);
     // 60 minutes after sunset to be on the safe side

@@ -2,12 +2,13 @@
   "name": "wiki-bot",
   "version": "1.0.0",
   "description": "wiki-bot",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "lint:test": "eslint './**/*.ts' './send-email/**/*.mjs'  --max-warnings 0",
     "type-check": "tsc --noEmit",
-    "test": "jest --coverage",
-    "build": "rm -rf dist && tsc --project tsconfig.build.json",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "build": "rm -rf dist && tsc --project tsconfig.build.json && node scripts/add-js-extensions.mjs",
     "update-env": "tsx --env-file=.env ./build/update-env.ts",
     "docker-build": "sh ./build/wiki-bot-playwright/build.sh",
     "docker-run": "sh ./build/wiki-bot-playwright/run.sh",
@@ -55,6 +56,7 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jest": "^29.0.1",
     "jest": "^30.2.0",
+    "ts-jest": "^29.2.5",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2",
     "zx": "^8.8.5"
