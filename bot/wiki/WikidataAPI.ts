@@ -24,24 +24,6 @@ export interface IWikiDataAPI {
       Promise<WikiDataSetReferenceResponse>;
 }
 
-export async function querySparql(query: string): Promise<Record<string, string>[]> {
-  const res = await fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}&format=json`, {
-    headers: {
-      'User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
-    },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to query sql: ${await res.text()}`);
-  }
-  const data = await res.json();
-  console.debug(`Response returns from ${res.headers.get('x-served-by')} host`);
-  return data.results.bindings.map(
-    (binding: Record<string, { value: string }>) => Object.fromEntries(
-      Object.entries(binding).map((entry) => [entry[0], entry[1].value]),
-    ),
-  );
-}
-
 export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultWikiDataConfig): IWikiDataAPI {
   const baseApi = BaseWikiApi(apiConfig);
   let token: string;

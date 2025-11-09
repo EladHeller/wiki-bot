@@ -3,9 +3,8 @@ import {
 } from '../API/mayaAPI';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi from '../wiki/WikiApi';
-import { querySparql } from '../wiki/WikidataAPI';
-import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
 import { promiseSequence } from '../utilities';
+import { companiesWithMayaId, type CompaniesWithMayaIdResult } from '../wiki/WikidataSparql';
 
 type CompanyData = {
   title: string;
@@ -17,13 +16,13 @@ async function main() {
   const api = WikiApi();
   await api.login();
   console.log('Login success');
-  const query = companiesWithMayaId();
-  const wikiDataResults = await querySparql(query);
+  const wikiDataResults = await companiesWithMayaId();
+  const validResults = wikiDataResults.filter((result): result is CompaniesWithMayaIdResult & { articleName: string } => typeof result.articleName === 'string');
   const results: CompanyData[] = [];
-  await promiseSequence(1, wikiDataResults.map((result) => async () => {
+  await promiseSequence(1, validResults.map((result) => async () => {
     const allDetails = await getAllDetails(result.mayaId);
     if (!allDetails) {
-      console.error(`No details for company ${result.companyName}`);
+      console.error(`No details for company ${result.mayaId}`);
       return;
     }
     const { content, revid } = await api.articleContent(result.articleName);

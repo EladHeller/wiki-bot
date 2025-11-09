@@ -3,8 +3,7 @@ import { getFinanceReport } from '../API/mayaAPI';
 import { WikiPage } from '../types';
 import { buildTable } from '../wiki/wikiTableParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
-import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
-import { querySparql } from '../wiki/WikidataAPI';
+import { companiesWithMayaId, CompaniesWithMayaIdResult } from '../wiki/WikidataSparql';
 // https://market.tase.co.il/he/market_data/company/1691/financial_reports
 // https://market.tase.co.il/he/market_data/company/1480/financial_reports
 
@@ -57,10 +56,10 @@ export default async function yearlyReport(year: string) {
   await api.login();
   console.log('Login success');
 
-  const query = companiesWithMayaId();
-  const results = await querySparql(query);
+  const results = await companiesWithMayaId();
+  const validResults = results.filter((result): result is CompaniesWithMayaIdResult & { articleName: string } => typeof result.articleName === 'string');
   const companies: Company[] = [];
-  for (const result of results) {
+  for (const result of validResults) {
     const maya = await getFinanceReport(result.mayaId);
     const wikiContent = await api.articleContent(result.articleName);
     const w: WikiPage = {
