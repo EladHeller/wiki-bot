@@ -4,9 +4,8 @@ import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getGoogleFinanceLinks } from '../wiki/SharedWikiApiFunctions';
-import { querySparql } from '../wiki/WikidataAPI';
-import { companiesWithTicker } from '../wiki/WikiDataSqlQueries';
 import { buildTable } from '../wiki/wikiTableParser';
+import { companiesWithTicker } from '../wiki/WikidataSparql';
 
 const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסאית (ארצות הברית)';
 const marketValueTemplate = `${baseMarketValueTemplate}/נתונים`;
@@ -50,7 +49,7 @@ export async function checkWikidata() {
   const api = WikiApi();
   await api.login();
   console.log('Login success');
-  const wikidataResults = await querySparql(companiesWithTicker());
+  const wikidataResults = await companiesWithTicker();
   const results = await getGoogleFinanceLinks(api);
   const companiesWithTickers: Record<string, {
     wikiDataTickers: {companyId: string, exchange: string, ticker}[], templateTicker: string

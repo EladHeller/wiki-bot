@@ -6,8 +6,7 @@ import { getUsersFromTagParagraph } from '../wiki/paragraphParser';
 import { getLocalDate } from '../utilities';
 import { isTwoWordsIsTheSamePerson } from '../API/openai';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
-import { querySparql } from '../wiki/WikidataAPI';
-import { companiesWithMayaId } from '../wiki/WikiDataSqlQueries';
+import { companiesWithMayaId, CompaniesWithMayaIdResult } from '../wiki/WikidataSparql';
 
 type JobChange = '-' | 'לא קיים בערך' | 'כן' | 'כנראה שכן' | 'כנראה שלא'| 'לא ידוע' | 'לא קיים במאי״ה';
 const notApplicapble: JobChange[] = ['לא קיים במאי״ה', 'לא ידוע', '-'];
@@ -283,10 +282,11 @@ async function tagUsers(api: IWikiApi) {
 async function getManagmentDetails(
   api: IWikiApi,
   tableData: ManagementDetails[],
-  wikiDataResults: Record<string, string>[],
+  wikiDataResults: CompaniesWithMayaIdResult[],
 ) {
+  const validResults = wikiDataResults.filter((result): result is CompaniesWithMayaIdResult & { articleName: string } => typeof result.articleName === 'string');
   const managementDetails:ManagementDetails[] = [];
-  for (const result of wikiDataResults) {
+  for (const result of validResults) {
     try {
       const { mayaId, articleName } = result;
       const res = await getAllDetails(mayaId);
@@ -320,8 +320,7 @@ export async function companyDetailsBot() {
   await api.login();
   console.log('Login success');
   const { data, tableRevid } = await getTableData(api);
-  const query = companiesWithMayaId();
-  const wikiDataResults = await querySparql(query);
+  const wikiDataResults = await companiesWithMayaId();
   const managementDetails = await getManagmentDetails(api, data, wikiDataResults);
 
   const updateResult = await saveCompanyDetails(api, tableRevid, managementDetails);
