@@ -4,7 +4,8 @@ import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from 
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import parseTableText from '../wiki/wikiTableParser';
 
-const companyNamesPage = 'תבנית:חברות מאיה/נתונים';
+const companyWikiPageTemplate = 'תבנית:חברות מאיה/נתונים';
+const companyNameTemplate = 'תבנית:חברות מאיה/שם מלא/נתונים';
 const baseIndexesTemplatePage = 'תבנית:מדד תל אביב בסיס';
 const indexesTemplatePage = `${baseIndexesTemplatePage}/נתונים`;
 const companyIndexesTemplatesBase = 'תבנית:מדדי הבורסה לניירות ערך בתל אביב';
@@ -16,16 +17,38 @@ type IndexData = {
   indexStocks: string[];
 };
 
+async function getCompanysData(api: IWikiApi, templateName: string) {
+  const { content } = await api.articleContent(templateName);
+  const templateData = findTemplate(content, '#switch: {{{ID}}}', templateName);
+  return getTemplateKeyValueData(templateData);
+}
+
+function getCompanyShowName(
+  companyId: number,
+  companyIdArticleDict: Record<string, string>,
+  companyIdNameDict: Record<string, string>,
+): string | null {
+  if (companyIdArticleDict[companyId]) {
+    return `[[${companyIdArticleDict[companyId]}]]`;
+  }
+  if (companyIdNameDict[companyId]) {
+    return companyIdNameDict[companyId];
+  }
+  return null;
+}
+
 async function getIndexes(api: IWikiApi) {
   const companyIndexesDict: Record<string, string[]> = {};
-  const { content: comapniesContent } = await api.articleContent(companyNamesPage);
-  const templateData = findTemplate(comapniesContent, '#switch: {{{ID}}}', companyNamesPage);
-  const companyIdNameDict = getTemplateKeyValueData(templateData);
+  const companyIdArticleDict = await getCompanysData(api, companyWikiPageTemplate);
+  const companyIdNameDict = await getCompanysData(api, companyNameTemplate);
   const data: IndexData[] = [];
   const indexes = await getIndicesList();
   for (const index of indexes) {
     const indexStocks = await getIndexStocks(index.IndexId ?? index.Id);
-    const stocks = indexStocks.map((stock) => (companyIdNameDict[stock.CompanyId] ? `[[${companyIdNameDict[stock.CompanyId]}]]` : stock.ShortName));
+    const stocks = indexStocks.map(
+      (stock) => getCompanyShowName(stock.CompanyId, companyIdArticleDict, companyIdNameDict)
+      ?? stock.ShortName,
+    );
     const uniqueStocks = [...new Set(stocks)];
     data.push({
       indexName: index.IndexHebName,

@@ -1,11 +1,17 @@
 export function companiesWithMayaId() {
   return `
 SELECT ?entityId ?mayaId ?articleName WHERE {
-  ?entity wdt:P10817 ?mayaId.
-  ?article schema:about ?entity;
-    schema:isPartOf <https://he.wikipedia.org/>;
-    schema:name ?articleName.
-  BIND(STRAFTER(STR(?entity), "entity/") AS ?entityId)
+  ?entity wdt:P10817 ?mayaId .
+
+  OPTIONAL {
+    ?article schema:about ?entity ;
+             schema:name ?articleName ;
+             schema:isPartOf <https://he.wikipedia.org/> .
+  }
+
+  BIND(STRAFTER(STR(?entity), "entity/") AS ?entityId) .
+
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "he,en" ; }
 }`;
 }
 

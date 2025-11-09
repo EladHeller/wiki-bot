@@ -34,7 +34,7 @@ export async function querySparql(query: string): Promise<Record<string, string>
     throw new Error(`Failed to query sql: ${await res.text()}`);
   }
   const data = await res.json();
-  console.log(`DEBUG LOG: Response returns from ${res.headers.get('x-served-by')} host`);
+  console.debug(`Response returns from ${res.headers.get('x-served-by')} host`);
   return data.results.bindings.map(
     (binding: Record<string, { value: string }>) => Object.fromEntries(
       Object.entries(binding).map((entry) => [entry[0], entry[1].value]),
