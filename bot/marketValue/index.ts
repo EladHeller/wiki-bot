@@ -29,7 +29,7 @@ export async function updateTemplate(
   const oldTemplate = findTemplate(content, '#switch: {{{ID}}}', templateName);
   const relevantCompanies = marketValues.filter((data) => {
     const value = data[keys[1]];
-    return typeof value !== 'number' || value > 0;
+    return value != null && value !== '' && (typeof value !== 'number' || value > 0);
   });
   const companies = relevantCompanies.map(
     (marketValue) => {
@@ -78,7 +78,7 @@ async function updateTable(api: IWikiApi, marketValues: MayaMarketValue[]) {
     marketValues.sort((a, b) => a.id - b.id)
       .map((marketValue) => [
         marketValue.id.toString(),
-        `[[{{חברות מאיה|ID=${marketValue.id}}}]]`,
+        `{{#if:{{{חברות מאיה|ID=${marketValue.id}}}|[[{{חברות מאיה|ID=${marketValue.id}}}]]|-}}`,
         `[https://maya.tase.co.il/company/${marketValue.id}?view=details {{חברות מאיה/שם מלא|ID=${marketValue.id}}}]`,
         `[[:d:${marketValue.wikiDataId}|{{חברות מאיה/ויקינתונים|ID=${marketValue.id}}}]]`,
       ]),
