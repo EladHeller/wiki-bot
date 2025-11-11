@@ -77,7 +77,7 @@ async function updateTable(api: IWikiApi, marketValues: MayaMarketValue[]) {
     marketValues.sort((a, b) => a.id - b.id)
       .map((marketValue) => [
         marketValue.id.toString(),
-        `{{#if:{{{חברות מאיה|ID=${marketValue.id}}}|[[{{חברות מאיה|ID=${marketValue.id}}}]]|-}}`,
+        `{{#if:{{חברות מאיה|ID=${marketValue.id}}}|[[{{חברות מאיה|ID=${marketValue.id}}}]]|-}}`,
         `[https://maya.tase.co.il/company/${marketValue.id}?view=details {{חברות מאיה/שם מלא|ID=${marketValue.id}}}]`,
         `[[:d:${marketValue.wikiDataId}|{{חברות מאיה/ויקינתונים|ID=${marketValue.id}}}]]`,
       ]),
