@@ -3,18 +3,18 @@ import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import getDrafts from './getDrafts';
 
 async function removeDraftsFromCategory(draft: string, api: IWikiApi) {
-  const { content, revid } = await api.articleContent(draft);
-  if (!content || !revid) {
-    console.error(`Missing content or revid for draft ${draft}`);
-    return;
+  try {
+    const { content, revid } = await api.articleContent(draft);
+    const newContent = content.replaceAll('[[קטגוריה:', '[[:קטגוריה:');
+    if (newContent === content) {
+      console.log(`No changes for draft ${draft}, skipping`);
+      return;
+    }
+    await api.edit(draft, 'הסרת דף טיוטה מקטגוריות של מרחב הערכים', newContent, revid);
+    console.log(`Removed draft ${draft} from categories`);
+  } catch (error) {
+    console.error(`Error removing draft ${draft}`, error);
   }
-  const newContent = content.replaceAll('[[קטגוריה:', '[[:קטגוריה:');
-  if (newContent === content) {
-    console.log(`No changes for draft ${draft}, skipping`);
-    return;
-  }
-  await api.edit(draft, 'הסרת דף טיוטה מקטגוריות של מרחב הערכים', newContent, revid);
-  console.log(`Removed draft ${draft} from categories`);
 }
 
 export async function removeDraftsFromCategories() {
