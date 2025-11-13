@@ -862,3 +862,46 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn: !GetAtt TagBotEventRule.Arn
       FunctionName: tag-bot-function
+
+  # Drafts on wrong categories
+  DraftsOnWrongCategoriesLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: drafts-on-wrong-categories-function
+      Runtime: nodejs22.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/maintenance/removeDraftsFromCategories/index.main
+      Timeout: 900
+      MemorySize: 2048
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
+
+  DraftsOnWrongCategoriesEventRule:
+    DependsOn:
+      - DraftsOnWrongCategoriesLambda
+    Type: AWS::Events::Rule
+    Properties:
+      Name: drafts-on-wrong-categories-scheduler
+      ScheduleExpression: cron(0 7 5,20 * ? *)
+      Targets:
+        - Id: drafts-on-wrong-categories-function
+          Arn: !GetAtt DraftsOnWrongCategoriesLambda.Arn
+
+    DraftsOnWrongCategoriesInvokePermission:
+    DependsOn:
+      - DraftsOnWrongCategoriesEventRule
+      - DraftsOnWrongCategoriesLambda
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt DraftsOnWrongCategoriesEventRule.Arn
+      FunctionName: drafts-on-wrong-categories-function
