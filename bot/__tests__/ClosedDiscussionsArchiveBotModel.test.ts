@@ -25,9 +25,9 @@ describe('closedDiscussionsArchiveBotModel', () => {
 |-
 ! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט
 |-
-| ויקיפדיה:מזנון || טופל,הועבר || 14 || רבעון || ויקיפדיה:מזנון
+| [[ויקיפדיה:מזנון]] || טופל,הועבר || 14 || רבעון || [[ויקיפדיה:מזנון]]
 |-
-| ויקיפדיה:בקשות || נפתר || 7 || תבנית ארכיון || ויקיפדיה:בקשות/ניווט
+| [[ויקיפדיה:בקשות]] || נפתר || 7 || תבנית ארכיון || [[ויקיפדיה:בקשות/ניווט]]
 |}`;
 
       wikiApi.articleContent.mockResolvedValue({ content: tableContent, revid: 1 });
@@ -50,6 +50,37 @@ describe('closedDiscussionsArchiveBotModel', () => {
         archiveType: 'תבנית ארכיון',
         archiveNavigatePage: 'ויקיפדיה:בקשות/ניווט',
       });
+    });
+
+    it('should throw error for invalid page link', async () => {
+      const tableContent = `{| class="wikitable"
+|-
+! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט
+|-
+| InvalidPageWithoutBrackets || טופל || 14 || רבעון || [[ויקיפדיה:מזנון]]
+|}`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: tableContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await expect(model.getPagesToArchive()).rejects.toThrow('Invalid page: InvalidPageWithoutBrackets');
+    });
+
+    it('should handle null archiveNavigatePage when link is invalid', async () => {
+      const tableContent = `{| class="wikitable"
+|-
+! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט
+|-
+| [[ויקיפדיה:מזנון]] || טופל || 14 || רבעון || InvalidNavigatePageWithoutBrackets
+|}`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: tableContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const pages = await model.getPagesToArchive();
+
+      expect(pages).toHaveLength(1);
+      expect(pages[0].archiveNavigatePage).toBeNull();
     });
   });
 

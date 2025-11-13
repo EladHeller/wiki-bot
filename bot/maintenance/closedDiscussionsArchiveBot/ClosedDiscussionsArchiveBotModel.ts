@@ -3,6 +3,7 @@ import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser
 import { getAllParagraphs } from '../../wiki/paragraphParser';
 import parseTableText from '../../wiki/wikiTableParser';
 import { getArchiveTitle } from '../../utilities/archiveUtils';
+import { getInnerLink } from '../../wiki/wikiLinkParser';
 
 export type ArchiveType = 'רבעון' | 'תבנית ארכיון';
 
@@ -11,7 +12,7 @@ export type PageToArchive = {
   statuses: string[];
   daysAfterLastActivity: number;
   archiveType: ArchiveType;
-  archiveNavigatePage: string;
+  archiveNavigatePage: string | null;
 };
 
 export interface IClosedDiscussionsArchiveBotModel {
@@ -150,14 +151,21 @@ export default function ClosedDiscussionsArchiveBotModel(
     const { content } = await getContent(wikiApi, 'ויקיפדיה:בוט/ארכוב דיונים שהסתיימו');
     const parsedTable = parseTableText(content)[0];
     return parsedTable
-      .rows.filter((row) => row.fields.length === 5)
-      .map((row) => ({
-        page: row.fields[0] as string,
-        statuses: (row.fields[1] as string).split(',').map((status) => status.trim()) as string[],
-        daysAfterLastActivity: parseInt(row.fields[2] as string, 10),
-        archiveType: row.fields[3] as ArchiveType,
-        archiveNavigatePage: row.fields[4] as string,
-      }));
+      .rows.filter((row) => row.fields.length === 5 && !row.isHeader)
+      .map((row) => {
+        const page = getInnerLink(row.fields[0] as string)?.link;
+        if (!page) {
+          throw new Error(`Invalid page: ${row.fields[0]}`);
+        }
+        const archiveNavigatePage = getInnerLink(row.fields[4] as string)?.link ?? null;
+        return {
+          page,
+          statuses: (row.fields[1] as string).split(',').map((status) => status.trim()) as string[],
+          daysAfterLastActivity: parseInt(row.fields[2] as string, 10),
+          archiveType: (row.fields[3] as ArchiveType),
+          archiveNavigatePage,
+        };
+      });
   }
 
   async function getArchivableParagraphs(
@@ -213,7 +221,7 @@ export default function ClosedDiscussionsArchiveBotModel(
             existingContent.revid,
           );
         } else {
-          const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${paragraphs.join('\n\n')}`;
+          const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${paragraphs.join('\n')}`;
           await wikiApi.create(archivePageName, 'ארכוב דיונים שהסתיימו', newContent);
         }
       }),

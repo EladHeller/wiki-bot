@@ -29,7 +29,7 @@ describe('archiveParagraph', () => {
 
   it('should return an error if no active archive page is found', async () => {
     api.info.mockResolvedValue([{ missing: '' }]);
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
 
     const result = await archiveParagraph(api, archiveBox, 123, 'pageTitle', 'paragraphContent', 'summary', 'user');
 
@@ -41,7 +41,7 @@ describe('archiveParagraph', () => {
     api.articleContent.mockResolvedValue({ content: 'existingContent', revid: 456 });
     api.edit.mockResolvedValue({});
 
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = 'paragraphContent';
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'user');
@@ -68,7 +68,7 @@ describe('archiveParagraph', () => {
     api.edit.mockResolvedValue({});
 
     const pageTitle = 'pageTitle';
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[/archiveBoxContent]]}}';
+    const archiveBox = '{{תיבת ארכיון|[[/archiveBoxContent]]}}';
     const paragraphContent = 'paragraphContent';
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, pageTitle, paragraphContent, 'summary', 'user');
@@ -96,7 +96,7 @@ describe('archiveParagraph', () => {
     api.articleContent.mockResolvedValue({ content: 'existingContent', revid: 456 });
     api.edit.mockResolvedValue({});
 
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `paragraphContent\n:@[[משתמש:Sapper-bot]] ארכב: ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson');
@@ -125,7 +125,7 @@ describe('archiveParagraph', () => {
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
     api.edit.mockResolvedValue({});
 
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
@@ -165,7 +165,7 @@ ${statusTemplate}
     api.info.mockResolvedValueOnce([{ missing: '1' }]);
     api.edit.mockResolvedValue({});
 
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
@@ -203,7 +203,7 @@ ${statusTemplate}
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
     api.edit.mockResolvedValue({});
 
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
@@ -242,7 +242,7 @@ ${statusTemplate}
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
     api.edit.mockResolvedValue({});
 
-    const archiveBox = '{{תיבת ארכיון|תוכן=[[archiveBoxContent]]}}';
+    const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
