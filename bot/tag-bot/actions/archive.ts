@@ -1,25 +1,7 @@
-import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
+import { findTemplate } from '../../wiki/newTemplateParser';
 import { IWikiApi } from '../../wiki/WikiApi';
-import { getInnerLink, getInnerLinks } from '../../wiki/wikiLinkParser';
-
-async function getLastActiveLink(
-  api: IWikiApi,
-  archiveBoxContent: string,
-  pageTitle: string,
-): Promise<string | null> {
-  const links = getInnerLinks(archiveBoxContent);
-  const reversedLinks = links.reverse();
-  for (const link of reversedLinks) {
-    const linkTitle = link.link;
-    const archiveTitle = linkTitle.startsWith('/') ? `${pageTitle}${linkTitle}` : linkTitle;
-    const articleContent = await api.info([archiveTitle]);
-    if (articleContent[0]?.missing == null) {
-      return archiveTitle;
-    }
-  }
-
-  return null;
-}
+import { getInnerLink } from '../../wiki/wikiLinkParser';
+import { getArchiveTitle } from '../../utilities/archiveUtils';
 
 const archiveCommandRegex = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב:.*/im;
 const archiveCommandRegexGlobal = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב:.*/gim;
@@ -41,27 +23,6 @@ async function regularArchive(
   await api.edit(archiveTitle, summary, `${archiveContent.content}\n${newContent}`, archiveContent.revid);
   await api.edit(pageTitle, summary, pageContent.replace(paragraphContent, ''), pageRevId);
   return { success: 'הארכוב בוצע בהצלחה' };
-}
-
-async function getArchiveTitle(
-  api: IWikiApi,
-  pageContent: string,
-  pageTitle: string,
-): Promise<{ archiveTitle: string } | { error: string }> {
-  const archiveBox = findTemplate(pageContent, 'תיבת ארכיון', pageTitle);
-  if (!archiveBox) {
-    return { error: 'תיבת ארכיון לא נמצאה' };
-  }
-  const [archiveBoxContent] = getTemplateArrayData(archiveBox, 'תיבת ארכיון', pageTitle);
-  if (!archiveBoxContent) {
-    return { error: 'התוכן של תיבת הארכיון לא נמצא' };
-  }
-  const archiveTitle = await getLastActiveLink(api, archiveBoxContent, pageTitle);
-  if (!archiveTitle) {
-    return { error: 'לא נמצא דף ארכיון פעיל' };
-  }
-
-  return { archiveTitle };
 }
 
 async function archiveTo(
@@ -115,7 +76,7 @@ export default async function archiveParagraph(
   requestedUser: string,
   [type, target]: (string | null)[] = [],
 ): Promise<{error: string} | {success: string}> {
-  const archiveTitleResult = await getArchiveTitle(api, pageContent, pageTitle);
+  const archiveTitleResult = await getArchiveTitle(api, pageContent, pageTitle, false);
   if ('error' in archiveTitleResult) {
     return { error: archiveTitleResult.error };
   }

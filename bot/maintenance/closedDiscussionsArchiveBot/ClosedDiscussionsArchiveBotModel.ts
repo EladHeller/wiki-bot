@@ -1,14 +1,31 @@
 import { IWikiApi } from '../../wiki/WikiApi';
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
 import { getAllParagraphs } from '../../wiki/paragraphParser';
+import parseTableText from '../../wiki/wikiTableParser';
+import { getArchiveTitle } from '../../utilities/archiveUtils';
+
+export type ArchiveType = 'רבעון' | 'תבנית ארכיון';
+
+export type PageToArchive = {
+  page: string;
+  statuses: string[];
+  daysAfterLastActivity: number;
+  archiveType: ArchiveType;
+  archiveNavigatePage: string;
+};
 
 export interface IClosedDiscussionsArchiveBotModel {
-  getArchivableParagraphs(pageTitle: string): Promise<string[]>;
-  archive(pageTitle: string, archivableParagraphs: string[]): Promise<void>;
+  getPagesToArchive(): Promise<PageToArchive[]>;
+  getArchivableParagraphs(pageTitle: string, validStatuses: string[]): Promise<string[]>;
+  archive(
+    pageTitle: string,
+    archivableParagraphs: string[],
+    archiveType: ArchiveType,
+    archiveNavigatePage: string,
+  ): Promise<void>;
 }
 
 const TEMPLATE_NAME = 'מצב';
-const VALID_STATUSES = ['הועבר', 'טופל'];
 
 const hebrewMonthNames: Record<string, number> = {
   ינואר: 0,
@@ -45,6 +62,7 @@ async function getContent(wikiApi: IWikiApi, title: string) {
 function hasValidStatusTemplate(
   paragraphContent: string,
   pageTitle: string,
+  validStatuses: string[],
 ): boolean {
   const statusTemplate = findTemplate(paragraphContent, TEMPLATE_NAME, pageTitle);
   if (!statusTemplate) {
@@ -57,7 +75,7 @@ function hasValidStatusTemplate(
   }
 
   const firstParameter = templateData[0].trim();
-  return VALID_STATUSES.includes(firstParameter);
+  return validStatuses.includes(firstParameter);
 }
 
 function extractSignatureDates(paragraphContent: string): Date[] {
@@ -128,12 +146,29 @@ export default function ClosedDiscussionsArchiveBotModel(
   wikiApi: IWikiApi,
   inactivityDays: number = 14,
 ): IClosedDiscussionsArchiveBotModel {
-  async function getArchivableParagraphs(pageTitle: string): Promise<string[]> {
+  async function getPagesToArchive(): Promise<PageToArchive[]> {
+    const { content } = await getContent(wikiApi, 'ויקיפדיה:בוט/ארכוב דיונים שהסתיימו');
+    const parsedTable = parseTableText(content)[0];
+    return parsedTable
+      .rows.filter((row) => row.fields.length === 5)
+      .map((row) => ({
+        page: row.fields[0] as string,
+        statuses: (row.fields[1] as string).split(',').map((status) => status.trim()) as string[],
+        daysAfterLastActivity: parseInt(row.fields[2] as string, 10),
+        archiveType: row.fields[3] as ArchiveType,
+        archiveNavigatePage: row.fields[4] as string,
+      }));
+  }
+
+  async function getArchivableParagraphs(
+    pageTitle: string,
+    validStatuses: string[],
+  ): Promise<string[]> {
     const { content } = await getContent(wikiApi, pageTitle);
     const allParagraphs = getAllParagraphs(content, pageTitle);
 
     return allParagraphs.filter((paragraph) => {
-      if (!hasValidStatusTemplate(paragraph, pageTitle)) {
+      if (!hasValidStatusTemplate(paragraph, pageTitle, validStatuses)) {
         return false;
       }
 
@@ -142,11 +177,10 @@ export default function ClosedDiscussionsArchiveBotModel(
     });
   }
 
-  async function archive(pageTitle: string, archivableParagraphs: string[]): Promise<void> {
-    if (archivableParagraphs.length === 0) {
-      return;
-    }
-
+  async function archiveWithQuarterlyAlgorithm(
+    pageTitle: string,
+    archivableParagraphs: string[],
+  ): Promise<void> {
     const paragraphsWithDates = archivableParagraphs
       .map((paragraph) => ({
         paragraph,
@@ -184,6 +218,61 @@ export default function ClosedDiscussionsArchiveBotModel(
         }
       }),
     );
+  }
+
+  async function archiveWithTemplateAlgorithm(
+    pageTitle: string,
+    archivableParagraphs: string[],
+    archiveNavigatePage: string,
+  ): Promise<void> {
+    const navigateContent = await getContent(wikiApi, archiveNavigatePage);
+
+    const archiveTitleResult = await getArchiveTitle(
+      wikiApi,
+      navigateContent.content,
+      pageTitle,
+      true,
+    );
+
+    if ('error' in archiveTitleResult) {
+      throw new Error(`Failed to get archive title: ${archiveTitleResult.error}`);
+    }
+
+    const { archiveTitle } = archiveTitleResult;
+
+    const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
+
+    if (existingArchiveContent) {
+      const newContent = `${existingArchiveContent.content}\n\n${archivableParagraphs.join('\n\n')}`;
+      await wikiApi.edit(
+        archiveTitle,
+        'ארכוב דיונים שהסתיימו',
+        newContent,
+        existingArchiveContent.revid,
+      );
+    } else {
+      const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${archivableParagraphs.join('\n\n')}`;
+      await wikiApi.create(archiveTitle, 'ארכוב דיונים שהסתיימו', newContent);
+    }
+  }
+
+  async function archive(
+    pageTitle: string,
+    archivableParagraphs: string[],
+    archiveType: ArchiveType,
+    archiveNavigatePage: string,
+  ): Promise<void> {
+    if (archivableParagraphs.length === 0) {
+      return;
+    }
+
+    if (archiveType === 'רבעון') {
+      await archiveWithQuarterlyAlgorithm(pageTitle, archivableParagraphs);
+    } else if (archiveType === 'תבנית ארכיון') {
+      await archiveWithTemplateAlgorithm(pageTitle, archivableParagraphs, archiveNavigatePage);
+    } else {
+      throw new Error(`Unknown archive type: ${archiveType}`);
+    }
 
     const { content: originalContent, revid: originalRevid } = await getContent(wikiApi, pageTitle);
     const updatedContent = removeParagraphsFromContent(originalContent, archivableParagraphs);
@@ -193,5 +282,6 @@ export default function ClosedDiscussionsArchiveBotModel(
   return {
     getArchivableParagraphs,
     archive,
+    getPagesToArchive,
   };
 }
