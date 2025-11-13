@@ -30,7 +30,7 @@ export interface IWikiApi {
   rollback(title: string, user: string, summary: string): Promise<any>;
   undo(title: string, summary: string, revision: number): Promise<any>;
   categroyPages(category: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
-  categroyTitles(category: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
+  categroyTitles(category: string, limit?: number, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   protect(title: string, protections: string, expiry: string, reason: string): Promise<any>;
   deletePage(title: string, reason: string): Promise<any>;
   getArticlesWithTemplate(
@@ -355,9 +355,9 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
-  async function* categroyTitles(category: string, limit = 50) {
+  async function* categroyTitles(category: string, limit = 50, namespace = '*') {
     const props = encodeURIComponent('title|sortkeyprefix');
-    const path = `?action=query&format=json&list=categorymembers&cmtitle=Category:${encodeURIComponent(category)}&cmlimit=${limit}&cmprop=${props}`;
+    const path = `?action=query&format=json&list=categorymembers&cmnamespace=${namespace}&cmtitle=Category:${encodeURIComponent(category)}&cmlimit=${limit}&cmprop=${props}`;
 
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.categorymembers ?? {}));
   }
