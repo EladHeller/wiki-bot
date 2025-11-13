@@ -137,6 +137,7 @@ export default async function writeAdminBotLogs(
   api: IWikiApi,
   logs: ArticleLog[] | Paragraph[],
   logPageTitle: string,
+  tagAdminUsers = true,
 ) {
   const { content: logPageContent, revid } = await api.articleContent(logPageTitle);
   const { title, nightRun, titleAndSummary } = getLogTitleData(logPageContent ?? '');
@@ -149,7 +150,7 @@ export default async function writeAdminBotLogs(
   if (!content.length) {
     return;
   }
-  const adminUsersToTag = await getAdminUsersToTag(api);
+  const adminUsersToTag = tagAdminUsers ? await getAdminUsersToTag(api) : [];
   const specificUsersToTag = await getUsersToTagFromSpecialPage(logPageContent);
 
   const usersToTag = `${[...new Set([...adminUsersToTag, ...specificUsersToTag])].join(', ')} לידיעתכם. ~~~~`;
