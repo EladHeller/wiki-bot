@@ -895,7 +895,7 @@ Resources:
         - Id: drafts-on-wrong-categories-function
           Arn: !GetAtt DraftsOnWrongCategoriesLambda.Arn
 
-    DraftsOnWrongCategoriesInvokePermission:
+  DraftsOnWrongCategoriesInvokePermission:
     DependsOn:
       - DraftsOnWrongCategoriesEventRule
       - DraftsOnWrongCategoriesLambda
