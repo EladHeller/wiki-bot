@@ -1,5 +1,5 @@
 import { IWikiApi } from '../wiki/WikiApi';
-import { findTemplate, getTemplateArrayData } from '../wiki/newTemplateParser';
+import { findTemplate, getTemplateData } from '../wiki/newTemplateParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 
 export async function getLastActiveArchiveLink(
@@ -38,7 +38,8 @@ export async function getArchiveTitle(
   if (!archiveBox) {
     return { error: 'תיבת ארכיון לא נמצאה' };
   }
-  const [archiveBoxContent] = getTemplateArrayData(archiveBox, 'תיבת ארכיון', pageTitle);
+  const { arrayData } = getTemplateData(archiveBox, 'תיבת ארכיון', pageTitle);
+  const archiveBoxContent = arrayData?.[0];
   if (!archiveBoxContent) {
     return { error: 'התוכן של תיבת הארכיון לא נמצא' };
   }

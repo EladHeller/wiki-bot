@@ -17,7 +17,7 @@ export default async function closedDiscussionsArchiveBot() {
       pageConfig.page,
       archivableParagraphs,
       pageConfig.archiveType,
-      pageConfig.archiveNavigatePage,
+      pageConfig.archiveNavigatePage ?? pageConfig.page,
     );
     console.log(`Archived ${archivableParagraphs.length} paragraphs`);
   }
