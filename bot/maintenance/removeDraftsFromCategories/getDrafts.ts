@@ -115,10 +115,10 @@ function parseField(value: string): any {
     return value
       .slice(1, -1)
       .replace(/\\'/g, "'")
-      .replace(/\\\\/g, '\\')
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '\r')
-      .replace(/\\t/g, '\t');
+      .replace(/\\t/g, '\t')
+      .replace(/\\\\/g, '\\');
   }
   if (!Number.isNaN(Number(value)) && value !== '') {
     return Number(value);
