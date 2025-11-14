@@ -6,7 +6,7 @@ import { getArchiveTitle } from '../../utilities/archiveUtils';
 import { getInnerLink } from '../../wiki/wikiLinkParser';
 
 export type ArchiveType = 'רבעון' | 'תבנית ארכיון';
-
+const CONFIG_PAGE_TITLE = 'ויקיפדיה:בוט/ארכוב דיונים';
 export type PageToArchive = {
   page: string;
   statuses: string[];
@@ -148,7 +148,7 @@ export default function ClosedDiscussionsArchiveBotModel(
   inactivityDays: number = 14,
 ): IClosedDiscussionsArchiveBotModel {
   async function getPagesToArchive(): Promise<PageToArchive[]> {
-    const { content } = await getContent(wikiApi, 'ויקיפדיה:בוט/ארכוב דיונים שהסתיימו');
+    const { content } = await getContent(wikiApi, CONFIG_PAGE_TITLE);
     const parsedTable = parseTableText(content)[0];
     return parsedTable
       .rows.filter((row) => row.fields.length === 5 && !row.isHeader)
