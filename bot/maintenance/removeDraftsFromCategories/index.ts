@@ -1,10 +1,81 @@
 import shabathProtectorDecorator from '../../decorators/shabathProtector';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
-import getDrafts from './getDrafts';
+import getDrafts, { getDumpModificationTimes } from './getDrafts';
 import { ArticleLog } from '../../admin/types';
 import writeAdminBotLogs from '../../admin/log';
 
-async function removeDraftsFromCategory(draft: string, api: IWikiApi): Promise<ArticleLog | null> {
+const PAGE_TITLE = 'ויקיפדיה:בוט/הסרת דפי טיוטה מקטגוריות של מרחב הערכים';
+const LAST_RUN_PAGE = `${PAGE_TITLE}/ריצה אחרונה`;
+const MAX_TIME_DIFF_HOURS = 5;
+
+const getLastRunTime = async (api: IWikiApi): Promise<Date | null> => {
+  try {
+    const { content } = await api.articleContent(LAST_RUN_PAGE);
+    const trimmed = content.trim();
+    if (!trimmed) return null;
+    const date = new Date(trimmed);
+    if (Number.isNaN(date.getTime())) {
+      console.warn(`Invalid date format in ${LAST_RUN_PAGE}: "${trimmed}"`);
+      return null;
+    }
+    return date;
+  } catch (error) {
+    console.warn(`Could not read ${LAST_RUN_PAGE}:`, error);
+    return null;
+  }
+};
+
+const updateLastRunTime = async (api: IWikiApi, time: Date): Promise<void> => {
+  try {
+    const { revid } = await api.articleContent(LAST_RUN_PAGE);
+    await api.edit(LAST_RUN_PAGE, 'עדכון זמן ריצה אחרון', time.toISOString(), revid);
+    console.log(`Updated ${LAST_RUN_PAGE} with time: ${time.toISOString()}`);
+  } catch (error) {
+    console.error(`Failed to update ${LAST_RUN_PAGE}:`, error);
+  }
+};
+
+const validateDumpTimes = (
+  times: { page: Date; categorylinks: Date; linktarget: Date },
+  lastRunTime: Date | null,
+): { valid: boolean; reason?: string; latestTime: Date } => {
+  const allTimes = [times.page, times.categorylinks, times.linktarget];
+  const earliest = new Date(Math.min(...allTimes.map((t) => t.getTime())));
+  const latest = new Date(Math.max(...allTimes.map((t) => t.getTime())));
+
+  console.log(`Dump modification times:
+    page: ${times.page.toISOString()}
+    categorylinks: ${times.categorylinks.toISOString()}
+    linktarget: ${times.linktarget.toISOString()}
+    earliest: ${earliest.toISOString()}
+    latest: ${latest.toISOString()}`);
+
+  if (lastRunTime) {
+    console.log(`Last run time: ${lastRunTime.toISOString()}`);
+    if (earliest <= lastRunTime) {
+      return {
+        valid: false,
+        reason: `Earliest dump (${earliest.toISOString()}) is not after last run time (${lastRunTime.toISOString()})`,
+        latestTime: latest,
+      };
+    }
+  }
+
+  const timeDiffMs = latest.getTime() - earliest.getTime();
+  const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+
+  if (timeDiffHours > MAX_TIME_DIFF_HOURS) {
+    return {
+      valid: false,
+      reason: `Dumps are ${timeDiffHours.toFixed(2)} hours apart, exceeding maximum of ${MAX_TIME_DIFF_HOURS} hours`,
+      latestTime: latest,
+    };
+  }
+
+  return { valid: true, latestTime: latest };
+};
+
+const removeDraftsFromCategory = async (draft: string, api: IWikiApi): Promise<ArticleLog | null> => {
   try {
     const { content, revid } = await api.articleContent(draft);
     const newContent = content.replaceAll('[[קטגוריה:', '[[:קטגוריה:');
@@ -18,11 +89,25 @@ async function removeDraftsFromCategory(draft: string, api: IWikiApi): Promise<A
     console.error(`Error removing draft ${draft}`, error);
     return { title: draft, text: `[[${draft}]]`, error: true };
   }
-}
+};
 
 export async function removeDraftsFromCategories() {
   const api = WikiApi();
   await api.login();
+
+  console.log('Checking dump file modification times...');
+  const dumpTimes = await getDumpModificationTimes();
+  const lastRunTime = await getLastRunTime(api);
+
+  const validation = validateDumpTimes(dumpTimes, lastRunTime);
+
+  if (!validation.valid) {
+    console.log(`Skipping run: ${validation.reason}`);
+    return;
+  }
+
+  console.log('Validation passed, proceeding with draft removal...');
+
   const drafts = await getDrafts();
   const logs: ArticleLog[] = [];
   for (const draft of drafts) {
@@ -31,7 +116,10 @@ export async function removeDraftsFromCategories() {
       logs.push(log);
     }
   }
-  await writeAdminBotLogs(api, logs, 'ויקיפדיה:בוט/הסרת דפי טיוטה מקטגוריות של מרחב הערכים', false);
+
+  await writeAdminBotLogs(api, logs, PAGE_TITLE, false);
+  await updateLastRunTime(api, validation.latestTime);
+
   console.log('Done');
 }
 
