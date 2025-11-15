@@ -19,11 +19,11 @@ Resources:
             "rules": [
               {
                 "rulePriority": 1,
-                "description": "Keep only recent images",
+                "description": "Keep 2 most recent images",
                 "selection": {
                   "tagStatus": "any",
                   "countType": "imageCountMoreThan",
-                  "countNumber": 1
+                  "countNumber": 2
                 },
                 "action": {
                   "type": "expire"
