@@ -4,8 +4,6 @@ import { join } from 'path';
 import { createHash } from 'crypto';
 import { createInterface } from 'readline';
 
-/* -------------------- Constants & Config -------------------- */
-
 const CATEGORY_NS = 14 as const;
 const USER_NS = 2 as const;
 const DRAFT_NS = 118 as const;
@@ -27,8 +25,6 @@ const cfg = {
     ?? 'https://dumps.wikimedia.org/hewiki/latest/hewiki-latest-linktarget.sql.gz',
 };
 
-/* -------------------- Data Models -------------------- */
-
 type Title = string;
 type LtId = number;
 type PageId = number;
@@ -38,20 +34,12 @@ type PageNSMap = Map<PageId, NS>;
 type PageTitleMap = Map<PageId, Title>;
 type ChildrenMap = Map<LtId, LtId[]>;
 
-/* -------------------- Download & Decompress -------------------- */
-
-/**
- * Get temp file path for a URL (in /tmp for Lambda)
- */
 function getTempPath(url: string): string {
   const hash = createHash('md5').update(url).digest('hex').slice(0, 8);
   const filename = `dump-${hash}.sql`;
   return join('/tmp', filename);
 }
 
-/**
- * Download a gzipped file, decompress it to /tmp, and return the file path
- */
 async function downloadAndDecompress(url: string): Promise<string> {
   const tempPath = getTempPath(url);
 
@@ -64,10 +52,8 @@ async function downloadAndDecompress(url: string): Promise<string> {
     throw new Error(`No response body for ${url}`);
   }
 
-  // Ensure /tmp exists
   mkdirSync('/tmp', { recursive: true });
 
-  // Download and decompress, streaming to file
   const reader = response.body.getReader();
   const gunzip = createGunzip();
   const writeStream = createWriteStream(tempPath);
@@ -84,34 +70,30 @@ async function downloadAndDecompress(url: string): Promise<string> {
     gunzip.on('end', resolve);
   });
 
-  // Pump data through gunzip
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const { value, done: readerDone } = await reader.read();
-    if (readerDone) {
-      gunzip.end();
-      break;
+  const readAndWrite = async () => {
+    let readerDone = false;
+    while (!readerDone) {
+      const result = await reader.read();
+      readerDone = result.done;
+      if (!readerDone && result.value) {
+        gunzip.write(Buffer.from(result.value));
+      }
     }
-    gunzip.write(Buffer.from(value));
-  }
+    gunzip.end();
+  };
 
+  await readAndWrite();
   await Promise.all([gunzipError, writeFinished]);
 
   console.log(`Decompressed to ${tempPath}`);
   return tempPath;
 }
 
-/* -------------------- SQL Parser (Simple) -------------------- */
-
-/**
- * Parse a single field value
- */
 function parseField(value: string): any {
   if (value === 'NULL') {
     return null;
   }
   if (value.startsWith("'") && value.endsWith("'")) {
-    // String value - unescape
     return value
       .slice(1, -1)
       .replace(/\\'/g, "'")
@@ -126,10 +108,6 @@ function parseField(value: string): any {
   return value;
 }
 
-/**
- * Parse SQL INSERT VALUES - extract rows from INSERT statement
- * Uses streaming to handle large files without loading entire file into memory
- */
 async function* parseSqlFile(filePath: string): AsyncGenerator<any[]> {
   const fileStream = createReadStream(filePath, { encoding: 'utf8' });
   const rl = createInterface({
@@ -144,12 +122,10 @@ async function* parseSqlFile(filePath: string): AsyncGenerator<any[]> {
   for await (const line of rl) {
     buffer += line;
 
-    // Check if we're starting an INSERT statement
     if (!inInsert && buffer.includes('INSERT INTO')) {
       inInsert = true;
     }
 
-    // If we're in an INSERT and the line ends with semicolon, process it
     if (inInsert && buffer.includes(';')) {
       // Extract the INSERT statement
       const insertMatch = /INSERT\s+INTO\s+`[^`]+`\s+VALUES\s+(.+?);/is.exec(buffer);
@@ -157,16 +133,13 @@ async function* parseSqlFile(filePath: string): AsyncGenerator<any[]> {
       if (insertMatch) {
         const valuesSection = insertMatch[1];
 
-        // Split into individual rows
         const rowRegex = /\(([^)]+(?:\([^)]*\)[^)]*)*)\)/g;
-        let rowMatch;
+        const matches = Array.from(valuesSection.matchAll(rowRegex));
 
-        // eslint-disable-next-line no-cond-assign
-        while ((rowMatch = rowRegex.exec(valuesSection)) !== null) {
+        for (const rowMatch of matches) {
           const rowText = rowMatch[1];
           const fields: any[] = [];
 
-          // Parse fields within the row
           let field = '';
           let inString = false;
           let escapeNext = false;
@@ -183,7 +156,6 @@ async function* parseSqlFile(filePath: string): AsyncGenerator<any[]> {
               inString = !inString;
               field += char;
             } else if (char === ',' && !inString) {
-              // End of field
               fields.push(parseField(field.trim()));
               field = '';
             } else {
@@ -191,7 +163,6 @@ async function* parseSqlFile(filePath: string): AsyncGenerator<any[]> {
             }
           }
 
-          // Add last field
           if (field) {
             fields.push(parseField(field.trim()));
           }
@@ -203,7 +174,6 @@ async function* parseSqlFile(filePath: string): AsyncGenerator<any[]> {
         }
       }
 
-      // Clear buffer after processing
       buffer = '';
       inInsert = false;
     }
@@ -211,8 +181,6 @@ async function* parseSqlFile(filePath: string): AsyncGenerator<any[]> {
 
   console.log(`Parsed ${rowCount} total rows from file`);
 }
-
-/* -------------------- Pure-ish helpers -------------------- */
 
 const setPush = <T>(m: Map<T, T[]>, k: T, v: T): Map<T, T[]> => {
   const prev = m.get(k);
@@ -240,16 +208,9 @@ const bfs = (root: LtId, children: ChildrenMap): Set<LtId> => {
 const formatTitle = (ns: NS, title: Title): string => {
   if (ns === USER_NS) return `${cfg.ns2Label}:${title}`;
   if (ns === DRAFT_NS) return `${cfg.ns118Label}:${title}`;
-  // fallback (shouldn't happen; we filter to 2/118)
   return title;
 };
 
-/* -------------------- Loaders (download & parse) -------------------- */
-
-/**
- * Download and parse linktarget.sql.gz
- * Returns: (14,title) -> lt_id map, and root lt_id
- */
 async function downloadAndParseLinktarget(): Promise<{
   titleToLt: TitleToLt;
   rootLt: LtId;
@@ -261,18 +222,15 @@ async function downloadAndParseLinktarget(): Promise<{
   let categoryCount = 0;
 
   for await (const row of parseSqlFile(filePath)) {
-    // lt_id, lt_namespace, lt_title
-    if (row.length < 3) {
-      // eslint-disable-next-line no-continue
-      continue;
-    }
-    const ltId = row[0] as number;
-    const ltNamespace = row[1] as number;
-    const ltTitle = row[2] as string;
+    if (row.length >= 3) {
+      const ltId = row[0] as number;
+      const ltNamespace = row[1] as number;
+      const ltTitle = row[2] as string;
 
-    if (ltNamespace === CATEGORY_NS && ltTitle) {
-      categoryCount += 1;
-      titleToLt.set(ltTitle, ltId);
+      if (ltNamespace === CATEGORY_NS && ltTitle) {
+        categoryCount += 1;
+        titleToLt.set(ltTitle, ltId);
+      }
     }
   }
 
@@ -288,10 +246,6 @@ async function downloadAndParseLinktarget(): Promise<{
   return { titleToLt, rootLt };
 }
 
-/**
- * Download and parse page.sql.gz
- * Returns: page_id -> namespace map, and page_id -> title maps for needed namespaces
- */
 async function downloadAndParsePage(): Promise<{
   pageNS: PageNSMap;
   userDraftTitles: PageTitleMap;
@@ -304,24 +258,21 @@ async function downloadAndParsePage(): Promise<{
   const userDraftTitles: PageTitleMap = new Map();
   const catTitles: PageTitleMap = new Map();
 
-  // Parse INSERT statements - page table has many columns, we need: page_id (0), page_namespace (1), page_title (2)
   for await (const row of parseSqlFile(filePath)) {
-    if (row.length < 3) {
-      // eslint-disable-next-line no-continue
-      continue;
-    }
-    const pageId = row[0] as number;
-    const pageNamespace = row[1] as number;
-    const pageTitle = row[2] as string | null;
+    if (row.length >= 3) {
+      const pageId = row[0] as number;
+      const pageNamespace = row[1] as number;
+      const pageTitle = row[2] as string | null;
 
-    if (pageId && pageNamespace !== undefined) {
-      pageNS.set(pageId, pageNamespace);
+      if (pageId && pageNamespace !== undefined) {
+        pageNS.set(pageId, pageNamespace);
 
-      if (pageTitle) {
-        if (pageNamespace === USER_NS || pageNamespace === DRAFT_NS) {
-          userDraftTitles.set(pageId, pageTitle);
-        } else if (pageNamespace === CATEGORY_NS) {
-          catTitles.set(pageId, pageTitle);
+        if (pageTitle) {
+          if (pageNamespace === USER_NS || pageNamespace === DRAFT_NS) {
+            userDraftTitles.set(pageId, pageTitle);
+          } else if (pageNamespace === CATEGORY_NS) {
+            catTitles.set(pageId, pageTitle);
+          }
         }
       }
     }
@@ -330,10 +281,39 @@ async function downloadAndParsePage(): Promise<{
   return { pageNS, userDraftTitles, catTitles };
 }
 
-/**
- * Download and parse categorylinks.sql.gz
- * Returns: parent lt_id -> child lt_id map (for subcat), and page memberships
- */
+const processCategorylinkRow = (
+  row: any[],
+  pageNS: PageNSMap,
+  catTitles: PageTitleMap,
+  titleToLt: TitleToLt,
+  children: ChildrenMap,
+  pageMemberships: Array<{ pageId: PageId; catLt: LtId }>,
+): void => {
+  if (row.length < 7) return;
+
+  const clFrom = row[0] as number;
+  const clType = row[4] as string;
+  const clTargetId = row[6] as number | null;
+
+  if (!clFrom || !clType || !clTargetId) return;
+
+  if (clType === 'page') {
+    pageMemberships.push({ pageId: clFrom, catLt: clTargetId });
+    return;
+  }
+
+  if (clType !== 'subcat') return;
+  if (pageNS.get(clFrom) !== CATEGORY_NS) return;
+
+  const childTitle = catTitles.get(clFrom);
+  if (!childTitle) return;
+
+  const childLt = titleToLt.get(childTitle);
+  if (!childLt) return;
+
+  setPush(children, clTargetId, childLt);
+};
+
 async function downloadAndParseCategorylinks(
   pageNS: PageNSMap,
   catTitles: PageTitleMap,
@@ -349,53 +329,13 @@ async function downloadAndParseCategorylinks(
   const children: ChildrenMap = new Map();
   const pageMemberships: Array<{ pageId: PageId; catLt: LtId }> = [];
 
-  // categorylinks: cl_from, cl_to, cl_timestamp, cl_sortkey, cl_type, cl_collation, cl_target_id
-  // We need: cl_from (0), cl_type (4), cl_target_id (6)
   for await (const row of parseSqlFile(filePath)) {
-    if (row.length < 7) {
-      // eslint-disable-next-line no-continue
-      continue;
-    }
-    const clFrom = row[0] as number;
-    const clType = row[4] as string;
-    const clTargetId = row[6] as number | null;
-
-    if (!clFrom || !clType || !clTargetId) {
-      // eslint-disable-next-line no-continue
-      continue;
-    }
-
-    if (clType === 'subcat') {
-      // Build category hierarchy: parent lt_id -> child lt_id
-      if (pageNS.get(clFrom) !== CATEGORY_NS) {
-        // eslint-disable-next-line no-continue
-        continue;
-      }
-      const childTitle = catTitles.get(clFrom);
-      if (!childTitle) {
-        // eslint-disable-next-line no-continue
-        continue;
-      }
-      const childLt = titleToLt.get(childTitle);
-      if (!childLt) {
-        // eslint-disable-next-line no-continue
-        continue;
-      }
-      setPush(children, clTargetId, childLt);
-    } else if (clType === 'page') {
-      // Store page memberships
-      pageMemberships.push({ pageId: clFrom, catLt: clTargetId });
-    }
+    processCategorylinkRow(row, pageNS, catTitles, titleToLt, children, pageMemberships);
   }
 
   return { children, pageMemberships };
 }
 
-/* -------------------- Main Logic -------------------- */
-
-/**
- * Collect user/draft page titles under reachable categories
- */
 function collectUserDraftMembers(
   reachable: Set<LtId>,
   pageNS: PageNSMap,
@@ -403,7 +343,7 @@ function collectUserDraftMembers(
   pageMemberships: Array<{ pageId: PageId; catLt: LtId }>,
 ): string[] {
   const result: string[] = [];
-  const printed = new Set<PageId>(); // prevent duplicates
+  const printed = new Set<PageId>();
 
   for (const { pageId, catLt } of pageMemberships) {
     if (
@@ -424,35 +364,50 @@ function collectUserDraftMembers(
   return result;
 }
 
-/* -------------------- Main (composition) -------------------- */
+export async function getDumpModificationTimes(): Promise<{
+  page: Date;
+  categorylinks: Date;
+  linktarget: Date;
+}> {
+  const fetchLastModified = async (url: string): Promise<Date> => {
+    const response = await fetch(url, { method: 'HEAD' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch headers for ${url}: ${response.status}`);
+    }
+    const lastModified = response.headers.get('Last-Modified');
+    if (!lastModified) {
+      throw new Error(`No Last-Modified header for ${url}`);
+    }
+    return new Date(lastModified);
+  };
 
-/**
- * Main function: downloads SQL dumps, parses them, and returns formatted page titles
- * @returns Array of formatted page titles (e.g., ["User:Title", "Draft:Title"])
- */
+  const [page, categorylinks, linktarget] = await Promise.all([
+    fetchLastModified(cfg.pageDumpUrl),
+    fetchLastModified(cfg.categorylinksDumpUrl),
+    fetchLastModified(cfg.linktargetDumpUrl),
+  ]);
+
+  return { page, categorylinks, linktarget };
+}
+
 export default async function main(): Promise<string[]> {
-  // Download and parse linktarget and page first (can be done in parallel)
   const [{ titleToLt, rootLt }, { pageNS, userDraftTitles, catTitles }] = await Promise.all([
     downloadAndParseLinktarget(),
     downloadAndParsePage(),
   ]);
 
-  // Now parse categorylinks (needs linktarget and page data)
   const { children, pageMemberships } = await downloadAndParseCategorylinks(
     pageNS,
     catTitles,
     titleToLt,
   );
 
-  // Traverse from root
   const reachable = bfs(rootLt, children);
   console.log(`Found ${reachable.size} categories under root category "${cfg.rootTitle}"`);
 
-  // Count total pages under reachable categories
   const pagesUnderRoot = pageMemberships.filter(({ catLt }) => reachable.has(catLt)).length;
   console.log(`Found ${pagesUnderRoot} total pages under root category`);
 
-  // Collect user/draft page titles
   const result = collectUserDraftMembers(reachable, pageNS, userDraftTitles, pageMemberships);
 
   return result;
