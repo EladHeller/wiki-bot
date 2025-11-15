@@ -1,6 +1,6 @@
 import { IWikiApi } from '../../wiki/WikiApi';
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
-import { getAllParagraphs } from '../../wiki/paragraphParser';
+import { getAllParagraphs, parseParagraph } from '../../wiki/paragraphParser';
 import parseTableText from '../../wiki/wikiTableParser';
 import { getArchiveTitle } from '../../utilities/archiveUtils';
 import { getInnerLink } from '../../wiki/wikiLinkParser';
@@ -60,23 +60,46 @@ async function getContent(wikiApi: IWikiApi, title: string) {
   return result;
 }
 
+function getStatusTemplateData(
+  paragraphContent: string,
+  pageTitle: string,
+): { status: string; handler?: string } | null {
+  const statusTemplate = findTemplate(paragraphContent, TEMPLATE_NAME, pageTitle);
+  if (!statusTemplate) {
+    return null;
+  }
+
+  const templateData = getTemplateArrayData(statusTemplate, TEMPLATE_NAME, pageTitle);
+  if (templateData.length === 0) {
+    return null;
+  }
+
+  const status = templateData[0].trim();
+  const handler = templateData.length > 1 ? templateData[1].trim() : undefined;
+
+  return { status, handler };
+}
+
 function hasValidStatusTemplate(
   paragraphContent: string,
   pageTitle: string,
   validStatuses: string[],
 ): boolean {
-  const statusTemplate = findTemplate(paragraphContent, TEMPLATE_NAME, pageTitle);
-  if (!statusTemplate) {
+  const templateData = getStatusTemplateData(paragraphContent, pageTitle);
+  if (!templateData) {
     return false;
   }
 
-  const templateData = getTemplateArrayData(statusTemplate, TEMPLATE_NAME, pageTitle);
-  if (templateData.length === 0) {
-    return false;
-  }
+  return validStatuses.includes(templateData.status);
+}
 
-  const firstParameter = templateData[0].trim();
-  return validStatuses.includes(firstParameter);
+function createArchiveSummary(
+  paragraphName: string,
+  status: string,
+  handler?: string,
+): string {
+  const handlerPart = handler ? ` מטפל: ${handler}.` : '';
+  return `ארכוב "${paragraphName}", ${status}.${handlerPart}`;
 }
 
 function extractSignatureDates(paragraphContent: string): Date[] {
@@ -185,6 +208,47 @@ export default function ClosedDiscussionsArchiveBotModel(
     });
   }
 
+  async function archiveSingleParagraphQuarterly(
+    pageTitle: string,
+    paragraph: string,
+    firstDate: Date,
+  ): Promise<void> {
+    const archivePageName = getArchivePageName(pageTitle, firstDate);
+    const { name: paragraphName } = parseParagraph(paragraph);
+    const templateData = getStatusTemplateData(paragraph, pageTitle);
+
+    if (!templateData) {
+      console.warn(`No status template found for paragraph: ${paragraphName}`);
+      return;
+    }
+
+    const archiveSummary = createArchiveSummary(
+      paragraphName,
+      templateData.status,
+      templateData.handler,
+    );
+
+    const existingContent = await getContentOrNull(wikiApi, archivePageName);
+
+    if (existingContent) {
+      const newContent = `${existingContent.content}\n\n${paragraph}`;
+      await wikiApi.edit(
+        archivePageName,
+        archiveSummary,
+        newContent,
+        existingContent.revid,
+      );
+    } else {
+      const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${paragraph}`;
+      await wikiApi.create(archivePageName, archiveSummary, newContent);
+    }
+
+    // Remove the paragraph from the source page
+    const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, pageTitle);
+    const updatedContent = removeParagraphsFromContent(sourceContent, [paragraph]);
+    await wikiApi.edit(pageTitle, archiveSummary, updatedContent, sourceRevid);
+  }
+
   async function archiveWithQuarterlyAlgorithm(
     pageTitle: string,
     archivableParagraphs: string[],
@@ -196,36 +260,49 @@ export default function ClosedDiscussionsArchiveBotModel(
       }))
       .filter((item): item is { paragraph: string; firstDate: Date } => item.firstDate != null);
 
-    const paragraphsByArchivePage: Record<string, string[]> = paragraphsWithDates.reduce(
-      (acc, { paragraph, firstDate }) => {
-        const archivePageName = getArchivePageName(pageTitle, firstDate);
-        if (!acc[archivePageName]) {
-          acc[archivePageName] = [];
-        }
-        acc[archivePageName].push(paragraph);
-        return acc;
-      },
-      {},
+    for (const { paragraph, firstDate } of paragraphsWithDates) {
+      await archiveSingleParagraphQuarterly(pageTitle, paragraph, firstDate);
+    }
+  }
+
+  async function archiveSingleParagraphTemplate(
+    pageTitle: string,
+    paragraph: string,
+    archiveTitle: string,
+  ): Promise<void> {
+    const { name: paragraphName } = parseParagraph(paragraph);
+    const templateData = getStatusTemplateData(paragraph, pageTitle);
+
+    if (!templateData) {
+      console.warn(`No status template found for paragraph: ${paragraphName}`);
+      return;
+    }
+
+    const archiveSummary = createArchiveSummary(
+      paragraphName,
+      templateData.status,
+      templateData.handler,
     );
 
-    await Promise.all(
-      Object.entries(paragraphsByArchivePage).map(async ([archivePageName, paragraphs]) => {
-        const existingContent = await getContentOrNull(wikiApi, archivePageName);
+    const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
 
-        if (existingContent) {
-          const newContent = `${existingContent.content}\n\n${paragraphs.join('\n\n')}`;
-          await wikiApi.edit(
-            archivePageName,
-            'ארכוב דיונים שהסתיימו',
-            newContent,
-            existingContent.revid,
-          );
-        } else {
-          const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${paragraphs.join('\n')}`;
-          await wikiApi.create(archivePageName, 'ארכוב דיונים שהסתיימו', newContent);
-        }
-      }),
-    );
+    if (existingArchiveContent) {
+      const newContent = `${existingArchiveContent.content}\n\n${paragraph}`;
+      await wikiApi.edit(
+        archiveTitle,
+        archiveSummary,
+        newContent,
+        existingArchiveContent.revid,
+      );
+    } else {
+      const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${paragraph}`;
+      await wikiApi.create(archiveTitle, archiveSummary, newContent);
+    }
+
+    // Remove the paragraph from the source page
+    const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, pageTitle);
+    const updatedContent = removeParagraphsFromContent(sourceContent, [paragraph]);
+    await wikiApi.edit(pageTitle, archiveSummary, updatedContent, sourceRevid);
   }
 
   async function archiveWithTemplateAlgorithm(
@@ -248,19 +325,8 @@ export default function ClosedDiscussionsArchiveBotModel(
 
     const { archiveTitle } = archiveTitleResult;
 
-    const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
-
-    if (existingArchiveContent) {
-      const newContent = `${existingArchiveContent.content}\n\n${archivableParagraphs.join('\n\n')}`;
-      await wikiApi.edit(
-        archiveTitle,
-        'ארכוב דיונים שהסתיימו',
-        newContent,
-        existingArchiveContent.revid,
-      );
-    } else {
-      const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${archivableParagraphs.join('\n\n')}`;
-      await wikiApi.create(archiveTitle, 'ארכוב דיונים שהסתיימו', newContent);
+    for (const paragraph of archivableParagraphs) {
+      await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle);
     }
   }
 
@@ -281,10 +347,6 @@ export default function ClosedDiscussionsArchiveBotModel(
     } else {
       throw new Error(`Unknown archive type: ${archiveType}`);
     }
-
-    const { content: originalContent, revid: originalRevid } = await getContent(wikiApi, pageTitle);
-    const updatedContent = removeParagraphsFromContent(originalContent, archivableParagraphs);
-    await wikiApi.edit(pageTitle, 'ארכוב דיונים שהסתיימו', updatedContent, originalRevid);
   }
 
   return {
