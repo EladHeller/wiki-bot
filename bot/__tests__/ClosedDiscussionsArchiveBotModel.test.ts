@@ -17,6 +17,7 @@ describe('closedDiscussionsArchiveBotModel', () => {
 
   afterEach(() => {
     jest.setSystemTime(jest.getRealSystemTime());
+    jest.restoreAllMocks();
   });
 
   describe('getPagesToArchive', () => {
@@ -257,7 +258,7 @@ Invalid month: 12:00, 5 בטעות 2025 (IDT)
   });
 
   describe('archive', () => {
-    it('should archive paragraphs to correct quarterly archive pages', async () => {
+    it('should archive paragraphs to correct quarterly archive pages with custom summaries', async () => {
       fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
 
       const pageContent = `
@@ -284,40 +285,35 @@ Too recent
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
 
-      // Mock getContentOrNull calls (archive pages don't exist)
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      // Mock final getContent call for source page
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      // Each paragraph triggers: archive page check, source page read for removal
+      // Q1 Discussion
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive doesn't exist
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page for removal
+      // Q2 Discussion
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive doesn't exist
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page for removal
 
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
-      // Should create two archive pages (Q1 and Q2)
-      expect(wikiApi.create).toHaveBeenCalledTimes(2);
-      expect(wikiApi.create).toHaveBeenCalledWith(
-        'TestPage/ארכיון ינואר-מרץ 2025',
-        'ארכוב דיונים שהסתיימו',
-        expect.stringContaining('{{ארכיון הדט}}'),
-      );
-      expect(wikiApi.create).toHaveBeenCalledWith(
-        'TestPage/ארכיון אפריל-יוני 2025',
-        'ארכוב דיונים שהסתיימו',
-        expect.stringContaining('{{ארכיון הדט}}'),
-      );
+      // Should create two archive pages (Q1 and Q2) with custom summaries
+      const createCalls = (jest.mocked(wikiApi.create)).mock.calls;
 
-      // Should edit the source page to remove archived paragraphs
-      expect(wikiApi.edit).toHaveBeenCalledWith(
-        'TestPage',
-        'ארכוב דיונים שהסתיימו',
-        expect.stringContaining('Recent Discussion'),
-        1,
-      );
-      expect(wikiApi.edit).toHaveBeenCalledWith(
-        'TestPage',
-        'ארכוב דיונים שהסתיימו',
-        expect.not.stringContaining('Q1 Discussion'),
-        1,
-      );
+      expect(createCalls).toHaveLength(2);
+      expect(createCalls[0]).toStrictEqual([
+        'TestPage/ארכיון ינואר-מרץ 2025',
+        'ארכוב "Q1 Discussion", הועבר.',
+        expect.stringContaining('{{ארכיון הדט}}'),
+      ]);
+      expect(createCalls[1]).toStrictEqual([
+        'TestPage/ארכיון אפריל-יוני 2025',
+        'ארכוב "Q2 Discussion", טופל.',
+        expect.stringContaining('{{ארכיון הדט}}'),
+      ]);
+
+      // Should edit the source page twice to remove each archived paragraph
+      const sourceEdits = (jest.mocked(wikiApi.edit)).mock.calls.filter((call) => call[0] === 'TestPage');
+
+      expect(sourceEdits).toHaveLength(2);
     });
 
     it('should append to existing archive pages', async () => {
@@ -340,23 +336,30 @@ Old content`;
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
 
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 2 });
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 2 }); // archive exists
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page for removal
 
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
       expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).toHaveBeenCalledTimes(2); // once for archive, once for source
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'ארכוב דיונים שהסתיימו',
+        'ארכוב "Discussion to Archive", הועבר.',
         expect.stringContaining('Old Discussion'),
         2,
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'ארכוב דיונים שהסתיימו',
+        'ארכוב "Discussion to Archive", הועבר.',
         expect.stringContaining('Discussion to Archive'),
         2,
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage',
+        'ארכוב "Discussion to Archive", הועבר.',
+        expect.any(String),
+        1,
       );
     });
 
@@ -411,36 +414,27 @@ Q4 discussion
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
 
-      // All archive pages don't exist
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      // Each paragraph: archive page check + source page read
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // Q1 archive
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // Q2 archive
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // Q3 archive
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // Q4 archive
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source
 
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
+      // Verify all 4 quarterly archives were created with correct summaries
       expect(wikiApi.create).toHaveBeenCalledTimes(4);
-      expect(wikiApi.create).toHaveBeenCalledWith(
-        'TestPage/ארכיון ינואר-מרץ 2025',
-        'ארכוב דיונים שהסתיימו',
-        expect.stringContaining('Q1 2025'),
-      );
-      expect(wikiApi.create).toHaveBeenCalledWith(
-        'TestPage/ארכיון אפריל-יוני 2025',
-        'ארכוב דיונים שהסתיימו',
-        expect.stringContaining('Q2 2025'),
-      );
-      expect(wikiApi.create).toHaveBeenCalledWith(
-        'TestPage/ארכיון יולי-ספטמבר 2025',
-        'ארכוב דיונים שהסתיימו',
-        expect.stringContaining('Q3 2025'),
-      );
-      expect(wikiApi.create).toHaveBeenCalledWith(
-        'TestPage/ארכיון אוקטובר-דצמבר 2025',
-        'ארכוב דיונים שהסתיימו',
-        expect.stringContaining('Q4 2025'),
-      );
+
+      const createCalls = (jest.mocked(wikiApi.create)).mock.calls;
+
+      expect(createCalls[0][0]).toBe('TestPage/ארכיון ינואר-מרץ 2025');
+      expect(createCalls[0][1]).toBe('ארכוב "Q1 2025", הועבר.');
+      expect(createCalls[1][0]).toBe('TestPage/ארכיון אפריל-יוני 2025');
+      expect(createCalls[3][0]).toBe('TestPage/ארכיון אוקטובר-דצמבר 2025');
     });
 
     it('should skip paragraphs without valid dates during archive', async () => {
@@ -463,13 +457,14 @@ This has an unparseable date
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
 
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive check
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
 
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
       // Should only archive the valid discussion
       expect(wikiApi.create).toHaveBeenCalledTimes(1);
+      expect(wikiApi.edit).toHaveBeenCalledTimes(1);
 
       const createCall = (jest.mocked(wikiApi.create)).mock.calls[0];
 
@@ -496,13 +491,14 @@ This has no date at all, just text
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
 
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive check
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
 
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
       // Should only archive the valid discussion
       expect(wikiApi.create).toHaveBeenCalledTimes(1);
+      expect(wikiApi.edit).toHaveBeenCalledTimes(1);
 
       const createCall = (jest.mocked(wikiApi.create)).mock.calls[0];
 
@@ -510,7 +506,7 @@ This has no date at all, just text
       expect(createCall[2]).not.toContain('No Date Discussion');
     });
 
-    it('should group multiple paragraphs to the same archive page', async () => {
+    it('should add multiple paragraphs to the same archive page sequentially', async () => {
       fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
 
       const pageContent = `
@@ -535,20 +531,42 @@ Third discussion
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
 
+      // Discussion 1: archive doesn't exist (create it), then edit source
       wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      // Discussion 2: archive now exists (append to it), then edit source
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון הדט}}\n\n==Discussion 1==\nContent', revid: 2 });
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      // Discussion 3: archive exists (append to it), then edit source
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון הדט}}\n\n==Discussion 1==\n==Discussion 2==', revid: 3 });
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
 
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
-      // Should create only one archive page for all three paragraphs (same quarter)
+      // Should create one archive page for the first paragraph
       expect(wikiApi.create).toHaveBeenCalledTimes(1);
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'TestPage/ארכיון ינואר-מרץ 2025',
+        'ארכוב "Discussion 1", הועבר.',
+        expect.stringContaining('Discussion 1'),
+      );
 
-      const createCall = (jest.mocked(wikiApi.create)).mock.calls[0];
+      // Should edit archive page twice for paragraphs 2 and 3
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage/ארכיון ינואר-מרץ 2025',
+        'ארכוב "Discussion 2", טופל.',
+        expect.stringContaining('Discussion 2'),
+        2,
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage/ארכיון ינואר-מרץ 2025',
+        'ארכוב "Discussion 3", הועבר.',
+        expect.stringContaining('Discussion 3'),
+        3,
+      );
 
-      expect(createCall[0]).toBe('TestPage/ארכיון ינואר-מרץ 2025');
-      expect(createCall[2]).toContain('Discussion 1');
-      expect(createCall[2]).toContain('Discussion 2');
-      expect(createCall[2]).toContain('Discussion 3');
+      // Should edit source page 3 times (once per paragraph)
+      expect(wikiApi.edit).toHaveBeenCalledTimes(5); // 2 archive edits + 3 source edits
     });
 
     it('should clean up multiple newlines in source page', async () => {
@@ -570,8 +588,8 @@ More content`;
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
 
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive check
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
 
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
@@ -593,7 +611,7 @@ More content`;
   });
 
   describe('archive with template algorithm', () => {
-    it('should archive to template-based archive page', async () => {
+    it('should archive to template-based archive page with custom summary', async () => {
       fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
 
       const pageContent = `
@@ -616,23 +634,24 @@ Some content
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
 
-      wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 });
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון הדט}}\n\nExisting content', revid: 3 });
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 }); // navigate page
+      wikiApi.info.mockResolvedValueOnce([{}]); // check archive exists
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון הדט}}\n\nExisting content', revid: 3 }); // archive content
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
 
       await model.archive('TestPage', archivableParagraphs, 'תבנית ארכיון', 'TestPage/Navigate');
 
+      expect(wikiApi.edit).toHaveBeenCalledTimes(2); // archive + source
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון 2',
-        'ארכוב דיונים שהסתיימו',
+        'ארכוב "Discussion 1", הועבר.',
         expect.stringContaining('Discussion 1'),
         3,
       );
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage',
-        'ארכוב דיונים שהסתיימו',
+        'ארכוב "Discussion 1", הועבר.',
         expect.not.stringContaining('Discussion 1'),
         1,
       );
@@ -659,17 +678,23 @@ Discussion content
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['טופל']);
 
-      wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 });
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 }); // navigate page
+      wikiApi.info.mockResolvedValueOnce([{}]); // check archive exists
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive doesn't exist
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
 
       await model.archive('TestPage', archivableParagraphs, 'תבנית ארכיון', 'TestPage/Navigate');
 
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TestPage/ארכיון 1',
-        'ארכוב דיונים שהסתיימו',
+        'ארכוב "Discussion 1", טופל.',
         expect.stringContaining('{{ארכיון הדט}}'),
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage',
+        'ארכוב "Discussion 1", טופל.',
+        expect.any(String),
+        1,
       );
     });
 
@@ -697,10 +722,10 @@ Discussion content
 
       const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
 
-      wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 });
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון הדט}}\n\nExisting content', revid: 3 });
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 }); // navigate page
+      wikiApi.info.mockResolvedValueOnce([{}]); // check archive exists
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון הדט}}\n\nExisting content', revid: 3 }); // archive content
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
 
       await model.archive('TestPage', archivableParagraphs, 'תבנית ארכיון', 'TestPage/Navigate');
 
@@ -709,7 +734,7 @@ Discussion content
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון 2',
-        'ארכוב דיונים שהסתיימו',
+        'ארכוב "Discussion 1", הועבר.',
         expect.stringContaining('Discussion 1'),
         3,
       );
@@ -757,6 +782,93 @@ Discussion content
       await expect(
         model.archive('TestPage', archivableParagraphs, 'invalid type' as any, 'TestPage'),
       ).rejects.toThrow('Unknown archive type: invalid type');
+    });
+
+    it('should include handler in archive summary when provided', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion with Handler==
+{{מצב|טופל|משתמש:בוט}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['טופל']);
+
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive doesn't exist
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
+
+      await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'TestPage/ארכיון ינואר-מרץ 2025',
+        'ארכוב "Discussion with Handler", טופל. מטפל: משתמש:בוט.',
+        expect.stringContaining('Discussion with Handler'),
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage',
+        'ארכוב "Discussion with Handler", טופל. מטפל: משתמש:בוט.',
+        expect.any(String),
+        1,
+      );
+    });
+
+    it('should skip paragraph without status template in quarterly archive', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      // Paragraph with date but without status template
+      const paragraphWithoutTemplate = `
+==Discussion Without Template==
+Discussion content without template
+First signature: 10:00, 1 בפברואר 2025 (IDT)
+More content
+`;
+
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await model.archive('TestPage', [paragraphWithoutTemplate], 'רבעון', 'TestPage');
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith('No status template found for paragraph: Discussion Without Template');
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should skip paragraph without status template in template archive', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      // Paragraph with date but without status template
+      const paragraphWithoutTemplate = `
+==Discussion Without Template==
+Discussion content without template
+10:00, 1 בפברואר 2025 (IDT)
+`;
+
+      const navigatePageContent = `
+{{תיבת ארכיון|
+[[/ארכיון 1]]
+}}
+`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await model.archive('TestPage', [paragraphWithoutTemplate], 'תבנית ארכיון', 'TestPage/Navigate');
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith('No status template found for paragraph: Discussion Without Template');
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
     });
   });
 });
