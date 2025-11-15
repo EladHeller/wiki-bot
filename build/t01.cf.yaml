@@ -892,7 +892,7 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Name: drafts-on-wrong-categories-scheduler
-      ScheduleExpression: cron(0 7 ? * 1#1,1#3 *)
+      ScheduleExpression: cron(0 7 ? * 1 *)
       Targets:
         - Id: drafts-on-wrong-categories-function
           Arn: !GetAtt DraftsOnWrongCategoriesLambda.Arn
