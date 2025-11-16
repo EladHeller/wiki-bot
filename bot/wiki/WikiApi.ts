@@ -37,8 +37,6 @@ export interface IWikiApi {
     templateName: string, continueObject?: Record<string, string>, prefix?: string, namespace?: string
   ): AsyncGenerator<WikiPage[], void, void>;
   search(text: string): AsyncGenerator<WikiPage[], void, void>;
-  getRedirectsTo(namespace?: number, linkNamespace?: number[], limit?: number, templates?: string, categories?: string):
-    AsyncGenerator<WikiPage[], void, void>;
   getRedirectsFrom(namespace: number, toNamespace: number, limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
   userContributes(
@@ -252,17 +250,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
-  async function* getRedirectsTo(namespace: number, linkNamespace: number[], limit = 100, templates = '', categories = '') {
-    const props = encodeURIComponent('links|templates|categories|revisions');
-    const template = encodeURIComponent(templates);
-    const templateString = template ? `&tltemplates=${template}&tllimit=${limit}` : '';
-    const category = encodeURIComponent(categories);
-    const categoryString = category ? `&clcategories=${category}&cllimit=${limit}` : '';
-    const path = `?action=query&format=json&generator=allredirects&garlimit=${limit}&garnamespace=${namespace}`
-    + `&prop=${props}&plnamespace=${encodeURIComponent(linkNamespace.join('|'))}${templateString}${categoryString}&pllimit=${limit}&rvprop=timestamp`;
-    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
-  }
-
   async function* getRedirectsFrom(namespace: number, toNamespace: number, limit = 100, templates = '', categories = '') {
     const props = encodeURIComponent('links|templates|categories|revisions');
     const template = encodeURIComponent(templates);
@@ -449,7 +436,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     deletePage,
     getArticlesWithTemplate,
     search,
-    getRedirectsTo,
     getRedirectsFrom,
     userContributes,
     listCategory,
