@@ -42,7 +42,7 @@ Resources:
           - Id: DeleteOldVersions
             Status: Enabled
             NoncurrentVersionExpiration:
-              NoncurrentDays: 1
+              NoncurrentDays: 35
 
 Outputs:
   WikiBotRepoUrl:

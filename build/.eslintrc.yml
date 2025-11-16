@@ -1,3 +1,4 @@
+---
 extends:
   - plugin:import/typescript
 parser: '@typescript-eslint/parser'
@@ -6,4 +7,6 @@ parserOptions:
 plugins:
   - '@typescript-eslint'
 rules:
-  "@typescript-eslint/no-unused-vars": error
+  import/no-extraneous-dependencies:
+    - error
+    - devDependencies: true

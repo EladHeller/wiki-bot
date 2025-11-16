@@ -13,7 +13,8 @@
     "docker-build": "sh ./build/wiki-bot-playwright/build.sh",
     "docker-run": "sh ./build/wiki-bot-playwright/run.sh",
     "docker-test": "curl \"http://localhost:9000/2015-03-31/functions/function/invocations\" -d '{}'",
-    "test:ci": "npm run type-check && npm test && npm run lint:test",
+    "validate-cf": "tsx ./build/validate-cloudformation.ts",
+    "test:ci": "npm run type-check && npm test && npm run lint:test && npm run validate-cf",
     "rollback": "tsx --env-file=.env bot/scripts/rollback.ts",
     "experiments": "tsx --env-file=.env bot/experiments/index.ts"
   },
