@@ -39,7 +39,7 @@ export interface IWikiApi {
   search(text: string): AsyncGenerator<WikiPage[], void, void>;
   getRedirectsTo(namespace?: number, linkNamespace?: number[], limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
-  getRedirectsFrom(namespace: number, limit?: number, templates?: string, categories?: string):
+  getRedirectsFrom(namespace: number, toNamespace: number, limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
   userContributes(
     user: string, startTime: Date, endTime: Date, limit?: number
@@ -263,14 +263,14 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
-  async function* getRedirectsFrom(namespace: number, limit = 100, templates = '', categories = '') {
+  async function* getRedirectsFrom(namespace: number, toNamespace: number, limit = 100, templates = '', categories = '') {
     const props = encodeURIComponent('links|templates|categories|revisions');
     const template = encodeURIComponent(templates);
     const templateString = template ? `&tltemplates=${template}&tllimit=${limit}` : '';
     const category = encodeURIComponent(categories);
     const categoryString = category ? `&clcategories=${category}&cllimit=${limit}` : '';
     const path = `?action=query&format=json&generator=allpages&gapfilterredir=redirects&gaplimit=${limit}&gapnamespace=${namespace}`
-    + `&prop=${props}&plnamespace=${namespace}&pllimit=${limit}&rvprop=timestamp${templateString}${categoryString}`;
+    + `&prop=${props}&plnamespace=${toNamespace}&pllimit=${limit}&rvprop=timestamp${templateString}${categoryString}`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
