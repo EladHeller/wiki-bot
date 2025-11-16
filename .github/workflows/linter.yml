@@ -47,3 +47,6 @@ jobs:
       - name: Run ESLint
         run: npm run lint:test
 
+      - name: Validate CloudFormation templates
+        run: npm run validate-cf
+
