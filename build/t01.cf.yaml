@@ -535,7 +535,7 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Name: archive-logs-scheduler
-      ScheduleExpression: cron(0 6 3 * ? *)
+      ScheduleExpression: cron(0 8 5,6,8 * ? *)
       Targets:
         - Id: archive-logs-function
           Arn: !GetAtt ArchiveLogsLambda.Arn
