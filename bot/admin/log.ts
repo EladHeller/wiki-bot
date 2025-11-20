@@ -7,7 +7,7 @@ import { ArticleLog } from './types';
 
 const tagsPage = 'משתמש:Sapper-bot/תיוג משתמשים';
 
-function isParagraphArray(logs: ArticleLog[] | Paragraph[]) : logs is Paragraph[] {
+function isParagraphArray(logs: ArticleLog[] | Paragraph[]): logs is Paragraph[] {
   const firstElement = logs[0];
 
   return firstElement && 'content' in firstElement && 'name' in firstElement;
@@ -28,7 +28,7 @@ function getContentFromNeedProtectLogs(logs: ArticleLog[]): string {
   return `* ${logs.map(({ title, text }) => `{{בקשת הגנה|${title}|${text}}}`).join('\n* ')}\n`;
 }
 
-let tagsPageContent: string| undefined;
+let tagsPageContent: string | undefined;
 
 async function getAdminUsersToTag(api: IWikiApi, users: string[] = []): Promise<string[]> {
   if (tagsPageContent == null) {
@@ -152,12 +152,12 @@ export default async function writeAdminBotLogs(
   }
   const adminUsersToTag = tagAdminUsers ? await getAdminUsersToTag(api) : [];
   const specificUsersToTag = await getUsersToTagFromSpecialPage(logPageContent);
-
-  const usersToTag = `${[...new Set([...adminUsersToTag, ...specificUsersToTag])].join(', ')} לידיעתכם. ~~~~`;
+  const users = [...new Set([...adminUsersToTag, ...specificUsersToTag])];
+  const usersToTag = users.length ? `${users.join(', ')} לידיעתכם. ` : '';
   await api.edit(
     logPageTitle,
     titleAndSummary,
-    `${logPageContent}ֿ\n${title}\n${content}\n${usersToTag}`,
+    `${logPageContent}ֿ\n${title}\n${content}\n${usersToTag}~~~~`,
     revid,
   );
 }
