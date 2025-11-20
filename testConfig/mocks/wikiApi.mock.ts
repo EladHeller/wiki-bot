@@ -53,10 +53,6 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     search:
       base.search
       ?? jest.fn<(text: string) => AsyncGenerator<WikiPage[], void, void>>(),
-    getRedirectsTo:
-      base.getRedirectsTo
-      ?? jest.fn<(namespace?: number, linkNamespace?: number[], limit?: number,
-        templates?: string, categories?: string) => AsyncGenerator<WikiPage[], void, void>>(),
     userContributes:
       base.userContributes
       ?? jest.fn<(user: string, startTime: Date, endTime: Date, limit?: number

@@ -70,7 +70,7 @@ Resources:
     Properties:
       Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Market-value-function
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
