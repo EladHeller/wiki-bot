@@ -11,6 +11,7 @@ export default async function closedDiscussionsArchiveBot() {
     const archivableParagraphs = await model.getArchivableParagraphs(
       pageConfig.page,
       pageConfig.statuses,
+      pageConfig.daysAfterLastActivity,
     );
     console.log(`Found ${archivableParagraphs.length} archivable paragraphs`);
     await model.archive(

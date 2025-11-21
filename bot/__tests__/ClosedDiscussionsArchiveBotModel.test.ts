@@ -115,7 +115,7 @@ This is too recent
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
+      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toContain('Discussion 1');
@@ -142,7 +142,7 @@ Too recent
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
+      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       expect(result).toHaveLength(0);
     });
@@ -159,7 +159,7 @@ No status template here
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
+      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       expect(result).toHaveLength(0);
     });
@@ -177,7 +177,7 @@ Empty status template
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
+      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       expect(result).toHaveLength(0);
     });
@@ -194,7 +194,7 @@ No signature here
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
+      const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       expect(result).toHaveLength(0);
     });
@@ -210,9 +210,9 @@ Discussion content
 `;
 
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = ClosedDiscussionsArchiveBotModel(wikiApi, 7);
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const result = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const result = await model.getArchivableParagraphs('TestPage', ['הועבר'], 7);
 
       expect(result).toHaveLength(1);
     });
@@ -231,7 +231,7 @@ Last signature: 15:00, 20 בינואר 2025 (IDT)
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const result = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const result = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       // Last signature is Jan 20, only 12 days old, should not be archived
       expect(result).toHaveLength(0);
@@ -250,7 +250,7 @@ Invalid month: 12:00, 5 בטעות 2025 (IDT)
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const result = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const result = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       // Should use the valid signature and archive
       expect(result).toHaveLength(1);
@@ -283,7 +283,7 @@ Too recent
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       // Each paragraph triggers: archive page check, source page read for removal
       // Q1 Discussion
@@ -334,7 +334,7 @@ Old content`;
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 2 }); // archive exists
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page for removal
@@ -376,7 +376,7 @@ Too recent
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
@@ -412,7 +412,7 @@ Q4 discussion
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       // Each paragraph: archive page check + source page read
       wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // Q1 archive
@@ -455,7 +455,7 @@ This has an unparseable date
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive check
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
@@ -489,7 +489,7 @@ This has no date at all, just text
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive check
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
@@ -529,7 +529,7 @@ Third discussion
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       // Discussion 1: archive doesn't exist (create it), then edit source
       wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
@@ -586,7 +586,7 @@ More content`;
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive check
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
@@ -606,7 +606,7 @@ More content`;
       wikiApi.articleContent.mockResolvedValue({ content: '', revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      await expect(model.getArchivableParagraphs('TestPage', ['הועבר'])).rejects.toThrow('Missing content for TestPage');
+      await expect(model.getArchivableParagraphs('TestPage', ['הועבר'], 14)).rejects.toThrow('Missing content for TestPage');
     });
   });
 
@@ -632,7 +632,7 @@ Some content
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 }); // navigate page
       wikiApi.info.mockResolvedValueOnce([{}]); // check archive exists
@@ -676,7 +676,7 @@ Discussion content
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['טופל']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['טופל'], 14);
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 }); // navigate page
       wikiApi.info.mockResolvedValueOnce([{}]); // check archive exists
@@ -720,7 +720,7 @@ Discussion content
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 }); // navigate page
       wikiApi.info.mockResolvedValueOnce([{}]); // check archive exists
@@ -755,7 +755,7 @@ Discussion content
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: navigatePageContent, revid: 2 });
 
@@ -777,7 +777,7 @@ Discussion content
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
 
       await expect(
         model.archive('TestPage', archivableParagraphs, 'invalid type' as any, 'TestPage'),
@@ -797,7 +797,7 @@ Discussion content
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['טופל']);
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['טופל'], 14);
 
       wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found')); // archive doesn't exist
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // source page
@@ -830,7 +830,7 @@ More content
 
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
 
       await model.archive('TestPage', [paragraphWithoutTemplate], 'רבעון', 'TestPage');
 
@@ -861,7 +861,7 @@ Discussion content without template
 
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
 
       await model.archive('TestPage', [paragraphWithoutTemplate], 'תבנית ארכיון', 'TestPage/Navigate');
 
