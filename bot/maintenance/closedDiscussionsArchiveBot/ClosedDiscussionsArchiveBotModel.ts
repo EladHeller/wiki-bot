@@ -17,7 +17,7 @@ export type PageToArchive = {
 
 export interface IClosedDiscussionsArchiveBotModel {
   getPagesToArchive(): Promise<PageToArchive[]>;
-  getArchivableParagraphs(pageTitle: string, validStatuses: string[]): Promise<string[]>;
+  getArchivableParagraphs(pageTitle: string, validStatuses: string[], inactivityDays: number): Promise<string[]>;
   archive(
     pageTitle: string,
     archivableParagraphs: string[],
@@ -168,7 +168,6 @@ function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: st
 
 export default function ClosedDiscussionsArchiveBotModel(
   wikiApi: IWikiApi,
-  inactivityDays: number = 14,
 ): IClosedDiscussionsArchiveBotModel {
   async function getPagesToArchive(): Promise<PageToArchive[]> {
     const { content } = await getContent(wikiApi, CONFIG_PAGE_TITLE);
@@ -194,6 +193,7 @@ export default function ClosedDiscussionsArchiveBotModel(
   async function getArchivableParagraphs(
     pageTitle: string,
     validStatuses: string[],
+    inactivityDays: number,
   ): Promise<string[]> {
     const { content } = await getContent(wikiApi, pageTitle);
     const allParagraphs = getAllParagraphs(content, pageTitle);
