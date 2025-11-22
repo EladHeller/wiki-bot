@@ -98,7 +98,7 @@ function createArchiveSummary(
   status: string,
   handler?: string,
 ): string {
-  const handlerPart = handler ? ` מטפל: ${handler}.` : '';
+  const handlerPart = handler ? ` מטפל: [[user:${handler}|${handler}]].` : '';
   return `ארכוב "${paragraphName}", ${status}.${handlerPart}`;
 }
 

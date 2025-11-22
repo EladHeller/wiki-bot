@@ -789,7 +789,7 @@ Discussion content
 
       const pageContent = `
 ==Discussion with Handler==
-{{מצב|טופל|משתמש:בוט}}
+{{מצב|טופל|בוט}}
 Discussion content
 10:00, 1 בפברואר 2025 (IDT)
 `;
@@ -806,12 +806,12 @@ Discussion content
 
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'ארכוב "Discussion with Handler", טופל. מטפל: משתמש:בוט.',
+        'ארכוב "Discussion with Handler", טופל. מטפל: [[user:בוט|בוט]].',
         expect.stringContaining('Discussion with Handler'),
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage',
-        'ארכוב "Discussion with Handler", טופל. מטפל: משתמש:בוט.',
+        'ארכוב "Discussion with Handler", טופל. מטפל: [[user:בוט|בוט]].',
         expect.any(String),
         1,
       );
