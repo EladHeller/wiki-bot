@@ -3,17 +3,11 @@ import {
 } from 'playwright';
 
 const mainUrl = 'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x';
-const KidnappedUrl = 'https://infogram.com/shay-tvh-h-7-vvktvvr-1hxj48pxm3k5q2v';
-
-// חטופים בשבי
-const kidnappetInGaza = 'חטופים שנותרו בשבי';
-const releasedKidnapped = 'שוחררו או חולצו';
 
 const urlDict = {
-  [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', 'הרוגים בעזה (ע"פ חמאס)', kidnappetInGaza], numberUp: false, page: 1 },
+  [mainUrl]: { titles: ['הרוגים ישראלים', 'פצועים בעזה (ע"פ חמאס)', 'הרוגים בעזה (ע"פ חמאס)'], numberUp: false, page: 1 },
   [`${mainUrl}#`]: { titles: ['הרוגים פלסטינים באיו"ש', 'עצורים פלסטינים**'], numberUp: false, page: 5 },
   [`${mainUrl}#1`]: { titles: ['הרוגים בלבנון'], numberUp: false, page: 3 },
-  [KidnappedUrl]: { titles: [releasedKidnapped], numberUp: true, page: 1 },
 };
 
 async function getPanelData(page: Page, titles: string[], numberUp = false) {
@@ -40,12 +34,12 @@ async function getPanelData(page: Page, titles: string[], numberUp = false) {
 
         const blockRect = block.getBoundingClientRect();
         const horizontalOverlapSize = Math.min(elementRect.right, blockRect.right)
-        - Math.max(elementRect.left, blockRect.left);
+          - Math.max(elementRect.left, blockRect.left);
         return (config.numberUp
           ? (elementRect.top - 40 < blockRect.bottom && elementRect.top > blockRect.top)
           : (blockRect.top - 40 < elementRect.bottom && blockRect.top > elementRect.top))
-        // && elementRect.left < blockRect.right && elementRect.right > blockRect.left
-        && elementRect.width * 0.7 < horizontalOverlapSize;
+          // && elementRect.left < blockRect.right && elementRect.right > blockRect.left
+          && elementRect.width * 0.7 < horizontalOverlapSize;
       });
       const numberElements = relatedElements.filter((block) => {
         let text = block.textContent?.trim();
@@ -122,12 +116,6 @@ export default async function getWarData() {
 
       const currResults = await getPanelData(page, config.titles, config.numberUp);
       result = { ...result, ...currResults };
-    }
-    if (result[kidnappetInGaza]) {
-      result[kidnappetInGaza] -= 1; // 1 kidnapped before the war
-    }
-    if (result[releasedKidnapped]) {
-      result[releasedKidnapped] -= 3; // 3 of the released were kidnapped before the war
     }
     return result;
   } finally {
