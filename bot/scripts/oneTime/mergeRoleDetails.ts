@@ -12,9 +12,10 @@ const TARGET_FIELD = 'תפקידים נוספים';
 const ROLE_NAME_FIELD = 'שם התפקיד';
 const DETAILS_FIELD = 'פירוט';
 
-const RELEVANT_ROLE_NAMES = ['תפקידים בולטים', 'תפקידים נוספים', 'תפקידים בולטים נוספים'];
-
+const RELEVANT_ROLE_NAMES = ['תפקידים בולטים', 'תפקידים נוספים', 'תפקידים בולטים נוספים', 'תפקידים בולטים אחרים'];
+let i = 0;
 export async function processPage(page: WikiPage, api: ReturnType<typeof WikiApi>) {
+  i += 1;
   const content = page.revisions?.[0].slots.main['*'];
   const revid = page.revisions?.[0].revid;
   if (!revid || !content) {
@@ -77,17 +78,11 @@ export default async function mergeRoleDetails() {
   await api.login();
 
   const generatorLeader = api.getArticlesWithTemplate(TEMPLATE_NAME_LEADER);
-  const generatorOfficeHolder = api.getArticlesWithTemplate(TEMPLATE_NAME_OFFICE_HOLDER);
 
   for await (const pages of generatorLeader) {
     for (const page of pages) {
       await processPage(page, api);
     }
   }
-
-  for await (const pages of generatorOfficeHolder) {
-    for (const page of pages) {
-      await processPage(page, api);
-    }
-  }
+  console.log('Done', i);
 }
