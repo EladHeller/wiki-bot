@@ -153,7 +153,7 @@ export default async function writeAdminBotLogs(
   const adminUsersToTag = tagAdminUsers ? await getAdminUsersToTag(api) : [];
   const specificUsersToTag = await getUsersToTagFromSpecialPage(logPageContent);
   const users = [...new Set([...adminUsersToTag, ...specificUsersToTag])];
-  const usersToTag = users.length ? `${users.join(', ')} לידיעתכם. ` : '';
+  const usersToTag = users.length ? `${users.join(', ')} ${users.length > 1 ? 'לידיעתכם' : 'לידיעתך'}. ` : '';
   await api.edit(
     logPageTitle,
     titleAndSummary,

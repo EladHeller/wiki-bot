@@ -3,6 +3,7 @@ import {
 } from '../../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../../wiki/WikiApi';
 import { promiseSequence } from '../../../utilities';
+import googleSearch from '../../../API/googleSearchAPI';
 
 interface BrokenLinkEntry {
   article: string;
@@ -24,11 +25,6 @@ const TEMPLATE_NAME = 'יזכור';
 const BASE_URL = 'https://izkor.gov.il';
 const REPORT_PAGE_TITLE = 'משתמש:Sapper-bot/ניסיונות תיקון קישורי יזכור - חיפוש';
 const FIX_RESULTS_PAGE_TITLE = 'משתמש:Sapper-bot/ניסיונות תיקון קישורי יזכור - חיפוש';
-
-// ...
-
-const { GOOGLE_SEARCH_API_KEY } = process.env;
-const { GOOGLE_SEARCH_CX } = process.env;
 
 // Delay between requests to avoid overwhelming the server
 const delay = (ms: number) => new Promise((resolve) => {
@@ -76,39 +72,6 @@ function parseReportPage(content: string): BrokenLinkEntry[] {
   }
 
   return brokenLinks;
-}
-
-async function searchIzkor(name: string): Promise<string | null> {
-  if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_CX) {
-    console.error('Missing Google Search API credentials');
-    return null;
-  }
-
-  try {
-    const url = new URL('https://www.googleapis.com/customsearch/v1');
-    url.searchParams.append('key', GOOGLE_SEARCH_API_KEY);
-    url.searchParams.append('cx', GOOGLE_SEARCH_CX);
-    url.searchParams.append('q', `site:izkor.gov.il "${name}"`);
-    url.searchParams.append('num', '1');
-
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      const body = await response.text();
-      console.error(`HTTP error! status: ${response.status}`);
-      console.error(body);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-
-    const { items } = data;
-    if (items && items.length > 0) {
-      return items[0].link;
-    }
-    return null;
-  } catch (error) {
-    console.error(`Error searching for ${name}:`, error.message);
-    return null;
-  }
 }
 
 function extractNameFromUrl(url: string): string | null {
@@ -192,7 +155,7 @@ async function attemptFix(
     };
   }
 
-  const foundUrl = await searchIzkor(getNameFromUrl ? nameFromUrl : name);
+  const foundUrl = await googleSearch(`site:izkor.gov.il ${getNameFromUrl ? nameFromUrl : name}`);
 
   if (!foundUrl) {
     return {

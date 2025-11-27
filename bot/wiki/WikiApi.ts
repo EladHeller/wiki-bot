@@ -60,6 +60,8 @@ export interface IWikiApi {
   addComment(page: string, summary: string, content: string, commentid: string): Promise<any>;
   allPages(namespace?: number, from?: string): AsyncGenerator<WikiPage[], void, void>;
   parsePage(title: string): Promise<string>;
+  getRedirectsTo(toNamespace: number, limit?: number, templates?: string, categories?: string):
+    AsyncGenerator<WikiPage[], void, void>;
 }
 
 export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -261,6 +263,17 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
+  async function* getRedirectsTo(toNamespace: number, limit = 100, templates = '', categories = '') {
+    const props = encodeURIComponent('links|templates|categories|revisions');
+    const template = encodeURIComponent(templates);
+    const templateString = template ? `&tltemplates=${template}&tllimit=${limit}` : '';
+    const category = encodeURIComponent(categories);
+    const categoryString = category ? `&clcategories=${category}&cllimit=${limit}` : '';
+    const path = `?action=query&format=json&generator=allredirects&garlimit=${limit}&garnamespace=${toNamespace}`
+    + `&prop=${props}${templateString}${categoryString}&pllimit=${limit}&rvprop=timestamp`;
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
+  }
+
   async function info(titles:string[]) {
     if (titles.length > 500) {
       throw new Error('Too many titles');
@@ -437,6 +450,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     getArticlesWithTemplate,
     search,
     getRedirectsFrom,
+    getRedirectsTo,
     userContributes,
     listCategory,
     categoriesStartsWith,
