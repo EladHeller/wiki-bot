@@ -9,11 +9,13 @@ import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 const fixBrokenRedirectsBotNames = ['EmausBot', 'Xqbot'];
 
 const HEADVY_NAMESPACES = [0];
+const TEMPLATES_TO_SKIP = ['תבנית:הפניה לא למחוק'];
+const CATEGORIES_TO_SKIP = ['קטגוריה:הפניות לא למחוק'];
 
 async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons: string[], delayDays = 0) {
   const isHeavyToNamespace = HEADVY_NAMESPACES.includes(to);
-  const generator = isHeavyToNamespace ? api.getRedirectsFrom(from, to, 500, 'תבנית:הפניה לא למחוק', 'קטגוריה:הפניות לא למחוק')
-    : api.getRedirectsTo(to, 500, 'תבנית:הפניה לא למחוק', 'קטגוריה:הפניות לא למחוק');
+  const generator = isHeavyToNamespace ? api.getRedirectsFrom(from, to, 500, TEMPLATES_TO_SKIP.join('|'), CATEGORIES_TO_SKIP.join('|'))
+    : api.getRedirectsTo(to, 500, TEMPLATES_TO_SKIP.join('|'), CATEGORIES_TO_SKIP.join('|'));
 
   const all: WikiPage[] = [];
   const errors: string[] = [];
