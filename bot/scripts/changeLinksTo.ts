@@ -8,10 +8,13 @@ export default async function changeLinksTo(
   newTarget: string,
   reason: string,
   saveText = true,
+  isCategory = false,
 ) {
   const api = WikiApi();
   await api.login();
-  const generator = api.backlinksTo(currentTarget, '0|2|100|118');
+
+  const generator = isCategory ? api.categroyPages(currentTarget.replace('קטגוריה:', ''))
+    : api.backlinksTo(currentTarget, '0|2|100|118');
 
   await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
