@@ -91,6 +91,34 @@ describe('fixYearRange', () => {
     expect(fixYearRange('[[1991]]–[[1990]] (עונה ראשונה)')).toBe('1990–1991 (עונה ראשונה)');
     expect(fixYearRange('שנים: 2000–1995, 2010–2015')).toBe('שנים: 1995–2000, 2010–2015');
   });
+
+  it('should remove dash when year is only on one side', () => {
+    expect(fixYearRange('2025-')).toBe('2025–');
+    expect(fixYearRange('2025–')).toBe('2025–');
+    expect(fixYearRange('2025 -')).toBe('2025–');
+    expect(fixYearRange('2025 –')).toBe('2025–');
+  });
+
+  it('should remove dash when year is only on one side followed by non-digit', () => {
+    expect(fixYearRange('2025- (עונה ראשונה)')).toBe('2025– (עונה ראשונה)');
+    expect(fixYearRange('2025–,')).toBe('2025–,');
+  });
+
+  it('should add space before parentheses after number', () => {
+    expect(fixYearRange('6(2)')).toBe('6 (2)');
+    expect(fixYearRange('10(5)')).toBe('10 (5)');
+    expect(fixYearRange('1990–1991 6(2)')).toBe('1990–1991 6 (2)');
+    expect(fixYearRange('6(2) 10(5)')).toBe('6 (2) 10 (5)');
+  });
+
+  it('should handle both fixes together', () => {
+    expect(fixYearRange('2025- 6(2)')).toBe('2025– 6 (2)');
+    expect(fixYearRange('1990–1995 10(3)')).toBe('1990–1995 10 (3)');
+  });
+
+  it('should handle dash removal and space before parentheses together', () => {
+    expect(fixYearRange('2025–6(2)')).toBe('2025–6 (2)');
+  });
 });
 
 describe('processTemplate', () => {
@@ -311,6 +339,21 @@ describe('processArticle', () => {
     expect(result).toStrictEqual({ title, text: `[[${title}]]` });
   });
 
+  it('should handle where is no content', async () => {
+    const title = 'Some Article';
+    console.log('Processing article:', title);
+    const result = await processArticle(api, {
+      title,
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [],
+    });
+
+    expect(api.edit).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+
   it('should handle basketball template', async () => {
     const title = 'Basketball Player';
     const content = 'Some text {{אישיות כדורסל|שנים כשחקן=[[1990]] - [[1991]]|שנים כמאמן=1995-2000}} more text';
@@ -422,7 +465,7 @@ describe('processArticle', () => {
   });
 });
 
-describe('footballYearsFormat', () => {
+describe('sportPersonalityTemplatesYearsFormatModel', () => {
   let mockApi: Mocked<IWikiApi>;
 
   beforeEach(() => {

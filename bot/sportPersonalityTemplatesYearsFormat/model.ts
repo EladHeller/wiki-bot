@@ -48,6 +48,11 @@ export function fixYearRange(value: string): string {
     return match;
   });
 
+  result = result.replace(/(\d{4})\s*-/g, '$1–');
+  result = result.replace(/(\d{4})\s*–$/g, '$1–');
+
+  result = result.replace(/(\d+)(\(\d+\))/g, '$1 $2');
+
   return result;
 }
 
@@ -84,8 +89,8 @@ export async function processArticle(
   page: WikiPage,
 ): Promise<ArticleLog | null> {
   try {
-    const originalContent = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const originalContent = page.revisions?.[0]?.slots.main['*'];
+    const revid = page.revisions?.[0]?.revid;
     if (!originalContent || !revid) {
       console.error(`No content or revid for ${page.title}`);
       return null;
