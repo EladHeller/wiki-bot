@@ -907,3 +907,66 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn: !GetAtt DraftsOnWrongCategoriesEventRule.Arn
       FunctionName: drafts-on-wrong-categories-function
+
+  # Sport Personality Templates Years Format
+  SportPersonalityTemplatesYearsFormatLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: sport-personality-templates-years-format-function
+      Runtime: nodejs24.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/sportPersonalityTemplatesYearsFormat/index.main
+      Timeout: 900
+      MemorySize: 2048
+      EphemeralStorage:
+        Size: 2048
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
+
+  # SportPersonalityTemplatesYearsFormatLogGroupInvokeLambdaPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !GetAtt SendEmailLambda.Arn
+  #     Action: lambda:InvokeFunction
+  #     Principal: logs.amazonaws.com
+  #     SourceAccount: !Ref AWS::AccountId
+  #     SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/sport-personality-templates-years-format-function:*
+
+  # SportPersonalityTemplatesYearsFormatLogGroupFailedSubscription:
+  #   DependsOn:
+  #     - SendEmailLambda
+  #   Type: AWS::Logs::SubscriptionFilter
+  #   Properties:
+  #     DestinationArn: !GetAtt SendEmailLambda.Arn
+  #     FilterPattern: Invoke Error
+  #     LogGroupName: /aws/lambda/sport-personality-templates-years-format-function
+
+  SportPersonalityTemplatesYearsFormatEventRule:
+    DependsOn:
+      - SportPersonalityTemplatesYearsFormatLambda
+    Type: AWS::Events::Rule
+    Properties:
+      Name: sport-personality-templates-years-format-scheduler
+      ScheduleExpression: cron(0 7 ? * 1#1 *)
+      Targets:
+        - Id: sport-personality-templates-years-format-function
+          Arn: !GetAtt SportPersonalityTemplatesYearsFormatLambda.Arn
+
+  SportPersonalityTemplatesYearsFormatInvokePermission:
+    DependsOn:
+      - SportPersonalityTemplatesYearsFormatEventRule
+      - SportPersonalityTemplatesYearsFormatLambda
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SportPersonalityTemplatesYearsFormatEventRule.Arn
+      FunctionName: sport-personality-templates-years-format-function
