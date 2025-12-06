@@ -6,7 +6,8 @@
   "main": "index.ts",
   "scripts": {
     "start": "tsx --max-old-space-size=8192 --trace-gc index.ts ",
-    "read": "tsx readLargeFile.ts"
+    "read": "tsx readLargeFile.ts",
+    "templates": "tsx templates.ts"
   },
   "keywords": [],
   "author": "",
