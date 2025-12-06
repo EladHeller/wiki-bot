@@ -1,12 +1,12 @@
 import { ArticleLog } from '../../admin/types';
 import { WikiPage } from '../../types';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
-import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
-import WikiDataAPI, { IWikiDataAPI } from '../../wiki/WikidataAPI';
 import {
   findTemplates,
   getTemplateKeyValueData,
 } from '../../wiki/newTemplateParser';
+import { IWikiApi } from '../../wiki/WikiApi';
+import { IWikiDataAPI } from '../../wiki/WikidataAPI';
 
 const TEMPLATE_SINGLE = 'סינגל';
 const TEMPLATE_ALBUM = 'אלבום';
@@ -129,6 +129,45 @@ export function processAlbumTemplate(
   return updatedContent;
 }
 
+async function processTemplates(
+  api: IWikiApi,
+  wikiDataApi: IWikiDataAPI,
+  originalContent: string,
+  currentContent: string,
+  pageTitle: string,
+  templateName: string,
+  processFunction: (templateData: Record<string, string>, content: string, year: string) => string,
+  itemType: string,
+): Promise<{ content: string; hasChanges: boolean }> {
+  let updatedContent = currentContent;
+  let hasChanges = false;
+
+  const templates = findTemplates(originalContent, templateName, pageTitle);
+  for (const template of templates) {
+    const templateData = getTemplateKeyValueData(template);
+    let year = getReleaseYearFromTemplate(templateData);
+
+    if (!year) {
+      const qid = await api.getWikiDataItem(pageTitle);
+      if (qid) {
+        year = await getReleaseYearFromWikidata(qid, wikiDataApi);
+      }
+    }
+
+    if (year) {
+      const newContent = processFunction(templateData, updatedContent, year);
+      if (newContent !== updatedContent) {
+        updatedContent = newContent;
+        hasChanges = true;
+      }
+    } else {
+      console.log(`No release year found for ${itemType} in ${pageTitle}`);
+    }
+  }
+
+  return { content: updatedContent, hasChanges };
+}
+
 export async function processArticle(
   api: IWikiApi,
   wikiDataApi: IWikiDataAPI,
@@ -144,55 +183,35 @@ export async function processArticle(
     }
 
     let updatedContent = originalContent;
-    let hasChanges = false;
+    let totalChanges = false;
 
-    const singleTemplates = findTemplates(originalContent, TEMPLATE_SINGLE, page.title);
-    for (const template of singleTemplates) {
-      const templateData = getTemplateKeyValueData(template);
-      let year = getReleaseYearFromTemplate(templateData);
+    const singleResult = await processTemplates(
+      api,
+      wikiDataApi,
+      originalContent,
+      updatedContent,
+      page.title,
+      TEMPLATE_SINGLE,
+      processSingleTemplate,
+      'single',
+    );
+    updatedContent = singleResult.content;
+    totalChanges = totalChanges || singleResult.hasChanges;
 
-      if (!year) {
-        const qid = await api.getWikiDataItem(page.title);
-        if (qid) {
-          year = await getReleaseYearFromWikidata(qid, wikiDataApi);
-        }
-      }
+    const albumResult = await processTemplates(
+      api,
+      wikiDataApi,
+      originalContent,
+      updatedContent,
+      page.title,
+      TEMPLATE_ALBUM,
+      processAlbumTemplate,
+      'album',
+    );
+    updatedContent = albumResult.content;
+    totalChanges = totalChanges || albumResult.hasChanges;
 
-      if (year) {
-        const newContent = processSingleTemplate(templateData, updatedContent, year);
-        if (newContent !== updatedContent) {
-          updatedContent = newContent;
-          hasChanges = true;
-        }
-      } else {
-        console.log(`No release year found for single in ${page.title}`);
-      }
-    }
-
-    const albumTemplates = findTemplates(originalContent, TEMPLATE_ALBUM, page.title);
-    for (const template of albumTemplates) {
-      const templateData = getTemplateKeyValueData(template);
-      let year = getReleaseYearFromTemplate(templateData);
-
-      if (!year) {
-        const qid = await api.getWikiDataItem(page.title);
-        if (qid) {
-          year = await getReleaseYearFromWikidata(qid, wikiDataApi);
-        }
-      }
-
-      if (year) {
-        const newContent = processAlbumTemplate(templateData, updatedContent, year);
-        if (newContent !== updatedContent) {
-          updatedContent = newContent;
-          hasChanges = true;
-        }
-      } else {
-        console.log(`No release year found for album in ${page.title}`);
-      }
-    }
-
-    if (hasChanges && updatedContent !== originalContent) {
+    if (totalChanges && updatedContent !== originalContent) {
       await api.edit(
         page.title,
         'הסרת קטגוריות שנוספות אוטומטית מהתבנית',
@@ -209,41 +228,51 @@ export async function processArticle(
   }
 }
 
-export default async function removeCategoriesFromSingleAlbum(apiInstance?: IWikiApi) {
-  const api = apiInstance || WikiApi();
-  const wikiDataApi = WikiDataAPI();
-
-  await api.login();
-  await wikiDataApi.login();
-
-  let processedCount = 0;
+async function processTemplateArticles(
+  api: IWikiApi,
+  wikiDataApi: IWikiDataAPI,
+  templateName: string,
+  logMessage: string,
+): Promise<{ logs: ArticleLog[]; count: number }> {
   const logs: ArticleLog[] = [];
+  let count = 0;
 
-  console.log('Processing singles...');
+  console.log(logMessage);
   await asyncGeneratorMapWithSequence(
     10,
-    api.getArticlesWithTemplate(TEMPLATE_SINGLE),
+    api.getArticlesWithTemplate(templateName),
     (page) => async () => {
       const log = await processArticle(api, wikiDataApi, page);
       if (log) {
         logs.push(log);
       }
-      processedCount += 1;
+      count += 1;
     },
   );
 
-  console.log('Processing albums...');
-  await asyncGeneratorMapWithSequence(
-    10,
-    api.getArticlesWithTemplate(TEMPLATE_ALBUM),
-    (page) => async () => {
-      const log = await processArticle(api, wikiDataApi, page);
-      if (log) {
-        logs.push(log);
-      }
-      processedCount += 1;
-    },
+  return { logs, count };
+}
+
+export default async function removeCategoriesFromSingleAlbum(
+  api: IWikiApi,
+  wikiDataApi: IWikiDataAPI,
+) {
+  const singleResults = await processTemplateArticles(
+    api,
+    wikiDataApi,
+    TEMPLATE_SINGLE,
+    'Processing singles...',
   );
+
+  const albumResults = await processTemplateArticles(
+    api,
+    wikiDataApi,
+    TEMPLATE_ALBUM,
+    'Processing albums...',
+  );
+
+  const logs = [...singleResults.logs, ...albumResults.logs];
+  const processedCount = singleResults.count + albumResults.count;
 
   console.log(`Processed ${processedCount} articles, updated ${logs.length}`);
 
