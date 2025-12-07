@@ -57,10 +57,26 @@ describe('nextWikiText', () => {
     expect(nextWikiText(text, currIndex, str)).toBe(35);
   });
 
+  it('should handle not closed <math> tag', () => {
+    const text = 'This is a <math>{{test}} x^2 + y^2 formula.';
+    const currIndex = 0;
+    const str = '{{test}}';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(16);
+  });
+
   it('should ignore text in <!-- -->', () => {
     const text = 'This is a <!--sample text with {{nested {{templates}}}}--> comment.';
     const currIndex = 0;
     const str = '{{nested {{templates}}}}';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(-1);
+  });
+
+  it('should ignore text in <math> tags', () => {
+    const text = 'This is a <math>{{test}} x^2 + y^2 = z^2</math> formula.';
+    const currIndex = 0;
+    const str = '{{test}}';
 
     expect(nextWikiText(text, currIndex, str)).toBe(-1);
   });
@@ -135,6 +151,14 @@ describe('nextWikiText', () => {
     const str = 'more';
 
     expect(nextWikiText(text, currIndex, str)).toBe(9);
+  });
+
+  it('should handle unclosed </math> tag', () => {
+    const text = 'text </math> more';
+    const currIndex = 0;
+    const str = 'more';
+
+    expect(nextWikiText(text, currIndex, str)).toBe(13);
   });
 
   it('should work with ignoreTemplates=true to find text inside templates', () => {
@@ -219,6 +243,15 @@ describe('warning logs for unclosed structures', () => {
     );
   });
 
+  it('should log warning for unclosed math tag when title is provided', () => {
+    const text = 'text <math>x^2 + y^2';
+    parseWikiStructures(text, 0, 'Test Article');
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Warning: Unclosed math in "Test Article"'),
+    );
+  });
+
   it('should log warning for unclosed parameter when title is provided', () => {
     const text = 'text {{{param';
     parseWikiStructures(text, 0, 'Test Article');
@@ -278,18 +311,22 @@ describe('warning logs for unclosed structures', () => {
     expect(consoleLogSpy).not.toHaveBeenCalled();
   });
 
-  it('should NOT log warning when title is not provided', () => {
+  it('should log warning when title is not provided', () => {
     const text = 'text {{template|param more';
     parseWikiStructures(text);
 
-    expect(consoleLogSpy).not.toHaveBeenCalled();
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Warning: Unclosed text'),
+    );
   });
 
-  it('should NOT log warning when title is undefined', () => {
+  it('should log warning when title is undefined', () => {
     const text = 'text {{template|param more';
     parseWikiStructures(text, 0, undefined);
 
-    expect(consoleLogSpy).not.toHaveBeenCalled();
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Warning: Unclosed text'),
+    );
   });
 
   it('should include position and preview in warning message', () => {

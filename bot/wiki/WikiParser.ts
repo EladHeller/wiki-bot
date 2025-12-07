@@ -1,5 +1,5 @@
 interface WikiStructure {
-  type: 'template' | 'parameter' | 'brace' | 'link' | 'wikilink' | 'nowiki' | 'comment';
+  type: 'template' | 'parameter' | 'brace' | 'link' | 'wikilink' | 'nowiki' | 'comment' | 'math';
   start: number;
   end: number;
 }
@@ -24,6 +24,9 @@ export function parseWikiStructures(text: string, startIndex?: number, title?: s
     if (text.substring(i, i + 8) === '<nowiki>') {
       stack.push({ type: 'nowiki', start: i });
       i += 8;
+    } else if (text.substring(i, i + 6) === '<math>') {
+      stack.push({ type: 'math', start: i });
+      i += 6;
     } else if (text.substring(i, i + 4) === '<!--') {
       stack.push({ type: 'comment', start: i });
       i += 4;
@@ -51,6 +54,13 @@ export function parseWikiStructures(text: string, startIndex?: number, title?: s
         structures.push({ type: 'nowiki', start: item.start, end: i + 9 });
       }
       i += 9;
+    } else if (text.substring(i, i + 7) === '</math>') {
+      const lastMath = findLastInStack(stack, 'math');
+      if (lastMath !== -1) {
+        const item = stack.splice(lastMath, 1)[0];
+        structures.push({ type: 'math', start: item.start, end: i + 7 });
+      }
+      i += 7;
     } else if (text.substring(i, i + 3) === '-->') {
       const lastComment = findLastInStack(stack, 'comment');
       if (lastComment !== -1) {
@@ -111,10 +121,10 @@ export function parseWikiStructures(text: string, startIndex?: number, title?: s
   }
 
   // Log unclosed structures
-  if (stack.length > 0 && title) {
+  if (stack.length > 0) {
     stack.forEach((unclosed) => {
       const preview = text.substring(unclosed.start, Math.min(unclosed.start + 100, text.length));
-      console.log(`Warning: Unclosed ${unclosed.type} in "${title}" at position ${unclosed.start}: ${preview}...`);
+      console.log(`Warning: Unclosed ${unclosed.type} in ${title ? `"${title}"` : 'text'} at position ${unclosed.start}: ${preview}...`);
     });
   }
 
@@ -127,7 +137,7 @@ function findStructureAtIndex(
   ignoreTemplates?: boolean,
 ): WikiStructure | undefined {
   return structures.find((s) => currentIndex > s.start && currentIndex < s.end
-    && (s.type === 'nowiki' || s.type === 'comment'
+    && (s.type === 'nowiki' || s.type === 'comment' || s.type === 'math'
      || (!ignoreTemplates && (s.type === 'template' || s.type === 'parameter' || s.type === 'brace'
         || s.type === 'wikilink' || s.type === 'link'))));
 }
