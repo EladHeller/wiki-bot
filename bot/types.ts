@@ -55,6 +55,7 @@ export type UserContribution = {
   ns: number;
   title: string;
   comment: string;
+  sizediff: number;
 }
 
 export type IBaseWikiApi = {
