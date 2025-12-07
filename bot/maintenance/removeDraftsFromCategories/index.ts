@@ -76,6 +76,7 @@ const validateDumpTimes = (
 };
 
 const removeDraftsFromCategory = async (draft: string, api: IWikiApi): Promise<ArticleLog | null> => {
+  const nameWithoutUnderscores = draft.replaceAll('_', ' ');
   try {
     const { content, revid } = await api.articleContent(draft);
     const newContent = content.replaceAll('[[קטגוריה:', '[[:קטגוריה:');
@@ -84,10 +85,19 @@ const removeDraftsFromCategory = async (draft: string, api: IWikiApi): Promise<A
       return null;
     }
     await api.edit(draft, 'הסרת דף טיוטה מקטגוריות של מרחב הערכים', newContent, revid);
-    return { title: draft, text: `[[${draft}]]` };
+    return { title: nameWithoutUnderscores, text: `[[${nameWithoutUnderscores}]]` };
   } catch (error) {
-    console.error(`Error removing draft ${draft}`, error);
-    return { title: draft, text: `[[${draft}]]`, error: true };
+    try {
+      const [info] = await api.info([nameWithoutUnderscores]);
+      if (info?.missing) {
+        console.log(`Draft ${nameWithoutUnderscores} is missing, skipping`);
+        return null;
+      }
+    } catch {
+      console.error(`Failed to get info for ${nameWithoutUnderscores}`);
+    }
+    console.error(`Failed to remove draft ${nameWithoutUnderscores}: ${error?.data || error?.message || error?.toString()}`);
+    return { title: nameWithoutUnderscores, text: `[[${nameWithoutUnderscores}]]`, error: true };
   }
 };
 
