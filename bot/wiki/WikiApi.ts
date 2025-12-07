@@ -321,7 +321,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
   }
 
   async function* userContributes(user:string, startTime: Date, endTime: Date, limit = 500) {
-    const props = encodeURIComponent('title|ids|comment');
+    const props = encodeURIComponent('title|ids|comment|sizediff');
     const path = `?action=query&format=json&list=usercontribs&ucuser=${encodeURIComponent(user)}&uclimit=${limit}&ucprop=${props}`
     + `&ucstart=${endTime.toISOString()}&ucend=${startTime.toISOString()}`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.usercontribs ?? {}));

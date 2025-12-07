@@ -1,37 +1,47 @@
 import { escapeRegex } from '../utilities';
-import { nextWikiText } from './WikiParser';
+import { parseWikiStructures, nextWikiText } from './WikiParser';
 
 type TemplateData = {
   arrayData?: string[];
   keyValueData?: Record<string, string>;
 };
 
-export function findTemplates(text: string, templateName: string, title: string): string[] {
-  const templates: string[] = [];
-  let currIndex = 0;
-  let templateStartIndex = 0;
-  let templateEndIndex = 0;
-  const templateStart = `{{${templateName}`;
-  while (currIndex < text.length) {
-    templateStartIndex = text.substring(currIndex).indexOf(templateStart);
-    if (templateStartIndex === -1) {
-      break;
-    }
-    templateStartIndex = currIndex + templateStartIndex;
-    templateEndIndex = nextWikiText(text, templateStartIndex + templateStart.length, '}}', undefined, title);
-    if (templateEndIndex === -1) {
-      console.log('Error: template end not found', title, text.substring(templateStartIndex, templateStartIndex + 100));
-      break;
-    }
-    const templateText = text.substring(templateStartIndex, templateEndIndex + 2);
+const isStructureInsideAnother = (
+  inner: { start: number; end: number },
+  outer: { start: number; end: number },
+): boolean => inner.start > outer.start && inner.end <= outer.end;
 
-    // prevent templates that starts with the same template name like הארץ and הארץ1
-    if (templateText.match(new RegExp(`^{{${escapeRegex(templateName)}\\s*[|}]`))) {
-      templates.push(text.substring(templateStartIndex, templateEndIndex + 2));
+export function findTemplates(text: string, templateName: string, title: string): string[] {
+  const structures = parseWikiStructures(text, 0, title);
+  const templateStart = `{{${templateName}`;
+  const templateRegex = new RegExp(`^{{${escapeRegex(templateName)}\\s*[|}]`);
+
+  const templateStructures = structures.filter((s) => s.type === 'template' || s.type === 'parameter');
+  const skipRanges: Array<{ start: number; end: number }> = [];
+  const matchingTemplates: string[] = [];
+
+  templateStructures.forEach((structure) => {
+    const insideSkippedRange = skipRanges.some((range) => isStructureInsideAnother(structure, range));
+
+    if (insideSkippedRange) {
+      return;
     }
-    currIndex = templateEndIndex + 2;
-  }
-  return templates;
+
+    const templateText = text.substring(structure.start, structure.end);
+    const startsWithName = templateText.startsWith(templateStart);
+
+    if (startsWithName) {
+      const matchesRegex = templateText.match(templateRegex);
+
+      if (matchesRegex) {
+        matchingTemplates.push(templateText);
+      } else {
+        skipRanges.push(structure);
+      }
+    }
+  });
+
+  return matchingTemplates;
 }
 
 export function findTemplate(text: string, templateName: string, title: string): string {

@@ -12,7 +12,7 @@ export type TableData = {
   tableStyle: string;
 }
 
-function getNextRowDelimiterIndex(rowText, currIndex, delimiter) {
+function getNextRowDelimiterIndex(rowText: string, currIndex: number, delimiter: string): number {
   const nextDelimiterIndex1 = nextWikiText(rowText, currIndex, delimiter + delimiter);
   const nextDelimiterIndex2 = nextWikiText(rowText, currIndex, `\n${delimiter}`);
   const index = ((nextDelimiterIndex2 === -1)

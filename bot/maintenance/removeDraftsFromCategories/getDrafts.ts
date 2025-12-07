@@ -117,65 +117,83 @@ async function* parseSqlFile(filePath: string): AsyncGenerator<any[]> {
 
   let buffer = '';
   let rowCount = 0;
-  let inInsert = false;
 
   for await (const line of rl) {
     buffer += line;
 
-    if (!inInsert && buffer.includes('INSERT INTO')) {
-      inInsert = true;
-    }
+    while (buffer.includes('INSERT INTO') && buffer.includes(';')) {
+      const insertStart = buffer.indexOf('INSERT INTO');
+      if (insertStart === -1) break;
 
-    if (inInsert && buffer.includes(';')) {
-      // Extract the INSERT statement
-      const insertMatch = /INSERT\s+INTO\s+`[^`]+`\s+VALUES\s+(.+?);/is.exec(buffer);
+      const valuesStart = buffer.indexOf(' VALUES ', insertStart);
+      if (valuesStart === -1) break;
 
-      if (insertMatch) {
-        const valuesSection = insertMatch[1];
+      let pos = valuesStart + 8;
+      let inString = false;
+      let escapeNext = false;
+      let semicolonPos = -1;
 
-        const rowRegex = /\(([^)]+(?:\([^)]*\)[^)]*)*)\)/g;
-        const matches = Array.from(valuesSection.matchAll(rowRegex));
+      while (pos < buffer.length) {
+        const char = buffer[pos];
 
-        for (const rowMatch of matches) {
-          const rowText = rowMatch[1];
-          const fields: any[] = [];
+        if (escapeNext) {
+          escapeNext = false;
+        } else if (char === '\\') {
+          escapeNext = true;
+        } else if (char === "'" && !escapeNext) {
+          inString = !inString;
+        } else if (char === ';' && !inString) {
+          semicolonPos = pos;
+          break;
+        }
 
-          let field = '';
-          let inString = false;
-          let escapeNext = false;
+        pos += 1;
+      }
 
-          for (let i = 0; i < rowText.length; i += 1) {
-            const char = rowText[i];
+      if (semicolonPos === -1) break;
 
-            if (escapeNext) {
-              field += char;
-              escapeNext = false;
-            } else if (char === '\\') {
-              escapeNext = true;
-            } else if (char === "'" && !escapeNext) {
-              inString = !inString;
-              field += char;
-            } else if (char === ',' && !inString) {
-              fields.push(parseField(field.trim()));
-              field = '';
-            } else {
-              field += char;
-            }
-          }
+      const valuesSection = buffer.slice(valuesStart + 8, semicolonPos);
+      const rowRegex = /\(([^)]+(?:\([^)]*\)[^)]*)*)\)/g;
+      const matches = Array.from(valuesSection.matchAll(rowRegex));
 
-          if (field) {
+      for (const rowMatch of matches) {
+        const rowText = rowMatch[1];
+        const fields: any[] = [];
+
+        let field = '';
+        let inFieldString = false;
+        let fieldEscapeNext = false;
+
+        for (let i = 0; i < rowText.length; i += 1) {
+          const char = rowText[i];
+
+          if (fieldEscapeNext) {
+            field += char;
+            fieldEscapeNext = false;
+          } else if (char === '\\') {
+            fieldEscapeNext = true;
+          } else if (char === "'" && !fieldEscapeNext) {
+            inFieldString = !inFieldString;
+            field += char;
+          } else if (char === ',' && !inFieldString) {
             fields.push(parseField(field.trim()));
+            field = '';
+          } else {
+            field += char;
           }
+        }
 
-          if (fields.length > 0) {
-            rowCount += 1;
-            yield fields;
-          }
+        if (field) {
+          fields.push(parseField(field.trim()));
+        }
+
+        if (fields.length > 0) {
+          rowCount += 1;
+          yield fields;
         }
       }
 
-      buffer = '';
-      inInsert = false;
+      buffer = buffer.slice(semicolonPos + 1);
     }
   }
 

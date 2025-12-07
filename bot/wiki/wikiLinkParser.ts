@@ -1,4 +1,4 @@
-import { nextWikiText } from './WikiParser';
+import { parseWikiStructures } from './WikiParser';
 
 export type WikiLink = {
   link: string;
@@ -7,27 +7,19 @@ export type WikiLink = {
 }
 
 export function getInnerLinks(text: string): WikiLink[] {
-  const links: WikiLink[] = [];
-  let currIndex = 0;
-  let nextLinkIndex = nextWikiText(text, currIndex, '[[', true);
-  while (nextLinkIndex !== -1 && currIndex < text.length) {
-    const endLinkIndex = nextWikiText(text, nextLinkIndex + 2, ']]', true);
-    if (endLinkIndex === -1) {
-      return links;
-    }
-    const link = text.substring(nextLinkIndex + 2, endLinkIndex);
-    const linkParts = link.split('|');
+  const structures = parseWikiStructures(text);
+  const wikilinks = structures.filter((s) => s.type === 'wikilink');
+
+  return wikilinks.map((structure) => {
+    const linkContent = text.substring(structure.start + 2, structure.end - 2);
+    const linkParts = linkContent.split('|');
     const innerLink = linkParts[0].startsWith(':') ? linkParts[0].substring(1) : linkParts[0];
     const currentLink: WikiLink = { link: innerLink, text: linkParts[1] ?? innerLink };
     if (linkParts.length > 2) {
       currentLink.params = linkParts.slice(1);
     }
-    links.push(currentLink);
-    currIndex = endLinkIndex + 2;
-    nextLinkIndex = nextWikiText(text, currIndex, '[[', true);
-  }
-
-  return links;
+    return currentLink;
+  });
 }
 
 export function getInnerLink(text: string): WikiLink | undefined {
@@ -36,28 +28,14 @@ export function getInnerLink(text: string): WikiLink | undefined {
 }
 
 export function getExternalLinks(text: string): WikiLink[] {
-  const links: WikiLink[] = [];
-  let currIndex = 0;
-  let nextLinkIndex = nextWikiText(text, currIndex, '[', true);
-  while (nextLinkIndex !== -1 && currIndex < text.length) {
-    if (text[nextLinkIndex + 1] === '[') {
-      currIndex = nextLinkIndex + 2;
-    } else {
-      const endLinkIndex = nextWikiText(text, nextLinkIndex + 1, ']', true);
-      if (endLinkIndex === -1) {
-        return links;
-      }
-      const linkText = text.substring(nextLinkIndex + 1, endLinkIndex).trim();
-      const [link, ...description] = linkText.split(' ');
-      links.push({ link, text: description.join(' ') });
+  const structures = parseWikiStructures(text);
+  const externalLinks = structures.filter((s) => s.type === 'link');
 
-      currIndex = endLinkIndex + 1;
-    }
-
-    nextLinkIndex = nextWikiText(text, currIndex, '[', true);
-  }
-
-  return links;
+  return externalLinks.map((structure) => {
+    const linkText = text.substring(structure.start + 1, structure.end - 1).trim();
+    const [link, ...description] = linkText.split(' ');
+    return { link, text: description.join(' ') };
+  });
 }
 
 export function getExternalLink(text: string): WikiLink | undefined {
