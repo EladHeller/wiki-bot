@@ -1,7 +1,10 @@
 import { getIndexStocks, getIndicesList } from '../API/mayaAPI';
 import shabathProtectorDecorator from '../decorators/shabathProtector';
+import { promiseSequence } from '../utilities';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import { getParagraphContent } from '../wiki/paragraphParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
+import { getInnerLinks } from '../wiki/wikiLinkParser';
 import parseTableText from '../wiki/wikiTableParser';
 
 const companyWikiPageTemplate = 'תבנית:חברות מאיה/נתונים';
@@ -37,13 +40,27 @@ function getCompanyShowName(
   return null;
 }
 
+async function getRelevantIndexes(api: IWikiApi): Promise<string[]> {
+  const { content } = await api.articleContent(baseIndexesTemplatePage);
+  const paragraph = getParagraphContent(content, 'מדדים נכללים', baseIndexesTemplatePage);
+  if (!paragraph) {
+    throw new Error('Can not find supported indexes paragraph');
+  }
+  return getInnerLinks(paragraph).map(({ text }) => text);
+}
+
 async function getIndexes(api: IWikiApi) {
   const companyIndexesDict: Record<string, string[]> = {};
   const companyIdArticleDict = await getCompanysData(api, companyWikiPageTemplate);
   const companyIdNameDict = await getCompanysData(api, companyNameTemplate);
+  const relevantIndexes = await getRelevantIndexes(api);
   const data: IndexData[] = [];
   const indexes = await getIndicesList();
-  for (const index of indexes) {
+  await promiseSequence(1, indexes.map((index) => async (): Promise<void> => {
+    const indexName = index.IndexHebName;
+    if (!relevantIndexes.includes(indexName)) {
+      return;
+    }
     const indexStocks = await getIndexStocks(index.IndexId ?? index.Id);
     const stocks = indexStocks.map(
       (stock) => getCompanyShowName(stock.CompanyId, companyIdArticleDict, companyIdNameDict)
@@ -60,7 +77,7 @@ async function getIndexes(api: IWikiApi) {
       }
       companyIndexesDict[stock.CompanyId].push(index.IndexHebName);
     });
-  }
+  }));
 
   data.sort((a, b) => a.indexName.localeCompare(b.indexName));
   return {
