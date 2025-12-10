@@ -538,7 +538,7 @@ type Page = {
     const templatesCount: Record<string, number> = {};
     let pagesCount = 0;
 
-    for (let i = 0; i <= 17; i += 1) {
+    for (let i = 0; i <= 18; i += 1) {
       const chunk = fs.readFileSync(`./data${i}.xml`, 'utf-8');
       const xml = await parseStringPromise(`<xml>${chunk}</xml>`);
       console.log('Processing chunk', i);
