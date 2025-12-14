@@ -13,9 +13,9 @@ interface WeeklyChartData {
 }
 
 interface IMediaForestBotModel {
-  getMediaForestData(): Promise<WeeklyChartData>;
+  getMediaForestData(group?: string): Promise<WeeklyChartData>;
   updateChartTable(data: WeeklyChartData[]): Promise<void>;
-  getOldData(start: number, end: number): Promise<WeeklyChartData[]>;
+  getOldData(start: number, end: number, group?: string): Promise<WeeklyChartData[]>;
 }
 
 interface MediaForestConfig {
@@ -48,7 +48,37 @@ export default function MediaForestBotModel(
     return week.split(' ').splice(1).map((x) => x.replaceAll('-', '.')).join('-');
   }
 
-  async function getMediaForestData(): Promise<WeeklyChartData> {
+  async function getRadioHeData(week: string, year: number): Promise<WeeklyChartData> {
+    const chart = await dataFetcher(`${config.baseUrl}weekly_charts/ISR/${year}/${encodeURIComponent(week)}/RadioHe.json`);
+    return {
+      entries: chart.entries.map((entry: any) => ({
+        title: entry.title,
+        artist: entry.artist,
+        position: entry.thisweek,
+      })),
+      week: normalizeWeek(week),
+    };
+  }
+
+  async function getWeekData(week: string, group: string): Promise<WeeklyChartData> {
+    const [, start, end] = week.split(' ');
+    const [startDate, startMonth, startYear] = start.split('-');
+    const [endDate, endMonth, endYear] = end.split('-');
+    const from = `20${startYear}-${startMonth}-${startDate}T00:00:00`;
+    const to = `20${endYear}-${endMonth}-${endDate}T23:59:59`;
+    const chart = await dataFetcher(`${config.baseUrl}api/charts/by_tracks_with_top_channels?count=50&countries=ISR&from=${from}&group=${group}&media_type=songs&play_type=full&to=${to}`);
+    const relevantEntries = chart.filter((entry: any) => entry.track_country === 'ISR').slice(0, 10);
+    return {
+      entries: relevantEntries.map((entry: any, index: number) => ({
+        title: entry.title,
+        artist: entry.artist,
+        position: (index + 1).toString(),
+      })),
+      week: normalizeWeek(week),
+    };
+  }
+
+  async function getMediaForestData(group?: string): Promise<WeeklyChartData> {
     let weeks: string[] | null = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${currentFullYear}`);
     if (!weeks || !weeks.length) {
       throw new Error('No data found');
@@ -69,20 +99,13 @@ export default function MediaForestBotModel(
       };
     }
 
-    const chart = await dataFetcher(`${config.baseUrl}weekly_charts/ISR/${currentFullYear}/${encodeURIComponent(lastWeek)}/RadioHe.json`);
+    const chart = !group ? await getRadioHeData(lastWeek, currentFullYear) : await getWeekData(lastWeek, group);
 
     await wikiApi.edit(`${config.page}/${lastWeekPath}`, 'עדכון מדיה פורסט', lastWeek, revid);
-    return {
-      entries: chart.entries.map((entry: any) => ({
-        title: entry.title,
-        artist: entry.artist,
-        position: entry.thisweek,
-      })),
-      week: lastWeekText,
-    };
+    return chart;
   }
 
-  async function getOldData(start: number, end: number) {
+  async function getOldData(start: number, end: number, group?: string) {
     const data:WeeklyChartData[] = [];
     for (let year = start; year <= end; year += 1) {
       let weeks: string[] = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${year}`);
@@ -91,17 +114,10 @@ export default function MediaForestBotModel(
       }
       weeks = weeks.filter((w: string) => w.endsWith((year % 100).toString()));
       for (const week of weeks) {
-        const chart = await dataFetcher(`${config.baseUrl}weekly_charts/ISR/${year}/${encodeURIComponent(week)}/RadioHe.json`);
-        const weekText = normalizeWeek(week);
-
-        data.push({
-          week: weekText,
-          entries: chart.entries.map((entry: any) => ({
-            title: entry.title,
-            artist: entry.artist,
-            position: entry.thisweek,
-          })),
-        });
+        const chart = !group
+          ? await getRadioHeData(week, year)
+          : await getWeekData(week, group);
+        data.push(chart);
       }
     }
     return data;

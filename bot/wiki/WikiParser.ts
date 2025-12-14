@@ -124,7 +124,7 @@ export function parseWikiStructures(text: string, startIndex?: number, title?: s
   if (stack.length > 0) {
     stack.forEach((unclosed) => {
       const preview = text.substring(unclosed.start, Math.min(unclosed.start + 100, text.length));
-      console.log(`Warning: Unclosed ${unclosed.type} in ${title ? `"${title}"` : 'text'} at position ${unclosed.start}: ${preview}...`);
+      console.debug(`Warning: Unclosed ${unclosed.type} in ${title ? `"${title}"` : 'text'} at position ${unclosed.start}: ${preview}...`);
     });
   }
 
