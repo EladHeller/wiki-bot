@@ -65,6 +65,27 @@ describe('mediaForestBotModel', () => {
       });
       expect(mockWikiApi.edit).not.toHaveBeenCalled();
     });
+
+    it('should fetch and return chart data for a group', async () => {
+      mockDataFetcher.mockResolvedValueOnce(['10 3-5-23 9-5-23', '11 10-5-23 16-5-23']);
+      mockDataFetcher.mockResolvedValueOnce([
+        { title: 'Song1', artist: 'Artist1', track_country: 'ISR' },
+        { title: 'Song2', artist: 'Artist2', track_country: 'ISR' },
+      ]);
+
+      const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
+      const result = await model.getMediaForestData('TV');
+
+      expect(result).toStrictEqual({
+        entries: [
+          { title: 'Song1', artist: 'Artist1', position: '1' },
+          { title: 'Song2', artist: 'Artist2', position: '2' },
+        ],
+        week: '10.5.23-16.5.23',
+      });
+      expect(mockWikiApi.edit).toHaveBeenCalledTimes(1);
+      expect(mockWikiApi.edit).toHaveBeenCalledWith(`${mockConfig.page}/שבוע אחרון`, 'עדכון מדיה פורסט', '11 10-5-23 16-5-23', 123);
+    });
   });
 
   describe('getOldData', () => {
@@ -84,6 +105,25 @@ describe('mediaForestBotModel', () => {
 
       const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
       const result = await model.getOldData(2023, 2023);
+
+      expect(result).toHaveLength(2);
+      expect(mockDataFetcher).toHaveBeenCalledTimes(3);
+    });
+
+    it('should fetch and save data for a single year with group', async () => {
+      const mockWeeks = ['10 3-5-23 9-5-23', '11 10-5-23 16-5-23'];
+      const mockChart = [
+        { title: 'Song1', artist: 'Artist1', track_country: 'ISR' },
+        { title: 'Song2', artist: 'Artist2', track_country: 'ISR' },
+      ];
+
+      mockDataFetcher
+        .mockResolvedValueOnce(mockWeeks)
+        .mockResolvedValueOnce(mockChart)
+        .mockResolvedValueOnce(mockChart);
+
+      const model = MediaForestBotModel(mockWikiApi, mockConfig, mockDataFetcher);
+      const result = await model.getOldData(2023, 2023, 'TV');
 
       expect(result).toHaveLength(2);
       expect(mockDataFetcher).toHaveBeenCalledTimes(3);

@@ -11,7 +11,7 @@ const defaultDataFetcher = async (url: string) => {
   return res.json();
 };
 
-export default async function mdeiaForestBot() {
+export default async function mediaForestBot() {
   console.log('Starting media forest bot');
   const model = MediaForestBotModel(WikiApi(), {
     baseUrl: 'https://mediaforest-group.com/',
@@ -24,7 +24,20 @@ export default async function mdeiaForestBot() {
     return;
   }
   await model.updateChartTable([data]);
-  console.log('Media forest bot finished');
+
+  console.log('Starting media forest bot TV');
+  const modelTV = MediaForestBotModel(WikiApi(), {
+    baseUrl: 'https://mediaforest-group.com/',
+    page: 'ויקיפדיה:בוט/בוט מצעדים/מדיה פורסט TV',
+  }, defaultDataFetcher);
+
+  const dataTV = await modelTV.getMediaForestData('TV');
+  if (!dataTV.entries?.length) {
+    console.log('No data found');
+    return;
+  }
+  await modelTV.updateChartTable([dataTV]);
+  console.log('Media forest bot TV finished');
 }
 
-export const main = shabathProtectorDecorator(mdeiaForestBot);
+export const main = shabathProtectorDecorator(mediaForestBot);
