@@ -28,6 +28,7 @@ const LOG_PAGE = `${BASE_PAGE}/לוג`;
 const SELECTED_QOUTE = 'ציטוט_נבחר';
 const WEBSITE_FOR_VISIT = 'אתר לביקור';
 const DRAFT = 'טיוטה';
+const SAND_BOX = 'ארגז חול';
 const TEMP_ERRORS = ['timeout', 'search_error', 'unhandled_exception'];
 
 function copyviosSearchLink(title: string) {
@@ -96,8 +97,11 @@ const hamichlolNotProblem = [
   'המכלול: ערכים מילוניים',
 ];
 
-export async function checkHamichlol(title: string, wikipediaTitle = title) {
+export async function checkHamichlol(title: string, wikipediaTitle: string) {
   const hamichlolPageText = await getHamichlolPageContent(title);
+  if (!hamichlolPageText) {
+    return null;
+  }
   try {
     if (hamichlolPageText && hamichlolNotProblem.some((text) => hamichlolPageText.includes(text))) {
       console.log(`Hamichlol from wiki: ${wikipediaTitle}`);
@@ -121,7 +125,7 @@ export async function checkHamichlol(title: string, wikipediaTitle = title) {
   }
 }
 
-async function handlePage(title: string, isMainNameSpace: boolean) {
+export async function handlePage(title: string, isMainNameSpace: boolean) {
   const logs: ArticleLog[] = [];
   const otherLogs: ArticleLog[] = [];
   if (title.includes(`(${DISAMBIGUATION})`)) {
@@ -153,8 +157,8 @@ async function handlePage(title: string, isMainNameSpace: boolean) {
   if (!isMainNameSpace) {
     titleForHamichlol = title.split(/[:/]/).at(-1) ?? '';
   }
-  if (titleForHamichlol && titleForHamichlol !== DRAFT) {
-    results.push(await checkHamichlol(titleForHamichlol));
+  if (titleForHamichlol && ![SAND_BOX, DRAFT].includes(titleForHamichlol)) {
+    results.push(await checkHamichlol(titleForHamichlol, title));
     results.push(await checkHamichlol(`רבי ${titleForHamichlol}`, title));
     results.push(await checkHamichlol(`הרב ${titleForHamichlol}`, title));
   }

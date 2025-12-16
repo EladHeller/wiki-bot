@@ -60,6 +60,10 @@ export default function MediaForestBotModel(
     };
   }
 
+  async function getWeeks(year: number): Promise<string[]> {
+    return dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${year}`);
+  }
+
   async function getWeekData(week: string, group: string): Promise<WeeklyChartData> {
     const [, start, end] = week.split(' ');
     const [startDate, startMonth, startYear] = start.split('-');
@@ -79,7 +83,7 @@ export default function MediaForestBotModel(
   }
 
   async function getMediaForestData(group?: string): Promise<WeeklyChartData> {
-    let weeks: string[] | null = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${currentFullYear}`);
+    let weeks: string[] | null = await getWeeks(currentFullYear);
     if (!weeks || !weeks.length) {
       throw new Error('No data found');
     }
@@ -108,7 +112,7 @@ export default function MediaForestBotModel(
   async function getOldData(start: number, end: number, group?: string) {
     const data:WeeklyChartData[] = [];
     for (let year = start; year <= end; year += 1) {
-      let weeks: string[] = await dataFetcher(`${config.baseUrl}api/weekly_charts/weeks?year=${year}`);
+      let weeks: string[] = await getWeeks(year);
       if (!weeks || !weeks.length) {
         throw new Error('No data found');
       }
