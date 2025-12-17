@@ -970,3 +970,46 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn: !GetAtt SportPersonalityTemplatesYearsFormatEventRule.Arn
       FunctionName: sport-personality-templates-years-format-function
+
+  # Exchange Rates
+  ExchangeRatesLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: exchange-rates-function
+      Runtime: nodejs24.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/exchangeRates/index.main
+      Timeout: 30
+      MemorySize: 512
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
+
+  ExchangeRatesEventRule:
+    DependsOn:
+      - ExchangeRatesLambda
+    Type: AWS::Events::Rule
+    Properties:
+      Name: exchange-rates-scheduler
+      ScheduleExpression: cron(0 12 ? * * *)
+      Targets:
+        - Id: exchange-rates-function
+          Arn: !GetAtt ExchangeRatesLambda.Arn
+
+  ExchangeRatesInvokePermission:
+    DependsOn:
+      - ExchangeRatesEventRule
+      - ExchangeRatesLambda
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ExchangeRatesEventRule.Arn
+      FunctionName: exchange-rates-function
