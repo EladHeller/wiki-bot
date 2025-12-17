@@ -57,8 +57,7 @@ export default function ExchangeRatesModel(
     if (!oldTemplate) {
       throw new Error('Template not found');
     }
-
-    // Create the data object with all rates plus the date
+    ratesData.rates.EUR = 1; // For simplicity, set EUR to 1
     const templateData: Record<string, string> = {
       ...Object.fromEntries(
         Object.entries(ratesData.rates).map(([currency, rate]) => [

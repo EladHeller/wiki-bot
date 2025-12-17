@@ -149,6 +149,7 @@ describe('exchangeRatesModel', () => {
       const mockContent = `{{#switch: {{{1}}}
 |USD=1.1776
 |ILS=3.7958
+|EUR=1
 |date=16 בדצמבר 2025
 |#default=
 }}`;
