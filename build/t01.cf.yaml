@@ -998,7 +998,7 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Name: exchange-rates-scheduler
-      ScheduleExpression: cron(0 12,18 ? * * *)
+      ScheduleExpression: cron(0 16,17,18 ? * * *)
       Targets:
         - Id: exchange-rates-function
           Arn: !GetAtt ExchangeRatesLambda.Arn
