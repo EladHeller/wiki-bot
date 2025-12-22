@@ -78,7 +78,7 @@ export default function ExchangeRatesModel(
     }
 
     await wikiApi.edit(config.templatePage, 'עדכון שערי חליפין', newContent, revid);
-    await wikiApi.purge([config.templatePage.replace('/נתונים', '')]);
+    await wikiApi.purge([config.templatePage.replace('/נתונים', ''), 'תבנית:שער חליפין בין מטבעות', 'תבנית:שערי חליפין למטבע']);
   }
 
   return {
