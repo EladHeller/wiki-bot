@@ -205,6 +205,25 @@ describe('templateFromKeyValueData', () => {
 
     expect(result).toBe('{{test|test=hello|other=world|author=}}');
   });
+
+  it('should generate a valid template from an empty templateData object with new lines', () => {
+    const templateData = {};
+    const templateName = 'name';
+    const result = templateFromKeyValueData(templateData, templateName, true);
+
+    expect(result).toBe('{{name}}');
+  });
+
+  it('should generate a valid template from data with new lines', () => {
+    const data = {
+      test: 'hello',
+      other: 'world',
+      author: '',
+    };
+    const result = templateFromKeyValueData(data, 'test', true);
+
+    expect(result).toBe('{{test\n|test=hello\n|other=world\n|author=\n}}');
+  });
 });
 
 describe('getTemplateKeyValueData', () => {
@@ -225,6 +244,22 @@ describe('getTemplateKeyValueData', () => {
     const result = getTemplateKeyValueData('');
 
     expect(result).toStrictEqual({});
+  });
+
+  it('should handle empty parameters', () => {
+    const template = '{{template}}';
+    const result = getTemplateKeyValueData(template);
+
+    expect(result).toStrictEqual({});
+  });
+
+  it('should handle template with pipe sign at the end', () => {
+    const template = '{{template|test=hello|}}';
+    const result = getTemplateKeyValueData(template);
+
+    expect(result).toStrictEqual({
+      test: 'hello',
+    });
   });
 });
 
