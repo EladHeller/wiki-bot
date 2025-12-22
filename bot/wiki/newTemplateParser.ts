@@ -53,11 +53,17 @@ export function getTemplateKeyValueData(templateText: string): Record<string, st
   const obj = {};
   if (templateText) {
     let currIndex = templateText.indexOf('|') + 1;
+    if (currIndex === 0) {
+      return {};
+    }
 
     let isTemplateEnd = false;
     while (!isTemplateEnd) {
       let value: string;
       const equalSignIndex = templateText.indexOf('=', currIndex);
+      if (equalSignIndex === -1) {
+        return obj;
+      }
       const key = templateText.substring(currIndex, equalSignIndex).trim();
       const pipeSignIndex = nextWikiText(templateText, currIndex, '|');
       isTemplateEnd = pipeSignIndex === -1;
@@ -81,10 +87,14 @@ export function templateFromKeyValueData(
   newLines = true,
 ): string {
   const endOfValue = newLines ? '\n' : '';
-  let templateStr = `{{${templateName}${endOfValue}`;
+  let templateStr = `{{${templateName}`;
 
-  Object.entries(data).forEach(([key, value]) => {
-    templateStr += `|${key}=${value}${endOfValue}`;
+  Object.entries(data).forEach(([key, value], index) => {
+    if (index > 0) {
+      templateStr += `|${key}=${value}${endOfValue}`;
+    } else {
+      templateStr += `${endOfValue}|${key}=${value}${endOfValue}`;
+    }
   });
   templateStr += '}}';
 
