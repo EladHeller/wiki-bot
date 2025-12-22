@@ -4,34 +4,10 @@ import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const TEMPLATE_CONFIGS = {
-  עיתון: {
+  'כלי תקשורת': {
     renames: {
-      'תאריך ייסוד': 'תאריך התחלה',
-      'תאריך סגירה': 'תאריך סיום',
-    },
-    deletes: ['מין'],
-  },
-  ערוץ: {
-    renames: {
-      'תאריך השקה': 'תאריך התחלה',
-      'תאריך סגירה': 'תאריך סיום',
-      בעלות: 'בעלים',
-      'משרד ראשי': 'מערכת',
-      קטגוריה: 'סוגה',
-      הוט: 'אפיק הוט',
-      יס: 'אפיק יס',
-      סלקום: 'אפיק סלקום',
-      פרטנר: 'אפיק פרטנר',
-      'עידן פלוס': 'אפיק עידן פלוס',
-    },
-    deletes: [],
-  },
-  'תחנת רדיו': {
-    renames: {
-      קטגוריה: 'סוגה',
-      בעלות: 'בעלים',
-      'אפיק HOT': 'אפיק הוט',
-      'אפיק yes': 'אפיק יס',
+      'התחלת פעילות': 'תאריך התחלה',
+      'סיום פעילות': 'תאריך סיום',
     },
     deletes: [],
   },
@@ -40,30 +16,23 @@ const TEMPLATE_CONFIGS = {
 function processTemplate(
   template: string,
   config: typeof TEMPLATE_CONFIGS[keyof typeof TEMPLATE_CONFIGS],
-): string {
+): string | null {
   const originalKeyValueData = getTemplateKeyValueData(template);
   const keyValueData = { ...originalKeyValueData };
 
+  let hasAnyChanges = false;
   for (const [oldKey, newKey] of Object.entries(config.renames)) {
     if (keyValueData[oldKey] !== undefined) {
       keyValueData[newKey] = keyValueData[oldKey];
       delete keyValueData[oldKey];
+      hasAnyChanges = true;
     }
   }
 
-  for (const keyToDelete of config.deletes) {
-    if (keyValueData[keyToDelete] !== undefined) {
-      delete keyValueData[keyToDelete];
-    }
+  if (hasAnyChanges) {
+    return templateFromKeyValueData(keyValueData, 'כלי תקשורת');
   }
-
-  for (const [key, value] of Object.entries(keyValueData)) {
-    if (!value || value.trim() === '') {
-      delete keyValueData[key];
-    }
-  }
-
-  return templateFromKeyValueData(keyValueData, 'כלי תקשורת');
+  return null;
 }
 
 async function processArticle(
@@ -80,9 +49,7 @@ async function processArticle(
     return;
   }
 
-  let newContent = content.replace(`{{כלי תקשורת
-|={{עיתון
-}}`, '{{כלי תקשורת}}');
+  let newContent = content;
   const templates = findTemplates(content, templateName, page.title);
 
   if (!templates || templates.length === 0) {
@@ -102,7 +69,7 @@ async function processArticle(
   if (hasAnyChanges) {
     await api.edit(
       page.title,
-      `הסבת תבנית ${templateName} לתבנית כלי תקשורת ([[מיוחד:הבדל/42406592|בקשה בוק:בב]], [[מיוחד:הבדל/42406579|דיון בוק:תב]])`,
+      `הסבת פרמטרים בתבנית ${templateName} ([[מיוחד:הבדל/42406592|בקשה בוק:בב]], [[מיוחד:הבדל/42406579|דיון בוק:תב]])`,
       newContent,
       revid,
     );
@@ -112,7 +79,7 @@ async function processArticle(
   }
 }
 
-export default async function updateMediaTemplates() {
+export default async function updateMediaTemplates1() {
   const api = WikiApi();
   await api.login();
 
