@@ -129,9 +129,9 @@ describe('archiveParagraph', () => {
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב:תבנית:[[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+:@[[משתמש:Sapper-bot]] ארכב ל: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
-    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['יעד', '[[שיחת תבנית:ספרינגפילד]]']);
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['ל', '[[שיחת תבנית:ספרינגפילד]]']);
 
     expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
 
@@ -169,9 +169,9 @@ ${statusTemplate}
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב:תבנית:[[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+:@[[משתמש:Sapper-bot]] ארכב ל: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
-    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['יעדחדש', '[[שיחת תבנית:ספרינגפילד]]']);
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['ל', '[[שיחת תבנית:ספרינגפילד]]']);
 
     expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
 
@@ -207,9 +207,9 @@ ${statusTemplate}
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב:תבנית:שיחת תבנית:ספרינגפילד ${userSign}`;
+:@[[משתמש:Sapper-bot]] ארכב ל: שיחת תבנית:ספרינגפילד ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
-    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['יעד', 'שיחת תבנית:ספרינגפילד']);
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['ל', 'שיחת תבנית:ספרינגפילד']);
 
     expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
 
@@ -246,10 +246,49 @@ ${statusTemplate}
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב:תבני:שיחת תבנית:ספרינגפילד ${userSign}`;
+:@[[משתמש:Sapper-bot]] ארכב: שיחת תבנית:ספרינגפילד ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
-    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['תבני', 'שיחת תבנית:ספרינגפילד']);
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['wrong', 'שיחת תבנית:ספרינגפילד']);
 
     expect(result).toStrictEqual({ error: 'הועברו פרמטרים לא תקינים' });
+  });
+
+  it('should support old format with יעד (backward compatibility)', async () => {
+    api.info.mockResolvedValue([{ }]);
+    api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
+    api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
+    api.edit.mockResolvedValue({});
+
+    const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
+    const paragraphContent = `==paragraph headline==
+${statusTemplate}
+paragraphContent
+:@[[משתמש:Sapper-bot]] ארכב: יעד: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+    const pageContent = `${archiveBox}\n${paragraphContent}`;
+    const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['ל', '[[שיחת תבנית:ספרינגפילד]]']);
+
+    expect(result).toStrictEqual({ success: 'הארכוב בוצע בהצלחה' });
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'archiveBoxContent',
+      'summary',
+      `existingContent\n==paragraph headline==
+${statusTemplate}
+{{הועבר|ל=שיחת תבנית:ספרינגפילד}} אורכב לבקשת [[משתמש:Homer Simpson]].{{כ}} ~~~~`,
+      456,
+    );
+    expect(api.edit).toHaveBeenCalledWith(
+      'שיחת תבנית:ספרינגפילד',
+      'summary. הועבר מ[[pageTitle]]',
+      expect.stringContaining('{{הועבר|מ=pageTitle}}'),
+      678,
+    );
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'pageTitle',
+      'summary. הועבר ל[[שיחת תבנית:ספרינגפילד]]',
+      pageContent.replace(paragraphContent, ''),
+      123,
+    );
   });
 });

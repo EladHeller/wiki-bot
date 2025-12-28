@@ -3,8 +3,8 @@ import { IWikiApi } from '../../wiki/WikiApi';
 import { getInnerLink } from '../../wiki/wikiLinkParser';
 import { getArchiveTitle } from '../../utilities/archiveUtils';
 
-const archiveCommandRegex = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב:.*/im;
-const archiveCommandRegexGlobal = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב:.*/gim;
+const archiveCommandRegex = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב(\s+ל)?:.*/im;
+const archiveCommandRegexGlobal = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב(\s+ל)?:.*/gim;
 
 async function regularArchive(
   api: IWikiApi,
@@ -82,7 +82,7 @@ export default async function archiveParagraph(
   }
   const { archiveTitle } = archiveTitleResult;
   const lastArchiveContent = await api.articleContent(archiveTitle);
-  if (type != null && ['יעד', 'יעדחדש'].includes(type) && target) {
+  if (type === 'ל' && target) {
     return archiveTo(
       api,
       archiveTitle,
