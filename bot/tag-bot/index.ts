@@ -97,7 +97,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
     const pageContent = await api.articleContent(title);
     const paragraphs = getAllParagraphs(pageContent.content, title);
     const paragraphContent = paragraphs.find((paragraph) => paragraph.match(/@\[\[(?:(?:משתמש|user):)?Sapper-bot/i)
-      && paragraph.includes('ארכב:')
+      && paragraph.match(/ארכב(?:\s+ל)?:/)
       && paragraph.includes(user)
       && getTimeStampOptions(timestamp).some((time) => paragraph.includes(time)));
     if (!paragraphContent) {
@@ -107,7 +107,16 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
     }
     const { name: paragraphName } = parseParagraph(paragraphContent);
     const archiveSummary = getArchiveSummary(user, paragraphName);
-    const [, type, ...target] = notification['*'].body.split(':');
+    const { body } = notification['*'];
+    const archiveToMatch = body.match(/ארכב\s+ל:\s*(.+)/);
+    const oldFormatMatch = body.match(/ארכב:\s*יעד:\s*(.+)/);
+    const isArchiveTo = archiveToMatch != null || oldFormatMatch != null;
+    let target = '';
+    if (archiveToMatch) {
+      target = archiveToMatch[1].trim();
+    } else if (oldFormatMatch) {
+      target = oldFormatMatch[1].trim();
+    }
     const res = await archiveParagraph(
       api,
       pageContent.content,
@@ -116,7 +125,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       paragraphContent,
       archiveSummary,
       user,
-      [type?.trim(), target.join(':').trim()],
+      [isArchiveTo ? 'ל' : null, target],
     );
     if ('error' in res) {
       const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}הארכוב נכשל: ${res.error}.`, commentId);
@@ -152,6 +161,7 @@ async function askAction(api: IWikiApi, notification: WikiNotification) {
 
 const actions = {
   ארכב: archiveAction,
+  'ארכב ל': archiveAction,
   ענה: askAction,
 };
 const supportedActions = Object.keys(actions);
