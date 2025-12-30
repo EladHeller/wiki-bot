@@ -8,7 +8,8 @@
     "start": "tsx --max-old-space-size=8192 --trace-gc index.ts ",
     "read": "tsx readLargeFile.ts",
     "templates": "tsx templates.ts",
-    "soldierAndPolice": "tsx soldierAndPolice.ts"
+    "soldierAndPolice": "tsx soldierAndPolice.ts",
+    "hasType": "tsx hasTypeField.ts"
   },
   "keywords": [],
   "author": "",
