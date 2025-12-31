@@ -1,4 +1,6 @@
+/* eslint-disable no-loop-func */
 import { WikiPage } from '../../types';
+import { promiseSequence } from '../../utilities';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
@@ -103,18 +105,17 @@ export default async function securityPersonalityToOfficer() {
   let count = 0;
 
   for await (const pages of generator) {
-    for (const page of pages) {
-      count += 1;
+    await promiseSequence(10, pages.map((page) => async () => {
       try {
+        count += 1;
         await processArticle(api, page);
       } catch (error) {
         console.error(`Error processing ${page.title}:`, error.message);
       }
-      if (count >= 1000) {
-        throw new Error('Stopped at 1000 pages');
-      }
+    }));
+    if (count >= 1000) {
+      console.log('Stopped at 1000 pages');
+      return;
     }
   }
-
-  console.log('\nAll security personalities processed!\n');
 }
