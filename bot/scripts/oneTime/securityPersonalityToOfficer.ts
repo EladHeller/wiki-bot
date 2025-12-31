@@ -107,12 +107,11 @@ export default async function securityPersonalityToOfficer() {
       count += 1;
       try {
         await processArticle(api, page);
-        console.log(`Processed ${page.title}`);
       } catch (error) {
         console.error(`Error processing ${page.title}:`, error.message);
       }
-      if (count >= 500) {
-        throw new Error('Stopped at 500 pages');
+      if (count >= 1000) {
+        throw new Error('Stopped at 1000 pages');
       }
     }
   }

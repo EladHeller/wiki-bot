@@ -104,7 +104,7 @@ async function notifyUserAboutArchive(
     const { content, revid } = await getContent(api, talkPage);
 
     if (content.includes(BOT_NOTIFICATION_HEADER)) {
-      console.log(`Skipping notification for ${talkPage}: already has bot notification`);
+      console.warn(`Skipping notification for ${talkPage}: already has bot notification`);
       return;
     }
 
@@ -361,34 +361,27 @@ export default function UserTalkArchiveBotModel(
   async function processPage(page: WikiPage): Promise<void> {
     const content = getPageContent(page);
     if (!content) {
-      console.log(`No content found for ${page.title}`);
+      console.warn(`No content found for ${page.title}`);
       return;
     }
 
     const config = getConfigFromPageContent(page.title, content);
     if (!config) {
-      console.log(`No valid config found for ${page.title}`);
+      console.warn(`No valid config found for ${page.title}`);
       return;
     }
-
-    console.log(`Processing page: ${page.title}`);
 
     const archivableParagraphs = await getArchivableParagraphs(
       config.talkPage,
       config.inactivityDays,
     );
 
-    console.log(`Found ${archivableParagraphs.length} archivable paragraphs`);
-
     if (archivableParagraphs.length > 0) {
       await archive(config, archivableParagraphs);
-      console.log(`Archived ${archivableParagraphs.length} paragraphs`);
     }
   }
 
   async function run(): Promise<void> {
-    console.log('Starting user talk archive bot');
-
     const generator = wikiApi.getArticlesWithTemplate(AUTO_ARCHIVE_TEMPLATE, undefined, 'תבנית', '*');
 
     await asyncGeneratorMapWithSequence(
@@ -402,8 +395,6 @@ export default function UserTalkArchiveBotModel(
         }
       },
     );
-
-    console.log('User talk archive bot finished');
   }
 
   return {
