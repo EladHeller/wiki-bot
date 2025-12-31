@@ -1,10 +1,9 @@
 import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const OFFICER_TEMPLATE_NAME = 'נושא משרה';
-const SECURITY_PERSONALITY_TEMPLATE_NAME = 'אישיות בטחונית';
+const SECURITY_PERSONALITY_TEMPLATE_NAME = 'אישיות ביטחונית';
 
 const fieldsToRename = {
   'התחלת פעילות': 'התחלת שירות',
@@ -12,13 +11,20 @@ const fieldsToRename = {
   'תפקידים אזרחיים': 'תפקידים נוספים',
 };
 
-const typesToRename = {
-  חייל: 'צבאי',
-  חיילת: 'צבאי',
-  שוטר: 'משטרה',
-  שוטרת: 'משטרה',
-  משטרתי: 'משטרה',
+const classificationMapping: Record<string, { סיווג: string; 'סוג שירות': string }> = {
+  חייל: { סיווג: 'צבאי', 'סוג שירות': 'צבאי' },
+  חיילת: { סיווג: 'צבאי', 'סוג שירות': 'צבאי' },
+  צבאי: { סיווג: 'צבאי', 'סוג שירות': 'צבאי' },
+  שוטר: { סיווג: 'משטרה', 'סוג שירות': 'משטרתי' },
+  שוטרת: { סיווג: 'משטרה', 'סוג שירות': 'משטרתי' },
+  משטרה: { סיווג: 'משטרה', 'סוג שירות': 'משטרתי' },
+  משטרתי: { סיווג: 'משטרה', 'סוג שירות': 'משטרתי' },
+  מחבל: { סיווג: 'מחבל', 'סוג שירות': 'טרור' },
+  מחבלת: { סיווג: 'מחבל', 'סוג שירות': 'טרור' },
 };
+
+const typesToConvertToServiceType = ['מוסד', 'שב"כ', 'מד"א'];
+
 function processTemplate(
   template: string,
 ): string {
@@ -31,9 +37,18 @@ function processTemplate(
       delete keyValueData[oldKey];
     }
   }
-  const type = keyValueData['סיווג'];
-  if (type && typesToRename[type]) {
-    keyValueData['סיווג'] = typesToRename[type];
+
+  const type = keyValueData['סיווג']?.trim();
+  if (type) {
+    if (classificationMapping[type]) {
+      keyValueData['סיווג'] = classificationMapping[type]['סיווג'];
+      keyValueData['סוג שירות'] = classificationMapping[type]['סוג שירות'];
+    } else if (typesToConvertToServiceType.includes(type)) {
+      keyValueData['סוג שירות'] = type;
+      delete keyValueData['סיווג'];
+    } else {
+      delete keyValueData['סיווג'];
+    }
   }
 
   return templateFromKeyValueData(keyValueData, 'נושא משרה');
@@ -71,11 +86,10 @@ async function processArticle(
   if (hasAnyChanges) {
     await api.edit(
       page.title,
-      `הסבת תבנית ${SECURITY_PERSONALITY_TEMPLATE_NAME} לתבנית ${OFFICER_TEMPLATE_NAME} ([[מיוחד:הבדל/42406592|בקשה בוק:בב]], [[מיוחד:הבדל/42406579|דיון בוק:תב]])`,
+      `הסבת תבנית ${SECURITY_PERSONALITY_TEMPLATE_NAME} לתבנית ${OFFICER_TEMPLATE_NAME} ([[מיוחד:הבדל/42456700|בקשה בוק:בב]], [[מיוחד:הבדל/42447855|דיון בוק:תב]])`,
       newContent,
       revid,
     );
-    console.log(`Updated ${page.title}`);
   } else {
     console.log(`No changes needed for ${page.title}`);
   }
@@ -86,18 +100,22 @@ export default async function securityPersonalityToOfficer() {
   await api.login();
 
   const generator = api.getArticlesWithTemplate(SECURITY_PERSONALITY_TEMPLATE_NAME, undefined, undefined, '*');
+  let count = 0;
 
-  await asyncGeneratorMapWithSequence(
-    1,
-    generator,
-    (page) => async () => {
+  for await (const pages of generator) {
+    for (const page of pages) {
+      count += 1;
       try {
         await processArticle(api, page);
+        console.log(`Processed ${page.title}`);
       } catch (error) {
-        console.error(`Error processing ${page.title}:`, error);
+        console.error(`Error processing ${page.title}:`, error.message);
       }
-    },
-  );
+      if (count >= 500) {
+        throw new Error('Stopped at 500 pages');
+      }
+    }
+  }
 
   console.log('\nAll security personalities processed!\n');
 }
