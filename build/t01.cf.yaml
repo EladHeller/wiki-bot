@@ -631,6 +631,49 @@ Resources:
   #     FilterPattern: Invoke Error
   #     LogGroupName: /aws/lambda/archive-closed-discussions-function
 
+  # Archive user talk pages
+  ArchiveUserTalkLambda:
+    DependsOn:
+      - MarketValueLambdaIamRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt MarketValueLambdaIamRole.Arn
+      FunctionName: archive-user-talk-function
+      Runtime: nodejs24.x
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
+      Handler: dist/maintenance/userTalkArchiveBot/index.main
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Ref BucketCodeName
+        S3Key: dist.zip
+        S3ObjectVersion: !Ref DistCodeVersionId
+
+  ArchiveUserTalkEventRule:
+    DependsOn:
+      - ArchiveUserTalkLambda
+    Type: AWS::Events::Rule
+    Properties:
+      Name: archive-user-talk-scheduler
+      ScheduleExpression: cron(0 8 ? * 0-5 *)
+      Targets:
+        - Id: archive-user-talk-function
+          Arn: !GetAtt ArchiveUserTalkLambda.Arn
+
+  ArchiveUserTalkInvokePermission:
+    DependsOn:
+      - ArchiveUserTalkEventRule
+      - ArchiveUserTalkLambda
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ArchiveUserTalkEventRule.Arn
+      FunctionName: archive-user-talk-function
+
   # Scripts lambda
   RunScriptsLambda:
     DependsOn:
