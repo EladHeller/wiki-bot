@@ -140,7 +140,7 @@ export default function UserTalkArchiveBotModel(
       ? (getInnerLink(directArchivePageStr)?.link ?? directArchivePageStr)
       : null;
 
-    const maxArchiveSizeStr = params['גודל דף ארכיון']?.trim();
+    const maxArchiveSizeStr = params['גודל דף ארכיון']?.trim().replace(/,/g, '');
     const maxArchiveSize = maxArchiveSizeStr ? parseInt(maxArchiveSizeStr, 10) : DEFAULT_ARCHIVE_SIZE;
 
     const archiveHeaderStr = params['ראש דף ארכיון']?.trim();

@@ -89,6 +89,18 @@ describe('userTalkArchiveBotModel', () => {
       expect(config).toBeNull();
     });
 
+    it('should parse maxArchiveSize with commas', () => {
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון 1]]|גודל דף ארכיון=100,000}}
+==דיון==
+תוכן`;
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
+
+      expect(config?.maxArchiveSize).toBe(100000);
+    });
+
     it('should parse createNewArchive as false when set to לא', () => {
       const pageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון 1]]|יצירת דף ארכיון חדש=לא}}
 ==דיון==
