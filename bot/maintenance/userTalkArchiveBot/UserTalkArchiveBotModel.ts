@@ -22,6 +22,7 @@ export interface UserTalkArchiveConfig {
   directArchivePage: string | null;
   maxArchiveSize: number;
   archiveHeader: string;
+  createNewArchive: boolean;
 }
 
 function getPageContent(page: WikiPage): string | null {
@@ -109,7 +110,7 @@ async function notifyUserAboutArchive(
     }
 
     const notificationMessage = `\n\n${BOT_NOTIFICATION_HEADER}\n${message} ~~~~`;
-    await api.edit(talkPage, 'הודעה מבוט הארכוב', content + notificationMessage, revid);
+    await api.edit(talkPage, '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הודעה מבוט הארכוב', content + notificationMessage, revid);
   } catch (error) {
     console.error(`Failed to notify user on ${talkPage}:`, error);
   }
@@ -145,6 +146,9 @@ export default function UserTalkArchiveBotModel(
     const archiveHeaderStr = params['ראש דף ארכיון']?.trim();
     const archiveHeader = archiveHeaderStr || DEFAULT_ARCHIVE_HEADER;
 
+    const createNewArchiveStr = params['יצירת דף ארכיון חדש']?.trim();
+    const createNewArchive = createNewArchiveStr !== 'לא';
+
     if (!archiveBoxPage && !directArchivePage) {
       return null;
     }
@@ -156,6 +160,7 @@ export default function UserTalkArchiveBotModel(
       directArchivePage,
       maxArchiveSize,
       archiveHeader,
+      createNewArchive,
     };
   }
 
@@ -258,35 +263,59 @@ export default function UserTalkArchiveBotModel(
 
     await api.edit(
       archiveBoxPage,
-      'הוספת דף ארכיון חדש',
+      '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
       content.replace(parameter, newParameter),
       revid,
     );
   }
 
-  async function archiveWithArchiveBox(
+  async function updateDirectArchiveTemplateParameter(
     talkPage: string,
-    archiveBoxPage: string,
-    archiveHeader: string,
-    maxArchiveSize: number,
-    paragraphs: string[],
+    oldArchivePage: string,
+    newArchivePage: string,
   ): Promise<void> {
-    const archiveTitleResult = await getArchiveTitleFromBox(
-      wikiApi,
-      archiveBoxPage,
-      talkPage,
-    );
+    const { content, revid } = await getContent(wikiApi, talkPage);
+    const template = findTemplate(content, AUTO_ARCHIVE_TEMPLATE, talkPage);
 
-    if ('error' in archiveTitleResult) {
-      await notifyUserAboutArchive(wikiApi, talkPage, archiveTitleResult.error);
-      return;
+    if (!template) {
+      throw new Error('תבנית בוט ארכוב אוטומטי לא נמצאה');
     }
 
-    let { archiveTitle } = archiveTitleResult;
+    const updatedTemplate = template
+      .replace(`[[${oldArchivePage}]]`, `[[${newArchivePage}]]`)
+      .replace(oldArchivePage, newArchivePage);
 
+    await wikiApi.edit(
+      talkPage,
+      '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: עדכון דף ארכיון חדש',
+      content.replace(template, updatedTemplate),
+      revid,
+    );
+  }
+
+  interface ArchiveStrategy {
+    archiveTitle: string;
+    maxSizeNotification: string;
+    onNewArchiveCreated: (newArchiveTitle: string) => Promise<void>;
+  }
+
+  async function performArchive(
+    talkPage: string,
+    archiveHeader: string,
+    maxArchiveSize: number,
+    createNewArchive: boolean,
+    paragraphs: string[],
+    strategy: ArchiveStrategy,
+  ): Promise<void> {
+    let { archiveTitle } = strategy;
     const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
 
     if (existingArchiveContent && existingArchiveContent.content.length >= maxArchiveSize) {
+      if (!createNewArchive) {
+        await notifyUserAboutArchive(wikiApi, talkPage, strategy.maxSizeNotification);
+        return;
+      }
+
       const newArchiveTitle = incrementArchivePageName(archiveTitle);
 
       if (!newArchiveTitle) {
@@ -301,8 +330,8 @@ export default function UserTalkArchiveBotModel(
       const newArchiveExists = await pageExists(wikiApi, newArchiveTitle);
 
       if (!newArchiveExists) {
-        await wikiApi.create(newArchiveTitle, 'יצירת דף ארכיון חדש', archiveHeader);
-        await updateArchiveBoxWithNewPage(wikiApi, archiveBoxPage, newArchiveTitle);
+        await wikiApi.create(newArchiveTitle, '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש', archiveHeader);
+        await strategy.onNewArchiveCreated(newArchiveTitle);
       }
 
       archiveTitle = newArchiveTitle;
@@ -311,25 +340,45 @@ export default function UserTalkArchiveBotModel(
     await archiveParagraphs(talkPage, paragraphs, archiveTitle, archiveHeader);
   }
 
+  async function archiveWithArchiveBox(
+    talkPage: string,
+    archiveBoxPage: string,
+    archiveHeader: string,
+    maxArchiveSize: number,
+    createNewArchive: boolean,
+    paragraphs: string[],
+  ): Promise<void> {
+    const archiveTitleResult = await getArchiveTitleFromBox(wikiApi, archiveBoxPage, talkPage);
+
+    if ('error' in archiveTitleResult) {
+      await notifyUserAboutArchive(wikiApi, talkPage, archiveTitleResult.error);
+      return;
+    }
+
+    await performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
+      archiveTitle: archiveTitleResult.archiveTitle,
+      maxSizeNotification: `דף הארכיון [[${archiveTitleResult.archiveTitle}]] הגיע לגודל המקסימלי. יש ליצור דף ארכיון חדש ולעדכן את תיבת הארכיון.`,
+      onNewArchiveCreated: (newArchiveTitle) => updateArchiveBoxWithNewPage(wikiApi, archiveBoxPage, newArchiveTitle),
+    });
+  }
+
   async function archiveWithDirectPage(
     talkPage: string,
     directArchivePage: string,
     archiveHeader: string,
     maxArchiveSize: number,
+    createNewArchive: boolean,
     paragraphs: string[],
   ): Promise<void> {
-    const existingArchiveContent = await getContentOrNull(wikiApi, directArchivePage);
-
-    if (existingArchiveContent && existingArchiveContent.content.length >= maxArchiveSize) {
-      await notifyUserAboutArchive(
-        wikiApi,
+    await performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
+      archiveTitle: directArchivePage,
+      maxSizeNotification: `דף הארכיון [[${directArchivePage}]] הגיע לגודל המקסימלי. יש ליצור דף ארכיון חדש ולעדכן את {{תב|בוט ארכוב אוטומטי}}.`,
+      onNewArchiveCreated: (newArchiveTitle) => updateDirectArchiveTemplateParameter(
         talkPage,
-        `דף הארכיון [[${directArchivePage}]] הגיע לגודל המקסימלי. כדי שהבוט ימשיך לארכב יש ליצור דף ארכיון חדש ולעדכן את {{תב|בוט ארכוב אוטומטי}}.`,
-      );
-      return;
-    }
-
-    await archiveParagraphs(talkPage, paragraphs, directArchivePage, archiveHeader);
+        directArchivePage,
+        newArchiveTitle,
+      ),
+    });
   }
 
   async function archive(config: UserTalkArchiveConfig, paragraphs: string[]): Promise<void> {
@@ -343,6 +392,7 @@ export default function UserTalkArchiveBotModel(
         config.archiveBoxPage,
         config.archiveHeader,
         config.maxArchiveSize,
+        config.createNewArchive,
         paragraphs,
       );
     } else if (config.directArchivePage) {
@@ -351,6 +401,7 @@ export default function UserTalkArchiveBotModel(
         config.directArchivePage,
         config.archiveHeader,
         config.maxArchiveSize,
+        config.createNewArchive,
         paragraphs,
       );
     } else {
