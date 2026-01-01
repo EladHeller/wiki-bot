@@ -658,7 +658,7 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Name: archive-user-talk-scheduler
-      ScheduleExpression: cron(0 8 ? * 0-5 *)
+      ScheduleExpression: cron(0 8 ? * 1-6 *)
       Targets:
         - Id: archive-user-talk-function
           Arn: !GetAtt ArchiveUserTalkLambda.Arn
