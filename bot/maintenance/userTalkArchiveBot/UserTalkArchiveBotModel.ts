@@ -81,7 +81,7 @@ function incrementArchivePageName(archiveName: string): string | null {
   const parts = archiveName.split('/');
   const lastPart = parts[parts.length - 1];
 
-  const match = lastPart.match(/^(.+?)(\d+)$/);
+  const match = lastPart.match(/^(.+?)(\d+)\/?$/);
   if (!match) {
     return null;
   }
