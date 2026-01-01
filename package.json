@@ -42,7 +42,7 @@
     "@aws-sdk/client-cloudformation": "^3.940.0",
     "@aws-sdk/client-lambda": "^3.942.0",
     "@aws-sdk/client-s3": "^3.858.0",
-    "@aws-sdk/client-ses": "^3.940.0",
+    "@aws-sdk/client-ses": "^3.958.0",
     "@babel/preset-env": "^7.28.5",
     "@babel/preset-typescript": "^7.28.5",
     "@jest/globals": "^30.0.5",
