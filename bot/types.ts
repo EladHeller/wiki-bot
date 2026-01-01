@@ -38,6 +38,7 @@ export type WikiPage = {
     title: string;
   }[];
   sortkeyprefix?: string;
+  length?: number;
 }
 export interface WikiApiConfig {
   baseUrl: string;

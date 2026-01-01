@@ -13,7 +13,7 @@ const NO_ARCHIVE_TEMPLATE = 'לא לארכוב';
 const BOT_NOTIFICATION_HEADER = '== הודעה מבוט הארכוב ==';
 const DEFAULT_INACTIVITY_DAYS = 30;
 const DEFAULT_ARCHIVE_HEADER = '{{ארכיון}}';
-const DEFAULT_ARCHIVE_SIZE = 100000;
+const DEFAULT_ARCHIVE_SIZE = 150000;
 
 export interface UserTalkArchiveConfig {
   talkPage: string;
@@ -37,9 +37,18 @@ export interface IUserTalkArchiveBotModel {
   archive(config: UserTalkArchiveConfig, paragraphs: string[]): Promise<void>;
 }
 
-async function pageExists(wikiApi: IWikiApi, title: string): Promise<boolean> {
+async function getPageInfo(wikiApi: IWikiApi, title: string): Promise<{ exists: boolean; size: number }> {
   const info = await wikiApi.info([title]);
-  return info[0]?.missing == null;
+  const page = info[0];
+  return {
+    exists: page?.missing == null,
+    size: page?.length ?? 0,
+  };
+}
+
+async function pageExists(wikiApi: IWikiApi, title: string): Promise<boolean> {
+  const info = await getPageInfo(wikiApi, title);
+  return info.exists;
 }
 
 async function getContentOrNull(wikiApi: IWikiApi, title: string) {
@@ -109,7 +118,7 @@ async function notifyUserAboutArchive(
       return;
     }
 
-    const notificationMessage = `\n\n${BOT_NOTIFICATION_HEADER}\n${message} ~~~~`;
+    const notificationMessage = `\n${BOT_NOTIFICATION_HEADER}\n${message} ~~~~`;
     await api.edit(talkPage, '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הודעה מבוט הארכוב', content + notificationMessage, revid);
   } catch (error) {
     console.error(`Failed to notify user on ${talkPage}:`, error);
@@ -133,7 +142,7 @@ export default function UserTalkArchiveBotModel(
     const archiveBoxPageStr = params['מיקום תבנית תיבת ארכיון']?.trim();
     const archiveBoxPage = archiveBoxPageStr
       ? (getInnerLink(archiveBoxPageStr)?.link ?? archiveBoxPageStr)
-      : null;
+      : pageTitle;
 
     const directArchivePageStr = params['מיקום דף ארכיון אחרון']?.trim();
     const directArchivePage = directArchivePageStr
@@ -148,10 +157,6 @@ export default function UserTalkArchiveBotModel(
 
     const createNewArchiveStr = params['יצירת דף ארכיון חדש']?.trim();
     const createNewArchive = createNewArchiveStr !== 'לא';
-
-    if (!archiveBoxPage && !directArchivePage) {
-      return null;
-    }
 
     return {
       talkPage: pageTitle,
@@ -308,9 +313,9 @@ export default function UserTalkArchiveBotModel(
     strategy: ArchiveStrategy,
   ): Promise<void> {
     let { archiveTitle } = strategy;
-    const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
+    const archiveInfo = await getPageInfo(wikiApi, archiveTitle);
 
-    if (existingArchiveContent && existingArchiveContent.content.length >= maxArchiveSize) {
+    if (archiveInfo.exists && archiveInfo.size >= maxArchiveSize) {
       if (!createNewArchive) {
         await notifyUserAboutArchive(wikiApi, talkPage, strategy.maxSizeNotification);
         return;

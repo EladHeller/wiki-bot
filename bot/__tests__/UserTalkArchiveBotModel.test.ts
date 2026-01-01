@@ -55,9 +55,9 @@ describe('userTalkArchiveBotModel', () => {
       expect(config).toStrictEqual({
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 30,
-        archiveBoxPage: null,
+        archiveBoxPage: 'שיחת משתמש:דוגמה',
         directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון הדט}}',
         createNewArchive: true,
       });
@@ -73,11 +73,11 @@ describe('userTalkArchiveBotModel', () => {
       const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
 
       expect(config?.inactivityDays).toBe(30);
-      expect(config?.maxArchiveSize).toBe(100000);
+      expect(config?.maxArchiveSize).toBe(150000);
       expect(config?.archiveHeader).toBe('{{ארכיון}}');
     });
 
-    it('should return null when neither archive box nor direct archive is provided', () => {
+    it('should default archiveBoxPage to page title when not provided', () => {
       const pageContent = `{{בוט ארכוב אוטומטי|ימים מתגובה אחרונה=14}}
 ==דיון==
 תוכן`;
@@ -86,7 +86,7 @@ describe('userTalkArchiveBotModel', () => {
 
       const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
 
-      expect(config).toBeNull();
+      expect(config?.archiveBoxPage).toBe('שיחת משתמש:דוגמה');
     });
 
     it('should parse maxArchiveSize with commas', () => {
@@ -145,7 +145,8 @@ describe('userTalkArchiveBotModel', () => {
 
       const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
 
-      expect(config).toBeNull();
+      expect(config?.archiveBoxPage).toBe('שיחת משתמש:דוגמה');
+      expect(config?.directArchivePage).toBeNull();
     });
 
     it('should handle template without any parameters', () => {
@@ -157,7 +158,8 @@ describe('userTalkArchiveBotModel', () => {
 
       const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
 
-      expect(config).toBeNull();
+      expect(config?.archiveBoxPage).toBe('שיחת משתמש:דוגמה');
+      expect(config?.directArchivePage).toBeNull();
     });
   });
 
@@ -311,7 +313,7 @@ Old content`;
         inactivityDays: 14,
         archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
         directArchivePage: null,
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -319,8 +321,7 @@ Old content`;
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -356,8 +357,6 @@ Old discussion
 * [[/ארכיון 1]]
 }}`;
 
-      const existingArchiveContent = 'x'.repeat(50001); // Exceeds limit
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -371,8 +370,7 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -423,8 +421,6 @@ Old discussion
 * [[/ארכיון]]
 }}`;
 
-      const existingArchiveContent = 'x'.repeat(50001);
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -435,11 +431,14 @@ Old discussion
         createNewArchive: true,
       };
 
-      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 }); // archive box page
-      wikiApi.info.mockResolvedValueOnce([{}]); // check /ארכיון exists
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 }); // archive content (too large)
-      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 }); // source page for notification
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [`
@@ -447,6 +446,7 @@ Old discussion
 Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `]);
+      consoleWarnSpy.mockRestore();
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה',
@@ -469,8 +469,6 @@ Old discussion
 * [[/ארכיון 1]]
 }}`;
 
-      const existingArchiveContent = 'x'.repeat(50001);
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -481,9 +479,11 @@ Old discussion
         createNewArchive: false,
       };
 
+      wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -519,8 +519,6 @@ Old discussion
 * [[/ארכיון 5]]
 }}`;
 
-      const existingArchiveContent = 'x'.repeat(50001);
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -534,8 +532,7 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -583,8 +580,6 @@ Old discussion 2
 * [[/ארכיון 1]]
 }}`;
 
-      const existingArchiveContent = 'x'.repeat(50001);
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -598,8 +593,7 @@ Old discussion 2
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -647,8 +641,6 @@ Old discussion
 # [[/ארכיון 2]]
 }}`;
 
-      const existingArchiveContent = 'x'.repeat(50001);
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -662,8 +654,7 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -700,8 +691,6 @@ Old discussion
 * [[ארכיון1]]
 }}`;
 
-      const existingArchiveContent = 'x'.repeat(50001);
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -715,8 +704,7 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -751,8 +739,6 @@ Old discussion
 
       const archiveBoxContent = '{{תיבת ארכיון|[[ארכיון1]]}}';
 
-      const existingArchiveContent = 'x'.repeat(50001);
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -766,8 +752,7 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -804,7 +789,6 @@ Old discussion
 * [[/ארכיון 1]]
 }}`;
 
-      const existingArchiveContent = 'x'.repeat(50001);
       const newArchiveContent = `{{ארכיון}}
 
 ==Some old content==`;
@@ -819,11 +803,14 @@ Old discussion
         createNewArchive: true,
       };
 
+      wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: newArchiveContent, revid: 4 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
       model = UserTalkArchiveBotModel(wikiApi);
@@ -858,7 +845,7 @@ Old discussion
         inactivityDays: 14,
         archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
         directArchivePage: null,
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -889,7 +876,7 @@ Old discussion
         inactivityDays: 14,
         archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
         directArchivePage: null,
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -921,7 +908,7 @@ Old discussion
         inactivityDays: 14,
         archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
         directArchivePage: null,
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -967,7 +954,7 @@ Old content`;
         inactivityDays: 14,
         archiveBoxPage: null,
         directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -1004,8 +991,6 @@ Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `;
 
-      const existingArchiveContent = 'x'.repeat(50001);
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -1016,27 +1001,14 @@ Old discussion
         createNewArchive: true,
       };
 
-      // Flow:
-      // 1. getContentOrNull(archive 1): pageExists + articleContent
-      wikiApi.info.mockResolvedValueOnce([{}]); // archive 1 exists
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 2 }); // archive 1 content (too large)
-
-      // 2. pageExists(archive 2): check if new archive exists
-      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]); // archive 2 doesn't exist
-
-      // 3. create(archive 2) - no mock needed
-
-      // 4. updateDirectArchiveTemplateParameter: getContent(talk page)
-      wikiApi.info.mockResolvedValueOnce([{}]); // talk page exists
-      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 }); // talk page content
-
-      // 5. archiveParagraphs:
-      //    - getContentOrNull(archive 2): pageExists + articleContent
-      wikiApi.info.mockResolvedValueOnce([{}]); // archive 2 now exists (just created)
-      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון}}', revid: 10 }); // new archive content
-      //    - getContent(talk page)
-      wikiApi.info.mockResolvedValueOnce([{}]); // talk page exists
-      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 3 }); // talk page for removal
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון}}', revid: 10 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 3 });
 
       model = UserTalkArchiveBotModel(wikiApi);
 
@@ -1046,14 +1018,12 @@ Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `]);
 
-      // Should create new archive page
       expect(wikiApi.create).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה/ארכיון 2',
         '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש',
         '{{ארכיון}}',
       );
 
-      // Should update template parameter in talk page
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה',
         '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: עדכון דף ארכיון חדש',
@@ -1071,8 +1041,6 @@ Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `;
 
-      const existingArchiveContent = 'x'.repeat(50001);
-
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
@@ -1083,8 +1051,8 @@ Old discussion
         createNewArchive: false,
       };
 
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 2 });
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -1121,7 +1089,7 @@ Old discussion
         inactivityDays: 14,
         archiveBoxPage: null,
         directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -1155,7 +1123,6 @@ Old discussion
 Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `;
-      const existingArchiveContent = 'x'.repeat(50001);
 
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
@@ -1167,10 +1134,9 @@ Old discussion
         createNewArchive: true,
       };
 
-      wikiApi.info.mockResolvedValueOnce([{}]); // archive exists
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 2 }); // too large
-      wikiApi.info.mockResolvedValueOnce([{}]); // talk page exists for notification
-      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 }); // talk page content
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
       model = UserTalkArchiveBotModel(wikiApi);
 
@@ -1195,7 +1161,7 @@ Old discussion
         inactivityDays: 14,
         archiveBoxPage: null,
         directArchivePage: null,
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -1214,7 +1180,6 @@ Old discussion
 Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `;
-      const existingArchiveContent = 'x'.repeat(50001);
       const newArchiveContent = '{{ארכיון}}';
 
       const config = {
@@ -1227,19 +1192,10 @@ Old discussion
         createNewArchive: true,
       };
 
-      // getContentOrNull(archive 1): archive exists and is too large
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 2 });
-
-      // pageExists(archive 2): new archive ALREADY exists (created manually)
-      wikiApi.info.mockResolvedValueOnce([{}]);
-
-      // archiveParagraphs:
-      // getContentOrNull(archive 2): exists
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: newArchiveContent, revid: 10 });
-
-      // getContent(talkPage) for removal
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 3 });
 
@@ -1251,10 +1207,8 @@ Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `]);
 
-      // Should NOT create new archive page (it already exists)
       expect(wikiApi.create).not.toHaveBeenCalled();
 
-      // Should edit the existing archive 2
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה/ארכיון 2',
         expect.any(String),
@@ -1270,7 +1224,6 @@ Old discussion
 Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `;
-      const existingArchiveContent = 'x'.repeat(50001);
 
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
@@ -1282,16 +1235,8 @@ Old discussion
         createNewArchive: true,
       };
 
-      // getContentOrNull(archive 1): archive exists and is too large
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 2 });
-
-      // pageExists(archive 2): new archive doesn't exist
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
-
-      // create(archive 2) - no mock needed
-
-      // updateDirectArchiveTemplateParameter: getContent(talk page) - no template!
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageWithoutTemplate, revid: 1 });
 
@@ -1325,7 +1270,7 @@ Old discussion
         inactivityDays: 14,
         archiveBoxPage: null,
         directArchivePage: null,
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -1355,7 +1300,6 @@ Old discussion
 
       const archiveBoxContent = '{{תיבת ארכיון|\n* [[/ארכיון 1]]\n}}';
 
-      const existingArchiveContent = 'x'.repeat(50001);
       const archiveBoxNoTemplate = 'No template here';
 
       const config = {
@@ -1371,8 +1315,7 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: existingArchiveContent, revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxNoTemplate, revid: 4 });
@@ -1395,7 +1338,7 @@ Old discussion
         inactivityDays: 14,
         archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
         directArchivePage: null,
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -1433,7 +1376,7 @@ Previous message from bot
         inactivityDays: 14,
         archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
         directArchivePage: null,
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -1464,7 +1407,7 @@ Previous message from bot
         inactivityDays: 14,
         archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
         directArchivePage: null,
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -1500,10 +1443,13 @@ Previous message from bot
         createNewArchive: true,
       };
 
+      wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
       wikiApi.info.mockResolvedValueOnce([{}]);
-      wikiApi.articleContent.mockResolvedValueOnce({ content: '', revid: 0 });
+      wikiApi.info.mockResolvedValueOnce([{ length: 0 }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: 'existing archive', revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: 'talk page', revid: 4 });
 
       model = UserTalkArchiveBotModel(wikiApi);
@@ -1584,7 +1530,7 @@ Previous message from bot
         inactivityDays: 14,
         archiveBoxPage: null,
         directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -1615,7 +1561,7 @@ More content`;
         inactivityDays: 14,
         archiveBoxPage: null,
         directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
-        maxArchiveSize: 100000,
+        maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
       };
@@ -1656,10 +1602,13 @@ Old discussion
     it('should process pages from generator and archive old discussions', async () => {
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
 
-      const pageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון 1]]}}
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום תבנית תיבת ארכיון=[[שיחת משתמש:דוגמה/ארכיונים]]}}
+{{תיבת ארכיון|[[שיחת משתמש:דוגמה/ארכיון 1]]}}
 ==דיון ישן==
 תוכן ישן
 12:42, 1 בינואר 2025 (IDT)`;
+
+      const archiveBoxContent = '{{תיבת ארכיון|[[שיחת משתמש:דוגמה/ארכיון 1]]}}';
 
       async function* mockGenerator() {
         yield [{
@@ -1676,22 +1625,15 @@ Old discussion
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
-
-      // getArchivableParagraphs: getContent(talkPage)
-      wikiApi.info.mockResolvedValueOnce([{}]); // talk page exists
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 }); // talk page content
-
-      // archive -> archiveWithDirectPage:
-      // getContentOrNull(archive)
-      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]); // archive doesn't exist
-
-      // archiveParagraphs:
-      // getContentOrNull(archive)
-      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]); // archive still doesn't exist (create will be called)
-
-      // getContent(talkPage) for removal
-      wikiApi.info.mockResolvedValueOnce([{}]); // talk page exists
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 2 }); // talk page content
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 3 });
 
       model = UserTalkArchiveBotModel(wikiApi);
 
