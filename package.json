@@ -34,7 +34,7 @@
     "axios-cookiejar-support": "^6.0.4",
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^26.1.0",
-    "openai": "^6.0.1",
+    "openai": "^6.15.0",
     "playwright": "^1.57.0",
     "tough-cookie": "^6.0.0"
   },
