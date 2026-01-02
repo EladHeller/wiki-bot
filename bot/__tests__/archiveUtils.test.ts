@@ -96,6 +96,19 @@ describe('archiveUtils', () => {
       expect(result).toBe('OtherPage/ארכיון 1');
     });
 
+    it('should handle archive link with trailing slash', async () => {
+      const archiveBoxContent = `
+[[/ארכיון 1/]]
+`;
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+
+      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', false);
+
+      expect(result).toBe('TestPage/ארכיון 1');
+      expect(wikiApi.info).toHaveBeenCalledWith(['TestPage/ארכיון 1']);
+    });
+
     it('should return null when matchPrefix is true and no links match the prefix', async () => {
       const archiveBoxContent = `
 [[OtherPage/ארכיון 1]]

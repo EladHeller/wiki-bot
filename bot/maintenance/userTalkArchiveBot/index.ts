@@ -3,7 +3,9 @@ import WikiApi from '../../wiki/WikiApi';
 import UserTalkArchiveBotModel from './UserTalkArchiveBotModel';
 
 export default async function userTalkArchiveBot() {
-  const model = UserTalkArchiveBotModel(WikiApi());
+  const api = WikiApi();
+  await api.login();
+  const model = UserTalkArchiveBotModel(api);
   await model.run();
 }
 

@@ -14,13 +14,13 @@ export async function getLastActiveArchiveLink(
   for (const link of reversedLinks) {
     const linkTitle = link.link;
     const archiveTitle = linkTitle.startsWith('/') ? `${pageTitle}${linkTitle}` : linkTitle;
-
-    const shouldCheck = !matchPrefix || archiveTitle.startsWith(pageTitle);
+    const fixedArchiveTitle = archiveTitle.replace(/\/$/, '');
+    const shouldCheck = !matchPrefix || fixedArchiveTitle.startsWith(pageTitle);
 
     if (shouldCheck) {
-      const articleContent = await api.info([archiveTitle]);
+      const articleContent = await api.info([fixedArchiveTitle]);
       if (articleContent[0]?.missing == null) {
-        return archiveTitle;
+        return fixedArchiveTitle;
       }
     }
   }
