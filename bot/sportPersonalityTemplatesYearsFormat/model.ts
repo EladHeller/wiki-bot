@@ -32,14 +32,12 @@ export function fixYearRange(value: string): string {
   if (!value) return value;
 
   let result = value
-    // הסרת קישורי שנים [[YYYY]] -> YYYY
+    .replace(/\[\[(\d{4}[–—-]\d{4})\]\]/g, '$1')
     .replace(/\[\[(\d{4})\]\]/g, '$1')
-    // החלפת מקפים רגילים בקו מפריד
+    .replace(/—/g, '–')
     .replace(/(\d{4})\s*-\s*(\d{4})/g, '$1–$2')
-    // הסרת רווחים סביב קו מפריד קיים
     .replace(/(\d{4})\s*–\s*(\d{4})/g, '$1–$2');
 
-  // תיקון סדר שנים - הקטנה לפני הגדולה
   result = result.replace(/(\d{4})–(\d{4})/g, (match, year1, year2) => {
     const num1 = parseInt(year1, 10);
     const num2 = parseInt(year2, 10);
