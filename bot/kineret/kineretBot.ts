@@ -2,7 +2,7 @@ import updateDeadSeaLevel from './deadSeaBot';
 import {
   formatDate, updateLevel,
 } from './utils';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import WikiDataAPI from '../wiki/WikidataAPI';
 import { WikiDataClaim } from '../types';
 
@@ -94,4 +94,4 @@ export default async function kinneretBot() {
   await updateDeadSeaLevel();
 }
 
-export const main = shabathProtectorDecorator(kinneretBot);
+export const main = botLoggerDecorator(kinneretBot, { botName: 'בוט כינרת' });

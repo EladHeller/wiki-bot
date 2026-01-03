@@ -119,6 +119,23 @@ describe('fixYearRange', () => {
   it('should handle dash removal and space before parentheses together', () => {
     expect(fixYearRange('2025–6(2)')).toBe('2025–6 (2)');
   });
+
+  it('should replace em dash with en dash', () => {
+    expect(fixYearRange('1990—1991')).toBe('1990–1991');
+    expect(fixYearRange('1990 — 1991')).toBe('1990–1991');
+    expect(fixYearRange('[[1990]]—[[1991]]')).toBe('1990–1991');
+  });
+
+  it('should remove brackets surrounding year range', () => {
+    expect(fixYearRange('[[2012–2014]]')).toBe('2012–2014');
+    expect(fixYearRange('[[1990–1995]]')).toBe('1990–1995');
+    expect(fixYearRange('[[2000—2005]]')).toBe('2000–2005');
+    expect(fixYearRange('[[2010-2015]]')).toBe('2010–2015');
+  });
+
+  it('should handle multiple bracketed year ranges', () => {
+    expect(fixYearRange('[[2012–2014]], [[2015–2017]]')).toBe('2012–2014, 2015–2017');
+  });
 });
 
 describe('processTemplate', () => {
