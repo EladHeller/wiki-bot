@@ -2,6 +2,7 @@ import {
   describe, expect, it, jest, beforeEach, afterEach,
 } from '@jest/globals';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
+import { getLocalTimeAndDate } from '../utilities';
 
 const moduleMockApi = WikiApiMock();
 jest.unstable_mockModule('../wiki/WikiApi', () => ({
@@ -114,8 +115,9 @@ describe('botLoggerDecorator', () => {
   });
 
   it('should add serial number to heading when same heading exists', async () => {
+    const dateString = getLocalTimeAndDate(new Date().toISOString());
     mockApi.articleContent.mockResolvedValue({
-      content: '==בוט בדיקה - 14:00, 15 בינואר 2024==\nתוכן קודם\n',
+      content: `==בוט בדיקה - ${dateString}==\nתוכן קודם\n`,
       revid: 123,
     });
 
@@ -135,8 +137,9 @@ describe('botLoggerDecorator', () => {
   });
 
   it('should increment serial number correctly', async () => {
+    const dateString = getLocalTimeAndDate(new Date().toISOString());
     mockApi.articleContent.mockResolvedValue({
-      content: '==בוט בדיקה - 14:00, 15 בינואר 2024==\nתוכן\n==בוט בדיקה - 14:00, 15 בינואר 2024 (2)==\nתוכן\n',
+      content: `==בוט בדיקה - ${dateString}==\nתוכן\n==בוט בדיקה - ${dateString} (2)==\nתוכן\n`,
       revid: 123,
     });
 
