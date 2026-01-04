@@ -134,12 +134,12 @@ export default function botLoggerDecorator<T>(
         const result = await cb(...args);
         return result;
       } catch (error) {
+        console.error('Error in botLoggerDecorator:', error);
         if (error instanceof Error) {
           context.thrownError = error;
         } else {
           context.thrownError = new Error(String(error));
         }
-        throw error;
       } finally {
         try {
           await writeLogsToWiki(api, context);
@@ -147,6 +147,7 @@ export default function botLoggerDecorator<T>(
           console.error('Failed to write logs to wiki:', writeError);
         }
       }
+      return undefined;
     });
   });
 

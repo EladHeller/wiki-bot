@@ -87,7 +87,7 @@ describe('botLoggerDecorator', () => {
     const callback = jest.fn<() => Promise<void>>().mockRejectedValue(error);
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
-    await expect(decorated()).rejects.toThrow('שגיאה קריטית');
+    await expect(decorated()).resolves.toBeUndefined();
 
     expect(mockApi.edit).toHaveBeenCalledTimes(1);
 
@@ -238,7 +238,7 @@ describe('botLoggerDecorator', () => {
     const callback = jest.fn<() => Promise<void>>().mockRejectedValue('string error');
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
-    await expect(decorated()).rejects.toBe('string error');
+    await expect(decorated()).resolves.toBeUndefined();
 
     expect(mockApi.edit).toHaveBeenCalledTimes(1);
 
