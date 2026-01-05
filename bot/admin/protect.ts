@@ -1,7 +1,7 @@
 /* eslint-disable import/prefer-default-export */
 import { getLocalDate, promiseSequence } from '../utilities';
 import writeAdminBotLogs from './log';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { ArticleLog } from './types';
 import pagesWithoutProtectInMainPage from './pagesWithoutProtectInMainPage';
 import pagesWithCopyrightIssuesInMainPage from './pagesWithCopyrightIssuesInMainPage';
@@ -188,4 +188,4 @@ export async function protectBot() {
     }
   }
 }
-export const main = shabathProtectorDecorator(protectBot);
+export const main = botLoggerDecorator(protectBot, { botName: 'בוט הגנת דפים שמופיעים בעמוד הראשי' });

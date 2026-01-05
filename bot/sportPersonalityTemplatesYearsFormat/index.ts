@@ -1,5 +1,5 @@
 import writeAdminBotLogs from '../admin/log';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import WikiApi from '../wiki/WikiApi';
 import sportPersonalityTemplatesYearsFormatModel from './model';
 
@@ -19,4 +19,4 @@ export default async function sportPersonalityTemplatesYearsFormat() {
     console.log(`⚠️ Errors: ${errorCount} articles`);
   }
 }
-export const main = shabathProtectorDecorator(sportPersonalityTemplatesYearsFormat);
+export const main = botLoggerDecorator(sportPersonalityTemplatesYearsFormat, { botName: 'בוט פורמט שנים בתבניות אישיות ספורט' });

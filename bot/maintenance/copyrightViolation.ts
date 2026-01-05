@@ -2,7 +2,8 @@ import { JSDOM } from 'jsdom';
 import checkCopyViolations, { CopyViolaionRank, CopyViolationResponse } from '../API/copyvios';
 import writeAdminBotLogs from '../admin/log';
 import type { ArticleLog } from '../admin/types';
-import shabathProtectorDecorator, { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
+import { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 import type { LogEvent, WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import WikiApi from '../wiki/WikiApi';
@@ -292,4 +293,4 @@ export default async function copyrightViolationBot() {
   }
 }
 
-export const main = shabathProtectorDecorator(copyrightViolationBot);
+export const main = botLoggerDecorator(copyrightViolationBot, { botName: 'בוט הפרת זכויות יוצרים' });

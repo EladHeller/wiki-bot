@@ -1,5 +1,5 @@
 import { getIndexStocks, getIndicesList } from '../API/mayaAPI';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { promiseSequence } from '../utilities';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import { getParagraphContent } from '../wiki/paragraphParser';
@@ -148,4 +148,4 @@ export default async function indexesBot() {
   await api.purge([baseIndexesTemplatePage]);
 }
 
-export const main = shabathProtectorDecorator(indexesBot);
+export const main = botLoggerDecorator(indexesBot, { botName: 'בוט המדדים' });

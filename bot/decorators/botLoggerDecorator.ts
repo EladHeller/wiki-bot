@@ -60,7 +60,7 @@ const formatLogContent = (context: BotLoggerContext): string => {
 
   if (thrownError) {
     lines.push('===שגיאה שנזרקה===');
-    lines.push(`<code>${thrownError.message}</code>`);
+    lines.push(`<code>${thrownError.message}\n${thrownError.stack}</code>`);
     lines.push('');
   }
 

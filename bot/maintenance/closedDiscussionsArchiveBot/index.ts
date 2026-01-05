@@ -1,4 +1,4 @@
-import shabathProtectorDecorator from '../../decorators/shabathProtector';
+import botLoggerDecorator from '../../decorators/botLoggerDecorator';
 import WikiApi from '../../wiki/WikiApi';
 import ClosedDiscussionsArchiveBotModel from './ClosedDiscussionsArchiveBotModel';
 
@@ -24,4 +24,4 @@ export default async function closedDiscussionsArchiveBot() {
   }
 }
 
-export const main = shabathProtectorDecorator(closedDiscussionsArchiveBot);
+export const main = botLoggerDecorator(closedDiscussionsArchiveBot, { botName: 'בוט ארכוב דיונים' });

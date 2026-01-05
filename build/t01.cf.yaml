@@ -101,24 +101,6 @@ Resources:
         S3Key: email.zip
         S3ObjectVersion: !Ref EmailCodeVersionId
 
-  LogGroupInvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt SendEmailLambda.Arn
-      Action: lambda:InvokeFunction
-      Principal: logs.amazonaws.com
-      SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Market-value-function:*
-
-  LogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties:
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: /aws/lambda/Market-value-function
-
   MarketValueEventRule:
     DependsOn:
       - MarketValueLambda
@@ -163,24 +145,6 @@ Resources:
         S3Key: dist.zip
         S3ObjectVersion: !Ref DistCodeVersionId
 
-  UsStockLogGroupInvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt SendEmailLambda.Arn
-      Action: lambda:InvokeFunction
-      Principal: logs.amazonaws.com
-      SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/US-stocks-function:*
-
-  UsStockLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties:
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: /aws/lambda/US-stocks-function
-
   UsStocksEventRule:
     DependsOn:
       - UsStocksLambda
@@ -223,24 +187,6 @@ Resources:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
         S3ObjectVersion: !Ref DistCodeVersionId
-
-  KineretLevelLogGroupInvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt SendEmailLambda.Arn
-      Action: lambda:InvokeFunction
-      Principal: logs.amazonaws.com
-      SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Kineret-level-function:*
-
-  KineretLevelLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties:
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: /aws/lambda/Kineret-level-function
 
   KineretLevelEventRule:
     DependsOn:
@@ -285,15 +231,6 @@ Resources:
         S3Key: dist.zip
         S3ObjectVersion: !Ref DistCodeVersionId
 
-  PurgeBirthdayLogGroupInvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt SendEmailLambda.Arn
-      Action: lambda:InvokeFunction
-      Principal: logs.amazonaws.com
-      SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/purge-birthday-function:*
-
   PurgeBirthdayEventRule:
     DependsOn:
       - PurgeBirthdayLambda
@@ -316,15 +253,6 @@ Resources:
       SourceArn: !GetAtt PurgeBirthdayEventRule.Arn
       FunctionName: purge-birthday-function
 
-  PurgeBirthdayLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties:
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: /aws/lambda/purge-birthday-function
-
   # protect templates
   ProtectTemplatesLambda:
     DependsOn:
@@ -345,24 +273,6 @@ Resources:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
         S3ObjectVersion: !Ref DistCodeVersionId
-
-  ProtectTemplatesLogGroupInvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt SendEmailLambda.Arn
-      Action: lambda:InvokeFunction
-      Principal: logs.amazonaws.com
-      SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/protect-templates-function:*
-
-  ProtectTemplatesLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties:
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: /aws/lambda/protect-templates-function
 
   ProtectTemplatesEventRule:
     DependsOn:
@@ -406,24 +316,6 @@ Resources:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
         S3ObjectVersion: !Ref DistCodeVersionId
-
-  DeleteRedirectsLogGroupInvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt SendEmailLambda.Arn
-      Action: lambda:InvokeFunction
-      Principal: logs.amazonaws.com
-      SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/delete-redirects-function:*
-
-  DeleteRedirectsLogGroupFailedSubscription:
-    DependsOn:
-      - SendEmailLambda
-    Type: AWS::Logs::SubscriptionFilter
-    Properties:
-      DestinationArn: !GetAtt SendEmailLambda.Arn
-      FilterPattern: Invoke Error
-      LogGroupName: /aws/lambda/delete-redirects-function
 
   DeleteRedirectsEventRule:
     DependsOn:
@@ -490,24 +382,6 @@ Resources:
       SourceArn: !GetAtt CopyrighViolationEventRule.Arn
       FunctionName: copyright-violation-function
 
-  # CopyrighViolationsLogGroupInvokeLambdaPermission:
-  #   Type: AWS::Lambda::Permission
-  #   Properties:
-  #     FunctionName: !GetAtt SendEmailLambda.Arn
-  #     Action: lambda:InvokeFunction
-  #     Principal: logs.amazonaws.com
-  #     SourceAccount: !Ref 'AWS::AccountId'
-  #     SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/copyright-violation-function:*'
-
-  # CopyrighViolationsLogGroupFailedSubscription:
-  #   DependsOn:
-  #     - SendEmailLambda
-  #   Type: AWS::Logs::SubscriptionFilter
-  #   Properties:
-  #     DestinationArn: !GetAtt SendEmailLambda.Arn
-  #     FilterPattern: Invoke Error
-  #     LogGroupName: '/aws/lambda/copyright-violation-function'
-
   # Arcive logs
   ArchiveLogsLambda:
     DependsOn:
@@ -551,25 +425,6 @@ Resources:
       SourceArn: !GetAtt ArchiveLogsEventRule.Arn
       FunctionName: archive-logs-function
 
-  # TODO:
-  # ArchiveLogsLogGroupInvokeLambdaPermission:
-  #   Type: AWS::Lambda::Permission
-  #   Properties:
-  #     FunctionName: !GetAtt SendEmailLambda.Arn
-  #     Action: lambda:InvokeFunction
-  #     Principal: logs.amazonaws.com
-  #     SourceAccount: !Ref 'AWS::AccountId'
-  #     SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/archive-logs-function:*'
-
-  # ArchiveLogsLogGroupFailedSubscription:
-  #   DependsOn:
-  #     - SendEmailLambda
-  #   Type: AWS::Logs::SubscriptionFilter
-  #   Properties:
-  #     DestinationArn: !GetAtt SendEmailLambda.Arn
-  #     FilterPattern: Invoke Error
-  #     LogGroupName: '/aws/lambda/archive-logs-function'
-
   # Archive closed discussions
   ArchiveClosedDiscussionsLambda:
     DependsOn:
@@ -612,24 +467,6 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn: !GetAtt ArchiveClosedDiscussionsEventRule.Arn
       FunctionName: archive-closed-discussions-function
-  # TODO:
-  # ArchiveClosedDiscussionsLogGroupInvokeLambdaPermission:
-  #   Type: AWS::Lambda::Permission
-  #   Properties:
-  #     FunctionName: !GetAtt SendEmailLambda.Arn
-  #     Action: lambda:InvokeFunction
-  #     Principal: logs.amazonaws.com
-  #     SourceAccount: !Ref AWS::AccountId
-  #     SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/archive-closed-discussions-function:*
-
-  # ArchiveClosedDiscussionsLogGroupFailedSubscription:
-  #   DependsOn:
-  #     - SendEmailLambda
-  #   Type: AWS::Logs::SubscriptionFilter
-  #   Properties:
-  #     DestinationArn: !GetAtt SendEmailLambda.Arn
-  #     FilterPattern: Invoke Error
-  #     LogGroupName: /aws/lambda/archive-closed-discussions-function
 
   # Archive user talk pages
   ArchiveUserTalkLambda:
@@ -973,24 +810,6 @@ Resources:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
         S3ObjectVersion: !Ref DistCodeVersionId
-
-  # SportPersonalityTemplatesYearsFormatLogGroupInvokeLambdaPermission:
-  #   Type: AWS::Lambda::Permission
-  #   Properties:
-  #     FunctionName: !GetAtt SendEmailLambda.Arn
-  #     Action: lambda:InvokeFunction
-  #     Principal: logs.amazonaws.com
-  #     SourceAccount: !Ref AWS::AccountId
-  #     SourceArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/sport-personality-templates-years-format-function:*
-
-  # SportPersonalityTemplatesYearsFormatLogGroupFailedSubscription:
-  #   DependsOn:
-  #     - SendEmailLambda
-  #   Type: AWS::Logs::SubscriptionFilter
-  #   Properties:
-  #     DestinationArn: !GetAtt SendEmailLambda.Arn
-  #     FilterPattern: Invoke Error
-  #     LogGroupName: /aws/lambda/sport-personality-templates-years-format-function
 
   SportPersonalityTemplatesYearsFormatEventRule:
     DependsOn:

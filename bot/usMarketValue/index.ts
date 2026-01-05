@@ -1,6 +1,6 @@
 import { getCompanyData, getTickerFromWikiPage, WikiPageWithGoogleFinance } from '../API/googleFinanceApi';
 import { currencyName, getLocalDate, promiseSequence } from '../utilities';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getGoogleFinanceLinks } from '../wiki/SharedWikiApiFunctions';
@@ -118,4 +118,4 @@ export default async function usMarketValueBot() {
   await updateTemplate(api, marketValues);
 }
 
-export const main = shabathProtectorDecorator(usMarketValueBot);
+export const main = botLoggerDecorator(usMarketValueBot, { botName: 'בוט שווי שוק אמריקאי' });

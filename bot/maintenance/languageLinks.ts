@@ -1,6 +1,5 @@
 import fs from 'fs/promises';
 import { getLogTitleData } from '../admin/log';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import BaseWikiApi, { defaultConfig } from '../wiki/BaseWikiApi';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
@@ -254,5 +253,3 @@ export default async function languageLinks(byCategory = true) {
   await fs.appendFile(fileName, `${JSON.stringify(statistics)}\n`);
   await wrightLogs(api);
 }
-
-export const main = shabathProtectorDecorator(languageLinks);

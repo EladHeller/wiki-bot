@@ -2,7 +2,7 @@
 import { WikiPage } from '../types';
 import { asyncGeneratorMapWithSequence } from '../utilities';
 import writeAdminBotLogs from './log';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { ArticleLog } from './types';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 
@@ -122,4 +122,4 @@ export default async function deleteBot() {
   await writeAdminBotLogs(api, convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
 }
 
-export const main = shabathProtectorDecorator(deleteBot);
+export const main = botLoggerDecorator(deleteBot, { botName: 'בוט מחיקת הפניות' });
