@@ -438,7 +438,7 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [`
@@ -486,7 +486,7 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [`
@@ -1055,7 +1055,7 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [`
@@ -1115,7 +1115,7 @@ Old discussion
     });
 
     it('should notify user when direct archive name cannot be incremented', async () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
 
       const talkPageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון]]}}
@@ -1128,7 +1128,7 @@ Old discussion
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 14,
         archiveBoxPage: null,
-        directArchivePage: 'שיחת משתמש:דוגמה/ארכיון', // No number at the end
+        directArchivePage: 'שיחת משתמש:דוגמה/ארכיון',
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
@@ -1255,8 +1255,8 @@ Old discussion
     let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
 
     beforeEach(() => {
-      consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
     });
 
     afterEach(() => {
@@ -1521,6 +1521,248 @@ Previous message from bot
 
       expect(wikiApi.create).not.toHaveBeenCalled();
     });
+
+    it('should split large content across multiple archives when content exceeds max size', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+
+      const archiveBoxContent = `{{תיבת ארכיון|
+* [[/ארכיון 1]]
+}}`;
+
+      const talkPageContent = `==Discussion 1==
+Old discussion 1
+12:42, 1 בינואר 2025 (IDT)
+
+==Discussion 2==
+Old discussion 2
+12:42, 1 בינואר 2025 (IDT)
+
+==Discussion 3==
+Old discussion 3
+12:42, 1 בינואר 2025 (IDT)
+`;
+
+      const largeParagraph1 = `==Discussion 1==\n${'x'.repeat(30000)}\n12:42, 1 בינואר 2025 (IDT)\n`;
+      const largeParagraph2 = `==Discussion 2==\n${'y'.repeat(30000)}\n12:42, 1 בינואר 2025 (IDT)\n`;
+      const largeParagraph3 = `==Discussion 3==\n${'z'.repeat(30000)}\n12:42, 1 בינואר 2025 (IDT)\n`;
+
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
+        directArchivePage: null,
+        maxArchiveSize: 50000,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: true,
+      };
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+
+      wikiApi.info.mockResolvedValueOnce([{ length: 40000 }]);
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: 'x'.repeat(40000), revid: 3 });
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+
+      wikiApi.info.mockResolvedValueOnce([{ length: 15 }]);
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון}}', revid: 4 });
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+
+      wikiApi.info.mockResolvedValueOnce([{ length: 15 }]);
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון}}', revid: 5 });
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.archive(config, [largeParagraph1, largeParagraph2, largeParagraph3]);
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 2',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש',
+        '{{ארכיון}}',
+      );
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 3',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש',
+        '{{ארכיון}}',
+      );
+
+      const editCalls = (jest.mocked(wikiApi.edit)).mock.calls;
+      const archive1Edits = editCalls.filter((call) => call[0] === 'שיחת משתמש:דוגמה/ארכיון 1');
+      const archive2Edits = editCalls.filter((call) => call[0] === 'שיחת משתמש:דוגמה/ארכיון 2');
+      const archive3Edits = editCalls.filter((call) => call[0] === 'שיחת משתמש:דוגמה/ארכיון 3');
+
+      expect(archive1Edits.length).toBeGreaterThan(0);
+      expect(archive2Edits.length).toBeGreaterThan(0);
+      expect(archive3Edits.length).toBeGreaterThan(0);
+    });
+
+    it('should archive large paragraphs even if they exceed max size', async () => {
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: null,
+        directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
+        maxArchiveSize: 1000,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: true,
+      };
+
+      const hugeParagraph = `==Discussion==\n${'x'.repeat(2000)}\n`;
+      const talkPageContent = '==Discussion==\nContent\n';
+
+      wikiApi.info.mockResolvedValueOnce([{ length: 100 }]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '', revid: 1 });
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.archive(config, [hugeParagraph]);
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.stringContaining(hugeParagraph.trim()),
+        1,
+      );
+    });
+
+    it('should notify when createNewArchive is false and more content remains after first batch', async () => {
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: null,
+        directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
+        maxArchiveSize: 100,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: false,
+      };
+
+      const paragraph1 = '==Discussion 1==\nContent 1\n';
+      const paragraph2 = '==Discussion 2==\nContent 2\n';
+      const talkPageContent = '==Discussion==\nContent\n';
+
+      wikiApi.info.mockResolvedValueOnce([{ length: 50 }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: 'existing', revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.archive(config, [paragraph1, paragraph2]);
+      consoleWarnSpy.mockRestore();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הודעה מבוט הארכוב',
+        expect.stringContaining('הגיע לגודל המקסימלי ויש עוד תוכן לארכוב'),
+        1,
+      );
+    });
+
+    it('should notify when archive name cannot be incremented during batching', async () => {
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: null,
+        directArchivePage: 'שיחת משתמש:דוגמה/ארכיון',
+        maxArchiveSize: 100,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: true,
+      };
+
+      const paragraph1 = '==Discussion 1==\nContent 1\n';
+      const paragraph2 = '==Discussion 2==\nContent 2\n';
+      const talkPageContent = '==Discussion==\nContent\n';
+
+      wikiApi.info.mockResolvedValueOnce([{ length: 50 }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: 'existing', revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.archive(config, [paragraph1, paragraph2]);
+      consoleWarnSpy.mockRestore();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הודעה מבוט הארכוב',
+        expect.stringContaining('לא ניתן ליצור דף חדש אוטומטית'),
+        1,
+      );
+    });
+
+    it('should use existing new archive when it already exists during batching', async () => {
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: null,
+        directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
+        maxArchiveSize: 100,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: true,
+      };
+
+      const paragraph1 = '==Discussion 1==\nContent 1\n';
+      const paragraph2 = '==Discussion 2==\nContent 2\n';
+      const talkPageContent = '==Discussion==\nContent\n';
+
+      wikiApi.info.mockResolvedValueOnce([{ length: 50 }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: 'existing', revid: 3 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.info.mockResolvedValueOnce([{ length: 50 }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: 'existing2', revid: 4 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.archive(config, [paragraph1, paragraph2]);
+
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 2',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.stringContaining('Discussion 2'),
+        4,
+      );
+    });
   });
 
   describe('archive general', () => {
@@ -1590,8 +1832,8 @@ Old discussion
     let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
 
     beforeEach(() => {
-      consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
+      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
     });
 
     afterEach(() => {

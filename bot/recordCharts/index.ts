@@ -1,4 +1,4 @@
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import WikiApi from '../wiki/WikiApi';
 import MediaForestBotModel from './MediaForestModel';
 
@@ -40,4 +40,4 @@ export default async function mediaForestBot() {
   console.log('Media forest bot TV finished');
 }
 
-export const main = shabathProtectorDecorator(mediaForestBot);
+export const main = botLoggerDecorator(mediaForestBot, { botName: 'בוט מצעדי הפזמונים' });

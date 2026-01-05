@@ -202,12 +202,7 @@ export default function UserTalkArchiveBotModel(
 
     if (existingArchiveContent) {
       const newContent = `${existingArchiveContent.content}\n\n${paragraphsContent}`;
-      await wikiApi.edit(
-        archiveTitle,
-        archiveSummary,
-        newContent,
-        existingArchiveContent.revid,
-      );
+      await wikiApi.edit(archiveTitle, archiveSummary, newContent, existingArchiveContent.revid);
     } else {
       const newContent = `${archiveHeader}\n\n${paragraphsContent}`;
       await wikiApi.create(archiveTitle, archiveSummary, newContent);
@@ -304,6 +299,81 @@ export default function UserTalkArchiveBotModel(
     onNewArchiveCreated: (newArchiveTitle: string) => Promise<void>;
   }
 
+  async function createNextArchivePage(
+    currentArchiveTitle: string,
+    archiveHeader: string,
+    onNewArchiveCreated: (newArchiveTitle: string) => Promise<void>,
+  ): Promise<string | null> {
+    const newArchiveTitle = incrementArchivePageName(currentArchiveTitle);
+    if (!newArchiveTitle) {
+      return null;
+    }
+
+    const exists = await pageExists(wikiApi, newArchiveTitle);
+    if (!exists) {
+      await wikiApi.create(
+        newArchiveTitle,
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש',
+        archiveHeader,
+      );
+      await onNewArchiveCreated(newArchiveTitle);
+    }
+
+    return newArchiveTitle;
+  }
+
+  async function handleArchiveOverflow(
+    talkPage: string,
+    currentArchiveTitle: string,
+    archiveHeader: string,
+    createNewArchive: boolean,
+    onNewArchiveCreated: (newArchiveTitle: string) => Promise<void>,
+    notificationMessage: string,
+  ): Promise<string | null> {
+    if (!createNewArchive) {
+      await notifyUserAboutArchive(wikiApi, talkPage, notificationMessage);
+      return null;
+    }
+
+    const newArchiveTitle = await createNextArchivePage(currentArchiveTitle, archiveHeader, onNewArchiveCreated);
+    if (!newArchiveTitle) {
+      await notifyUserAboutArchive(
+        wikiApi,
+        talkPage,
+        `דף הארכיון [[${currentArchiveTitle}]] מלא, אך לא ניתן ליצור דף חדש אוטומטית. יש ליצור דף ארכיון חדש ידנית.`,
+      );
+      return null;
+    }
+
+    return newArchiveTitle;
+  }
+
+  function collectBatchForArchive(
+    paragraphs: string[],
+    currentArchiveSize: number,
+    maxArchiveSize: number,
+  ): { batch: string[]; remaining: string[] } {
+    let totalSize = currentArchiveSize;
+
+    const splitIndex = paragraphs.findIndex((paragraph) => {
+      const newSize = totalSize + paragraph.length;
+      if (newSize > maxArchiveSize && totalSize > currentArchiveSize) {
+        return true;
+      }
+      totalSize = newSize;
+      return false;
+    });
+
+    if (splitIndex === -1) {
+      return { batch: paragraphs, remaining: [] };
+    }
+
+    return {
+      batch: paragraphs.slice(0, splitIndex),
+      remaining: paragraphs.slice(splitIndex),
+    };
+  }
+
   async function performArchive(
     talkPage: string,
     archiveHeader: string,
@@ -312,37 +382,48 @@ export default function UserTalkArchiveBotModel(
     paragraphs: string[],
     strategy: ArchiveStrategy,
   ): Promise<void> {
-    let { archiveTitle } = strategy;
-    const archiveInfo = await getPageInfo(wikiApi, archiveTitle);
+    let currentArchiveTitle = strategy.archiveTitle;
+    let remainingParagraphs = paragraphs;
 
-    if (archiveInfo.exists && archiveInfo.size >= maxArchiveSize) {
-      if (!createNewArchive) {
-        await notifyUserAboutArchive(wikiApi, talkPage, strategy.maxSizeNotification);
-        return;
-      }
+    while (remainingParagraphs.length > 0) {
+      const archiveInfo = await getPageInfo(wikiApi, currentArchiveTitle);
 
-      const newArchiveTitle = incrementArchivePageName(archiveTitle);
-
-      if (!newArchiveTitle) {
-        await notifyUserAboutArchive(
-          wikiApi,
+      if (archiveInfo.exists && archiveInfo.size >= maxArchiveSize) {
+        const newTitle = await handleArchiveOverflow(
           talkPage,
-          `דף הארכיון [[${archiveTitle}]] מלא, אך לא ניתן ליצור דף חדש אוטומטית. יש ליצור דף ארכיון חדש ידנית.`,
+          currentArchiveTitle,
+          archiveHeader,
+          createNewArchive,
+          strategy.onNewArchiveCreated,
+          strategy.maxSizeNotification,
         );
-        return;
+        if (!newTitle) return;
+        currentArchiveTitle = newTitle;
+      } else {
+        const currentSize = archiveInfo.exists ? archiveInfo.size : 0;
+        const { batch, remaining } = collectBatchForArchive(
+          remainingParagraphs,
+          currentSize,
+          maxArchiveSize,
+        );
+
+        await archiveParagraphs(talkPage, batch, currentArchiveTitle, archiveHeader);
+        remainingParagraphs = remaining;
+
+        if (remaining.length > 0) {
+          const newTitle = await handleArchiveOverflow(
+            talkPage,
+            currentArchiveTitle,
+            archiveHeader,
+            createNewArchive,
+            strategy.onNewArchiveCreated,
+            `דף הארכיון [[${currentArchiveTitle}]] הגיע לגודל המקסימלי ויש עוד תוכן לארכוב. יש ליצור דף ארכיון חדש.`,
+          );
+          if (!newTitle) return;
+          currentArchiveTitle = newTitle;
+        }
       }
-
-      const newArchiveExists = await pageExists(wikiApi, newArchiveTitle);
-
-      if (!newArchiveExists) {
-        await wikiApi.create(newArchiveTitle, '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש', archiveHeader);
-        await strategy.onNewArchiveCreated(newArchiveTitle);
-      }
-
-      archiveTitle = newArchiveTitle;
     }
-
-    await archiveParagraphs(talkPage, paragraphs, archiveTitle, archiveHeader);
   }
 
   async function archiveWithArchiveBox(

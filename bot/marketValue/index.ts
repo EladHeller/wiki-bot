@@ -1,6 +1,6 @@
 import { getLocalDate, prettyNumericValue } from '../utilities';
 import { MayaMarketValue, getMarketValueById } from '../API/mayaAPI';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import parseTableText, { buildTable } from '../wiki/wikiTableParser';
@@ -124,4 +124,4 @@ export default async function marketValueBot() {
   await updateTable(api, marketValues);
 }
 
-export const main = shabathProtectorDecorator(marketValueBot);
+export const main = botLoggerDecorator(marketValueBot, { botName: 'בוט שווי שוק' });

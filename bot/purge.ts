@@ -1,4 +1,4 @@
-import shabathProtectorDecorator from './decorators/shabathProtector';
+import botLoggerDecorator from './decorators/botLoggerDecorator';
 import WikiApi, { IWikiApi } from './wiki/WikiApi';
 import { personWithBirthdayInDay } from './wiki/WikidataSparql';
 
@@ -38,4 +38,4 @@ export default async function purgeBot() {
   console.log(await api.purge([...articles]));
 }
 
-export const main = shabathProtectorDecorator(purgeBot);
+export const main = botLoggerDecorator(purgeBot, { botName: 'בוט רענון דפים שחוגגים יום הולדת' });

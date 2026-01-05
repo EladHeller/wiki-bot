@@ -1,4 +1,4 @@
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import WikiApi from '../wiki/WikiApi';
 import ExchangeRatesModel from './ExchangeRatesModel';
 
@@ -22,4 +22,4 @@ export default async function exchangeRatesBot() {
   console.log('Exchange rates bot finished');
 }
 
-export const main = shabathProtectorDecorator(exchangeRatesBot);
+export const main = botLoggerDecorator(exchangeRatesBot, { botName: 'בוט שערי חליפין' });

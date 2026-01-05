@@ -1,4 +1,4 @@
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { WikiNotification } from '../types';
 import { getLocalTimeAndDate } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
@@ -244,4 +244,4 @@ export default async function tagBot() {
   }
 }
 
-export const main = shabathProtectorDecorator(tagBot);
+export const main = botLoggerDecorator(tagBot, { botName: 'בוט התיוג' });

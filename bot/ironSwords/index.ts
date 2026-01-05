@@ -1,5 +1,5 @@
 import WikiApi from '../wiki/WikiApi';
-import shabathProtectorDecorator from '../decorators/shabathProtector';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { getLocalDate } from '../utilities';
 import getCasualties from './idfSiteScraper';
 import getWarData from './inssSiteScraper';
@@ -77,4 +77,4 @@ export default async function ironSwordsBot() {
   }
 }
 
-export const main = shabathProtectorDecorator(ironSwordsBot);
+export const main = botLoggerDecorator(ironSwordsBot, { botName: 'בוט חרבות ברזל' });

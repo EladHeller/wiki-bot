@@ -1,4 +1,4 @@
-import shabathProtectorDecorator from '../../decorators/shabathProtector';
+import botLoggerDecorator from '../../decorators/botLoggerDecorator';
 import WikiApi from '../../wiki/WikiApi';
 import ArchiveBotModel from './ArchiveBotModel';
 
@@ -25,4 +25,4 @@ export default async function archiveBot() {
   }
 }
 
-export const main = shabathProtectorDecorator(archiveBot);
+export const main = botLoggerDecorator(archiveBot, { botName: 'בוט ארכוב לוגים' });

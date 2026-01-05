@@ -1,4 +1,4 @@
-import shabathProtectorDecorator from '../../decorators/shabathProtector';
+import botLoggerDecorator from '../../decorators/botLoggerDecorator';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import getDrafts, { getDumpModificationTimes } from './getDrafts';
 import { ArticleLog } from '../../admin/types';
@@ -133,4 +133,4 @@ export async function removeDraftsFromCategories() {
   console.log('Done');
 }
 
-export const main = shabathProtectorDecorator(removeDraftsFromCategories);
+export const main = botLoggerDecorator(removeDraftsFromCategories, { botName: 'בוט הסרת טיוטות מקטגוריות' });

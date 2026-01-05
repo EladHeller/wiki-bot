@@ -1,4 +1,4 @@
-import shabathProtectorDecorator from '../../decorators/shabathProtector';
+import botLoggerDecorator from '../../decorators/botLoggerDecorator';
 import WikiApi from '../../wiki/WikiApi';
 import UserTalkArchiveBotModel from './UserTalkArchiveBotModel';
 
@@ -9,4 +9,4 @@ export default async function userTalkArchiveBot() {
   await model.run();
 }
 
-export const main = shabathProtectorDecorator(userTalkArchiveBot);
+export const main = botLoggerDecorator(userTalkArchiveBot, { botName: 'בוט ארכוב דפי שיחה' });
