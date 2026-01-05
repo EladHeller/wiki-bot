@@ -71,7 +71,7 @@ async function main() {
   await $`sh ./build/build.sh`;
   console.log('finnish build!');
 
-  const { distVersion, emailVersion } = await updateS3();
+  const { distVersion } = await updateS3();
   console.log('finnish deploy!');
 
   await runTemplate(
@@ -111,9 +111,6 @@ async function main() {
     }, {
       ParameterKey: 'DistCodeVersionId',
       ParameterValue: distVersion,
-    }, {
-      ParameterKey: 'EmailCodeVersionId',
-      ParameterValue: emailVersion,
     }],
     ['CAPABILITY_NAMED_IAM'],
   );

@@ -26,8 +26,6 @@ Parameters:
     Type: String
   DistCodeVersionId:
     Type: String
-  EmailCodeVersionId:
-    Type: String
   OpenAPIKey:
     Type: String
   VectorStoreID:
@@ -57,7 +55,6 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                  - ses:SendEmail
                   - sqs:ReceiveMessage
                   - sqs:DeleteMessage
                   - sqs:GetQueueAttributes
@@ -82,24 +79,6 @@ Resources:
         S3Bucket: !Ref BucketCodeName
         S3Key: dist.zip
         S3ObjectVersion: !Ref DistCodeVersionId
-
-  SendEmailLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
-      FunctionName: Send-email-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          REGION: !Ref AWS::Region
-      Handler: send-email/index.handler
-      Timeout: 15
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: email.zip
-        S3ObjectVersion: !Ref EmailCodeVersionId
 
   MarketValueEventRule:
     DependsOn:
