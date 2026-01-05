@@ -55,6 +55,5 @@ export default async function updateS3() {
   }
 
   const distVersion = await upload(bucketCodeName, 'dist.zip', './dist.zip');
-  const emailVersion = await upload(bucketCodeName, 'email.zip', './email.zip');
-  return { distVersion, emailVersion };
+  return { distVersion };
 }
