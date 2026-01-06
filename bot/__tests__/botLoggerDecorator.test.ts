@@ -95,7 +95,7 @@ describe('botLoggerDecorator', () => {
     const content = editCall[2] as string;
 
     expect(content).toContain('===שגיאה שנזרקה===');
-    expect(content).toContain('<code>שגיאה קריטית\nError: שגיאה קריטית\n    at Object.<anonymous> (');
+    expect(content).toContain('<div style="direction: ltr"><code>Error: שגיאה קריטית<br/>&nbsp;&nbsp;&nbsp;&nbsp;at Object.<anonymous> (');
   });
 
   it('should include bot name and date in heading', async () => {
@@ -246,7 +246,7 @@ describe('botLoggerDecorator', () => {
     const content = editCall[2] as string;
 
     expect(content).toContain('===שגיאה שנזרקה===');
-    expect(content).toContain('<code>string error\n');
+    expect(content).toContain('<div style="direction: ltr"><code>Error: string error<br/>&nbsp;&nbsp;&nbsp;&nbsp;at ');
   });
 
   it('should log to console when writing logs to wiki fails', async () => {
