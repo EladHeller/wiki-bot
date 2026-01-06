@@ -134,6 +134,12 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
   }
 
   async function archiveContent(logPage: string, archiveMode: ArchiveMode = 'titles') {
+    const archivePageTitle = getLastMonthTitle(logPage);
+    const [archivePageInfo] = await wikiApi.info([archivePageTitle]);
+    if (archivePageInfo.pageid) {
+      return;
+    }
+
     const { content, revid } = await getContent(wikiApi, logPage);
 
     const { newContent, text } = archiveMode === 'signatureDate'
@@ -144,7 +150,7 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
       return;
     }
 
-    await wikiApi.create(getLastMonthTitle(logPage), `ארכוב ${month} ${year}`, `{{${config.archiveTemplate}}}\n${text}`);
+    await wikiApi.create(archivePageTitle, `ארכוב ${month} ${year}`, `{{${config.archiveTemplate}}}\n${text}`);
     await wikiApi.edit(logPage, `ארכוב ${month} ${year}`, newContent, revid);
   }
 

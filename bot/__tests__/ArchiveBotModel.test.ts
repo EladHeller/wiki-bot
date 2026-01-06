@@ -155,6 +155,8 @@ adasd
 שגשדג`,
         revid: 1,
       });
+      wikiApi.info.mockResolvedValue([{ missing: '' }]);
+
       archiveBotModel = ArchiveBotModel(wikiApi);
 
       await archiveBotModel.archiveContent('logPage');
@@ -199,12 +201,26 @@ adasd
 
     it('should not archive if no content to archive', async () => {
       wikiApi.articleContent.mockResolvedValue({ content: 'text before', revid: 1 });
+      wikiApi.info.mockResolvedValue([{ missing: '' }]);
       archiveBotModel = ArchiveBotModel(wikiApi);
 
       await archiveBotModel.archiveContent('logPage');
 
       expect(wikiApi.articleContent).toHaveBeenCalledTimes(1);
       expect(wikiApi.articleContent).toHaveBeenCalledWith('logPage');
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
+    it('should skip archiving if archive page already exists', async () => {
+      fakerTimers.setSystemTime(new Date('2020-03-02'));
+      wikiApi.info.mockResolvedValue([{ pageid: 12345 }]);
+      archiveBotModel = ArchiveBotModel(wikiApi);
+
+      await archiveBotModel.archiveContent('logPage');
+
+      expect(wikiApi.info).toHaveBeenCalledWith(['logPage/ארכיון פברואר 2020']);
+      expect(wikiApi.articleContent).not.toHaveBeenCalled();
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalled();
     });
@@ -236,6 +252,7 @@ adasd
 `;
 
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 10 });
+      wikiApi.info.mockResolvedValue([{ missing: '' }]);
 
       archiveBotModel = ArchiveBotModel(wikiApi);
 
@@ -292,6 +309,7 @@ adasd
 פסקה בלי חתימה
 `;
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 11 });
+      wikiApi.info.mockResolvedValue([{ missing: '' }]);
 
       archiveBotModel = ArchiveBotModel(wikiApi);
 
@@ -315,6 +333,7 @@ adasd
 01:00, 1 באוגוסט 2025 (IDT)
 `;
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 12 });
+      wikiApi.info.mockResolvedValue([{ missing: '' }]);
 
       archiveBotModel = ArchiveBotModel(wikiApi, {
         ...defaultConfig,
