@@ -18,11 +18,18 @@ async function runTemplate(
   parameters?: Parameter[],
   capabilities?: Capability[],
 ): Promise<void> {
-  const stack = await cf.describeStacks({
-    StackName: name,
-  });
+  let newStack = false;
+  try {
+    await cf.describeStacks({ StackName: name });
+  } catch (e: any) {
+    if (e.name === 'ValidationError' && e.message.includes('does not exist')) {
+      newStack = true;
+    } else {
+      throw e;
+    }
+  }
+
   const template = await fs.readFile(templatePath, 'utf-8');
-  const newStack = stack.Stacks != null && stack.Stacks.length < 1;
   if (newStack) {
     await cf.createStack({
       StackName: name,
@@ -38,7 +45,7 @@ async function runTemplate(
         Capabilities: capabilities,
         Parameters: parameters,
       });
-    } catch (e) {
+    } catch (e: any) {
       if (e.message === 'No updates are to be performed.') {
         console.log(`template ${name} No updates are to be performed.`);
         return;
@@ -47,13 +54,16 @@ async function runTemplate(
     }
   }
 
-  const { state, reason } = await Promise.race([
-    waitUntilStackCreateComplete({ client: cf, maxWaitTime: 1000 * 60 * 30 }, { StackName: name }),
-    waitUntilStackUpdateComplete({ client: cf, maxWaitTime: 1000 * 60 * 30 }, { StackName: name }),
-  ]);
-  if (['ABORTED', 'FAILURE', 'TIMEOUT'].includes(state)) {
+  console.log(`Waiting for ${newStack ? 'creation' : 'update'} of ${name}...`);
+  const waiter = newStack ? waitUntilStackCreateComplete : waitUntilStackUpdateComplete;
+  const { state, reason } = await waiter(
+    { client: cf, maxWaitTime: 1000 * 60 * 30 },
+    { StackName: name },
+  );
+
+  if (state !== 'SUCCESS') {
     console.log(state, reason);
-    throw new Error('Creation failed');
+    throw new Error(`${newStack ? 'Creation' : 'Update'} failed`);
   }
   console.log(`template ${name} ${newStack ? 'created' : 'updated'}.`);
 }
