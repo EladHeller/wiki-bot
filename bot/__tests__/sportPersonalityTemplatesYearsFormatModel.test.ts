@@ -11,6 +11,7 @@ import { IWikiApi } from '../wiki/WikiApi';
 import { WikiPage } from '../types';
 import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
+import { logger } from '../utilities/logger';
 
 describe('fixYearRange', () => {
   it('should remove year links', () => {
@@ -212,18 +213,18 @@ describe('processTemplate', () => {
 
 describe('processArticle', () => {
   let api: Mocked<IWikiApi>;
-  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
   let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
+  let loggerLogErrorSpy: jest.SpiedFunction<typeof logger.logError>;
 
   beforeEach(() => {
     api = WikiApiMock();
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    loggerLogErrorSpy = jest.spyOn(logger, 'logError').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    consoleErrorSpy.mockRestore();
     consoleLogSpy.mockRestore();
+    loggerLogErrorSpy.mockRestore();
   });
 
   it('should process article and update template', async () => {
@@ -474,9 +475,8 @@ describe('processArticle', () => {
       ],
     });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to update'),
-      expect.any(Error),
+    expect(loggerLogErrorSpy).toHaveBeenCalledWith(
+      'Failed to update Error Article: Error: API Error',
     );
     expect(result).toStrictEqual({ title, text: `[[${title}]]`, error: true });
   });

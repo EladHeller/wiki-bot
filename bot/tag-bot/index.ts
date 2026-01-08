@@ -6,6 +6,7 @@ import { getAllParagraphs, getParagraphContent, parseParagraph } from '../wiki/p
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import archiveParagraph from './actions/archive';
 import askGPT from './gpt-bot/askGPT';
+import { logger } from '../utilities/logger';
 
 const TAG_PAGE_NAME = 'משתמש:Sapper-bot/בוט התיוג';
 const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
@@ -132,7 +133,7 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
       console.log({ commentRes });
     }
   } catch (error) {
-    console.error(error.message || error.data || error.toString());
+    logger.logError(error.message || error.data || error.toString());
     const commentRes = await api.addComment(title, commentSummary, failedMessage, commentId);
     console.log({ commentRes });
   }
@@ -153,7 +154,7 @@ async function askAction(api: IWikiApi, notification: WikiNotification) {
     const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}\n${response}.`, commentId);
     console.log({ commentRes });
   } catch (error) {
-    console.error('Failed to ask gpt', error.message || error.data || error.toString());
+    logger.logError(`Failed to ask gpt: ${error.message || error.data || error.toString()}`);
     const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}${failedMessage}`, commentId);
     console.log({ commentRes });
   }
@@ -226,7 +227,7 @@ async function saveNotification(api: IWikiApi, notification: WikiNotification) {
     const title = notification['*'].header;
     await api.edit('user:Sapper-bot/אימיילים', title, content, -1, title);
   } catch (e) {
-    console.error('Failed to save notification', e);
+    logger.logError(`Failed to save notification: ${e.message || e.data || e.toString()}`);
   }
 }
 

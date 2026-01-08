@@ -1,5 +1,6 @@
 import { AxiosInstance } from 'axios';
 import { objectToFormData } from '../utilities';
+import { logger } from '../utilities/logger';
 
 export async function getToken(
   axiosClient: AxiosInstance,
@@ -35,13 +36,13 @@ export async function baseLogin(
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   });
   if (result.data.login.result !== 'Success') {
-    console.error(result.data.login);
+    logger.logError(result.data.login);
     throw new Error(`Failed to login to: ${wikiBaseUrl}`);
   }
 
   const tokenResult = await axiosClient(`${wikiBaseUrl}?action=query&meta=tokens&format=json&assert=${assertBot ? 'bot' : 'user'}`);
   if (tokenResult.data.error) {
-    console.error(tokenResult.data.error);
+    logger.logError(tokenResult.data.error);
     throw new Error('Failed to get token');
   }
   return tokenResult.data.query.tokens.csrftoken;

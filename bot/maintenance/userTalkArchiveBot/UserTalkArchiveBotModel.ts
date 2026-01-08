@@ -6,6 +6,7 @@ import { extractLastSignatureDate, isInactiveForDays } from '../../utilities/sig
 import { getArchiveTitle } from '../../utilities/archiveUtils';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 import { WikiPage } from '../../types';
+import { logger } from '../../utilities/logger';
 
 const ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון';
 const AUTO_ARCHIVE_TEMPLATE = 'בוט ארכוב אוטומטי';
@@ -108,20 +109,18 @@ async function notifyUserAboutArchive(
   talkPage: string,
   message: string,
 ): Promise<void> {
-  console.warn(`Failed to archive ${talkPage}: ${message}`);
-
   try {
     const { content, revid } = await getContent(api, talkPage);
 
     if (content.includes(BOT_NOTIFICATION_HEADER)) {
-      console.warn(`Skipping notification for ${talkPage}: already has bot notification`);
+      logger.logWarning(`Skipping notification for ${talkPage}: already has bot notification`);
       return;
     }
 
     const notificationMessage = `\n${BOT_NOTIFICATION_HEADER}\n${message} ~~~~`;
     await api.edit(talkPage, '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הודעה מבוט הארכוב', content + notificationMessage, revid);
   } catch (error) {
-    console.error(`Failed to notify user on ${talkPage}:`, error);
+    logger.logError(`Failed to notify user on ${talkPage}: ${error}`);
   }
 }
 
@@ -498,13 +497,13 @@ export default function UserTalkArchiveBotModel(
   async function processPage(page: WikiPage): Promise<void> {
     const content = getPageContent(page);
     if (!content) {
-      console.warn(`No content found for ${page.title}`);
+      logger.logWarning(`No content found for ${page.title}`);
       return;
     }
 
     const config = getConfigFromPageContent(page.title, content);
     if (!config) {
-      console.warn(`No valid config found for ${page.title}`);
+      logger.logWarning(`No valid config found for ${page.title}`);
       return;
     }
 
@@ -528,7 +527,7 @@ export default function UserTalkArchiveBotModel(
         try {
           await processPage(page);
         } catch (error) {
-          console.error(`Failed to process ${page.title}:`, error);
+          logger.logError(`Failed to process ${page.title}: ${error}`);
         }
       },
     );

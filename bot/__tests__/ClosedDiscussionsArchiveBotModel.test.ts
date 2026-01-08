@@ -5,19 +5,23 @@ import ClosedDiscussionsArchiveBotModel, { IClosedDiscussionsArchiveBotModel } f
 import { IWikiApi } from '../wiki/WikiApi';
 import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
+import { logger } from '../utilities/logger';
 
 describe('closedDiscussionsArchiveBotModel', () => {
   let model: IClosedDiscussionsArchiveBotModel;
   let wikiApi: Mocked<IWikiApi>;
   const fakerTimers = jest.useFakeTimers();
+  let loggerLogWarningSpy: jest.SpiedFunction<typeof logger.logWarning>;
 
   beforeEach(() => {
     wikiApi = WikiApiMock();
+    loggerLogWarningSpy = jest.spyOn(logger, 'logWarning').mockImplementation(() => { });
   });
 
   afterEach(() => {
     jest.setSystemTime(jest.getRealSystemTime());
     jest.restoreAllMocks();
+    loggerLogWarningSpy.mockRestore();
   });
 
   describe('getPagesToArchive', () => {
@@ -830,14 +834,12 @@ More content
 
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
-
       await model.archive('TestPage', [paragraphWithoutTemplate], 'רבעון', 'TestPage');
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No status template found for paragraph: Discussion Without Template');
+      expect(loggerLogWarningSpy).toHaveBeenCalledWith('No status template found for paragraph: TestPage: Discussion Without Template');
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalled();
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+      expect(loggerLogWarningSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should skip paragraph without status template in template archive', async () => {
@@ -861,14 +863,12 @@ Discussion content without template
 
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
-
       await model.archive('TestPage', [paragraphWithoutTemplate], 'תבנית ארכיון', 'TestPage/Navigate');
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No status template found for paragraph: Discussion Without Template');
+      expect(loggerLogWarningSpy).toHaveBeenCalledWith('No status template found for paragraph: TestPage: Discussion Without Template');
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalled();
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+      expect(loggerLogWarningSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

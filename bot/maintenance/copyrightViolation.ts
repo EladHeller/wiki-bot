@@ -9,6 +9,7 @@ import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import { Paragraph } from '../wiki/paragraphParser';
+import { logger } from '../utilities/logger';
 
 const violationColor: Record<CopyViolaionRank, string> = {
   suspected: 'אדום',
@@ -114,7 +115,7 @@ export async function checkHamichlol(title: string, wikipediaTitle: string) {
       return null;
     }
     if (res.error) {
-      console.error('Error in Hamichlol', res.error);
+      logger.logWarning(`Error in Hamichlol: ${res.error}`);
       return null; // ignore Hamichlol errors
     }
     if (res.best?.violation === 'none') {

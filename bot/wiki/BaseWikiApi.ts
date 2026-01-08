@@ -4,6 +4,7 @@ import { CookieJar } from 'tough-cookie';
 import { objectToQueryString } from '../utilities';
 import { baseLogin, getToken as getWikiToken } from './wikiLogin';
 import { IBaseWikiApi, WikiApiConfig } from '../types';
+import { logger } from '../utilities/logger';
 
 export const defaultConfig: Partial<WikiApiConfig> = {
   baseUrl: 'https://he.wikipedia.org/w/api.php',
@@ -69,15 +70,15 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWik
       const result = await client(queryDetails);
 
       if (result.data.error) {
-        console.error(JSON.stringify(result.data.error, null, 2));
+        logger.logError(JSON.stringify(result.data.error, null, 2));
         throw new Error(`Failed to ${method?.toUpperCase() === 'GET' ? 'get data' : 'perform action'}`);
       } else if (result.data.warnings) {
-        console.warn(result.data.warnings);
+        logger.logWarning(result.data.warnings);
       }
       return result.data;
     } catch (e) {
       const error = e.message || e.data || e.toString();
-      console.error(JSON.stringify(error, null, 2));
+      logger.logError(JSON.stringify(error, null, 2));
       throw new Error('Failed to perform action');
     }
   }

@@ -3,6 +3,7 @@ import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { getLocalDate } from '../utilities';
 import getCasualties from './idfSiteScraper';
 import getWarData from './inssSiteScraper';
+import { logger } from '../utilities/logger';
 
 const baseTemplatePageName = 'תבנית:אבדות במלחמת חרבות ברזל';
 const templatePageName = `${baseTemplatePageName}/נתונים`;
@@ -73,7 +74,7 @@ export default async function ironSwordsBot() {
     console.log(editResult);
     await api.purge([baseTemplatePageName]);
   } catch (error) {
-    console.error(error);
+    logger.logError(error);
   }
 }
 

@@ -44,10 +44,10 @@ export default async function fixFlagTemplateIssues() {
 
       if (changed && updatedContent !== originalContent) {
         await api.edit(title, 'תבנית דגל - העברת הקישור לתבנית באמצעות פרמטר +', updatedContent, revid);
-        console.log(`✅ Updated: ${title}`);
+        console.log(`Updated: ${title}`);
       }
     } catch (err) {
-      console.error(`⚠️ Failed to update ${title}`, err);
+      console.error(`Failed to update ${title}`, err);
     }
   }
 }

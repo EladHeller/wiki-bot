@@ -9,6 +9,7 @@ import {
   extractFirstSignatureDate,
   isInactiveForDays,
 } from '../../utilities/signatureUtils';
+import { logger } from '../../utilities/logger';
 
 export type ArchiveType = 'רבעון' | 'תבנית ארכיון';
 const CONFIG_PAGE_TITLE = 'ויקיפדיה:בוט/ארכוב דיונים';
@@ -175,7 +176,7 @@ export default function ClosedDiscussionsArchiveBotModel(
     const templateData = getStatusTemplateData(paragraph, pageTitle);
 
     if (!templateData) {
-      console.warn(`No status template found for paragraph: ${paragraphName}`);
+      logger.logWarning(`No status template found for paragraph: ${pageTitle}: ${paragraphName}`);
       return;
     }
 
@@ -231,7 +232,7 @@ export default function ClosedDiscussionsArchiveBotModel(
     const templateData = getStatusTemplateData(paragraph, pageTitle);
 
     if (!templateData) {
-      console.warn(`No status template found for paragraph: ${paragraphName}`);
+      logger.logWarning(`No status template found for paragraph: ${pageTitle}: ${paragraphName}`);
       return;
     }
 

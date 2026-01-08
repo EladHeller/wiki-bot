@@ -13,10 +13,10 @@ export default async function sportPersonalityTemplatesYearsFormat() {
   const updatedCount = logs.filter((log) => !log.error).length;
   const errorCount = logs.filter((log) => log.error).length;
 
-  console.log(`✅ Processed ${processedCount} articles`);
-  console.log(`✅ Updated: ${updatedCount} articles`);
+  console.log(`Processed ${processedCount} articles`);
+  console.log(`Updated: ${updatedCount} articles`);
   if (errorCount > 0) {
-    console.log(`⚠️ Errors: ${errorCount} articles`);
+    console.log(`Errors: ${errorCount} articles`);
   }
 }
 export const main = botLoggerDecorator(sportPersonalityTemplatesYearsFormat, { botName: 'בוט פורמט שנים בתבניות אישיות ספורט' });

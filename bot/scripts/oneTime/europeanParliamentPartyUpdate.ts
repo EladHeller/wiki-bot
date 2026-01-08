@@ -119,12 +119,12 @@ async function processArticle(
 
     if (updatedContent !== originalContent) {
       await api.edit(title, 'עדכון פרמטרים של הפרלמנט האירופי בתבנית מפלגה', updatedContent, revid);
-      console.log(`✅ Updated: ${title}`);
+      console.log(`Updated: ${title}`);
     } else {
-      console.log(`❌ No changes needed for ${title}`);
+      console.log(`No changes needed for ${title}`);
     }
   } catch (err) {
-    console.error(`⚠️ Failed to update ${title}`, err);
+    console.error(`Failed to update ${title}`, err);
   }
 }
 

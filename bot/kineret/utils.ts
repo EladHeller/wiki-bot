@@ -1,6 +1,7 @@
 import { parseLocalDate } from '../utilities';
 import WikiApi from '../wiki/WikiApi';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import { logger } from '../utilities/logger';
 
 const dateFormater = new Intl.DateTimeFormat('he-IL', {
   year: 'numeric',
@@ -45,10 +46,7 @@ function getChangeData(change: number) {
 
 function datesDiffereceInDays(date1: Date, date2: Date) {
   if (date1 > date2) {
-    console.error('date1 must be before date2', {
-      date1,
-      date2,
-    });
+    logger.logError(`date1 must be before date2: ${date1} > ${date2}`);
     throw new Error('date1 must be before date2');
   }
   // {{הפרש תאריכים|יום1|חודש1|שנה1|יום2|חודש2|שנה2}}
@@ -88,7 +86,7 @@ export async function updateLevel(
   const today = new Date();
 
   if (today < parsedDate) {
-    console.warn(`Date ${date} is in the future`);
+    logger.logWarning(`Date ${date} is in the future`);
     return;
   }
 

@@ -1,4 +1,5 @@
 import botLoggerDecorator from './decorators/botLoggerDecorator';
+import { logger } from './utilities/logger';
 import WikiApi, { IWikiApi } from './wiki/WikiApi';
 import { personWithBirthdayInDay } from './wiki/WikidataSparql';
 
@@ -36,6 +37,7 @@ export default async function purgeBot() {
   const wikiDataArticles = await getWikiDataArticles();
   const articles = new Set([...wikipediaArticles, ...wikiDataArticles]);
   console.log(await api.purge([...articles]));
+  logger.logInfo(`Purged ${articles.size} articles`);
 }
 
 export const main = botLoggerDecorator(purgeBot, { botName: 'בוט רענון דפים שחוגגים יום הולדת' });

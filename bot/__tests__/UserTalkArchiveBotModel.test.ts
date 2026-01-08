@@ -5,21 +5,28 @@ import UserTalkArchiveBotModel, { IUserTalkArchiveBotModel } from '../maintenanc
 import { IWikiApi } from '../wiki/WikiApi';
 import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
+import { logger } from '../utilities/logger';
 
 describe('userTalkArchiveBotModel', () => {
   let model: IUserTalkArchiveBotModel;
   let wikiApi: Mocked<IWikiApi>;
   const fakerTimers = jest.useFakeTimers();
+  let loggerLogWarningSpy: jest.SpiedFunction<typeof logger.logWarning>;
+  let loggerLogErrorSpy: jest.SpiedFunction<typeof logger.logError>;
 
   beforeEach(() => {
     wikiApi = WikiApiMock();
     wikiApi.info.mockResolvedValue([{}]);
     wikiApi.articleContent.mockResolvedValue({ content: '', revid: 1 });
+    loggerLogWarningSpy = jest.spyOn(logger, 'logWarning').mockImplementation(() => { });
+    loggerLogErrorSpy = jest.spyOn(logger, 'logError').mockImplementation(() => { });
   });
 
   afterEach(() => {
     jest.setSystemTime(jest.getRealSystemTime());
     jest.restoreAllMocks();
+    loggerLogWarningSpy.mockRestore();
+    loggerLogErrorSpy.mockRestore();
   });
 
   describe('getConfigFromPageContent', () => {
@@ -438,7 +445,6 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [`
@@ -446,7 +452,6 @@ Old discussion
 Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `]);
-      consoleWarnSpy.mockRestore();
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה',
@@ -486,7 +491,6 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [`
@@ -494,7 +498,6 @@ Old discussion
 Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `]);
-      consoleWarnSpy.mockRestore();
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה',
@@ -1055,7 +1058,6 @@ Old discussion
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [`
@@ -1063,7 +1065,6 @@ Old discussion
 Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `]);
-      consoleWarnSpy.mockRestore();
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה',
@@ -1115,7 +1116,6 @@ Old discussion
     });
 
     it('should notify user when direct archive name cannot be incremented', async () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
 
       const talkPageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון]]}}
@@ -1145,7 +1145,6 @@ Old discussion
 Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `]);
-      consoleWarnSpy.mockRestore();
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה',
@@ -1251,19 +1250,6 @@ Old discussion
   });
 
   describe('archive error handling', () => {
-    let consoleWarnSpy: jest.SpiedFunction<typeof console.warn>;
-    let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
-
-    beforeEach(() => {
-      consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
-      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
-    });
-
-    afterEach(() => {
-      consoleWarnSpy.mockRestore();
-      consoleErrorSpy.mockRestore();
-    });
-
     it('should throw error when both archiveBoxPage and directArchivePage are null', async () => {
       const config = {
         talkPage: 'שיחת משתמש:דוגמה',
@@ -1350,13 +1336,8 @@ Old discussion
 
       await model.archive(config, ['==Discussion 1==\nOld discussion\n']);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to archive'),
-      );
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(loggerLogErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Failed to notify user'),
-        expect.any(Error),
       );
     });
 
@@ -1388,7 +1369,7 @@ Previous message from bot
 
       await model.archive(config, ['==Discussion 1==\nOld discussion\n']);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect(loggerLogWarningSpy).toHaveBeenCalledWith(
         expect.stringContaining('Skipping notification'),
       );
 
@@ -1673,11 +1654,9 @@ Old discussion 3
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [paragraph1, paragraph2]);
-      consoleWarnSpy.mockRestore();
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה',
@@ -1710,11 +1689,9 @@ Old discussion 3
       wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [paragraph1, paragraph2]);
-      consoleWarnSpy.mockRestore();
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה',
@@ -1828,19 +1805,6 @@ Old discussion
   });
 
   describe('run', () => {
-    let consoleWarnSpy: jest.SpiedFunction<typeof console.warn>;
-    let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
-
-    beforeEach(() => {
-      consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
-      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
-    });
-
-    afterEach(() => {
-      consoleWarnSpy.mockRestore();
-      consoleErrorSpy.mockRestore();
-    });
-
     it('should process pages from generator and archive old discussions', async () => {
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
 
@@ -1904,7 +1868,7 @@ Old discussion
 
       await model.run();
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No content found for שיחת משתמש:דוגמה');
+      expect(loggerLogWarningSpy).toHaveBeenCalledWith('No content found for שיחת משתמש:דוגמה');
     });
 
     it('should skip pages with content but without valid config', async () => {
@@ -1930,7 +1894,7 @@ Old discussion
 
       await model.run();
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith('No valid config found for שיחת משתמש:דוגמה');
+      expect(loggerLogWarningSpy).toHaveBeenCalledWith('No valid config found for שיחת משתמש:דוגמה');
     });
 
     it('should handle errors during page processing', async () => {
@@ -1958,9 +1922,8 @@ Old discussion
 
       await model.run();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to process שיחת משתמש:דוגמה:',
-        expect.any(Error),
+      expect(loggerLogErrorSpy).toHaveBeenCalledWith(
+        'Failed to process שיחת משתמש:דוגמה: Error: API Error',
       );
     });
 

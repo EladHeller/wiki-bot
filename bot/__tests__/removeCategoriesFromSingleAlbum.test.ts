@@ -1,5 +1,5 @@
 import {
-  describe, expect, it, jest,
+  afterEach, beforeEach, describe, expect, it, jest,
 } from '@jest/globals';
 import removeCategoriesFromSingleAlbum, {
   extractYearFromDate,
@@ -128,6 +128,16 @@ describe('processSingleTemplate', () => {
 });
 
 describe('processAlbumTemplate', () => {
+  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
+
+  beforeEach(() => {
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
   it('should remove albums category', () => {
     const templateData = {};
     const content = 'Text\n[[קטגוריה:אלבומי 2024]]\nMore';
@@ -388,6 +398,16 @@ describe('getReleaseYearFromWikidata', () => {
 });
 
 describe('processArticle', () => {
+  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
+
+  beforeEach(() => {
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
   it('should process single template and update article', async () => {
     const mockApi = WikiApiMock({
       getWikiDataItem: jest.fn() as any,
@@ -686,7 +706,6 @@ describe('processArticle', () => {
   });
 
   it('should return null if no content', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const mockApi = WikiApiMock();
     const mockWikiDataApi = WikiDataApiMock();
 
@@ -718,7 +737,6 @@ describe('processArticle', () => {
   });
 
   it('should return null if no revid', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const mockApi = WikiApiMock();
     const mockWikiDataApi = WikiDataApiMock();
 
@@ -750,7 +768,6 @@ describe('processArticle', () => {
   });
 
   it('should return error log on exception', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const mockApi = WikiApiMock({
       getWikiDataItem: jest.fn() as any,
       edit: jest.fn<(articleTitle: string, summary: string, content: string, baseRevId: number) => Promise<any>>()

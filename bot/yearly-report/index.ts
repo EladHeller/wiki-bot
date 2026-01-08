@@ -4,6 +4,7 @@ import { WikiPage } from '../types';
 import { buildTable } from '../wiki/wikiTableParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { companiesWithMayaId, CompaniesWithMayaIdResult } from '../wiki/WikidataSparql';
+import { logger } from '../utilities/logger';
 // https://market.tase.co.il/he/market_data/company/1691/financial_reports
 // https://market.tase.co.il/he/market_data/company/1480/financial_reports
 
@@ -82,14 +83,14 @@ export default async function yearlyReport(year: string) {
       }],
     };
     if (!maya) {
-      console.error(`no maya data ${result.articleName}`);
+      logger.logError(`no maya data ${result.articleName}`);
     }
     if (!wikiContent) {
-      console.error(`no wiki content ${result.articleName}`);
+      logger.logError(`no wiki content ${result.articleName}`);
     }
 
     if (maya && !maya.CurrencyName) {
-      console.error(`no currency ${result.articleName}`);
+      logger.logError(`no currency ${result.articleName}`);
     }
 
     if (maya && wikiContent && maya.CurrencyName) {
