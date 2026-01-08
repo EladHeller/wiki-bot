@@ -345,7 +345,7 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Name: copyright-violation-scheduler
-      ScheduleExpression: cron(0 6,18 ? * * *)
+      ScheduleExpression: cron(0 6,18,x,y ? * * *)
       Targets:
         - Id: copyright-violation-function
           Arn: !GetAtt CopyrighViolationLambda.Arn
