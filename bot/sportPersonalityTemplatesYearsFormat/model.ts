@@ -8,6 +8,7 @@ import {
   getTemplateKeyValueData,
   templateFromKeyValueData,
 } from '../wiki/newTemplateParser';
+import { logger } from '../utilities/logger';
 
 export type TemplateName = 'אישיות כדורגל' | 'אישיות כדורסל';
 
@@ -91,7 +92,7 @@ export async function processArticle(
     const originalContent = page.revisions?.[0]?.slots.main['*'];
     const revid = page.revisions?.[0]?.revid;
     if (!originalContent || !revid) {
-      console.error(`No content or revid for ${page.title}`);
+      logger.logWarning(`No content or revid for ${page.title}`);
       return null;
     }
     let updatedContent = originalContent;
@@ -115,12 +116,11 @@ export async function processArticle(
         updatedContent,
         revid,
       );
-      console.log(`✅ Updated: ${page.title}`);
       return { title: page.title, text: `[[${page.title}]]` };
     }
     return null;
   } catch (err) {
-    console.error(`⚠️ Failed to update ${page.title}`, err);
+    logger.logError(`Failed to update ${page.title}: ${err}`);
     return { title: page.title, text: `[[${page.title}]]`, error: true };
   }
 }

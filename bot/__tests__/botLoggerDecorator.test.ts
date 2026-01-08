@@ -3,6 +3,7 @@ import {
 } from '@jest/globals';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 import { getLocalTimeAndDate } from '../utilities';
+import { logger } from '../utilities/logger';
 
 const moduleMockApi = WikiApiMock();
 jest.unstable_mockModule('../wiki/WikiApi', () => ({
@@ -10,10 +11,12 @@ jest.unstable_mockModule('../wiki/WikiApi', () => ({
   default: () => moduleMockApi,
 }));
 
-const { default: botLoggerDecorator, logError, logWarning } = await import('../decorators/botLoggerDecorator');
+const { default: botLoggerDecorator } = await import('../decorators/botLoggerDecorator');
 
 describe('botLoggerDecorator', () => {
   const mockApi = WikiApiMock();
+  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
+  let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -21,10 +24,14 @@ describe('botLoggerDecorator', () => {
     jest.clearAllMocks();
     mockApi.articleContent.mockResolvedValue({ content: '', revid: 123 });
     moduleMockApi.articleContent.mockResolvedValue({ content: '', revid: 123 });
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+    consoleErrorSpy.mockRestore();
+    consoleLogSpy.mockRestore();
   });
 
   it('should execute the callback and return its result', async () => {
@@ -48,8 +55,8 @@ describe('botLoggerDecorator', () => {
 
   it('should write error logs to wiki', async () => {
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה ראשונה');
-      logError('שגיאה שנייה');
+      logger.logError('שגיאה ראשונה');
+      logger.logError('שגיאה שנייה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
@@ -67,7 +74,7 @@ describe('botLoggerDecorator', () => {
 
   it('should write warning logs to wiki', async () => {
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logWarning('אזהרה ראשונה');
+      logger.logWarning('אזהרה ראשונה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
@@ -100,7 +107,7 @@ describe('botLoggerDecorator', () => {
 
   it('should include bot name and date in heading', async () => {
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה');
+      logger.logError('שגיאה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט מיוחד', wikiApi: mockApi });
 
@@ -122,7 +129,7 @@ describe('botLoggerDecorator', () => {
     });
 
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה');
+      logger.logError('שגיאה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
@@ -144,7 +151,7 @@ describe('botLoggerDecorator', () => {
     });
 
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה');
+      logger.logError('שגיאה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
@@ -173,8 +180,8 @@ describe('botLoggerDecorator', () => {
 
   it('should handle both errors and warnings together', async () => {
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה');
-      logWarning('אזהרה');
+      logger.logError('שגיאה');
+      logger.logWarning('אזהרה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
@@ -191,7 +198,7 @@ describe('botLoggerDecorator', () => {
 
   it('should use correct edit summary', async () => {
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה');
+      logger.logError('שגיאה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט ארכיון', wikiApi: mockApi });
 
@@ -207,7 +214,7 @@ describe('botLoggerDecorator', () => {
 
   it('should write to correct log page', async () => {
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה');
+      logger.logError('שגיאה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
@@ -222,7 +229,7 @@ describe('botLoggerDecorator', () => {
 
   it('should add signature at the end of logs', async () => {
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה');
+      logger.logError('שגיאה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
@@ -250,11 +257,10 @@ describe('botLoggerDecorator', () => {
   });
 
   it('should log to console when writing logs to wiki fails', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockApi.edit.mockRejectedValue(new Error('Wiki API error'));
 
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה');
+      logger.logError('שגיאה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
@@ -267,13 +273,13 @@ describe('botLoggerDecorator', () => {
   });
 
   it('should not throw when logging outside of context', () => {
-    expect(() => logError('שגיאה מחוץ לקונטקסט')).not.toThrow();
-    expect(() => logWarning('אזהרה מחוץ לקונטקסט')).not.toThrow();
+    expect(() => logger.logError('שגיאה מחוץ לקונטקסט')).not.toThrow();
+    expect(() => logger.logWarning('אזהרה מחוץ לקונטקסט')).not.toThrow();
   });
 
   it('should use default WikiApi when wikiApi option is not provided', async () => {
     const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
-      logError('שגיאה');
+      logger.logError('שגיאה');
     });
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה' });
 
@@ -281,5 +287,31 @@ describe('botLoggerDecorator', () => {
 
     expect(moduleMockApi.login).toHaveBeenCalledWith();
     expect(moduleMockApi.articleContent).toHaveBeenCalledWith('משתמש:Sapper-bot/לוג שגיאות');
+  });
+
+  it('should log to console when NODE_ENV is development', () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    logger.logError('שגיאה');
+    process.env.NODE_ENV = originalNodeEnv;
+
+    expect(consoleLogSpy).toHaveBeenCalledWith('error: שגיאה');
+  });
+
+  it('should log info logs', async () => {
+    const callback = jest.fn<() => Promise<void>>().mockImplementation(async () => {
+      logger.logInfo('info');
+    });
+    const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
+
+    await decorated();
+
+    expect(mockApi.edit).toHaveBeenCalledTimes(1);
+
+    const editCall = mockApi.edit.mock.calls[0];
+    const content = editCall[2] as string;
+
+    expect(content).toContain('===לוגים===');
+    expect(content).toContain('info');
   });
 });

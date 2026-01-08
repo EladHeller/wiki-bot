@@ -1,39 +1,9 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getLocalTimeAndDate } from '../utilities';
 import shabathProtectorDecorator from './shabathProtector';
+import { BotLoggerContext, loggerAsyncLocalStorage } from '../utilities/logger';
 
 const BOT_LOG_PAGE = 'משתמש:Sapper-bot/לוג שגיאות';
-
-type LogLevel = 'error' | 'warning';
-
-type LogEntry = {
-  level: LogLevel;
-  message: string;
-  timestamp: Date;
-};
-
-type BotLoggerContext = {
-  botName: string;
-  logs: LogEntry[];
-  thrownError?: Error;
-};
-
-const asyncLocalStorage = new AsyncLocalStorage<BotLoggerContext>();
-
-const addLog = (level: LogLevel, message: string): void => {
-  const context = asyncLocalStorage.getStore();
-  if (context) {
-    context.logs.push({
-      level,
-      message,
-      timestamp: new Date(),
-    });
-  }
-};
-
-export const logError = (message: string): void => addLog('error', message);
-export const logWarning = (message: string): void => addLog('warning', message);
 
 const findNextHeadingNumber = (content: string, baseHeading: string): number => {
   const escapedHeading = baseHeading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -55,6 +25,7 @@ const formatLogContent = (context: BotLoggerContext): string => {
 
   const errors = logs.filter((log) => log.level === 'error');
   const warnings = logs.filter((log) => log.level === 'warning');
+  const infos = logs.filter((log) => log.level === 'info');
 
   const lines: string[] = [];
 
@@ -63,6 +34,14 @@ const formatLogContent = (context: BotLoggerContext): string => {
     lines.push(`<div style="direction: ltr"><code>${
       thrownError.stack?.replaceAll('\n', '<br/>').replaceAll('    ', '&nbsp;&nbsp;&nbsp;&nbsp;')
     }</code></div>`);
+    lines.push('');
+  }
+
+  if (infos.length > 0) {
+    lines.push('===לוגים===');
+    infos.forEach((log) => {
+      lines.push(`* ${log.message}`);
+    });
     lines.push('');
   }
 
@@ -128,7 +107,7 @@ export default function botLoggerDecorator<T>(
       logs: [],
     };
 
-    return asyncLocalStorage.run(context, async () => {
+    return loggerAsyncLocalStorage.run(context, async () => {
       const api = options.wikiApi ?? WikiApi();
       await api.login();
 
@@ -136,7 +115,6 @@ export default function botLoggerDecorator<T>(
         const result = await cb(...args);
         return result;
       } catch (error) {
-        console.error('Error in botLoggerDecorator:', error);
         if (error instanceof Error) {
           context.thrownError = error;
         } else {

@@ -6,6 +6,7 @@ import { ArticleLog } from './types';
 import pagesWithoutProtectInMainPage from './pagesWithoutProtectInMainPage';
 import pagesWithCopyrightIssuesInMainPage from './pagesWithCopyrightIssuesInMainPage';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
+import { logger } from '../utilities/logger';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
@@ -139,7 +140,7 @@ export async function protectBot() {
       await api.protect(title, 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'מופיע בעמוד הראשי');
     } catch (e) {
       console.log(`Failed to protect ${title}`);
-      console.error(e);
+      logger.logError(e);
       errors.push(title);
     }
   }
@@ -150,7 +151,7 @@ export async function protectBot() {
       await api.protect(title, 'edit=editautopatrolprotected|move=editautopatrolprotected', 'never', 'דפי מפרט של בוט ההסבה');
     } catch (e) {
       console.log(`Failed to protect ${title}`);
-      console.error(e);
+      logger.logError(e);
       convertErrors.push(title);
     }
   }

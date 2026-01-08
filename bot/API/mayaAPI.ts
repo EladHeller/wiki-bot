@@ -1,4 +1,5 @@
 import axios, { type AxiosResponse } from 'axios';
+import { logger } from '../utilities/logger';
 
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';
 const jsonAllLink = 'https://mayaapi.tase.co.il/api/company/alldetails?companyId=';
@@ -190,9 +191,8 @@ export async function getIndicesList(): Promise<Index[]> {
     const response = await axios(indicesListApiUrl, mayaGetOptions);
     return response.data?.NavCmpnIndicesData;
   } catch (e) {
-    console.error(
-      'getIndicesList error',
-      e?.data || e?.message || e,
+    logger.logError(
+      `getIndicesList error: ${e?.data || e?.message || e}`,
     );
     throw e;
   }
@@ -219,9 +219,8 @@ export async function getIndexStocks(indexId: string): Promise<Stock[]> {
     }
     return items;
   } catch (e) {
-    console.error(
-      'getIndicesList error',
-      e?.data || e?.message || e,
+    logger.logError(
+      `getIndicesList error: ${e?.data || e?.message || e}`,
     );
     throw e;
   }
@@ -246,10 +245,8 @@ export async function getMarketValueById(
       companyLongName: result.CompanyDetails?.CompanyLongName,
     };
   } catch (e) {
-    console.error(
-      'companyAllDetailsUrl',
-      { companyId },
-      e?.data || e?.message || e,
+    logger.logError(
+      `companyAllDetailsUrl: ${companyId}. ${e?.data || e?.message || e}`,
     );
     throw e;
   }
@@ -282,10 +279,8 @@ export async function getSymbol(
       hebrewName: allDetails.CompanyDetails.CompanyLongName,
     };
   } catch (e) {
-    console.error(
-      'companyAllDetailsUrl',
-      { companyId },
-      e?.data || e?.message || e,
+    logger.logError(
+      `companyAllDetailsUrl: ${companyId}. ${e?.data || e?.message || e}`,
     );
     throw e;
   }
@@ -299,10 +294,8 @@ export async function getAllDetails(
     const results = await axios(url, mayaGetOptions);
     return results?.data;
   } catch (e) {
-    console.error(
-      'companyAllDetailsUrl',
-      { companyId },
-      e?.data || e?.message || e,
+    logger.logError(
+      `companyAllDetailsUrl: ${companyId}. ${e?.data || e?.message || e}`,
     );
     throw e;
   }
@@ -316,10 +309,8 @@ export async function getFinanceReport(
     const result = await axios(companyFinnaceDetailsUrl, mayaGetOptions);
     return result?.data;
   } catch (e) {
-    console.error(
-      'companyFinnaceDetailsUrl',
-      companyId,
-      e?.data || e?.message || e,
+    logger.logError(
+      `companyFinnaceDetailsUrl: ${companyId}. ${e?.data || e?.message || e}`,
     );
     throw e;
   }

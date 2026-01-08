@@ -1,8 +1,10 @@
+import { logger } from '../utilities/logger';
+
 const { GOOGLE_SEARCH_API_KEY, GOOGLE_SEARCH_CX } = process.env;
 let isGoogleSearchEnabled = true;
 export default async function googleSearch(searchText: string): Promise<string | null> {
   if (!isGoogleSearchEnabled) {
-    console.warn('Google Search is disabled');
+    logger.logWarning('Google Search is disabled');
     return null;
   }
   if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_CX) {
@@ -20,14 +22,14 @@ export default async function googleSearch(searchText: string): Promise<string |
     if (!response.ok) {
       try {
         const body = await response.json();
-        console.error(body);
+        logger.logError(body);
       } catch {
         // Ignore JSON parse error
       }
       if (response.status === 429) {
         isGoogleSearchEnabled = false;
       }
-      console.error(`HTTP error! status: ${response.status}`);
+      logger.logError(`HTTP error! status: ${response.status}`);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
@@ -38,7 +40,7 @@ export default async function googleSearch(searchText: string): Promise<string |
     }
     return null;
   } catch (error) {
-    console.error(`Error searching for ${searchText}:`, error.message);
+    logger.logError(`Error searching for ${searchText}: ${error.message}`);
     throw error;
   }
 }
