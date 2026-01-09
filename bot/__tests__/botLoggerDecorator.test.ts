@@ -220,11 +220,11 @@ describe('botLoggerDecorator', () => {
 
     await decorated();
 
-    expect(mockApi.articleContent).toHaveBeenCalledWith('משתמש:Sapper-bot/לוג שגיאות');
+    expect(mockApi.articleContent).toHaveBeenCalledWith('משתמש:Sapper-bot/לוג ריצות');
 
     const editCall = mockApi.edit.mock.calls[0];
 
-    expect(editCall[0]).toBe('משתמש:Sapper-bot/לוג שגיאות');
+    expect(editCall[0]).toBe('משתמש:Sapper-bot/לוג ריצות');
   });
 
   it('should add signature at the end of logs', async () => {
@@ -286,7 +286,7 @@ describe('botLoggerDecorator', () => {
     await decorated();
 
     expect(moduleMockApi.login).toHaveBeenCalledWith();
-    expect(moduleMockApi.articleContent).toHaveBeenCalledWith('משתמש:Sapper-bot/לוג שגיאות');
+    expect(moduleMockApi.articleContent).toHaveBeenCalledWith('משתמש:Sapper-bot/לוג ריצות');
   });
 
   it('should log to console when NODE_ENV is development', () => {
