@@ -3,7 +3,7 @@ import { getLocalTimeAndDate } from '../utilities';
 import shabathProtectorDecorator from './shabathProtector';
 import { BotLoggerContext, loggerAsyncLocalStorage } from '../utilities/logger';
 
-const BOT_LOG_PAGE = 'משתמש:Sapper-bot/לוג שגיאות';
+const BOT_LOG_PAGE = 'משתמש:Sapper-bot/לוג ריצות';
 
 const findNextHeadingNumber = (content: string, baseHeading: string): number => {
   const escapedHeading = baseHeading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -82,7 +82,7 @@ const writeLogsToWiki = async (
   const heading = headingNumber > 0 ? `${baseHeading} (${headingNumber})` : baseHeading;
 
   const logContent = formatLogContent(context);
-  const newContent = `${pageContent}\n==${heading}==\n${logContent}~~~~\n`;
+  const newContent = `${pageContent}\n==${heading}==\n${logContent}.\n@[[משתמש:החבלן|החבלן]] ~~~~\n`;
 
   await api.edit(
     BOT_LOG_PAGE,
