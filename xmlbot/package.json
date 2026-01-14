@@ -9,7 +9,8 @@
     "read": "tsx readLargeFile.ts",
     "templates": "tsx templates.ts",
     "soldierAndPolice": "tsx soldierAndPolice.ts",
-    "hasType": "tsx hasTypeField.ts"
+    "hasType": "tsx hasTypeField.ts",
+    "coordinates": "tsx findCoordinates.ts"
   },
   "keywords": [],
   "author": "",

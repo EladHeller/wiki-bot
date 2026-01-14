@@ -40,7 +40,7 @@ export default async function changeLinksTo(
     releventLinks.forEach((link) => {
       const isTextDifferent = link.text !== link.link;
       const oldLink = isTextDifferent ? `[[${link.link}|${link.text}]]` : `[[${link.link}]]`;
-      const newLink = (isTextDifferent || saveText) ? `[[${newTarget}|${link.text}]]` : `[[${newTarget}]]`;
+      const newLink = (isTextDifferent || saveText) && newTarget !== link.text ? `[[${newTarget}|${link.text}]]` : `[[${newTarget}]]`;
       newContent = newContent.replace(oldLink, newLink);
     });
     longTemplates.forEach((template) => {
