@@ -159,7 +159,7 @@ Resources:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
-      Handler: dist/kineret/kineretBot.main
+      Handler: dist/kineret/index.main
       Timeout: 20
       MemorySize: 512
       Code:
