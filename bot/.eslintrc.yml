@@ -7,6 +7,7 @@ plugins:
   - '@typescript-eslint'
 rules:
   "@typescript-eslint/no-unused-vars": error
+  "@typescript-eslint/no-non-null-assertion": error
   jest/prefer-expect-assertions: 0
   jest/no-hooks: 0
   jest/require-hook: 0

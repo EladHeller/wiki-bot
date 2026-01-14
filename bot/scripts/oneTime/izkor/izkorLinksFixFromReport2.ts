@@ -362,12 +362,14 @@ export default async function izkorLinksFixFromReport() {
   const fixesByArticle = new Map<string, Array<{ oldTemplate: string; newTemplate: string }>>();
 
   for (const result of successfulFixes) {
-    if (!fixesByArticle.has(result.article)) {
-      fixesByArticle.set(result.article, []);
+    let replacements = fixesByArticle.get(result.article);
+    if (!replacements) {
+      replacements = [];
+      fixesByArticle.set(result.article, replacements);
     }
-    fixesByArticle.get(result.article)!.push({
+    replacements.push({
       oldTemplate: result.originalTemplate,
-      newTemplate: result.newTemplate!,
+      newTemplate: result.newTemplate ?? '',
     });
   }
 

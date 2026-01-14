@@ -115,6 +115,8 @@ export type WikiDataClaim = {
       type: string;
     }
   };
+  qualifiers?: Record<string, WikiDataSnack[]>;
+  'qualifiers-order': string[];
   type: string;
   id: string;
   rank: string;
