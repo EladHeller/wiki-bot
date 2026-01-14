@@ -211,7 +211,8 @@ const bfs = (root: LtId, children: ChildrenMap): Set<LtId> => {
   const seen = new Set<LtId>([root]);
   const q: LtId[] = [root];
   while (q.length) {
-    const cur = q.shift()!;
+    const cur = q.shift();
+    if (cur === undefined) break;
     const kids = children.get(cur) ?? [];
     for (const ch of kids) {
       if (!seen.has(ch)) {

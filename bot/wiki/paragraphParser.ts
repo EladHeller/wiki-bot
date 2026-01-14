@@ -4,8 +4,8 @@ import { findTemplates } from './newTemplateParser';
 import { getInnerLinks } from './wikiLinkParser';
 
 export interface Paragraph {
-    name: string;
-    content: string;
+  name: string;
+  content: string;
 }
 
 export function getParagraphContent(
@@ -41,12 +41,12 @@ export function getParagraphContent(
 
 export function parseParagraph(paragraphText: string): Paragraph {
   const titleMatch = paragraphText.match(/^[ \t]*={2,4}[ \t]*([^=]+?)[ \t]*={2,4}[ \t]*$/m);
-  if (!titleMatch) {
+  if (!titleMatch || titleMatch.index == null) {
     throw new Error('Invalid paragraph format: missing title');
   }
 
   const name = titleMatch[1].trim();
-  const startIndex = titleMatch.index! + titleMatch[0].length;
+  const startIndex = titleMatch.index + titleMatch[0].length;
   const content = paragraphText.substring(startIndex).trim();
 
   return { name, content };
@@ -84,7 +84,7 @@ export function getAllParagraphs(articleText: string, articleTitle: string): str
   return paragraphContents;
 }
 
-export function getUsersFromTagParagraph(articleContent: string, paragraphName: string) : string[] {
+export function getUsersFromTagParagraph(articleContent: string, paragraphName: string): string[] {
   const tagParagraph = getParagraphContent(articleContent, paragraphName);
   const users: string[] = [];
   if (!tagParagraph) {
