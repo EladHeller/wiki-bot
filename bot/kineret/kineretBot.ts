@@ -46,7 +46,7 @@ async function getKineretLevel() {
 function isClaimValid(currentClaim: WikiDataClaim) {
   const isUnitValid = currentClaim.mainsnak.datavalue.value.unit === 'http://www.wikidata.org/entity/Q11573';
   const isReferenceValid = currentClaim.references?.length === 1
-     && currentClaim.references?.[0].snaks?.P854[0].datavalue.value === 'https://data.gov.il/dataset/https-www-data-gov-il-dataset-682';
+    && currentClaim.references?.[0].snaks?.P854[0].datavalue.value === 'https://data.gov.il/he/datasets/water_authority/https-www-data-gov-il-dataset-682';
   const thereIsTimeReference = currentClaim.references?.[0].snaks?.P813[0].datavalue.value.time;
   return isUnitValid && isReferenceValid && thereIsTimeReference;
 }
