@@ -33,10 +33,13 @@ export interface IKineretModel {
 }
 
 function parseDateFromRecord(surveyDate: string): Date {
-  const dateMatch = surveyDate.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+  const dateMatch = surveyDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (dateMatch) {
     const [, day, month, year] = dateMatch;
-    return new Date(`20${year}-${month}-${day}`);
+    const fullYear = year.length === 2 ? `20${year}` : year;
+    const paddedMonth = month.padStart(2, '0');
+    const paddedDay = day.padStart(2, '0');
+    return new Date(`${fullYear}-${paddedMonth}-${paddedDay}`);
   }
   return new Date(surveyDate);
 }

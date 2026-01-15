@@ -62,7 +62,7 @@ describe('deadSeaModel', () => {
   });
 
   describe('updateWikiTemplate', () => {
-    const mockTemplateContent = `{{גוף מים
+    const mockTemplateContent = `{{#switch: {{{מאפיין}}}
 |תאריך גובה=10 בינואר 2025
 |גובה=-436
 |שינוי=ירידה של 5 ס"מ [[File:Decrease2.svg|11px]] מלפני {{הפרש תאריכים|5|1|2025|10|1|2025}}

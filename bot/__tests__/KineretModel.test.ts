@@ -45,6 +45,28 @@ describe('kineretModel', () => {
       expect(mockDataFetcher).toHaveBeenCalledWith(mockConfig.apiUrl);
     });
 
+    it('should fetch and return level data with date in D/M/YYYY format', async () => {
+      const mockResponse = {
+        result: {
+          records: [{
+            Survey_Date: '15/1/2026',
+            Kinneret_Level: -213.3,
+            _id: 1,
+          }],
+        },
+      };
+      mockDataFetcher.mockResolvedValueOnce(mockResponse);
+
+      const model = KineretModel(mockWikiApi, mockWikiDataApi, mockConfig, mockDataFetcher, mockGetCurrentDate);
+      const result = await model.fetchLevelData();
+
+      expect(result.level).toBe('-213.3');
+      expect(result.date.getFullYear()).toBe(2026);
+      expect(result.date.getMonth()).toBe(0); // Jan is 0
+      expect(result.date.getDate()).toBe(15);
+      expect(mockDataFetcher).toHaveBeenCalledWith(mockConfig.apiUrl);
+    });
+
     it('should handle ISO date format if slash format fails', async () => {
       const mockResponse = {
         result: {
@@ -83,7 +105,7 @@ describe('kineretModel', () => {
   });
 
   describe('updateWikiTemplate', () => {
-    const mockTemplateContent = `{{גוף מים
+    const mockTemplateContent = `{{#switch: {{{מאפיין}}}
 |תאריך גובה=10 בינואר 2025
 |גובה=-211
 |שינוי=ירידה של 5 ס"מ [[File:Decrease2.svg|11px]] מלפני {{הפרש תאריכים|5|1|2025|10|1|2025}}
