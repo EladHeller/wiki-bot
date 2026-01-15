@@ -16,22 +16,33 @@ export type BotLoggerContext = {
 
 export const loggerAsyncLocalStorage = new AsyncLocalStorage<BotLoggerContext>();
 
-const addLog = (level: LogLevel, message: string): void => {
+export function stringify(message: any): string {
+  if (typeof message === 'string') {
+    return message;
+  }
+  if (message instanceof Error) {
+    return message.stack || message.toString();
+  }
+  return JSON.stringify(message, null, 2);
+}
+
+const addLog = (level: LogLevel, message: any): void => {
   const context = loggerAsyncLocalStorage.getStore();
+  const messageStr = stringify(message);
   if (context) {
     context.logs.push({
       level,
-      message,
+      message: messageStr,
       timestamp: new Date(),
     });
   }
   if (process.env.NODE_ENV === 'development') {
-    console.log(`${level}: ${message}`);
+    console.log(`${level}: ${messageStr}`);
   }
 };
 
 export const logger = {
-  logError: (message: string): void => addLog('error', message),
-  logWarning: (message: string): void => addLog('warning', message),
-  logInfo: (message: string): void => addLog('info', message),
+  logError: (message: any): void => addLog('error', message),
+  logWarning: (message: any): void => addLog('warning', message),
+  logInfo: (message: any): void => addLog('info', message),
 };

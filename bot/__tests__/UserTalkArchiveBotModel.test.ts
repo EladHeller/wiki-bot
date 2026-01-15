@@ -1923,7 +1923,7 @@ Old discussion
       await model.run();
 
       expect(loggerLogErrorSpy).toHaveBeenCalledWith(
-        'Failed to process שיחת משתמש:דוגמה: Error: API Error',
+        expect.stringContaining('Failed to process שיחת משתמש:דוגמה: Error: API Error'),
       );
     });
 

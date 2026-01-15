@@ -8,7 +8,7 @@ import {
   getTemplateKeyValueData,
   templateFromKeyValueData,
 } from '../wiki/newTemplateParser';
-import { logger } from '../utilities/logger';
+import { logger, stringify } from '../utilities/logger';
 
 export type TemplateName = 'אישיות כדורגל' | 'אישיות כדורסל';
 
@@ -120,7 +120,7 @@ export async function processArticle(
     }
     return null;
   } catch (err) {
-    logger.logError(`Failed to update ${page.title}: ${err}`);
+    logger.logError(`Failed to update ${page.title}: ${stringify(err)}`);
     return { title: page.title, text: `[[${page.title}]]`, error: true };
   }
 }
