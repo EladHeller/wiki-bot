@@ -6,7 +6,7 @@ import { extractLastSignatureDate, isInactiveForDays } from '../../utilities/sig
 import { getArchiveTitle } from '../../utilities/archiveUtils';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 import { WikiPage } from '../../types';
-import { logger } from '../../utilities/logger';
+import { logger, stringify } from '../../utilities/logger';
 
 const ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון';
 const AUTO_ARCHIVE_TEMPLATE = 'בוט ארכוב אוטומטי';
@@ -120,7 +120,7 @@ async function notifyUserAboutArchive(
     const notificationMessage = `\n${BOT_NOTIFICATION_HEADER}\n${message} ~~~~`;
     await api.edit(talkPage, '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הודעה מבוט הארכוב', content + notificationMessage, revid);
   } catch (error) {
-    logger.logError(`Failed to notify user on ${talkPage}: ${error}`);
+    logger.logError(`Failed to notify user on ${talkPage}: ${stringify(error)}`);
   }
 }
 
@@ -527,7 +527,7 @@ export default function UserTalkArchiveBotModel(
         try {
           await processPage(page);
         } catch (error) {
-          logger.logError(`Failed to process ${page.title}: ${error}`);
+          logger.logError(`Failed to process ${page.title}: ${stringify(error)}`);
         }
       },
     );

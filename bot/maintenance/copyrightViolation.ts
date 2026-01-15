@@ -9,7 +9,7 @@ import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import { Paragraph } from '../wiki/paragraphParser';
-import { logger } from '../utilities/logger';
+import { logger, stringify } from '../utilities/logger';
 
 const violationColor: Record<CopyViolaionRank, string> = {
   suspected: 'אדום',
@@ -61,7 +61,7 @@ function textFromMatch(
   return `: ${link}, ציון: ${confidence.toFixed(2)}, הפרה: {{עיצוב גופן|טקסט=${violationText[violation]}|צבע=${violationColor[violation]}}}.`;
 }
 
-async function getLastRun(api: ReturnType<typeof WikiApi>): Promise<{revid: number, content: string}> {
+async function getLastRun(api: ReturnType<typeof WikiApi>): Promise<{ revid: number, content: string }> {
   const lastRunResult = await api.articleContent(LAST_RUN_PAGE);
   if (lastRunResult) {
     return lastRunResult;
@@ -115,7 +115,7 @@ export async function checkHamichlol(title: string, wikipediaTitle: string) {
       return null;
     }
     if (res.error) {
-      logger.logWarning(`Error in Hamichlol: ${res.error}`);
+      logger.logWarning(`Error in Hamichlol: ${wikipediaTitle} ${stringify(res.error)}`);
       return null; // ignore Hamichlol errors
     }
     if (res.best?.violation === 'none') {
@@ -243,7 +243,7 @@ export default async function copyrightViolationBot() {
 
   await asyncGeneratorMapWithSequence(3, logsGenerator, (log: LogEvent) => async () => {
     if (!log.title || log.params?.target_ns == null || log.params.target_title == null
-       || log.params.target_ns === log.ns) {
+      || log.params.target_ns === log.ns) {
       return;
     }
     const { logs, otherLogs } = await handlePage(log.params.target_title, log.params.target_ns === 0);

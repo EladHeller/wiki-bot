@@ -218,8 +218,8 @@ describe('processArticle', () => {
 
   beforeEach(() => {
     api = WikiApiMock();
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-    loggerLogErrorSpy = jest.spyOn(logger, 'logError').mockImplementation(() => {});
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    loggerLogErrorSpy = jest.spyOn(logger, 'logError').mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -476,7 +476,7 @@ describe('processArticle', () => {
     });
 
     expect(loggerLogErrorSpy).toHaveBeenCalledWith(
-      'Failed to update Error Article: Error: API Error',
+      expect.stringContaining('Failed to update Error Article: Error: API Error'),
     );
     expect(result).toStrictEqual({ title, text: `[[${title}]]`, error: true });
   });

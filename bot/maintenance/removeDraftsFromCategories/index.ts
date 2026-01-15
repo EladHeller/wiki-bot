@@ -3,7 +3,7 @@ import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import getDrafts, { getDumpModificationTimes } from './getDrafts';
 import { ArticleLog } from '../../admin/types';
 import writeAdminBotLogs from '../../admin/log';
-import { logger } from '../../utilities/logger';
+import { logger, stringify } from '../../utilities/logger';
 
 const PAGE_TITLE = 'ויקיפדיה:בוט/הסרת דפי טיוטה מקטגוריות של מרחב הערכים';
 const LAST_RUN_PAGE = `${PAGE_TITLE}/ריצה אחרונה`;
@@ -21,7 +21,7 @@ const getLastRunTime = async (api: IWikiApi): Promise<Date | null> => {
     }
     return date;
   } catch (error) {
-    logger.logWarning(`Could not read ${LAST_RUN_PAGE}: ${error}`);
+    logger.logWarning(`Could not read ${LAST_RUN_PAGE}: ${stringify(error)}`);
     return null;
   }
 };
@@ -32,7 +32,7 @@ const updateLastRunTime = async (api: IWikiApi, time: Date): Promise<void> => {
     await api.edit(LAST_RUN_PAGE, 'עדכון זמן ריצה אחרון', time.toISOString(), revid);
     console.log(`Updated ${LAST_RUN_PAGE} with time: ${time.toISOString()}`);
   } catch (error) {
-    logger.logError(`Failed to update ${LAST_RUN_PAGE}: ${error}`);
+    logger.logError(`Failed to update ${LAST_RUN_PAGE}: ${stringify(error)}`);
   }
 };
 
@@ -97,7 +97,7 @@ const removeDraftsFromCategory = async (draft: string, api: IWikiApi): Promise<A
     } catch {
       logger.logError(`Failed to get info for ${nameWithoutUnderscores}`);
     }
-    logger.logError(`Failed to remove draft ${nameWithoutUnderscores}: ${error?.data || error?.message || error?.toString()}`);
+    logger.logError(`Failed to remove draft ${nameWithoutUnderscores}: ${stringify(error)}`);
     return { title: nameWithoutUnderscores, text: `[[${nameWithoutUnderscores}]]`, error: true };
   }
 };

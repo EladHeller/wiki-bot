@@ -1,6 +1,6 @@
 import { JSDOM } from 'jsdom';
 import { WikiPage } from '../types';
-import { logger } from '../utilities/logger';
+import { logger, stringify } from '../utilities/logger';
 
 function getTextNodeByText(textNodes: Text[], label: string): Text | undefined {
   return textNodes.find((textNode) => textNode.textContent?.trim().toUpperCase() === label);
@@ -22,7 +22,7 @@ export interface MarketCap {
 }
 
 export interface GoogleFinanceData {
-    marketCap: MarketCap;
+  marketCap: MarketCap;
 }
 
 export interface WikiPageWithGoogleFinance {
@@ -130,7 +130,7 @@ export async function getCompanyData(
     }
     console.log('no results', page.title);
   } catch (e) {
-    logger.logError(`${page.title}: ${e}`);
+    logger.logError(`${page.title}: ${stringify(e)}`);
   }
   return undefined;
 }
