@@ -29,16 +29,20 @@ const templates = [
 const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const runChecks = false;
-
-async function needProtectFromTitles(api: IWikiApi, titles :string[]): Promise<string[]> {
-  const templatesInfo = await api.info(titles);
-  return templatesInfo
-    .filter((templateInfo) => {
-      if (('missing' in templateInfo) || !templateInfo.title) {
+const validProtects = ['autoconfirmed', 'sysop', 'editautopatrolprotected', 'templateeditor'];
+async function needProtectFromTitles(api: IWikiApi, titles: string[]): Promise<string[]> {
+  const promises: any[] = [];
+  for (let i = 0; i < titles.length; i += 50) {
+    promises.push(api.info(titles.slice(i, i + 50)));
+  }
+  const pagesInfo = (await Promise.all(promises)).flat();
+  return pagesInfo
+    .filter((pageInfo) => {
+      if (('missing' in pageInfo) || !pageInfo.title) {
         return false;
       }
-      const editProtect = templateInfo.protection?.some(({ level, type, expiry }) => type === 'edit' && level !== 'autoconfirmed' && expiry === 'infinity');
-      const moveProtect = templateInfo.protection?.some(({ level, type, expiry }) => type === 'move' && level !== 'autoconfirmed' && expiry === 'infinity');
+      const editProtect = pageInfo.protection?.some(({ level, type, expiry }) => type === 'edit' && validProtects.includes(level) && expiry === 'infinity');
+      const moveProtect = pageInfo.protection?.some(({ level, type, expiry }) => type === 'move' && validProtects.includes(level) && expiry === 'infinity');
       return (!editProtect || !moveProtect);
     })
     .map<string>(({ title }) => title || '');
@@ -93,9 +97,23 @@ async function getTemplatesByCategory(api: IWikiApi, category: string, exceptCat
   } while (!res?.done);
   return needToProtect;
 }
+
+async function getUnitPagesToProtect(api: IWikiApi) {
+  const generator = api.allPages(828);
+  const needToProtect: string[] = [];
+  for await (const pages of generator) {
+    const titles = pages.map((p) => p.title).filter((title) => !title.endsWith('/תיעוד') && !title.startsWith('יחידה:ארגז חול'));
+    const needProtection = await needProtectFromTitles(api, titles);
+    needToProtect.push(...needProtection);
+  }
+  return needToProtect;
+}
+
 export async function protectBot() {
   const api = WikiApi();
   await api.login();
+  const unitPages = await getUnitPagesToProtect(api);
+
   const didYouKnowTemplates = await getTemplatesByCategory(api, 'תבניות הידעת?');
   let needToProtect = didYouKnowTemplates.filter((template) => template.startsWith('תבנית:הידעת?'));
   const portalTemplates = await getTemplatesByCategory(api, 'פורטלים: קטעי "ערך מומלץ"');
@@ -129,9 +147,9 @@ export async function protectBot() {
       || template.includes('פרמטר')
       || template.includes('ניקיון')
       || template.includes('שאילתות')
-    || template.startsWith('משתמש:בורה בורה/')
-    || template.startsWith('משתמש:עמד/')
-    || template.startsWith('משתמש:Kotz/'));
+      || template.startsWith('משתמש:בורה בורה/')
+      || template.startsWith('משתמש:עמד/')
+      || template.startsWith('משתמש:Kotz/'));
 
   const errors: string[] = [];
   for (const title of needToProtect) {
@@ -156,6 +174,18 @@ export async function protectBot() {
     }
   }
 
+  const unitErrors: string[] = [];
+  for (const title of unitPages) {
+    try {
+      console.log(`Protecting ${title}`);
+      await api.protect(title, 'edit=autoconfirmed|move=autoconfirmed', 'never', 'הגנה על מרחב יחידה');
+    } catch (e) {
+      console.log(`Failed to protect ${title}`);
+      logger.logError(e);
+      unitErrors.push(title);
+    }
+  }
+
   if (allConvertPages.length) {
     const logs: ArticleLog[] = allConvertPages.map((title) => {
       const skipped = !convertPages.includes(title);
@@ -168,6 +198,18 @@ export async function protectBot() {
       };
     });
     await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה');
+  }
+
+  if (unitPages.length) {
+    const logs: ArticleLog[] = unitPages.map((title) => {
+      const error = unitErrors.includes(title);
+      return {
+        title,
+        text: `[[${title}]]`,
+        error,
+      };
+    });
+    await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/הגנת דפי מרחב יחידה');
   }
   const needProtectLogs = runChecks ? await pagesWithoutProtectInMainPage() : [];
   if (needToProtect.length || needProtectLogs.length) {
