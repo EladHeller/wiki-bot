@@ -7,7 +7,7 @@ import { parseLocalDate } from '../utilities';
 export const METER_UNIT = 'http://www.wikidata.org/entity/Q11573';
 export const ELEVATION_ABOVE_SEA_LEVEL_ID = 'P2044';
 
-export const TEMPLATE_NAME = 'גוף מים';
+export const TEMPLATE_NAME = '#switch: {{{מאפיין}}}';
 export const DATE_LEVEL_FIELD = 'תאריך גובה';
 export const LEVEL_FIELD = 'גובה';
 export const CHANGE_FIELD = 'שינוי';
