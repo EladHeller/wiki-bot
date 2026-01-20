@@ -36,6 +36,7 @@ export function fixYearRange(value: string): string {
     .replace(/\[\[(\d{4}[–—-]\d{4})\]\]/g, '$1')
     .replace(/\[\[(\d{4})\]\]/g, '$1')
     .replace(/—/g, '–')
+    .replace(/(\d{4})\s*–/g, '$1–')
     .replace(/(\d{4})\s*-\s*(\d{4})/g, '$1–$2')
     .replace(/(\d{4})\s*–\s*(\d{4})/g, '$1–$2');
 
