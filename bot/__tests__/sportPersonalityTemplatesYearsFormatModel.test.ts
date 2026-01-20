@@ -137,6 +137,11 @@ describe('fixYearRange', () => {
   it('should handle multiple bracketed year ranges', () => {
     expect(fixYearRange('[[2012–2014]], [[2015–2017]]')).toBe('2012–2014, 2015–2017');
   });
+
+  it('should remove space from single year with dash', () => {
+    expect(fixYearRange('2018 –'))
+      .toBe('2018–');
+  });
 });
 
 describe('processTemplate', () => {
