@@ -4,7 +4,7 @@ import { getLocalTimeAndDate } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getAllParagraphs, getParagraphContent, parseParagraph } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
-import archiveParagraph from './actions/archive';
+import archiveParagraph, { moveTo } from './actions/archive';
 import askGPT from './gpt-bot/askGPT';
 import { logger } from '../utilities/logger';
 
@@ -82,11 +82,19 @@ function getCommentSummary(user: string) {
   return `${SUMMARY_PREFIX}תגובה ל-[[משתמש:${user}|${user}]]`;
 }
 
+function getMoveSummary(user: string, title: string) {
+  return `${SUMMARY_PREFIX}העברת הנושא ''${title}'' לבקשת [[משתמש:${user}|${user}]]`;
+}
+
 function getCommentPrefix(user: string) {
   return `@[[משתמש:${user}|${user}]] `;
 }
 
-export async function archiveAction(api: IWikiApi, notification: WikiNotification) {
+async function performAction(
+  api: IWikiApi,
+  notification: WikiNotification,
+  actionType: 'ארכב' | 'העבר',
+) {
   const title = notification.title.full;
   const user = notification.agent.name;
   const url = new URL(notification['*'].links.primary.url);
@@ -94,49 +102,85 @@ export async function archiveAction(api: IWikiApi, notification: WikiNotificatio
   const timestamp = notification.timestamp.utciso8601;
   const commentSummary = getCommentSummary(user);
   const commentPrefix = getCommentPrefix(user);
+
+  const actionName = actionType === 'ארכב' ? 'ארכוב' : 'העברה';
+  const actionRegex = actionType === 'ארכב' ? /ארכב(?:\s+ל)?:/ : /העבר:/;
+
   try {
     const pageContent = await api.articleContent(title);
     const paragraphs = getAllParagraphs(pageContent.content, title);
     const paragraphContent = paragraphs.find((paragraph) => paragraph.match(/@\[\[(?:(?:משתמש|user):)?Sapper-bot/i)
-      && paragraph.match(/ארכב(?:\s+ל)?:/)
+      && paragraph.match(actionRegex)
       && paragraph.includes(user)
       && getTimeStampOptions(timestamp).some((time) => paragraph.includes(time)));
+
     if (!paragraphContent) {
-      const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}לא נמצאה פסקה מתאימה לארכוב`, commentId);
+      const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}לא נמצאה פסקה מתאימה ל${actionName}`, commentId);
       console.log({ commentRes });
       return;
     }
+
     const { name: paragraphName } = parseParagraph(paragraphContent);
-    const archiveSummary = getArchiveSummary(user, paragraphName);
     const { body } = notification['*'];
-    const archiveToMatch = body.match(/ארכב\s+ל:\s*(.+)/);
-    const oldFormatMatch = body.match(/ארכב:\s*יעד:\s*(.+)/);
-    const isArchiveTo = archiveToMatch != null || oldFormatMatch != null;
-    let target = '';
-    if (archiveToMatch) {
-      target = archiveToMatch[1].trim();
-    } else if (oldFormatMatch) {
-      target = oldFormatMatch[1].trim();
-    }
-    const res = await archiveParagraph(
-      api,
-      pageContent.content,
-      pageContent.revid,
-      title,
-      paragraphContent,
-      archiveSummary,
-      user,
-      [isArchiveTo ? 'ל' : null, target],
-    );
-    if ('error' in res) {
-      const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}הארכוב נכשל: ${res.error}.`, commentId);
-      console.log({ commentRes });
+
+    if (actionType === 'ארכב') {
+      const archiveSummary = getArchiveSummary(user, paragraphName);
+      const archiveToMatch = body.match(/ארכב\s+ל:\s*(.+)/);
+      const oldFormatMatch = body.match(/ארכב:\s*יעד:\s*(.+)/);
+      const isArchiveTo = archiveToMatch != null || oldFormatMatch != null;
+      let target = '';
+      if (archiveToMatch) {
+        target = archiveToMatch[1].trim();
+      } else if (oldFormatMatch) {
+        target = oldFormatMatch[1].trim();
+      }
+      const res = await archiveParagraph(
+        api,
+        pageContent.content,
+        pageContent.revid,
+        title,
+        paragraphContent,
+        archiveSummary,
+        user,
+        [isArchiveTo ? 'ל' : null, target],
+      );
+      if ('error' in res) {
+        await api.addComment(title, commentSummary, `${commentPrefix}הארכוב נכשל: ${res.error}.`, commentId);
+      }
+    } else {
+      const moveSummary = getMoveSummary(user, paragraphName);
+      const moveMatch = body.match(/העבר:\s*(.+)/);
+      if (!moveMatch) {
+        await api.addComment(title, commentSummary, `${commentPrefix}לא נמצא יעד להעברה`, commentId);
+        return;
+      }
+      const target = moveMatch[1].trim();
+      const res = await moveTo(
+        api,
+        user,
+        paragraphContent,
+        pageContent.content,
+        pageContent.revid,
+        title,
+        moveSummary,
+        target,
+      );
+      if ('error' in res) {
+        await api.addComment(title, commentSummary, `${commentPrefix}ההעברה נכשלה: ${res.error}.`, commentId);
+      }
     }
   } catch (error) {
     logger.logError(error.message || error.data || error.toString());
-    const commentRes = await api.addComment(title, commentSummary, failedMessage, commentId);
-    console.log({ commentRes });
+    await api.addComment(title, commentSummary, failedMessage, commentId);
   }
+}
+
+export async function archiveAction(api: IWikiApi, notification: WikiNotification) {
+  return performAction(api, notification, 'ארכב');
+}
+
+export async function moveAction(api: IWikiApi, notification: WikiNotification) {
+  return performAction(api, notification, 'העבר');
 }
 
 async function askAction(api: IWikiApi, notification: WikiNotification) {
@@ -164,6 +208,7 @@ const actions = {
   ארכב: archiveAction,
   'ארכב ל': archiveAction,
   ענה: askAction,
+  העבר: moveAction,
 };
 const supportedActions = Object.keys(actions);
 

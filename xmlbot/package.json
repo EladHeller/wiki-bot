@@ -10,7 +10,9 @@
     "templates": "tsx templates.ts",
     "soldierAndPolice": "tsx soldierAndPolice.ts",
     "hasType": "tsx hasTypeField.ts",
-    "coordinates": "tsx findCoordinates.ts"
+    "coordinates": "tsx findCoordinates.ts",
+    "report": "tsx generateReport.ts",
+    "duplicates-report": "tsx generateDuplicatesReport.ts"
   },
   "keywords": [],
   "author": "",

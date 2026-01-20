@@ -23,7 +23,7 @@ export interface IWikiApi {
   create(
     articleTitle: string, summary: string, content: string
   ): Promise<any>;
-  articleContent(title: string): Promise<{content: string, revid: number}>;
+  articleContent(title: string): Promise<{ content: string, revid: number }>;
   externalUrl(link: string, protocol?: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<Partial<WikiPage>[]>;
   purge(titles: string[]): Promise<any>;
@@ -106,8 +106,8 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content|ids');
     const path = `?action=query&format=json&generator=allpages&gapnamespace=${namespace}&gaplimit=500${from ? `&gapfrom=${from}` : ''}`
-    + `&prop=${props}`
-    + `&rvprop=${rvprops}&rvslots=*`;
+      + `&prop=${props}`
+      + `&rvprop=${rvprops}&rvslots=*`;
 
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
@@ -115,7 +115,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
   async function getWikiDataItem(title: string): Promise<string | undefined> {
     const path = `?action=query&format=json&prop=pageprops&titles=${encodeURIComponent(title)}`;
     const result = await request(path);
-    const res:Record<string, Partial<WikiPage>> = result.query.pages;
+    const res: Record<string, Partial<WikiPage>> = result.query.pages;
 
     return Object.values(res)[0]?.pageprops?.wikibase_item;
   }
@@ -130,11 +130,11 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content|ids');
     const path = '?action=query&format=json'
-    // Pages with template
-    + `&generator=embeddedin&geinamespace=${namespace}&geilimit=50&geititle=${template}`
-    + `&prop=${props}`
-    // Get content of page
-    + `&rvprop=${rvprops}&rvslots=*`;
+      // Pages with template
+      + `&generator=embeddedin&geinamespace=${namespace}&geilimit=50&geititle=${template}`
+      + `&prop=${props}`
+      // Get content of page
+      + `&rvprop=${rvprops}&rvslots=*`;
     yield* baseWikiApi.continueQuery(
       path,
       (result) => Object.values(result?.query?.pages ?? {}),
@@ -145,13 +145,13 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
   async function* backlinksTo(target: string, namespace = '0') {
     const rvProps = encodeURIComponent('content|ids');
     const path = `?action=query&format=json&generator=backlinks&gblnamespace=${namespace}&gbltitle=${encodeURIComponent(target)}&gbllimit=500`
-    + `&gblfilterredir=nonredirects&prop=revisions&rvprop=${rvProps}&rvslots=*`;
+      + `&gblfilterredir=nonredirects&prop=revisions&rvprop=${rvProps}&rvslots=*`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
   async function updateArticle(
     articleTitle: string,
-    summary:string,
+    summary: string,
     content: string,
     newSectionTitle?: string,
   ) {
@@ -198,13 +198,11 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
 
   async function articleContent(
     title: string,
-  ): Promise<{content: string, revid: number}> {
+  ): Promise<{ content: string, revid: number }> {
     const props = encodeURIComponent('content|ids');
-    const path = `?action=query&format=json&rvprop=${props}&rvslots=*&prop=revisions&titles=${
-      encodeURIComponent(title)
-    }`;
+    const path = `?action=query&format=json&rvprop=${props}&rvslots=*&prop=revisions&titles=${encodeURIComponent(title)}`;
     const result = await request(path);
-    const wikiPages:Record<string, Partial<WikiPage>> = result.query.pages;
+    const wikiPages: Record<string, Partial<WikiPage>> = result.query.pages;
 
     const revision = Object.values(wikiPages)[0]?.revisions?.[0];
     if (!revision?.revid) {
@@ -219,35 +217,33 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
 
   async function getArticleRevisions(title: string, limit: number, props = 'content|user|size|comment') {
     const encodedProps = encodeURIComponent(props);
-    const path = `?action=query&format=json&rvprop=${encodedProps}&rvslots=*&prop=revisions&titles=${
-      encodeURIComponent(title)
-    }&rvlimit=${limit}`;
+    const path = `?action=query&format=json&rvprop=${encodedProps}&rvslots=*&prop=revisions&titles=${encodeURIComponent(title)}&rvlimit=${limit}`;
     const result = await request(path);
-    const wikiPages:Record<string, Partial<WikiPage>> = result.query.pages;
+    const wikiPages: Record<string, Partial<WikiPage>> = result.query.pages;
 
     return Object.values(wikiPages)[0]?.revisions ?? [];
   }
 
-  async function* externalUrl(link:string, protocol:string = 'https', namespace = '0') {
+  async function* externalUrl(link: string, protocol: string = 'https', namespace = '0') {
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content|ids');
     const path = '?action=query&format=json&'
-    + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=${encodeURIComponent(namespace)}&geuquery=${encodeURIComponent(link)}&geulimit=100`
-    + `&prop=${props}`
-    + `&rvprop=${rvprops}&rvslots=*`;
+      + `generator=exturlusage&geuprotocol=${protocol}&geunamespace=${encodeURIComponent(namespace)}&geuquery=${encodeURIComponent(link)}&geulimit=100`
+      + `&prop=${props}`
+      + `&rvprop=${rvprops}&rvslots=*`;
     yield* baseWikiApi.continueQuery(
       path,
       (result) => Object.values(result?.query?.pages ?? {}),
     );
   }
 
-  async function* search(text:string) {
+  async function* search(text: string) {
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content|ids');
 
     const path = `?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=50`
-    + `&prop=${props}`
-    + `&rvprop=${rvprops}&rvslots=*`;
+      + `&prop=${props}`
+      + `&rvprop=${rvprops}&rvslots=*`;
 
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
@@ -259,7 +255,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const category = encodeURIComponent(categories);
     const categoryString = category ? `&clcategories=${category}&cllimit=${limit}` : '';
     const path = `?action=query&format=json&generator=allpages&gapfilterredir=redirects&gaplimit=${limit}&gapnamespace=${namespace}`
-    + `&prop=${props}&plnamespace=${toNamespace}&pllimit=${limit}&rvprop=timestamp${templateString}${categoryString}`;
+      + `&prop=${props}&plnamespace=${toNamespace}&pllimit=${limit}&rvprop=timestamp${templateString}${categoryString}`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
@@ -270,11 +266,11 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const category = encodeURIComponent(categories);
     const categoryString = category ? `&clcategories=${category}&cllimit=${limit}` : '';
     const path = `?action=query&format=json&generator=allredirects&garlimit=${limit}&garnamespace=${toNamespace}`
-    + `&prop=${props}${templateString}${categoryString}&pllimit=${limit}&rvprop=timestamp`;
+      + `&prop=${props}${templateString}${categoryString}&pllimit=${limit}&rvprop=timestamp`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
-  async function info(titles:string[]) {
+  async function info(titles: string[]) {
     if (titles.length > 500) {
       throw new Error('Too many titles');
     }
@@ -282,7 +278,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const encodedTitles = encodeURIComponent(titles.join('|'));
     const path = `?action=query&format=json&prop=info&inprop=${props}&titles=${encodedTitles}`;
     const result = await request(path);
-    const res:Record<string, Partial<WikiPage>> = result.query?.pages ?? {};
+    const res: Record<string, Partial<WikiPage>> = result.query?.pages ?? {};
     return Object.values(res);
   }
 
@@ -320,10 +316,10 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     }));
   }
 
-  async function* userContributes(user:string, startTime: Date, endTime: Date, limit = 500) {
+  async function* userContributes(user: string, startTime: Date, endTime: Date, limit = 500) {
     const props = encodeURIComponent('title|ids|comment|sizediff');
     const path = `?action=query&format=json&list=usercontribs&ucuser=${encodeURIComponent(user)}&uclimit=${limit}&ucprop=${props}`
-    + `&ucstart=${endTime.toISOString()}&ucend=${startTime.toISOString()}`;
+      + `&ucstart=${endTime.toISOString()}&ucend=${startTime.toISOString()}`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.usercontribs ?? {}));
   }
 
@@ -375,13 +371,13 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     yield* baseWikiApi.continueQuery(path);
   }
 
-  async function protect(title:string, protections: string, expiry: string, reason: string) {
+  async function protect(title: string, protections: string, expiry: string, reason: string) {
     return request('?action=protect&format=json&assert=bot', 'post', objectToFormData({
       title, token, expiry, reason, protections,
     }));
   }
 
-  async function deletePage(title:string, reason: string) {
+  async function deletePage(title: string, reason: string) {
     const queryDetails = {
       method: 'post',
       data: objectToFormData({
@@ -408,8 +404,8 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     }
   }
 
-  async function movePage(from: string, to: string, reason: string) {
-    return request('?action=move&format=json&movetalk=true', 'post', objectToFormData({
+  async function movePage(from: string, to: string, reason: string, nonRedirects = false) {
+    return request(`?action=move&format=json&movetalk=true${nonRedirects ? '&noredirect=true' : ''}`, 'post', objectToFormData({
       from, to, token, reason,
     }));
   }
