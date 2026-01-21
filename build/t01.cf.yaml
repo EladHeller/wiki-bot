@@ -173,7 +173,7 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Name: Kineret-level-scheduler
-      ScheduleExpression: cron(0 10,11 ? * * *)
+      ScheduleExpression: cron(0 5,10,15,20 ? * * *)
       Targets:
         - Id: Kineret-level-function
           Arn: !GetAtt KineretLevelLambda.Arn
