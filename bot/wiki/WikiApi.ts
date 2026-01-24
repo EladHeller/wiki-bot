@@ -9,6 +9,7 @@ import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
 export interface IWikiApi {
   login(): Promise<void>;
   request(path: string, method?: string, data?: Record<string, any>): Promise<any>;
+  getWikiDataItems(titles: string[]): Promise<Record<string, string>>;
   continueQuery(path: string, resultSelector?: (result: any) => any[], continueObject?: Record<string, string>):
     AsyncGenerator<any, void, void>;
   recursiveSubCategories(category: string, limit?: number): AsyncGenerator<WikiPage, WikiPage, void>;
@@ -115,9 +116,28 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
   async function getWikiDataItem(title: string): Promise<string | undefined> {
     const path = `?action=query&format=json&prop=pageprops&titles=${encodeURIComponent(title)}`;
     const result = await request(path);
-    const res: Record<string, Partial<WikiPage>> = result.query.pages;
+    const pages: Record<string, Partial<WikiPage>> = result.query?.pages ?? {};
 
-    return Object.values(res)[0]?.pageprops?.wikibase_item;
+    return Object.values(pages)[0]?.pageprops?.wikibase_item;
+  }
+
+  async function getWikiDataItems(titles: string[]): Promise<Record<string, string>> {
+    const chunks = Array.from({ length: Math.ceil(titles.length / 50) }, (_, i) => titles.slice(i * 50, (i + 1) * 50));
+
+    const results = await Promise.all(chunks.map(async (chunk) => {
+      const path = `?action=query&format=json&prop=pageprops&titles=${encodeURIComponent(chunk.join('|'))}`;
+      const res = await request(path);
+      const pages: Record<string, Partial<WikiPage>> = res.query?.pages ?? {};
+      return Object.fromEntries(
+        Object.values(pages)
+          .flatMap((page) => {
+            const item = page.pageprops?.wikibase_item;
+            return item ? [[page.title ?? '', item]] : [];
+          }),
+      );
+    }));
+
+    return Object.assign({}, ...results);
   }
 
   async function* getArticlesWithTemplate(
@@ -452,6 +472,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     categoriesStartsWith,
     fileUsage,
     getWikiDataItem,
+    getWikiDataItems,
     getArticleRevisions,
     newPages,
     logs,

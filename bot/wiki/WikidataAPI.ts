@@ -14,14 +14,15 @@ const defaultWikiDataConfig: Partial<WikiApiConfig> = {
 export interface IWikiDataAPI {
   login: () => Promise<void>;
   setClaimValue: (claim: string, value: any, summary: string, baserevid: number) =>
-     Promise<WikiDataSetClaimResponse>;
+    Promise<WikiDataSetClaimResponse>;
   setClaim: (claim: WikiDataClaim, summary: string, baserevid: number) => Promise<WikiDataSetClaimResponse>;
-  getClaim: (entity: string, property:string) => Promise<WikiDataClaim[]>;
+  getClaim: (entity: string, property: string) => Promise<WikiDataClaim[]>;
   readEntity: (qid: string, props: string, languages?: string) => Promise<WikiDataEntity>;
+  readEntities: (qids: string[], props: string, languages?: string) => Promise<Record<string, WikiDataEntity>>;
   getRevId: (title: string) => Promise<number>;
   updateReference: (claim: string, referenceHash: string,
     snaks: Record<string, WikiDataSnack[]>, summary: string, baserevid: number) =>
-      Promise<WikiDataSetReferenceResponse>;
+    Promise<WikiDataSetReferenceResponse>;
 }
 
 export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultWikiDataConfig): IWikiDataAPI {
@@ -117,6 +118,24 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
     return res.entities[qid];
   }
 
+  async function readEntities(qids: string[], props: string, languages?: string) {
+    const chunks = Array.from({ length: Math.ceil(qids.length / 50) }, (_, i) => qids.slice(i * 50, (i + 1) * 50));
+    const results = await Promise.all(chunks.map(async (chunk) => {
+      const params = new URLSearchParams({
+        action: 'wbgetentities',
+        ids: chunk.join('|'),
+        format: 'json',
+        languages: languages ?? 'en',
+        props,
+      });
+
+      const res = await baseApi.request(`?${params.toString()}`);
+      return res.entities;
+    }));
+
+    return Object.assign({}, ...results);
+  }
+
   async function getClaim(entity: string, property: string) {
     const params = new URLSearchParams({
       action: 'wbgetclaims',
@@ -138,6 +157,7 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
     setClaim,
     getClaim,
     readEntity,
+    readEntities,
     getRevId,
     updateReference,
   };

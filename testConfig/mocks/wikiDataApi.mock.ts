@@ -22,6 +22,8 @@ export default function WikiDataApiMock(base: Partial<Mocked<IWikiDataAPI>> = {}
       ?? jest.fn<(entity: string, property: string) => Promise<WikiDataClaim[]>>(),
     readEntity: base.readEntity
       ?? jest.fn<(qid: string, props: string, languages?: string) => Promise<WikiDataEntity>>(),
+    readEntities: base.readEntities
+      ?? jest.fn<(qids: string[], props: string, languages?: string) => Promise<Record<string, WikiDataEntity>>>(),
     getRevId: base.getRevId
       ?? jest.fn<(title: string) => Promise<number>>(),
     updateReference: base.updateReference
