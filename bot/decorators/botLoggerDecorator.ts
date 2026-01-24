@@ -31,9 +31,7 @@ const formatLogContent = (context: BotLoggerContext): string => {
 
   if (thrownError) {
     lines.push('===שגיאה שנזרקה===');
-    lines.push(`<div style="direction: ltr"><code>${
-      thrownError.stack?.replaceAll('\n', '<br/>').replaceAll('    ', '&nbsp;&nbsp;&nbsp;&nbsp;')
-    }</code></div>`);
+    lines.push(`<div style="direction: ltr"><code>${thrownError.stack?.replaceAll('\n', '<br/>').replaceAll('    ', '&nbsp;&nbsp;&nbsp;&nbsp;')}</code></div>`);
     lines.push('');
   }
 
@@ -113,6 +111,12 @@ export default function botLoggerDecorator<T>(
 
       try {
         const result = await cb(...args);
+        try {
+          await writeLogsToWiki(api, context);
+        } catch (logError) {
+          console.error('Failed to write logs to wiki:', logError);
+        }
+
         return result;
       } catch (error) {
         if (error instanceof Error) {
@@ -120,14 +124,13 @@ export default function botLoggerDecorator<T>(
         } else {
           context.thrownError = new Error(String(error));
         }
-      } finally {
         try {
           await writeLogsToWiki(api, context);
-        } catch (writeError) {
-          console.error('Failed to write logs to wiki:', writeError);
+        } catch (logError) {
+          console.error('Failed to write logs to wiki:', logError);
         }
+        throw error;
       }
-      return undefined;
     });
   });
 
