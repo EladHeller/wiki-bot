@@ -94,7 +94,7 @@ describe('botLoggerDecorator', () => {
     const callback = jest.fn<() => Promise<void>>().mockRejectedValue(error);
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
-    await expect(decorated()).resolves.toBeUndefined();
+    await expect(decorated()).rejects.toThrow(error);
 
     expect(mockApi.edit).toHaveBeenCalledTimes(1);
 
@@ -245,7 +245,7 @@ describe('botLoggerDecorator', () => {
     const callback = jest.fn<() => Promise<void>>().mockRejectedValue('string error');
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
-    await expect(decorated()).resolves.toBeUndefined();
+    await expect(decorated()).rejects.toBe('string error');
 
     expect(mockApi.edit).toHaveBeenCalledTimes(1);
 
@@ -265,6 +265,20 @@ describe('botLoggerDecorator', () => {
     const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
 
     await decorated();
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Failed to write logs to wiki:',
+      expect.any(Error),
+    );
+  });
+
+  it('should log to console when writing logs to wiki fails after callback error', async () => {
+    mockApi.edit.mockRejectedValue(new Error('Wiki API error'));
+
+    const callback = jest.fn<() => Promise<void>>().mockRejectedValue(new Error('Callback error'));
+    const decorated = botLoggerDecorator(callback, { botName: 'בוט בדיקה', wikiApi: mockApi });
+
+    await expect(decorated()).rejects.toThrow('Callback error');
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Failed to write logs to wiki:',
