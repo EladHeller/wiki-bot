@@ -47,18 +47,6 @@ Globals:
       Variables:
         USER_NAME: !Ref WikiUserName
         PASSWORD: !Ref WikiPassword
-    Policies:
-      - Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-              - sqs:ReceiveMessage
-              - sqs:DeleteMessage
-              - sqs:GetQueueAttributes
-            Resource: "*"
 
 Resources:
   MarketValueFunction:
@@ -228,22 +216,52 @@ Resources:
             Schedule: cron(0 18 ? * * *)
             Name: record-charts-scheduler
 
+  IronSwordsFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
   IronSwordsFunction:
-    Type: AWS::Serverless::Function
+    Type: AWS::Lambda::Function
     Properties:
       FunctionName: iron-swords-function-new
       PackageType: Image
-      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:${ImageVersion}
+      Role: !GetAtt IronSwordsFunctionRole.Arn
+      Code:
+        ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:${ImageVersion}
       Timeout: 900
       MemorySize: 2048
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
       EphemeralStorage:
         Size: 2048
-      Events:
-        Schedule:
-          Type: Schedule
-          Properties:
-            Schedule: cron(0 18 ? * * *)
-            Name: iron-swords-scheduler
+
+  IronSwordsEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: iron-swords-scheduler
+      ScheduleExpression: cron(0 18 ? * * *)
+      Targets:
+        - Id: iron-swords-function-new
+          Arn: !GetAtt IronSwordsFunction.Arn
+
+  IronSwordsInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt IronSwordsEventRule.Arn
+      FunctionName: iron-swords-function-new
 
   TagBotFunction:
     Type: AWS::Serverless::Function
