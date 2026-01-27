@@ -266,7 +266,10 @@ export default function UserTalkArchiveBotModel(
     );
     const { prefix } = detectLinkStyle(parameter);
     const displayName = getDisplayName(newArchivePage);
-    const newArchiveLink = `${prefix}[[${newArchivePage}|${displayName}]]`;
+    const archiveTitleLink = newArchivePage.startsWith(`${archiveBoxPage}/`) && !archiveBoxPage.includes('/')
+      ? newArchivePage.slice(archiveBoxPage.length)
+      : newArchivePage;
+    const newArchiveLink = `${prefix}[[${archiveTitleLink}|${displayName}]]`;
     const newParameter = parameter + newArchiveLink;
 
     await api.edit(
