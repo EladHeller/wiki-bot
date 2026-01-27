@@ -122,7 +122,7 @@ async function main() {
       ParameterKey: 'DistCodeVersionId',
       ParameterValue: distVersion,
     }],
-    ['CAPABILITY_NAMED_IAM'],
+    ['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'],
   );
 }
 
