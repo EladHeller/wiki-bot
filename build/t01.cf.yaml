@@ -1,4 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Wiki Bot Serverless Application
+
 Parameters:
   BucketCodeName:
     Description: The name of code bucket.
@@ -10,16 +13,16 @@ Parameters:
     Description: The password of wiki user.
     Type: String
   WikiProtectUserName:
-    Description: The name of wiki user.
+    Description: The name of wiki protect user.
     Type: String
   WikiProtectPassword:
-    Description: The password of wiki user.
+    Description: The password of wiki protect user.
     Type: String
   WikiDeleteUserName:
-    Description: The name of wiki user.
+    Description: The name of wiki delete user.
     Type: String
   WikiDeletePassword:
-    Description: The password of wiki user.
+    Description: The password of wiki delete user.
     Type: String
   ImageVersion:
     Description: Trick for force deploy
@@ -31,634 +34,239 @@ Parameters:
   VectorStoreID:
     Type: String
 
-Resources:
-  MarketValueLambdaIamRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Timeout: 900
+    MemorySize: 1024
+    CodeUri:
+      Bucket: !Ref BucketCodeName
+      Key: dist.zip
+      Version: !Ref DistCodeVersionId
+    Environment:
+      Variables:
+        USER_NAME: !Ref WikiUserName
+        PASSWORD: !Ref WikiPassword
+    Policies:
+      - Version: 2012-10-17
         Statement:
           - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
             Action:
-              - sts:AssumeRole
-      RoleName: Market-value-lambda-role
-      Policies:
-        - PolicyName: Lambda-execution-basic
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                  - sqs:ReceiveMessage
-                  - sqs:DeleteMessage
-                  - sqs:GetQueueAttributes
-                Resource: "*"
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: "*"
 
-  MarketValueLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
+Resources:
+  MarketValueFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Market-value-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/marketValue/index.main
       Timeout: 900
       MemorySize: 2048
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 19 ? * * *)
+            Name: Market-value-scheduler
 
-  MarketValueEventRule:
-    DependsOn:
-      - MarketValueLambda
-    Type: AWS::Events::Rule
+  UsStocksFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: Market-value-scheduler
-      ScheduleExpression: cron(0 19 ? * * *)
-      Targets:
-        - Id: market-value-function
-          Arn: !GetAtt MarketValueLambda.Arn
-
-  MarketValueInvokePermission:
-    DependsOn:
-      - MarketValueEventRule
-      - MarketValueLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt MarketValueEventRule.Arn
-      FunctionName: Market-value-function
-
-  # US stocks
-
-  UsStocksLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: US-stocks-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/usMarketValue/index.main
       Timeout: 360
       MemorySize: 2048
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 22 ? * * *)
+            Name: US-stocks-scheduler
 
-  UsStocksEventRule:
-    DependsOn:
-      - UsStocksLambda
-    Type: AWS::Events::Rule
+  KineretLevelFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: US-stocks-scheduler
-      ScheduleExpression: cron(0 22 ? * * *)
-      Targets:
-        - Id: US-stocks-function
-          Arn: !GetAtt UsStocksLambda.Arn
-
-  UsStocksInvokePermission:
-    DependsOn:
-      - UsStocksEventRule
-      - UsStocksLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt UsStocksEventRule.Arn
-      FunctionName: US-stocks-function
-
-  # Kineret level
-  KineretLevelLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: Kineret-level-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/kineret/index.main
       Timeout: 20
       MemorySize: 512
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 5,10,15,20 ? * * *)
+            Name: Kineret-level-scheduler
 
-  KineretLevelEventRule:
-    DependsOn:
-      - KineretLevelLambda
-    Type: AWS::Events::Rule
+  PurgeBirthdayFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: Kineret-level-scheduler
-      ScheduleExpression: cron(0 5,10,15,20 ? * * *)
-      Targets:
-        - Id: Kineret-level-function
-          Arn: !GetAtt KineretLevelLambda.Arn
-
-  KineretLevelInvokePermission:
-    DependsOn:
-      - KineretLevelEventRule
-      - KineretLevelLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt KineretLevelEventRule.Arn
-      FunctionName: Kineret-level-function
-
-  # purge birthday
-  PurgeBirthdayLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: purge-birthday-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/purge.main
       Timeout: 21
       MemorySize: 512
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 ? * * *)
+            Name: purge-birthday-scheduler
 
-  PurgeBirthdayEventRule:
-    DependsOn:
-      - PurgeBirthdayLambda
-    Type: AWS::Events::Rule
+  ProtectTemplatesFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: purge-birthday-scheduler
-      ScheduleExpression: cron(0 0 ? * * *)
-      Targets:
-        - Id: purge-birthday-function
-          Arn: !GetAtt PurgeBirthdayLambda.Arn
-
-  PurgeBirthdayInvokePermission:
-    DependsOn:
-      - PurgeBirthdayEventRule
-      - PurgeBirthdayLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt PurgeBirthdayEventRule.Arn
-      FunctionName: purge-birthday-function
-
-  # protect templates
-  ProtectTemplatesLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: protect-templates-function
-      Runtime: nodejs24.x
+      Handler: dist/admin/protect.main
       Environment:
         Variables:
           USER_NAME: !Ref WikiProtectUserName
           PASSWORD: !Ref WikiProtectPassword
-      Handler: dist/admin/protect.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 6,18 ? * * *)
+            Name: protect-templates-scheduler
 
-  ProtectTemplatesEventRule:
-    DependsOn:
-      - ProtectTemplatesLambda
-    Type: AWS::Events::Rule
+  DeleteRedirectsFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: protect-templates-scheduler
-      ScheduleExpression: cron(0 6,18 ? * * *)
-      Targets:
-        - Id: protect-templates-function
-          Arn: !GetAtt ProtectTemplatesLambda.Arn
-
-  ProtectTemplatesInvokePermission:
-    DependsOn:
-      - ProtectTemplatesEventRule
-      - ProtectTemplatesLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt ProtectTemplatesEventRule.Arn
-      FunctionName: protect-templates-function
-
-  # delete redirects
-  DeleteRedirectsLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: delete-redirects-function
-      Runtime: nodejs24.x
+      Handler: dist/admin/deleteRedirects.main
       Environment:
         Variables:
           USER_NAME: !Ref WikiDeleteUserName
           PASSWORD: !Ref WikiDeletePassword
-      Handler: dist/admin/deleteRedirects.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 6,18 ? * * *)
+            Name: delete-redirects-scheduler
 
-  DeleteRedirectsEventRule:
-    DependsOn:
-      - DeleteRedirectsLambda
-    Type: AWS::Events::Rule
+  CopyrightViolationFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: delete-redirects-scheduler
-      ScheduleExpression: cron(0 6,18 ? * * *)
-      Targets:
-        - Id: delete-redirects-function
-          Arn: !GetAtt DeleteRedirectsLambda.Arn
-
-  DeleteRedirectsInvokePermission:
-    DependsOn:
-      - DeleteRedirectsEventRule
-      - DeleteRedirectsLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt DeleteRedirectsEventRule.Arn
-      FunctionName: delete-redirects-function
-
-  # Copyrigh violation
-  CopyrighViolationLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: copyright-violation-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/maintenance/copyrightViolation.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 6,18 ? * * *)
+            Name: copyright-violation-scheduler
 
-  CopyrighViolationEventRule:
-    DependsOn:
-      - CopyrighViolationLambda
-    Type: AWS::Events::Rule
+  ArchiveLogsFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: copyright-violation-scheduler
-      ScheduleExpression: cron(0 6,18 ? * * *)
-      Targets:
-        - Id: copyright-violation-function
-          Arn: !GetAtt CopyrighViolationLambda.Arn
-
-  CopyrighViolationInvokePermission:
-    DependsOn:
-      - CopyrighViolationEventRule
-      - CopyrighViolationLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt CopyrighViolationEventRule.Arn
-      FunctionName: copyright-violation-function
-
-  # Arcive logs
-  ArchiveLogsLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: archive-logs-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/maintenance/archiveBot/index.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 8 5,6,8 * ? *)
+            Name: archive-logs-scheduler
 
-  ArchiveLogsEventRule:
-    DependsOn:
-      - ArchiveLogsLambda
-    Type: AWS::Events::Rule
+  ArchiveClosedDiscussionsFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: archive-logs-scheduler
-      ScheduleExpression: cron(0 8 5,6,8 * ? *)
-      Targets:
-        - Id: archive-logs-function
-          Arn: !GetAtt ArchiveLogsLambda.Arn
-
-  ArchiveLogsInvokePermission:
-    DependsOn:
-      - ArchiveLogsEventRule
-      - ArchiveLogsLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt ArchiveLogsEventRule.Arn
-      FunctionName: archive-logs-function
-
-  # Archive closed discussions
-  ArchiveClosedDiscussionsLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: archive-closed-discussions-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/maintenance/closedDiscussionsArchiveBot/index.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 7 ? * 1-5,7 *)
+            Name: archive-closed-discussions-scheduler
 
-  ArchiveClosedDiscussionsEventRule:
-    DependsOn:
-      - ArchiveClosedDiscussionsLambda
-    Type: AWS::Events::Rule
+  ArchiveUserTalkFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: archive-closed-discussions-scheduler
-      ScheduleExpression: cron(0 7 ? * 1-5,7 *)
-      Targets:
-        - Id: archive-closed-discussions-function
-          Arn: !GetAtt ArchiveClosedDiscussionsLambda.Arn
-
-  ArchiveClosedDiscussionsInvokePermission:
-    DependsOn:
-      - ArchiveClosedDiscussionsEventRule
-      - ArchiveClosedDiscussionsLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt ArchiveClosedDiscussionsEventRule.Arn
-      FunctionName: archive-closed-discussions-function
-
-  # Archive user talk pages
-  ArchiveUserTalkLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: archive-user-talk-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/maintenance/userTalkArchiveBot/index.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 8 ? * 1-6 *)
+            Name: archive-user-talk-scheduler
 
-  ArchiveUserTalkEventRule:
-    DependsOn:
-      - ArchiveUserTalkLambda
-    Type: AWS::Events::Rule
+  RunScriptsFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: archive-user-talk-scheduler
-      ScheduleExpression: cron(0 8 ? * 1-6 *)
-      Targets:
-        - Id: archive-user-talk-function
-          Arn: !GetAtt ArchiveUserTalkLambda.Arn
-
-  ArchiveUserTalkInvokePermission:
-    DependsOn:
-      - ArchiveUserTalkEventRule
-      - ArchiveUserTalkLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt ArchiveUserTalkEventRule.Arn
-      FunctionName: archive-user-talk-function
-
-  # Scripts lambda
-  RunScriptsLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: run-scripts-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/experiments/lambda.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
 
-  # Indexes
-  IndexesBotLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
+  IndexesBotFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: indexes-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/indexesBot/index.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 18 ? * * *)
+            Name: indexes-bot-scheduler
 
-  IndexesBotEventRule:
-    DependsOn:
-      - IndexesBotLambda
-    Type: AWS::Events::Rule
+  RecordChartsFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: indexes-bot-scheduler
-      ScheduleExpression: cron(0 18 ? * * *)
-      Targets:
-        - Id: indexes-function
-          Arn: !GetAtt IndexesBotLambda.Arn
-
-  IndexesBotInvokePermission:
-    DependsOn:
-      - IndexesBotEventRule
-      - IndexesBotLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt IndexesBotEventRule.Arn
-      FunctionName: indexes-function
-
-  # Record carts
-  RecordChartsLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: record-charts-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/recordCharts/index.main
       Timeout: 120
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 18 ? * * *)
+            Name: record-charts-scheduler
 
-  RecordChartsEventRule:
-    DependsOn:
-      - RecordChartsLambda
-    Type: AWS::Events::Rule
+  IronSwordsFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: record-charts-scheduler
-      ScheduleExpression: cron(0 18 ? * * *)
-      Targets:
-        - Id: record-charts-function
-          Arn: !GetAtt RecordChartsLambda.Arn
-
-  RecordChartsInvokePermission:
-    DependsOn:
-      - RecordChartsEventRule
-      - RecordChartsLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt RecordChartsEventRule.Arn
-      FunctionName: record-charts-function
-
-  # Iron swords
-  IronSwordsLambdaNew:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: iron-swords-function-new
       PackageType: Image
-      Code:
-        ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:${ImageVersion}
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:${ImageVersion}
       Timeout: 900
       MemorySize: 2048
       EphemeralStorage:
         Size: 2048
-  IronSwordsEventRule:
-    DependsOn:
-      - IronSwordsLambdaNew
-    Type: AWS::Events::Rule
-    Properties:
-      Name: iron-swords-scheduler
-      ScheduleExpression: cron(0 18 ? * * *)
-      Targets:
-        - Id: iron-swords-function-new
-          Arn: !GetAtt IronSwordsLambdaNew.Arn
-  IronSwordsInvokePermission:
-    DependsOn:
-      - IronSwordsEventRule
-      - IronSwordsLambdaNew
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt IronSwordsEventRule.Arn
-      FunctionName: iron-swords-function-new
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 18 ? * * *)
+            Name: iron-swords-scheduler
 
-  # Tag bot lambda
-  TagBotLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
+  TagBotFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: tag-bot-function
-      Runtime: nodejs24.x
+      Handler: dist/tag-bot/index.main
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
           OPENAI_API_KEY: !Ref OpenAPIKey
           VECTOR_STORE_ID: !Ref VectorStoreID
-      Handler: dist/tag-bot/index.main
-      Timeout: 900
-      MemorySize: 1024
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 18 ? * 7 *)
+            Name: tag-bot-scheduler
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt TagBotQueue.Arn
+            BatchSize: 1
 
   TagBotQueue:
     Type: AWS::SQS::Queue
@@ -666,191 +274,48 @@ Resources:
       QueueName: tag-bot-queue
       VisibilityTimeout: 900
 
-  TagBotQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
+  DraftsOnWrongCategoriesFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Queues:
-        - !Ref TagBotQueue
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action:
-              - sqs:SendMessage
-              - sqs:ReceiveMessage
-              - sqs:DeleteMessage
-              - sqs:GetQueueAttributes
-            Resource: !GetAtt TagBotQueue.Arn
-
-  TagBotEventSourceMapping:
-    Type: AWS::Lambda::EventSourceMapping
-    Properties:
-      BatchSize: 1
-      Enabled: true
-      EventSourceArn: !GetAtt TagBotQueue.Arn
-      FunctionName: !GetAtt TagBotLambda.Arn
-
-  TagBotSQSPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt TagBotLambda.Arn
-      Principal: sqs.amazonaws.com
-      SourceArn: !GetAtt TagBotQueue.Arn
-
-  TagBotEventRule:
-    DependsOn:
-      - TagBotLambda
-    Type: AWS::Events::Rule
-    Properties:
-      Name: tag-bot-scheduler
-      ScheduleExpression: cron(0 18 ? * 7 *)
-      Targets:
-        - Id: tag-bot-function
-          Arn: !GetAtt TagBotLambda.Arn
-
-  TagBotInvokePermission:
-    DependsOn:
-      - TagBotEventRule
-      - TagBotLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt TagBotEventRule.Arn
-      FunctionName: tag-bot-function
-
-  # Drafts on wrong categories
-  DraftsOnWrongCategoriesLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: drafts-on-wrong-categories-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/maintenance/removeDraftsFromCategories/index.main
       Timeout: 900
       MemorySize: 2048
       EphemeralStorage:
         Size: 2048
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 7 ? * 1 *)
+            Name: drafts-on-wrong-categories-scheduler
 
-  DraftsOnWrongCategoriesEventRule:
-    DependsOn:
-      - DraftsOnWrongCategoriesLambda
-    Type: AWS::Events::Rule
+  SportPersonalityTemplatesYearsFormatFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: drafts-on-wrong-categories-scheduler
-      ScheduleExpression: cron(0 7 ? * 1 *)
-      Targets:
-        - Id: drafts-on-wrong-categories-function
-          Arn: !GetAtt DraftsOnWrongCategoriesLambda.Arn
-
-  DraftsOnWrongCategoriesInvokePermission:
-    DependsOn:
-      - DraftsOnWrongCategoriesEventRule
-      - DraftsOnWrongCategoriesLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt DraftsOnWrongCategoriesEventRule.Arn
-      FunctionName: drafts-on-wrong-categories-function
-
-  # Sport Personality Templates Years Format
-  SportPersonalityTemplatesYearsFormatLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: sport-personality-templates-years-format-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/sportPersonalityTemplatesYearsFormat/index.main
       Timeout: 900
       MemorySize: 2048
       EphemeralStorage:
         Size: 2048
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 7 ? * 1#1 *)
+            Name: sport-personality-templates-years-format-scheduler
 
-  SportPersonalityTemplatesYearsFormatEventRule:
-    DependsOn:
-      - SportPersonalityTemplatesYearsFormatLambda
-    Type: AWS::Events::Rule
+  ExchangeRatesFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: sport-personality-templates-years-format-scheduler
-      ScheduleExpression: cron(0 7 ? * 1#1 *)
-      Targets:
-        - Id: sport-personality-templates-years-format-function
-          Arn: !GetAtt SportPersonalityTemplatesYearsFormatLambda.Arn
-
-  SportPersonalityTemplatesYearsFormatInvokePermission:
-    DependsOn:
-      - SportPersonalityTemplatesYearsFormatEventRule
-      - SportPersonalityTemplatesYearsFormatLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt SportPersonalityTemplatesYearsFormatEventRule.Arn
-      FunctionName: sport-personality-templates-years-format-function
-
-  # Exchange Rates
-  ExchangeRatesLambda:
-    DependsOn:
-      - MarketValueLambdaIamRole
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt MarketValueLambdaIamRole.Arn
       FunctionName: exchange-rates-function
-      Runtime: nodejs24.x
-      Environment:
-        Variables:
-          USER_NAME: !Ref WikiUserName
-          PASSWORD: !Ref WikiPassword
       Handler: dist/exchangeRates/index.main
       Timeout: 30
       MemorySize: 512
-      Code:
-        S3Bucket: !Ref BucketCodeName
-        S3Key: dist.zip
-        S3ObjectVersion: !Ref DistCodeVersionId
-
-  ExchangeRatesEventRule:
-    DependsOn:
-      - ExchangeRatesLambda
-    Type: AWS::Events::Rule
-    Properties:
-      Name: exchange-rates-scheduler
-      ScheduleExpression: cron(0,30 14,15,16,17,18 ? * * *)
-      Targets:
-        - Id: exchange-rates-function
-          Arn: !GetAtt ExchangeRatesLambda.Arn
-
-  ExchangeRatesInvokePermission:
-    DependsOn:
-      - ExchangeRatesEventRule
-      - ExchangeRatesLambda
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt ExchangeRatesEventRule.Arn
-      FunctionName: exchange-rates-function
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0,30 14,15,16,17,18 ? * * *)
+            Name: exchange-rates-scheduler
