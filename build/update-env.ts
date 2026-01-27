@@ -86,7 +86,7 @@ async function main() {
 
   await runTemplate(
     './build/t01.cf.yaml',
-    'Market-value',
+    'wiki-bot',
     [{
       ParameterKey: 'BucketCodeName',
       ParameterValue: bucketCodeName,
