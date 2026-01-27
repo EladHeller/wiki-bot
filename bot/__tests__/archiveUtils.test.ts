@@ -200,5 +200,20 @@ Some content
 
       expect(result).toStrictEqual({ archiveTitle: 'OtherPage/ארכיון 1' });
     });
+
+    it('should return archive title when auto archive box exists', async () => {
+      const pageContent = `
+{{תיבת ארכיון אוטומטי|
+[[/ארכיון 1]]
+[[/ארכיון 2]]
+}}
+`;
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+
+      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', false);
+
+      expect(result).toStrictEqual({ archiveTitle: 'TestPage/ארכיון 2' });
+    });
   });
 });

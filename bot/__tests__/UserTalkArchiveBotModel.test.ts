@@ -415,6 +415,63 @@ Old discussion
       );
     });
 
+    it('should create new archive page and update auto archive box when size limit is reached', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+
+      const talkPageContent = `
+==Discussion 1==
+Old discussion
+12:42, 1 בינואר 2025 (IDT)
+`;
+
+      const archiveBoxContent = `{{תיבת ארכיון אוטומטי|
+* [[/ארכיון 1]]
+}}`;
+
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
+        directArchivePage: null,
+        maxArchiveSize: 50000,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: true,
+      };
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון}}', revid: 4 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.archive(config, [`
+==Discussion 1==
+Old discussion
+12:42, 1 בינואר 2025 (IDT)
+`]);
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 2',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש',
+        '{{ארכיון}}',
+      );
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיונים',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
+        expect.stringContaining('[[שיחת משתמש:דוגמה/ארכיון 2|ארכיון 2]]'),
+        2,
+      );
+    });
+
     it('should notify user when archive page name cannot be incremented', async () => {
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
 
@@ -1957,6 +2014,29 @@ Old discussion
 
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
+    it('should skip processPage when title is תבנית:תיבת ארכיון אוטומטי', async () => {
+      async function* mockGenerator() {
+        yield [{
+          pageid: 1,
+          ns: 10,
+          title: 'תבנית:תיבת ארכיון אוטומטי',
+          extlinks: [],
+          revisions: [{
+            user: 'test',
+            size: 100,
+            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': 'some content' } },
+          }],
+        }];
+      }
+
+      wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.articleContent).not.toHaveBeenCalled();
     });
   });
 });

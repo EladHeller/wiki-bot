@@ -2,6 +2,9 @@ import { IWikiApi } from '../wiki/WikiApi';
 import { findTemplate, getTemplateData } from '../wiki/newTemplateParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 
+const SIMPLE_ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון';
+const AUTO_ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון אוטומטי';
+
 export async function getLastActiveArchiveLink(
   api: IWikiApi,
   archiveBoxContent: string,
@@ -34,11 +37,18 @@ export async function getArchiveTitle(
   pageTitle: string,
   matchPrefix: boolean = false,
 ): Promise<{ archiveTitle: string } | { error: string }> {
-  const archiveBox = findTemplate(pageContent, 'תיבת ארכיון', pageTitle);
+  const simpleArchiveBox = findTemplate(pageContent, SIMPLE_ARCHIVE_BOX_TEMPLATE, pageTitle);
+  const autoArchiveBox = findTemplate(pageContent, AUTO_ARCHIVE_BOX_TEMPLATE, pageTitle);
+  const archiveBox = simpleArchiveBox || autoArchiveBox;
   if (!archiveBox) {
     return { error: 'תיבת ארכיון לא נמצאה' };
   }
-  const { arrayData } = getTemplateData(archiveBox, 'תיבת ארכיון', pageTitle);
+  const isSimpleArchiveBox = !!simpleArchiveBox;
+  const { arrayData } = getTemplateData(
+    archiveBox,
+    isSimpleArchiveBox ? SIMPLE_ARCHIVE_BOX_TEMPLATE : AUTO_ARCHIVE_BOX_TEMPLATE,
+    pageTitle,
+  );
   const archiveBoxContent = arrayData?.[0];
   if (!archiveBoxContent) {
     return { error: 'התוכן של תיבת הארכיון לא נמצא' };

@@ -9,6 +9,7 @@ import { WikiPage } from '../../types';
 import { logger, stringify } from '../../utilities/logger';
 
 const ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון';
+const AUTO_ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון אוטומטי';
 const AUTO_ARCHIVE_TEMPLATE = 'בוט ארכוב אוטומטי';
 const NO_ARCHIVE_TEMPLATE = 'לא לארכוב';
 const BOT_NOTIFICATION_HEADER = '== הודעה מבוט הארכוב ==';
@@ -128,7 +129,8 @@ export default function UserTalkArchiveBotModel(
   wikiApi: IWikiApi,
 ): IUserTalkArchiveBotModel {
   function getConfigFromPageContent(pageTitle: string, content: string): UserTalkArchiveConfig | null {
-    const template = findTemplate(content, AUTO_ARCHIVE_TEMPLATE, pageTitle);
+    const template = findTemplate(content, AUTO_ARCHIVE_TEMPLATE, pageTitle)
+      || findTemplate(content, AUTO_ARCHIVE_BOX_TEMPLATE, pageTitle);
     if (!template) {
       return null;
     }
@@ -248,13 +250,20 @@ export default function UserTalkArchiveBotModel(
     newArchivePage: string,
   ): Promise<void> {
     const { content, revid } = await getContent(api, archiveBoxPage);
-    const archiveBox = findTemplate(content, ARCHIVE_BOX_TEMPLATE, archiveBoxPage);
-
+    const simpleArchiveBox = findTemplate(content, ARCHIVE_BOX_TEMPLATE, archiveBoxPage);
+    const autoArchiveBox = findTemplate(content, AUTO_ARCHIVE_BOX_TEMPLATE, archiveBoxPage);
+    const isSimpleArchiveBox = !!simpleArchiveBox;
+    const archiveBox = simpleArchiveBox || autoArchiveBox;
     if (!archiveBox) {
       throw new Error('תיבת ארכיון לא נמצאה');
     }
 
-    const [parameter] = getTemplateArrayData(archiveBox, ARCHIVE_BOX_TEMPLATE, archiveBoxPage, true);
+    const [parameter] = getTemplateArrayData(
+      archiveBox,
+      isSimpleArchiveBox ? ARCHIVE_BOX_TEMPLATE : AUTO_ARCHIVE_BOX_TEMPLATE,
+      archiveBoxPage,
+      true,
+    );
     const { prefix } = detectLinkStyle(parameter);
     const displayName = getDisplayName(newArchivePage);
     const newArchiveLink = `${prefix}[[${newArchivePage}|${displayName}]]`;
@@ -274,7 +283,8 @@ export default function UserTalkArchiveBotModel(
     newArchivePage: string,
   ): Promise<void> {
     const { content, revid } = await getContent(wikiApi, talkPage);
-    const template = findTemplate(content, AUTO_ARCHIVE_TEMPLATE, talkPage);
+    const template = findTemplate(content, AUTO_ARCHIVE_TEMPLATE, talkPage)
+      || findTemplate(content, AUTO_ARCHIVE_BOX_TEMPLATE, talkPage);
 
     if (!template) {
       throw new Error('תבנית בוט ארכוב אוטומטי לא נמצאה');
@@ -495,6 +505,9 @@ export default function UserTalkArchiveBotModel(
   }
 
   async function processPage(page: WikiPage): Promise<void> {
+    if (page.title === `תבנית:${AUTO_ARCHIVE_BOX_TEMPLATE}`) {
+      return;
+    }
     const content = getPageContent(page);
     if (!content) {
       logger.logWarning(`No content found for ${page.title}`);
@@ -519,17 +532,23 @@ export default function UserTalkArchiveBotModel(
 
   async function run(): Promise<void> {
     const generator = wikiApi.getArticlesWithTemplate(AUTO_ARCHIVE_TEMPLATE, undefined, 'תבנית', '*');
-
+    const generator2 = wikiApi.getArticlesWithTemplate(AUTO_ARCHIVE_BOX_TEMPLATE, undefined, 'תבנית', '*');
+    const generatorCallback = (page: WikiPage) => async () => {
+      try {
+        await processPage(page);
+      } catch (error) {
+        logger.logError(`Failed to process ${page.title}: ${stringify(error)}`);
+      }
+    };
     await asyncGeneratorMapWithSequence(
-      1,
+      5,
       generator,
-      (page) => async () => {
-        try {
-          await processPage(page);
-        } catch (error) {
-          logger.logError(`Failed to process ${page.title}: ${stringify(error)}`);
-        }
-      },
+      generatorCallback,
+    );
+    await asyncGeneratorMapWithSequence(
+      5,
+      generator2,
+      generatorCallback,
     );
   }
 
