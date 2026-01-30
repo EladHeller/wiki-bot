@@ -5,6 +5,9 @@ import { getInnerLinks } from '../wiki/wikiLinkParser';
 const SIMPLE_ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון';
 const AUTO_ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון אוטומטי';
 
+export type ArchiveTitleError = 'תיבת ארכיון לא נמצאה' | 'התוכן של תיבת הארכיון לא נמצא' | 'לא נמצא דף ארכיון פעיל';
+export type ArchiveTitleResult = { archiveTitle: string } | { error: ArchiveTitleError };
+
 export async function getLastActiveArchiveLink(
   api: IWikiApi,
   archiveBoxContent: string,
@@ -36,7 +39,7 @@ export async function getArchiveTitle(
   pageContent: string,
   pageTitle: string,
   matchPrefix: boolean = false,
-): Promise<{ archiveTitle: string } | { error: string }> {
+): Promise<ArchiveTitleResult> {
   const simpleArchiveBox = findTemplate(pageContent, SIMPLE_ARCHIVE_BOX_TEMPLATE, pageTitle);
   const autoArchiveBox = findTemplate(pageContent, AUTO_ARCHIVE_BOX_TEMPLATE, pageTitle);
   const archiveBox = simpleArchiveBox || autoArchiveBox;
