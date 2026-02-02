@@ -979,6 +979,7 @@ Old discussion
     });
 
     it('should handle error when archive box content is empty', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
       const archiveBoxContent = '{{תיבת ארכיון}}';
 
       const config = {
@@ -991,20 +992,123 @@ Old discussion
         createNewArchive: true,
       };
 
+      wikiApi.info.mockResolvedValueOnce([{}]);
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
-      wikiApi.articleContent.mockResolvedValueOnce({ content: 'talk page content', revid: 1 });
+
+      // NEW: updateArchiveBoxWithNewPage (Archive 1) - explicit call
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+
+      // performArchive checks:
+      // 1. getPageInfo(archiveTitle) -> 'שיחת משתמש:דוגמה/ארכיון 1'
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+
+      // 2. archiveParagraphs checks if archive exists
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+
+      // 3. archiveParagraphs gets talk page content
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: 'talk page content\n==Discussion 1==\nOld\n12:42, 1 בינואר 2025 (IDT)', revid: 1 });
 
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.archive(config, [`==Discussion 1==
-Old discussion
-`]);
+Old
+12:42, 1 בינואר 2025 (IDT)`]);
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.stringContaining('{{ארכיון}}'),
+      );
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'שיחת משתמש:דוגמה',
-        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הודעה מבוט הארכוב',
-        expect.stringContaining('התוכן של תיבת הארכיון לא נמצא'),
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.not.stringContaining('Discussion 1'),
         1,
+      );
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיונים',
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
+        expect.stringContaining('[[שיחת משתמש:דוגמה/ארכיון 1|ארכיון 1]]'),
+        2,
+      );
+    });
+
+    it('should handle overflow when archive box content is empty', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+      const archiveBoxContent = '{{תיבת ארכיון}}';
+
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
+        directArchivePage: null,
+        maxArchiveSize: 10,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: true,
+      };
+
+      const p1 = '==Discussion 1==\nOld\n12:42, 1 בינואר 2025 (IDT)';
+      const p2 = '==Discussion 2==\nOld\n12:42, 1 בינואר 2025 (IDT)';
+
+      // 1. getArchiveTitleFromBox
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+
+      // 2. updateArchiveBoxWithNewPage (Archive 1)
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+
+      // performArchive starts
+      // 3. getPageInfo(Archive 1) -> missing
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+
+      // 4. archiveParagraphs(Archive 1): existingArchiveContent
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+
+      // 5. archiveParagraphs(Archive 1): getContent(talkPage)
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: `${p1}\n\n${p2}`, revid: 1 });
+
+      // 6. handleArchiveOverflow(Archive 1): createNextArchivePage(Archive 1) -> pageExists(Archive 2)
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+
+      // 7. createNextArchivePage: onNewArchiveCreated -> updateArchiveBoxWithNewPage(Archive 2)
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{תיבת ארכיון|[[/ארכיון 1|ארכיון 1]]}}', revid: 3 });
+
+      // 8. Next getPageInfo(Archive 2)
+      wikiApi.info.mockResolvedValueOnce([{ length: 11 }]);
+
+      // 9. archiveParagraphs(Archive 2): existingArchiveContent
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון}}', revid: 10 });
+
+      // 10. archiveParagraphs(Archive 2): getContent(talkPage)
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: `${p2}`, revid: 4 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.archive(config, [p1, p2]);
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        expect.any(String),
+        expect.stringContaining(p1),
+      );
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 2',
+        expect.any(String),
+        expect.stringContaining('{{ארכיון}}'),
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיונים',
+        expect.any(String),
+        expect.stringContaining('[[שיחת משתמש:דוגמה/ארכיון 2|ארכיון 2]]'),
+        3,
       );
     });
 

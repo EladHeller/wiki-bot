@@ -81,7 +81,8 @@ export function getAllParagraphs(articleText: string, articleTitle: string): str
     }
   }
 
-  return paragraphContents;
+  // TODO: more elagant way to remove empty paragraphs
+  return paragraphContents.filter((x) => x);
 }
 
 export function getUsersFromTagParagraph(articleContent: string, paragraphName: string): string[] {
