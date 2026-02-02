@@ -216,6 +216,9 @@ export default function UserTalkArchiveBotModel(
 
   function detectLinkStyle(archiveBoxContent: string): { prefix: string; suffix: string } {
     const links = getInnerLinks(archiveBoxContent);
+    if (links.length === 0) {
+      return { prefix: '\n# ', suffix: '' };
+    }
     if (links.length < 2) {
       const [firstLink] = links;
       const firstLinkIndex = archiveBoxContent.indexOf(`[[${firstLink.link}`);
@@ -258,26 +261,42 @@ export default function UserTalkArchiveBotModel(
       throw new Error('תיבת ארכיון לא נמצאה');
     }
 
-    const [parameter] = getTemplateArrayData(
+    const data = getTemplateArrayData(
       archiveBox,
       isSimpleArchiveBox ? ARCHIVE_BOX_TEMPLATE : AUTO_ARCHIVE_BOX_TEMPLATE,
       archiveBoxPage,
       true,
     );
-    const { prefix } = detectLinkStyle(parameter);
+
     const displayName = getDisplayName(newArchivePage);
     const archiveTitleLink = newArchivePage.startsWith(`${archiveBoxPage}/`) && !archiveBoxPage.includes('/')
       ? newArchivePage.slice(archiveBoxPage.length)
       : newArchivePage;
-    const newArchiveLink = `${prefix}[[${archiveTitleLink}|${displayName}]]`;
-    const newParameter = parameter + newArchiveLink;
 
-    await api.edit(
-      archiveBoxPage,
-      '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
-      content.replace(parameter, newParameter),
-      revid,
-    );
+    if (data.length === 0) {
+      const { prefix } = detectLinkStyle('');
+      const newArchiveLink = `${prefix}[[${archiveTitleLink}|${displayName}]]`;
+      const newTemplate = `${archiveBox.slice(0, -2)}|${newArchiveLink}}}`;
+
+      await api.edit(
+        archiveBoxPage,
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
+        content.replace(archiveBox, newTemplate),
+        revid,
+      );
+    } else {
+      const [parameter] = data;
+      const { prefix } = detectLinkStyle(parameter);
+      const newArchiveLink = `${prefix}[[${archiveTitleLink}|${displayName}]]`;
+      const newParameter = parameter + newArchiveLink;
+
+      await api.edit(
+        archiveBoxPage,
+        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
+        content.replace(parameter, newParameter),
+        revid,
+      );
+    }
   }
 
   async function updateDirectArchiveTemplateParameter(
@@ -449,6 +468,24 @@ export default function UserTalkArchiveBotModel(
     const archiveTitleResult = await getArchiveTitleFromBox(wikiApi, archiveBoxPage, talkPage);
 
     if ('error' in archiveTitleResult) {
+      if (archiveTitleResult.error === 'התוכן של תיבת הארכיון לא נמצא') {
+        const firstArchiveName = 'ארכיון 1';
+        const archiveTitle = `${talkPage}/${firstArchiveName}`;
+
+        await updateArchiveBoxWithNewPage(wikiApi, archiveBoxPage, archiveTitle);
+
+        await performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
+          archiveTitle,
+          maxSizeNotification: `דף הארכיון [[${archiveTitle}]] הגיע לגודל המקסימלי. `
+            + 'יש ליצור דף ארכיון חדש ולעדכן את תיבת הארכיון.',
+          onNewArchiveCreated: (newArchiveTitle) => updateArchiveBoxWithNewPage(
+            wikiApi,
+            archiveBoxPage,
+            newArchiveTitle,
+          ),
+        });
+        return;
+      }
       await notifyUserAboutArchive(wikiApi, talkPage, archiveTitleResult.error);
       return;
     }
