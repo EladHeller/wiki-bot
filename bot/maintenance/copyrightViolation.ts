@@ -233,8 +233,13 @@ export default async function copyrightViolationBot() {
 
   const allLogs: ArticleLog[] = [];
   const allOtherLogs: ArticleLog[] = [];
+  const processedPages = new Set<string>();
 
   await asyncGeneratorMapWithSequence(3, generator, (page: WikiPage) => async () => {
+    if (processedPages.has(page.title)) {
+      return;
+    }
+    processedPages.add(page.title);
     const { logs, otherLogs } = await handlePage(page.title, page.ns === 0);
     allLogs.push(...logs);
     allOtherLogs.push(...otherLogs);
@@ -246,12 +251,20 @@ export default async function copyrightViolationBot() {
       || log.params.target_ns === log.ns) {
       return;
     }
+    if (processedPages.has(log.params.target_title)) {
+      return;
+    }
+    processedPages.add(log.params.target_title);
     const { logs, otherLogs } = await handlePage(log.params.target_title, log.params.target_ns === 0);
     allLogs.push(...logs);
     allOtherLogs.push(...otherLogs);
   });
 
   await promiseSequence(3, tempErrors.map(({ link }) => async () => {
+    if (processedPages.has(link)) {
+      return;
+    }
+    processedPages.add(link);
     const [pageInfo] = await api.info([link]);
     const { logs, otherLogs } = await handlePage(link, pageInfo.ns === 0);
     allLogs.push(...logs);
