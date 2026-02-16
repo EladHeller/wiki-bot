@@ -1,7 +1,8 @@
 import { getLocalDate, prettyNumericValue } from '../utilities';
 import { MayaMarketValue, getMarketValueById } from '../API/mayaAPI';
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
-import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import validateDataChanges from '../utilities/dataValidation';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import parseTableText, { buildTable } from '../wiki/wikiTableParser';
 import { getParagraphContent } from '../wiki/paragraphParser';
@@ -26,6 +27,7 @@ export async function updateTemplate(
     throw new Error('Failed to get template content');
   }
   const oldTemplate = findTemplate(content, '#switch: {{{ID}}}', templateName);
+  const oldData = getTemplateKeyValueData(oldTemplate);
   const relevantCompanies = marketValues.filter((data) => {
     const value = data[keys[1]];
     return value != null && value !== '' && (typeof value !== 'number' || value > 0);
@@ -38,11 +40,15 @@ export async function updateTemplate(
     },
   );
 
-  const newTemplate = templateFromKeyValueData({
+  const newTemplateData = {
     ...Object.fromEntries(companies),
     ...(showTimestamp ? { timestamp: getLocalDate(relevantCompanies[0].correctionDate) } : {}),
     '#default': '',
-  }, '#switch: {{{ID}}}');
+  };
+
+  validateDataChanges(oldData, newTemplateData, templateName);
+
+  const newTemplate = templateFromKeyValueData(newTemplateData, '#switch: {{{ID}}}');
   const newContent = content.replace(oldTemplate, newTemplate);
   const res = await api.edit(
     templateName,

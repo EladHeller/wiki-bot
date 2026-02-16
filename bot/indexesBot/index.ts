@@ -6,6 +6,7 @@ import { getParagraphContent } from '../wiki/paragraphParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import parseTableText from '../wiki/wikiTableParser';
+import validateDataChanges from '../utilities/dataValidation';
 
 const companyWikiPageTemplate = 'תבנית:חברות מאיה/נתונים';
 const companyNameTemplate = 'תבנית:חברות מאיה/שם מלא/נתונים';
@@ -64,7 +65,7 @@ async function getIndexes(api: IWikiApi) {
     const indexStocks = await getIndexStocks(index.IndexId ?? index.Id);
     const stocks = indexStocks.map(
       (stock) => getCompanyShowName(stock.CompanyId, companyIdArticleDict, companyIdNameDict)
-      ?? stock.ShortName,
+        ?? stock.ShortName,
     );
     const uniqueStocks = [...new Set(stocks)];
     data.push({
@@ -86,7 +87,7 @@ async function getIndexes(api: IWikiApi) {
   };
 }
 
-async function getSupportedIndexes(api: IWikiApi) : Promise<Record<string, {template: string, category: string}>> {
+async function getSupportedIndexes(api: IWikiApi): Promise<Record<string, { template: string, category: string }>> {
   const { content } = await api.articleContent(companyIndexesTemplatesBase);
   const tables = parseTableText(content);
   const { rows } = tables[0];
@@ -107,6 +108,9 @@ async function updateCompanyIndexes(api: IWikiApi, companyIndexesDict: Record<st
   const suppurtedIndexes = await getSupportedIndexes(api);
   const { content: templateContent, revid } = await api.articleContent(companiesIndexesTemplates);
   const templateData = findTemplate(templateContent, '#switch: {{{1}}}', companiesIndexesTemplates);
+
+  const oldData = getTemplateKeyValueData(templateData);
+
   const newData = Object.entries(companyIndexesDict).map(([companyId, indexes]) => {
     const companyIndexesTemplates = indexes
       .map((index) => suppurtedIndexes[index])
@@ -114,7 +118,12 @@ async function updateCompanyIndexes(api: IWikiApi, companyIndexesDict: Record<st
       .map(({ category, template }) => `{{${template}}} ${category ? `[[קטגוריה:${category}]]` : ''}`);
     return [companyId, companyIndexesTemplates.join(' ')];
   });
-  const newTemplateText = templateFromKeyValueData(Object.fromEntries(newData), '#switch: {{{1}}}');
+
+  const newDataRecord = Object.fromEntries(newData);
+
+  validateDataChanges(oldData, newDataRecord, 'מדדי הבורסה לניירות ערך בתל אביב');
+
+  const newTemplateText = templateFromKeyValueData(newDataRecord, '#switch: {{{1}}}');
   const newContent = templateContent.replace(templateData, newTemplateText);
   if (newContent === templateContent) {
     console.log('No changes in company indexes');
@@ -137,7 +146,13 @@ export default async function indexesBot() {
   const newTemplateData = indexes.map((index) => [index.indexName, `${index.indexStocks.join(' • ')}`]);
 
   const oldTemplate = findTemplate(content, templateStart, indexesTemplatePage);
-  const newTemplateText = templateFromKeyValueData(Object.fromEntries(newTemplateData), templateStart);
+  const oldData = getTemplateKeyValueData(oldTemplate);
+
+  const newTemplateDataRecord = Object.fromEntries(newTemplateData);
+
+  validateDataChanges(oldData, newTemplateDataRecord, 'מדד תל אביב בסיס');
+
+  const newTemplateText = templateFromKeyValueData(newTemplateDataRecord, templateStart);
   const newContent = content.replace(oldTemplate, newTemplateText);
   await updateCompanyIndexes(api, companyIndexesDict);
   if (newContent === content) {
