@@ -1,7 +1,8 @@
 import { getCompanyData, getTickerFromWikiPage, WikiPageWithGoogleFinance } from '../API/googleFinanceApi';
 import { currencyName, getLocalDate, promiseSequence } from '../utilities';
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
-import { findTemplate, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
+import validateDataChanges from '../utilities/dataValidation';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getGoogleFinanceLinks } from '../wiki/SharedWikiApiFunctions';
 import { buildTable } from '../wiki/wikiTableParser';
@@ -16,6 +17,7 @@ async function updateTemplate(api: IWikiApi, marketValues: WikiPageWithGoogleFin
     throw new Error('Failed to get template content');
   }
   const oldTemplate = findTemplate(content, '#switch: {{{ID}}}', marketValueTemplate);
+  const oldData = getTemplateKeyValueData(oldTemplate);
   const relevantCompanies = marketValues.filter(({ gf: { marketCap } }) => marketCap.number !== '0');
   const companies = relevantCompanies.map(
     (marketValue) => [
@@ -24,11 +26,15 @@ async function updateTemplate(api: IWikiApi, marketValues: WikiPageWithGoogleFin
     ],
   ).sort((a, b) => (a[0] > b[0] ? 1 : -1));
 
-  const newTemplate = templateFromKeyValueData({
+  const newTemplateData = {
     ...Object.fromEntries(companies),
     timestamp: getLocalDate(relevantCompanies[0].gf.marketCap.date ?? new Date().toDateString()),
     '#default': '',
-  }, '#switch: {{{ID}}}');
+  };
+
+  validateDataChanges(oldData, newTemplateData, marketValueTemplate);
+
+  const newTemplate = templateFromKeyValueData(newTemplateData, '#switch: {{{ID}}}');
   const newContent = content.replace(oldTemplate, newTemplate);
   const res = await api.edit(
     marketValueTemplate,
@@ -52,7 +58,7 @@ export async function checkWikidata() {
   const wikidataResults = await companiesWithTicker();
   const results = await getGoogleFinanceLinks(api);
   const companiesWithTickers: Record<string, {
-    wikiDataTickers: {companyId: string, exchange: string, ticker}[], templateTicker: string
+    wikiDataTickers: { companyId: string, exchange: string, ticker }[], templateTicker: string
   }> = {};
   for (const result of wikidataResults) {
     const {
