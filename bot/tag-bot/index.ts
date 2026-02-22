@@ -12,7 +12,7 @@ const TAG_PAGE_NAME = 'משתמש:Sapper-bot/בוט התיוג';
 const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
 
 const failedMessage = 'שגיאה לא ידועה: [[משתמש:החבלן]], שים לב ותקן.';
-const notAllowedUserMessage = `אני מצטער, אבל אינך מורשה להשתמש בבוט. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ולאחר מכן הוסף את שמך בפסקה "רשימת משתמשים".`;
+const notAllowedUserMessage = `אני מצטער, אבל אינך מורשה להשתמש בבוט. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ולאחר מכן הוסף בקשה להרשאות [[שיחת ${TAG_PAGE_NAME}|בדף השיחה]].`;
 const notSupportedCommandMessage = `מצטער, אבל הפקודה שהזנת לא נתמכת. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ונסה שוב.`;
 
 type AllowedConfiguration = {
@@ -211,7 +211,7 @@ const actions = {
   העבר: moveAction,
 };
 const supportedActions = Object.keys(actions);
-
+const allowedGroups = ['autopatrolled', 'sysop', 'bureaucrat', 'patroller', 'templateeditor'];
 async function handleNotification(
   api: IWikiApi,
   notification: WikiNotification,
@@ -248,7 +248,14 @@ async function handleNotification(
     return;
   }
 
-  if (!allowedConfiguration.users.includes(user)) {
+  const isUserInWhiteList = allowedConfiguration.users.includes(user);
+  let isUserAllowed = isUserInWhiteList;
+  if (!isUserAllowed) {
+    const userGroups = await api.getUserGroups(user);
+    isUserAllowed = userGroups.some((group) => allowedGroups.includes(group));
+  }
+
+  if (!isUserAllowed) {
     const commentRes = await api.addComment(title, commentSummary, commentPrefix + notAllowedUserMessage, decodeURIComponent(url.hash.replace('#', '')));
     console.log({ commentRes });
 
