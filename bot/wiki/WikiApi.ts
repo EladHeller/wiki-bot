@@ -62,6 +62,7 @@ export interface IWikiApi {
   parsePage(title: string): Promise<string>;
   getRedirectsTo(toNamespace: number, limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
+  getUserGroups(username: string): Promise<string[]>;
 }
 
 export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -425,6 +426,12 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     return res.parse.text['*'];
   }
 
+  async function getUserGroups(username: string): Promise<string[]> {
+    const path = `?action=query&format=json&list=users&usprop=groups&ususers=${encodeURIComponent(username)}`;
+    const result = await request(path);
+    return result?.query?.users?.[0]?.groups ?? [];
+  }
+
   return {
     login,
     request: baseWikiApi.request,
@@ -463,5 +470,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     addComment,
     allPages,
     parsePage,
+    getUserGroups,
   };
 }

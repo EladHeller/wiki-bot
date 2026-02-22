@@ -6,16 +6,16 @@ import {
   WikiRedirectData,
 } from '../../bot/types';
 
-export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mocked<IWikiApi> {
+export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocked<IWikiApi> {
   return {
     login: base.login ?? jest.fn<() => Promise<void>>(),
     request: base.request ?? jest.fn<(path: string, method?: string, data?: Record<string, any>) => Promise<any>>(),
     continueQuery:
-    base.continueQuery ?? jest.fn<(path: string,
+      base.continueQuery ?? jest.fn<(path: string,
         resultConverterCallback?: (result: any) => any,
         baseContinue?: Record<string, any>
       ) => AsyncGenerator<any, any, unknown>
-    >(),
+      >(),
     recursiveSubCategories: base.recursiveSubCategories
       ?? jest.fn<(category: string, limit?: number) => AsyncGenerator<WikiPage, WikiPage, void>>(),
     backlinksTo:
@@ -48,8 +48,8 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
     getArticlesWithTemplate:
       base.getArticlesWithTemplate
       ?? jest.fn<(templateName: string,
-         continueObject?: Record<string, string>, prefix?: string, namespace?: string
-        ) => AsyncGenerator<WikiPage[], void, void>>(),
+        continueObject?: Record<string, string>, prefix?: string, namespace?: string
+      ) => AsyncGenerator<WikiPage[], void, void>>(),
     search:
       base.search
       ?? jest.fn<(text: string) => AsyncGenerator<WikiPage[], void, void>>(),
@@ -110,5 +110,6 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}) : Mock
       ?? jest.fn<(page: string, summary: string, content: string, commentid: string) => Promise<any>>(),
     allPages: base.allPages ?? jest.fn<(namespace: number) => AsyncGenerator<WikiPage[], void, void>>(),
     parsePage: base.parsePage ?? jest.fn<(title: string) => Promise<string>>(),
+    getUserGroups: base.getUserGroups ?? jest.fn<(username: string) => Promise<string[]>>(),
   };
 }
