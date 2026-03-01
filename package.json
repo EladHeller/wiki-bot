@@ -33,7 +33,7 @@
     "axios": "^1.13.6",
     "axios-cookiejar-support": "^6.0.4",
     "find-hebrew-names": "^0.0.2",
-    "jsdom": "^26.1.0",
+    "jsdom": "^28.1.0",
     "openai": "^6.25.0",
     "playwright": "^1.57.0",
     "tough-cookie": "^6.0.0"
@@ -46,7 +46,7 @@
     "@babel/preset-typescript": "^7.28.5",
     "@jest/globals": "^30.0.5",
     "@types/jest": "^30.0.0",
-    "@types/jsdom": "^21.1.7",
+    "@types/jsdom": "^28.0.0",
     "@types/node": "^25.0.3",
     "@types/tough-cookie": "^4.0.5",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
