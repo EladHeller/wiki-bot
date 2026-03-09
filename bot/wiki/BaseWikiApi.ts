@@ -13,8 +13,7 @@ export const defaultConfig: Partial<WikiApiConfig> = {
 };
 
 function validateConfig(config: Partial<WikiApiConfig> = defaultConfig): config is WikiApiConfig {
-  if (config.userName == null || config.password == null
-        || config.baseUrl == null) {
+  if (!config.userName || !config.password || !config.baseUrl) {
     return false;
   }
   return true;
