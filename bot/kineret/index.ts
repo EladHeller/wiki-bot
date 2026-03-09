@@ -31,7 +31,7 @@ export default async function kineretBot() {
   const deadSeaModel = DeadSeaModel(wikiApi, wikiDataApi, {
     templatePage: 'תבנית:מפלס ים המלח',
     apiUrl: DEAD_SEA_API_URL,
-    shouldUpdateWikiData: false,
+    shouldUpdateWikiData: true,
   }, defaultDataFetcher, getCurrentDate);
 
   await kineretModel.fetchLevelData();
