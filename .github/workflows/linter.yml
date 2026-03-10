@@ -44,5 +44,8 @@ jobs:
       - name: Unit test
         run: npm test
 
+      - name: Smoke test
+        run: npm run smoke-test
+
       - name: Run ESLint
         run: npm run lint:test
