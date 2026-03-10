@@ -10,3 +10,4 @@ maya*.json
 coverage/
 .vscode/
 GEMINI.md
+.gemini
