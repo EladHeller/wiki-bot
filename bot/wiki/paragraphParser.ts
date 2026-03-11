@@ -8,6 +8,21 @@ export interface Paragraph {
   content: string;
 }
 
+export function getParagraphEnd(articleText: string, startIndex: number, title?: string): number {
+  let endIndex = nextWikiText(articleText, startIndex, '==', false, title);
+  while (endIndex !== -1 && articleText.substring(endIndex, endIndex + 3) === '===') {
+    let nextIndex = endIndex;
+    while (articleText[nextIndex] === '=') {
+      nextIndex += 1;
+    }
+    endIndex = nextWikiText(articleText, nextIndex, '==', false, title);
+  }
+  if (endIndex === -1) {
+    endIndex = articleText.length;
+  }
+  return endIndex;
+}
+
 export function getParagraphContent(
   articleText: string,
   paragraphName: string,
@@ -21,16 +36,7 @@ export function getParagraphContent(
   const startIndex = match.index;
   const paragraphStartText = match[0];
 
-  let endIndex = nextWikiText(articleText, startIndex + paragraphStartText.length, '==', false, title);
-  while (articleText.substring(endIndex, endIndex + 3) === '===') {
-    while (articleText[endIndex] === '=') {
-      endIndex += 1;
-    }
-    endIndex = nextWikiText(articleText, endIndex, '==', false, title);
-  }
-  if (endIndex === -1) {
-    endIndex = articleText.length;
-  }
+  const endIndex = getParagraphEnd(articleText, startIndex + paragraphStartText.length, title);
 
   if (withTitle) {
     return articleText.substring(startIndex, endIndex);
@@ -64,25 +70,22 @@ export function getAllParagraphs(articleText: string, articleTitle: string): str
       currIndex = start + 3;
     } else {
       const nextNewLine = articleText.indexOf('\n', start);
-      currIndex = start + 2;
+      const titleStart = start + 2;
 
-      const end = nextWikiText(articleText, currIndex, '==', false);
-      if (end === -1) {
-        break;
-      }
-      if (nextNewLine !== -1 && nextNewLine < end) {
+      const titleEnd = nextWikiText(articleText, titleStart, '==', false);
+      if (titleEnd === -1) {
+        currIndex = titleStart;
+      } else if (nextNewLine !== -1 && nextNewLine < titleEnd) {
         currIndex = nextNewLine;
       } else {
-        const title = articleText.substring(currIndex, end).trim();
-        currIndex = end + 2;
-        const content = getParagraphContent(articleText, title, articleTitle, true) as string;
-        paragraphContents.push(content);
+        const paragraphEnd = getParagraphEnd(articleText, titleEnd + 2, articleTitle);
+        paragraphContents.push(articleText.substring(start, paragraphEnd));
+        currIndex = paragraphEnd;
       }
     }
   }
 
-  // TODO: more elagant way to remove empty paragraphs
-  return paragraphContents.filter((x) => x);
+  return paragraphContents.filter((x) => x); // TODO: check if it's neccessary
 }
 
 export function getUsersFromTagParagraph(articleContent: string, paragraphName: string): string[] {
