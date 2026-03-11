@@ -264,6 +264,66 @@ Content 3
   it('should handle empty article', () => {
     expect(getAllParagraphs('', 'test')).toStrictEqual([]);
   });
+
+  it('should not return duplicate paragraphs when multiple paragraphs have the same title', () => {
+    const articleText = `
+==Same Title==
+Content 1
+==Same Title==
+Content 2
+`;
+
+    const paragraphs = getAllParagraphs(articleText, 'test');
+
+    expect(paragraphs).toStrictEqual([
+      `==Same Title==
+Content 1
+`,
+      `==Same Title==
+Content 2
+`,
+    ]);
+  });
+
+  it('should return withTitle content when withTitle is true', () => {
+    const articleText = `
+==Title==
+Content
+`;
+    const result = getParagraphContent(articleText, 'Title', 'test', true);
+
+    expect(result).toBe(`==Title==
+Content
+`);
+  });
+
+  it('should handle incomplete paragraph title at the end of the text in getAllParagraphs', () => {
+    const articleText = '==Title without end';
+    const paragraphs = getAllParagraphs(articleText, 'test');
+
+    expect(paragraphs).toStrictEqual([]);
+  });
+
+  it('should handle title with newline before closing equals in getAllParagraphs', () => {
+    const articleText = '==Title\n==';
+    const paragraphs = getAllParagraphs(articleText, 'test');
+
+    expect(paragraphs).toStrictEqual([]);
+  });
+
+  it('should skip level 3 headings in getAllParagraphs', () => {
+    const articleText = '===Level 3===';
+    const paragraphs = getAllParagraphs(articleText, 'test');
+
+    expect(paragraphs).toStrictEqual([]);
+  });
+
+  it('should handle newline within potential title in getAllParagraphs', () => {
+    const articleText = '==Title\nStill Title==';
+    const paragraphs = getAllParagraphs(articleText, 'test');
+
+    expect(paragraphs).toStrictEqual([]);
+  });
 });
 
 describe('parseParagraph', () => {
