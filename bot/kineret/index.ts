@@ -7,7 +7,7 @@ import DeadSeaModel from './DeadSeaModel';
 const KINERET_API_URL = 'https://data.gov.il/api/3/action/datastore_search?resource_id=2de7b543-e13d-4e7e-b4c8-56071bc4d3c8&limit=1';
 const DEAD_SEA_API_URL = 'https://data.gov.il/api/3/action/datastore_search?resource_id=823479b4-4771-43d8-9189-6a2a1dcaaf10&limit=1';
 
-const defaultDataFetcher = async (url: string) => {
+export const defaultDataFetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Failed to fetch data from ${url}`);
@@ -15,7 +15,7 @@ const defaultDataFetcher = async (url: string) => {
   return res.json();
 };
 
-const getCurrentDate = () => new Date();
+export const getCurrentDate = () => new Date();
 
 export default async function kineretBot() {
   const wikiApi = WikiApi();
