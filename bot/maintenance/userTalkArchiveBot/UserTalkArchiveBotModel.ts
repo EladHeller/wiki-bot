@@ -174,6 +174,25 @@ export default function UserTalkArchiveBotModel(
     return findTemplate(paragraph, NO_ARCHIVE_TEMPLATE, '') !== '';
   }
 
+  function extractYearAndWeekDate(paragraph: string): Date | null {
+    const headerMatch = paragraph.match(/^[ \t]*==+[ \t]*(.+?)[ \t]*==+[ \t]*$/m);
+    if (!headerMatch) {
+      return null;
+    }
+    const header = headerMatch[1];
+    const match = header.match(/(20\d{2}) שבוע (\d{1,2})\b/);
+
+    if (!match) {
+      return null;
+    }
+    const year = parseInt(match[1], 10);
+    const week = parseInt(match[2], 10);
+
+    const date = new Date(year, 0, 1);
+    date.setDate(date.getDate() + (week * 7) - 1);
+    return date;
+  }
+
   async function getArchivableParagraphs(
     pageTitle: string,
     inactivityDays: number,
@@ -185,7 +204,7 @@ export default function UserTalkArchiveBotModel(
       if (hasNoArchiveTemplate(paragraph)) {
         return false;
       }
-      const lastSignatureDate = extractLastSignatureDate(paragraph);
+      const lastSignatureDate = extractLastSignatureDate(paragraph) || extractYearAndWeekDate(paragraph);
       return lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays);
     });
   }

@@ -293,6 +293,62 @@ Old discussion that should not be archived
       expect(result[0]).toContain('Discussion 1');
       expect(result[0]).not.toContain('Discussion 2');
     });
+
+    it('should return paragraphs with year and week in the title if they are old enough', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+
+      const pageContent = `
+==חדשופדיה 2024 שבוע 41==
+Some content here without a standard signature.
+
+==Any other title 2025 שבוע 4==
+This one is recent.
+
+==Pattern without adjacency: 2024 some text שבוע 42==
+Should not be matched now.
+`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toContain('חדשופדיה 2024 שבוע 41');
+      expect(result).not.toContain('Pattern without adjacency');
+    });
+
+    it('should return empty array if year and week in the title is recent', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+
+      const pageContent = `
+==Some title 2025 שבוע 4==
+Recent content.
+`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle paragraphs where headerMatch fails (malformed header) by returning empty array', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+
+      const pageContent = `
+==Malformed Header== with extra text after closing marks
+No signature here.
+`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
+
+      expect(result).toHaveLength(0);
+    });
   });
 
   describe('archive with archive box', () => {
