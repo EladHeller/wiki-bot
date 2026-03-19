@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 import { IWikiApi } from '../../bot/wiki/WikiApi';
 import { Mocked } from './types';
 import {
-  LogEvent, Revision, UserContribution, WikiPage,
+  LogEvent, RecentChange, Revision, UserContribution, WikiPage,
   WikiRedirectData,
 } from '../../bot/types';
 
@@ -68,10 +68,6 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     getWikiDataItem:
       base.getWikiDataItem
       ?? jest.fn<(title: string) => Promise<string | undefined>>(),
-    newPages:
-      base.newPages
-      ?? jest.fn<(namespaces: number[], endTimestamp: string, limit?: number) =>
-        AsyncGenerator<WikiPage[], void, void>>(),
     getArticleRevisions:
       base.getArticleRevisions
       ?? jest.fn<(title: string, limit: number) => Promise<Revision[]>>(),
@@ -111,5 +107,8 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     allPages: base.allPages ?? jest.fn<(namespace: number) => AsyncGenerator<WikiPage[], void, void>>(),
     parsePage: base.parsePage ?? jest.fn<(title: string) => Promise<string>>(),
     getUserGroups: base.getUserGroups ?? jest.fn<(username: string) => Promise<string[]>>(),
+    recentChanges: base.recentChanges ?? jest.fn<(namespaces: number[], endTimestamp: string, limit?: number,
+      type?: string, props?: string
+    ) => AsyncGenerator<RecentChange[], void, void>>(),
   };
 }
