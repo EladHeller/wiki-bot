@@ -59,6 +59,14 @@ export type UserContribution = {
   sizediff: number;
 }
 
+export type RecentChange = {
+  type: 'edit' | 'new' | 'log' | 'categorize' | 'external';
+  ns: number;
+  title: string;
+  oldlen: number;
+  newlen: number;
+}
+
 export type IBaseWikiApi = {
   login: () => Promise<string>;
   request: (path: string, method?: string, data?: Record<string, any>) => Promise<any>;

@@ -1,5 +1,6 @@
 import {
   LogEvent,
+  RecentChange,
   Revision, UserContribution, WikiPage,
   WikiRedirectData,
 } from '../types';
@@ -46,7 +47,9 @@ export interface IWikiApi {
   categoriesStartsWith(prefix: string): AsyncGenerator<WikiPage[], void, void>;
   fileUsage(pageIds: string[], limit?: number): AsyncGenerator<WikiPage[], void, void>;
   getWikiDataItem(title: string): Promise<string | undefined>;
-  newPages(namespaces: number[], endTimestamp: string, limit?: number): AsyncGenerator<WikiPage[], void, void>;
+  recentChanges(
+    namespaces: number[], endTimestamp: string, limit?: number, type?: string, props?: string
+  ): AsyncGenerator<RecentChange[], void, void>;
   getArticleRevisions(title: string, limit: number, props?: string): Promise<Revision[]>;
   logs(
     type: string, namespaces: number[], endTimestamp: string, limit?: number
@@ -389,8 +392,14 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     return request(queryDetails.url, queryDetails.method, queryDetails.data);
   }
 
-  async function* newPages(namespaces: number[], endTimestamp: string, limit = 500) {
-    const path = `?action=query&format=json&list=recentchanges&rcprop=title&rcnamespace=${namespaces.join('|')}&rctype=new&rcshow=!redirect|!bot&rclimit=${limit}&rcend=${endTimestamp}`;
+  async function* recentChanges(
+    namespaces: number[],
+    endTimestamp: string,
+    limit = 500,
+    type = 'edit|new',
+    props = 'title|sizes',
+  ) {
+    const path = `?action=query&format=json&list=recentchanges&rcprop=${encodeURIComponent(props)}&rcnamespace=${namespaces.join('|')}&rctype=${encodeURIComponent(type)}&rcshow=!bot&rclimit=${limit}&rcend=${endTimestamp}`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(
       result?.query?.recentchanges ?? {},
     ));
@@ -460,7 +469,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     fileUsage,
     getWikiDataItem,
     getArticleRevisions,
-    newPages,
     logs,
     movePage,
     getRedirecTarget,
@@ -471,5 +479,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     allPages,
     parsePage,
     getUserGroups,
+    recentChanges,
   };
 }

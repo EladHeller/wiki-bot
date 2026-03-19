@@ -119,7 +119,7 @@ async function notifyUserAboutArchive(
     }
 
     const notificationMessage = `\n${BOT_NOTIFICATION_HEADER}\n${message} ~~~~`;
-    await api.edit(talkPage, '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הודעה מבוט הארכוב', content + notificationMessage, revid);
+    await api.edit(talkPage, '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הודעה מבוט הארכוב', content + notificationMessage, revid);
   } catch (error) {
     logger.logError(`Failed to notify user on ${talkPage}: ${stringify(error)}`);
   }
@@ -215,7 +215,7 @@ export default function UserTalkArchiveBotModel(
     archiveTitle: string,
     archiveHeader: string,
   ): Promise<void> {
-    const archiveSummary = '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים';
+    const archiveSummary = '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים';
     const paragraphsContent = paragraphs.join('\n\n');
 
     const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
@@ -299,7 +299,7 @@ export default function UserTalkArchiveBotModel(
 
       await api.edit(
         archiveBoxPage,
-        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
         content.replace(archiveBox, newTemplate),
         revid,
       );
@@ -311,7 +311,7 @@ export default function UserTalkArchiveBotModel(
 
       await api.edit(
         archiveBoxPage,
-        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: הוספת דף ארכיון חדש',
         content.replace(parameter, newParameter),
         revid,
       );
@@ -337,7 +337,7 @@ export default function UserTalkArchiveBotModel(
 
     await wikiApi.edit(
       talkPage,
-      '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: עדכון דף ארכיון חדש',
+      '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: עדכון דף ארכיון חדש',
       content.replace(template, updatedTemplate),
       revid,
     );
@@ -363,7 +363,7 @@ export default function UserTalkArchiveBotModel(
     if (!exists) {
       await wikiApi.create(
         newArchiveTitle,
-        '[[תבנית:בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש',
         archiveHeader,
       );
       await onNewArchiveCreated(newArchiveTitle);

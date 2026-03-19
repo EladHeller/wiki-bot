@@ -4,7 +4,7 @@ import writeAdminBotLogs from '../admin/log';
 import type { ArticleLog } from '../admin/types';
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
-import type { LogEvent, WikiPage } from '../types';
+import type { LogEvent, RecentChange } from '../types';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
 import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
@@ -32,6 +32,7 @@ const WEBSITE_FOR_VISIT = 'אתר לביקור';
 const DRAFT = 'טיוטה';
 const SAND_BOX = 'ארגז חול';
 const TEMP_ERRORS = ['timeout', 'search_error', 'unhandled_exception'];
+const EDIT_SIZE_THRESHOLD = 2000;
 
 function copyviosSearchLink(title: string) {
   return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title.replace(/ /g, '_').replace(/"/g, '%22')}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
@@ -127,9 +128,10 @@ export async function checkHamichlol(title: string, wikipediaTitle: string) {
   }
 }
 
-export async function handlePage(title: string, isMainNameSpace: boolean) {
+export async function handlePage(title: string, isMainNameSpace: boolean, isNewPage = true) {
   const logs: ArticleLog[] = [];
   const otherLogs: ArticleLog[] = [];
+  const editMarker = isNewPage ? '' : ' (שינוי)';
   if (title.includes(`(${DISAMBIGUATION})`)) {
     otherLogs.push({
       text: DISAMBIGUATION,
@@ -193,7 +195,7 @@ export async function handlePage(title: string, isMainNameSpace: boolean) {
       console.log(res.error);
       logs.push({
         title,
-        text: `[[${escapeTitle(title)}]] - ${res.error?.info}`,
+        text: `[[${escapeTitle(title)}]]${editMarker} - ${res.error?.info}`,
         error: true,
       });
 
@@ -204,7 +206,7 @@ export async function handlePage(title: string, isMainNameSpace: boolean) {
     if (violation === 'none') {
       otherLogs.push({
         title,
-        text: `[[${escapeTitle(title)}]] ${confidence.toFixed(2)}`,
+        text: `[[${escapeTitle(title)}]]${editMarker} ${confidence.toFixed(2)}`,
         rank: confidence,
       });
       return;
@@ -212,7 +214,7 @@ export async function handlePage(title: string, isMainNameSpace: boolean) {
     const matchText = textFromMatch(confidence, violation, url, title);
     logs.push({
       title,
-      text: `[[${escapeTitle(title)}]]{{כ}}${matchText}`,
+      text: `[[${escapeTitle(title)}]]${editMarker}{{כ}}${matchText}`,
       rank: confidence,
     });
   });
@@ -229,18 +231,21 @@ export default async function copyrightViolationBot() {
   const lastRun = await getLastRun(api);
   const { content: tempErrorsContent, revid: tempErrorsRevid } = await api.articleContent(TEMP_ERRORS_PAGE);
   const tempErrors = getInnerLinks(tempErrorsContent);
-  const generator = api.newPages([0, 2, 118], lastRun.content);
+  const generator = api.recentChanges([0, 2, 118], lastRun.content);
 
   const allLogs: ArticleLog[] = [];
   const allOtherLogs: ArticleLog[] = [];
   const processedPages = new Set<string>();
 
-  await asyncGeneratorMapWithSequence(3, generator, (page: WikiPage) => async () => {
-    if (processedPages.has(page.title)) {
+  await asyncGeneratorMapWithSequence(3, generator, (change: RecentChange) => async () => {
+    if (processedPages.has(change.title)) {
       return;
     }
-    processedPages.add(page.title);
-    const { logs, otherLogs } = await handlePage(page.title, page.ns === 0);
+    if (change.type === 'edit' && (change.newlen - change.oldlen) < EDIT_SIZE_THRESHOLD) {
+      return;
+    }
+    processedPages.add(change.title);
+    const { logs, otherLogs } = await handlePage(change.title, change.ns === 0, change.type === 'new');
     allLogs.push(...logs);
     allOtherLogs.push(...otherLogs);
   });
