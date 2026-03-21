@@ -1,5 +1,5 @@
 import {
-  describe, beforeEach, it, expect, jest,
+  describe, beforeEach, afterEach, it, expect, jest,
 } from '@jest/globals';
 
 const mockRequest = jest.fn() as any;
@@ -31,16 +31,23 @@ jest.unstable_mockModule('../wiki/BaseWikiApi', () => ({
   defaultConfig: {},
 }));
 
+await import('../decorators/injectionDecorator');
 const { default: AiGeneratedImagesModel } = await import('../maintenance/aiGeneratedImages/AiGeneratedImagesModel');
 const { updateHebrewWikiList, main } = await import('../maintenance/aiGeneratedImages/index');
-const { logger } = await import('../utilities/logger');
 const { buildTable } = await import('../wiki/wikiTableParser');
 
 const TARGET_PAGE = 'ויקיפדיה:תחזוקה/תמונות שנוצרו על ידי בינה מלאכותית';
 
 describe('ai generated images bot', () => {
+  let consoleLogSpy: any;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
   });
 
   describe('aiGeneratedImagesModel', () => {
@@ -98,7 +105,6 @@ describe('ai generated images bot', () => {
       expect(result).toStrictEqual({
         Page: ['File:Img.jpg'],
       });
-      // Initial call + 1 subcat call. The third call (cycle) and fourth (duplicate) should return immediately.
       expect(mockCommonsApi.listCategory).toHaveBeenCalledTimes(2);
     });
 
@@ -184,13 +190,11 @@ describe('ai generated images bot', () => {
 
       mockArticleContent.mockResolvedValue({ content, revid: 123 });
 
-      const logInfoSpy = jest.spyOn(logger, 'logInfo');
-
       await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
 
       expect(mockEdit).not.toHaveBeenCalled();
       expect(mockCreate).not.toHaveBeenCalled();
-      expect(logInfoSpy).toHaveBeenCalledWith('No changes detected in AI-generated images list.');
+      expect(consoleLogSpy).toHaveBeenCalledWith('No changes detected in AI-generated images list.');
     });
   });
 

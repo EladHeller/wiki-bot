@@ -1,6 +1,5 @@
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import BaseWikiApi from '../../wiki/BaseWikiApi';
-import { logger } from '../../utilities/logger';
 import AiGeneratedImagesModel from './AiGeneratedImagesModel';
 import injectionDecorator, { CallbackArgs } from '../../decorators/injectionDecorator';
 import botLoggerDecorator from '../../decorators/botLoggerDecorator';
@@ -37,7 +36,7 @@ export async function updateHebrewWikiList(pagesWithAiImages: Record<string, str
   }
 
   if (currentContent === content) {
-    logger.logInfo('No changes detected in AI-generated images list.');
+    console.log('No changes detected in AI-generated images list.');
     return;
   }
 
@@ -46,7 +45,7 @@ export async function updateHebrewWikiList(pagesWithAiImages: Record<string, str
   } else {
     await heWikiApi.create(TARGET_PAGE, 'עדכון רשימת דפים עם תמונות בינה מלאכותית', content);
   }
-  logger.logInfo(`Updated AI-generated images list on ${TARGET_PAGE}`);
+  console.log(`Updated AI-generated images list on ${TARGET_PAGE}`);
 }
 
 export async function aiGeneratedImagesBot(heWikiApi: IWikiApi) {
