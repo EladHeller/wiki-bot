@@ -337,3 +337,17 @@ Resources:
           Properties:
             Schedule: cron(0,30 14,15,16,17,18 ? * * *)
             Name: exchange-rates-scheduler
+
+  AiGeneratedImagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ai-generated-images-function
+      Handler: dist/maintenance/aiGeneratedImages/index.main
+      Timeout: 900
+      MemorySize: 2048
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 7 ? * 1 *)
+            Name: ai-generated-images-scheduler
