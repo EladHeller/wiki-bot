@@ -1,5 +1,5 @@
 import {
-  describe, beforeEach, it, expect, jest,
+  describe, beforeEach, afterEach, it, expect, jest,
 } from '@jest/globals';
 
 const mockRequest = jest.fn() as any;
@@ -31,16 +31,23 @@ jest.unstable_mockModule('../wiki/BaseWikiApi', () => ({
   defaultConfig: {},
 }));
 
+await import('../decorators/injectionDecorator');
 const { default: AiGeneratedImagesModel } = await import('../maintenance/aiGeneratedImages/AiGeneratedImagesModel');
 const { updateHebrewWikiList, main } = await import('../maintenance/aiGeneratedImages/index');
-const { logger } = await import('../utilities/logger');
 const { buildTable } = await import('../wiki/wikiTableParser');
 
 const TARGET_PAGE = 'ויקיפדיה:תחזוקה/תמונות שנוצרו על ידי בינה מלאכותית';
 
 describe('ai generated images bot', () => {
+  let consoleLogSpy: any;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
   });
 
   describe('aiGeneratedImagesModel', () => {
@@ -98,7 +105,6 @@ describe('ai generated images bot', () => {
       expect(result).toStrictEqual({
         Page: ['File:Img.jpg'],
       });
-      // Initial call + 1 subcat call. The third call (cycle) and fourth (duplicate) should return immediately.
       expect(mockCommonsApi.listCategory).toHaveBeenCalledTimes(2);
     });
 
@@ -159,17 +165,27 @@ describe('ai generated images bot', () => {
       );
     });
 
-    it('should handle error when getting article content and create new', async () => {
-      const pagesWithAiImages = { Page1: ['File:AI1.jpg'] };
-      mockArticleContent.mockRejectedValue(new Error('Page not found'));
-      mockCreate.mockResolvedValue({});
+    it('should update only the table and date in existing content', async () => {
+      const pagesWithAiImages = {
+        Page1: ['File:AI1.jpg'],
+      };
+
+      const existingTable = buildTable(['דף', 'תמונות'], [['[[OldPage]]', '[[:File:OldImg.jpg|OldImg.jpg]]']]);
+      const currentContent = `Some header\n\nהנתונים נכונים ל-01/01/2000.\n\n${existingTable}\n\nSome footer`;
+      mockArticleContent.mockResolvedValue({ content: currentContent, revid: 123 });
+      mockEdit.mockResolvedValue({});
 
       await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
 
-      expect(mockCreate).toHaveBeenCalledWith(
+      const expectedTable = buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']]);
+      const expectedDateStr = new Date().toLocaleDateString('he-IL');
+      const expectedContent = `Some header\n\nהנתונים נכונים ל-${expectedDateStr}.\n\n${expectedTable}\n\nSome footer`;
+
+      expect(mockEdit).toHaveBeenCalledWith(
         TARGET_PAGE,
         'עדכון רשימת דפים עם תמונות בינה מלאכותית',
-        expect.any(String),
+        expectedContent,
+        123,
       );
     });
 
@@ -184,13 +200,57 @@ describe('ai generated images bot', () => {
 
       mockArticleContent.mockResolvedValue({ content, revid: 123 });
 
-      const logInfoSpy = jest.spyOn(logger, 'logInfo');
-
       await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
 
       expect(mockEdit).not.toHaveBeenCalled();
       expect(mockCreate).not.toHaveBeenCalled();
-      expect(logInfoSpy).toHaveBeenCalledWith('No changes detected in AI-generated images list.');
+      expect(consoleLogSpy).toHaveBeenCalledWith('No changes detected in AI-generated images list.');
+    });
+
+    it('should append table and date when current content lacks a table', async () => {
+      const pagesWithAiImages = {
+        Page1: ['File:AI1.jpg'],
+      };
+
+      const currentContent = 'Header only';
+      mockArticleContent.mockResolvedValue({ content: currentContent, revid: 123 });
+      mockEdit.mockResolvedValue({});
+
+      const expectedTable = buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']]);
+      const expectedDateStr = new Date().toLocaleDateString('he-IL');
+      const expectedContent = `${currentContent.trim()}\n\nהנתונים נכונים ל-${expectedDateStr}.\n\n${expectedTable}`;
+
+      await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        'עדכון רשימת דפים עם תמונות בינה מלאכותית',
+        expectedContent,
+        123,
+      );
+    });
+
+    it('should replace the table even when the date line is missing', async () => {
+      const pagesWithAiImages = {
+        Page1: ['File:AI1.jpg'],
+      };
+
+      const existingTable = buildTable(['דף', 'תמונות'], [['[[OldPage]]', '[[:File:OldImg.jpg|OldImg.jpg]]']]);
+      const currentContent = `Some header\n\n${existingTable}\n\nSome footer`;
+      mockArticleContent.mockResolvedValue({ content: currentContent, revid: 123 });
+      mockEdit.mockResolvedValue({});
+
+      const expectedTable = buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']]);
+      const expectedContent = `Some header\n\n${expectedTable}\n\nSome footer`;
+
+      await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        'עדכון רשימת דפים עם תמונות בינה מלאכותית',
+        expectedContent,
+        123,
+      );
     });
   });
 
@@ -200,16 +260,35 @@ describe('ai generated images bot', () => {
         yield callback({ query: { pages: { 1: { title: 'File:AI.jpg', globalusage: [{ wiki: 'hewiki', title: 'Page' }] } } } });
       });
       mockListCategory.mockImplementation(async function* mockList() { yield []; });
-      mockArticleContent.mockResolvedValue({ content: '', revid: 0 });
-      mockCreate.mockResolvedValue({});
+      mockArticleContent.mockResolvedValue({ content: '', revid: 123 });
+      mockEdit.mockResolvedValue({});
       mockLogin.mockResolvedValue({});
 
       await main();
 
-      expect(mockCreate).toHaveBeenCalledWith(
+      expect(mockEdit).toHaveBeenCalledWith(
         TARGET_PAGE,
         'עדכון רשימת דפים עם תמונות בינה מלאכותית',
         expect.any(String),
+        123,
+      );
+    });
+
+    it('should handle non-existent page by creating it', async () => {
+      const pagesWithAiImages = { Page1: ['File:AI1.jpg'] };
+      mockArticleContent.mockResolvedValue({ content: null, revid: 0 }); // Simulate non-existent page
+      mockEdit.mockResolvedValue({});
+
+      await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
+
+      const expectedDateStr = new Date().toLocaleDateString('he-IL');
+      const expectedContent = `הנתונים נכונים ל-${expectedDateStr}.\n\n${buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']])}`;
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        'עדכון רשימת דפים עם תמונות בינה מלאכותית',
+        expect.stringContaining(expectedContent),
+        0,
       );
     });
 
