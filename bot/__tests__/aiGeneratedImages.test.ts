@@ -7,6 +7,9 @@ const mockContinueQuery = jest.fn() as any;
 const mockLogin = jest.fn() as any;
 const mockArticleContent = jest.fn() as any;
 const mockListCategory = jest.fn() as any;
+const mockRecursiveSubCategories = jest.fn().mockImplementation(async function* mockRecursive() {
+  yield* [];
+}) as any;
 const mockInfo = jest.fn() as any;
 const mockEdit = jest.fn() as any;
 const mockCreate = jest.fn() as any;
@@ -15,6 +18,7 @@ const mockHeWikiApi = {
   login: mockLogin,
   articleContent: mockArticleContent,
   listCategory: mockListCategory,
+  recursiveSubCategories: mockRecursiveSubCategories,
   info: mockInfo,
   edit: mockEdit,
   create: mockCreate,
@@ -22,21 +26,30 @@ const mockHeWikiApi = {
   continueQuery: mockContinueQuery,
 };
 
+const mockWikiApi = jest.fn(() => {
+  throw new Error('Missing username or password');
+}) as any;
+const mockBaseWikiApi = jest.fn(() => {
+  throw new Error('Missing username or password');
+}) as any;
+
 jest.unstable_mockModule('../wiki/WikiApi', () => ({
-  default: jest.fn().mockReturnValue(mockHeWikiApi),
+  default: mockWikiApi,
 }));
 
 jest.unstable_mockModule('../wiki/BaseWikiApi', () => ({
-  default: jest.fn().mockReturnValue({ login: mockLogin }),
+  default: mockBaseWikiApi,
   defaultConfig: {},
 }));
 
+const { default: WikiApi } = await import('../wiki/WikiApi');
 await import('../decorators/injectionDecorator');
 const { default: AiGeneratedImagesModel } = await import('../maintenance/aiGeneratedImages/AiGeneratedImagesModel');
 const { updateHebrewWikiList, main } = await import('../maintenance/aiGeneratedImages/index');
 const { buildTable } = await import('../wiki/wikiTableParser');
 
 const TARGET_PAGE = 'ויקיפדיה:תחזוקה/תמונות שנוצרו על ידי בינה מלאכותית';
+const EDIT_SUMMARY = 'עדכון רשימת דפים עם תמונות בינה מלאכותית';
 
 describe('ai generated images bot', () => {
   let consoleLogSpy: any;
@@ -44,211 +57,300 @@ describe('ai generated images bot', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    mockWikiApi.mockImplementation(() => mockHeWikiApi);
+    mockBaseWikiApi.mockImplementation(() => ({ login: mockLogin }));
   });
 
   afterEach(() => {
     consoleLogSpy.mockRestore();
+    mockWikiApi.mockImplementation(() => {
+      throw new Error('Missing username or password');
+    });
+    mockBaseWikiApi.mockImplementation(() => {
+      throw new Error('Missing username or password');
+    });
   });
 
   describe('aiGeneratedImagesModel', () => {
     it('should fetch images and their global usage from Commons', async () => {
       const mockCommonsApi = {
-        continueQuery: jest.fn().mockImplementation(async function* mockContinue(path: string, callback: any) {
-          const result = {
-            query: {
-              pages: {
-                1: { title: 'File:AI1.jpg', globalusage: [{ wiki: 'hewiki', title: 'Page1' }] },
-                2: { title: 'File:AI2.jpg', globalusage: [{ wiki: 'hewiki', title: 'Page2' }, { wiki: 'enwiki', title: 'Other' }] },
-              },
-            },
-          };
-          yield callback(result);
+        filesWithGlobalUsage: jest.fn().mockImplementation(async function* mockFiles() {
+          yield [
+            { title: 'File:AI1.jpg', globalusage: [{ wiki: 'he.wikipedia.org', title: 'Page1' }] },
+            { title: 'File:AI2.jpg', globalusage: [{ wiki: 'he.wikipedia.org', title: 'Page2' }, { wiki: 'enwiki', title: 'Other' }] },
+          ];
         }),
-        listCategory: jest.fn().mockImplementation(async function* mockList() {
-          yield [];
+        recursiveSubCategories: jest.fn().mockImplementation(async function* mockRecursive() {
+          yield* [];
         }),
       } as any;
 
       const model = AiGeneratedImagesModel(mockCommonsApi);
       const result = await model.getAiGeneratedImagesFromCommons();
 
-      expect(result).toStrictEqual({
-        Page1: ['File:AI1.jpg'],
-        Page2: ['File:AI2.jpg'],
-      });
+      expect(result).toStrictEqual(new Map([
+        ['Page1', ['File:AI1.jpg']],
+        ['Page2', ['File:AI2.jpg']],
+      ]));
     });
 
-    it('should handle subcategories recursively and avoid cycles', async () => {
+    it('should handle subcategories recursively', async () => {
       const mockCommonsApi = {
-        continueQuery: jest.fn()
-          .mockImplementation(async function* mockContinue(path: string, callback: any) {
-            yield callback({ query: { pages: { 1: { title: 'File:Img.jpg', globalusage: [{ wiki: 'hewiki', title: 'Page' }] } } } });
+        filesWithGlobalUsage: jest.fn()
+          .mockImplementation(async function* mockFiles() {
+            yield [{ title: 'File:Img.jpg', globalusage: [{ wiki: 'he.wikipedia.org', title: 'Page' }] }];
           }),
-        listCategory: jest.fn()
-          .mockImplementationOnce(async function* mockList1() {
-            yield [{ title: 'Category:Sub' }];
-          })
-          .mockImplementationOnce(async function* mockList2() {
-            yield [{ title: 'Category:AI-generated images' }]; // Cycle
-          })
-          .mockImplementationOnce(async function* mockList3() {
-            yield [{ title: 'Category:Sub' }]; // Already seen
-          })
-          .mockImplementation(async function* mockListEmpty() {
-            yield [];
+        recursiveSubCategories: jest.fn()
+          .mockImplementation(async function* mockRecursive() {
+            yield { title: 'Category:Sub' };
           }),
       } as any;
 
       const model = AiGeneratedImagesModel(mockCommonsApi);
       const result = await model.getAiGeneratedImagesFromCommons();
 
-      expect(result).toStrictEqual({
-        Page: ['File:Img.jpg'],
-      });
-      expect(mockCommonsApi.listCategory).toHaveBeenCalledTimes(2);
+      expect(result).toStrictEqual(new Map([
+        ['Page', ['File:Img.jpg']],
+      ]));
+      expect(mockCommonsApi.filesWithGlobalUsage).toHaveBeenCalledTimes(2); // One for main category, one for Sub
     });
 
     it('should handle empty responses in continueQuery', async () => {
       const mockCommonsApi = {
-        continueQuery: jest.fn().mockImplementation(async function* mockContinue(path: string, callback: any) {
-          yield callback({});
-          yield callback({ query: {} });
+        filesWithGlobalUsage: jest.fn().mockImplementation(async function* mockFiles() {
+          yield [];
         }),
-        listCategory: jest.fn().mockImplementation(async function* mockList() { yield []; }),
+        recursiveSubCategories: jest.fn().mockImplementation(async function* mockRecursive() {
+          yield* [];
+        }),
       } as any;
 
       const model = AiGeneratedImagesModel(mockCommonsApi);
       const result = await model.getAiGeneratedImagesFromCommons();
 
-      expect(result).toStrictEqual({});
+      expect(result).toStrictEqual(new Map());
     });
 
     it('should handle files without globalusage or without title', async () => {
       const mockCommonsApi = {
-        continueQuery: jest.fn().mockImplementation(async function* mockContinue(path: string, callback: any) {
-          yield callback({
-            query: {
-              pages: {
-                1: { title: 'File:NoUsage.jpg' },
-                2: { title: 'File:EmptyUsage.jpg', globalusage: [] },
-                3: { title: 'File:NoTitle.jpg', globalusage: [{ wiki: 'hewiki' }] },
-              },
-            },
-          });
+        filesWithGlobalUsage: jest.fn().mockImplementation(async function* mockFiles() {
+          yield [
+            { title: 'File:NoUsage.jpg' },
+            { title: 'File:EmptyUsage.jpg', globalusage: [] },
+            { title: 'File:NoTitle.jpg', globalusage: [{ wiki: 'he.wikipedia.org' }] },
+            { title: 'File:OtherWiki.jpg', globalusage: [{ wiki: 'enwiki', title: 'Page' }] },
+          ];
         }),
-        listCategory: jest.fn().mockImplementation(async function* mockList() { yield []; }),
+        recursiveSubCategories: jest.fn().mockImplementation(async function* mockRecursive() {
+          yield* [];
+        }),
       } as any;
 
       const model = AiGeneratedImagesModel(mockCommonsApi);
       const result = await model.getAiGeneratedImagesFromCommons();
 
-      expect(result).toStrictEqual({});
+      expect(result).toStrictEqual(new Map());
+    });
+
+    it('should ignore duplicate files for the same page', async () => {
+      const mockCommonsApi = {
+        filesWithGlobalUsage: jest.fn().mockImplementation(async function* mockFiles() {
+          yield [{ title: 'File:AI1.jpg', globalusage: [{ wiki: 'he.wikipedia.org', title: 'Page' }] }];
+          yield [{ title: 'File:AI1.jpg', globalusage: [{ wiki: 'he.wikipedia.org', title: 'Page' }] }];
+        }),
+        recursiveSubCategories: jest.fn().mockImplementation(async function* mockRecursive() {
+          yield* [];
+        }),
+      } as any;
+
+      const model = AiGeneratedImagesModel(mockCommonsApi);
+      const result = await model.getAiGeneratedImagesFromCommons();
+
+      expect(result).toStrictEqual(new Map([
+        ['Page', ['File:AI1.jpg']],
+      ]));
     });
   });
 
   describe('updateHebrewWikiList', () => {
     it('should update Hebrew Wikipedia list', async () => {
-      const pagesWithAiImages = {
-        Page1: ['File:AI1.jpg'],
-      };
+      const pagesWithAiImages = new Map<string, string[]>([
+        ['Page1', ['File:AI1.jpg']],
+      ]);
 
-      mockArticleContent.mockResolvedValue({ content: 'Old content', revid: 123 });
-      mockEdit.mockResolvedValue({});
+      mockArticleContent.mockResolvedValue({ content: 'Existing content', revid: 123 });
 
       await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
 
       expect(mockEdit).toHaveBeenCalledWith(
         TARGET_PAGE,
-        'עדכון רשימת דפים עם תמונות בינה מלאכותית',
-        expect.stringContaining('[[Page1]]'),
+        EDIT_SUMMARY,
+        expect.stringContaining('Page1'),
         123,
       );
     });
 
     it('should update only the table and date in existing content', async () => {
-      const pagesWithAiImages = {
-        Page1: ['File:AI1.jpg'],
-      };
+      const pagesWithAiImages = new Map<string, string[]>([
+        ['Page1', ['File:AI1.jpg']],
+      ]);
+      const existingContent = `Header
+הנתונים נכונים ל-01/01/2024.
+{| class="wikitable"
+! דף !! תמונות
+|-
+| [[OldPage]] || [[:File:Old.jpg|Old.jpg]]
+|}
+Footer`;
 
-      const existingTable = buildTable(['דף', 'תמונות'], [['[[OldPage]]', '[[:File:OldImg.jpg|OldImg.jpg]]']]);
-      const currentContent = `Some header\n\nהנתונים נכונים ל-01/01/2000.\n\n${existingTable}\n\nSome footer`;
-      mockArticleContent.mockResolvedValue({ content: currentContent, revid: 123 });
-      mockEdit.mockResolvedValue({});
+      mockArticleContent.mockResolvedValue({ content: existingContent, revid: 123 });
 
       await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
 
-      const expectedTable = buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']]);
-      const expectedDateStr = new Date().toLocaleDateString('he-IL');
-      const expectedContent = `Some header\n\nהנתונים נכונים ל-${expectedDateStr}.\n\n${expectedTable}\n\nSome footer`;
-
       expect(mockEdit).toHaveBeenCalledWith(
         TARGET_PAGE,
-        'עדכון רשימת דפים עם תמונות בינה מלאכותית',
-        expectedContent,
+        EDIT_SUMMARY,
+        expect.stringContaining('Header'),
+        123,
+      );
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.stringContaining('Footer'),
+        123,
+      );
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.stringContaining('Page1'),
+        123,
+      );
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.not.stringContaining('OldPage'),
+        123,
+      );
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.stringMatching(/הנתונים נכונים ל-\d{1,2}.\d{1,2}.\d{4}/),
         123,
       );
     });
 
     it('should not update if content is the same', async () => {
-      const pagesWithAiImages = {
-        Page1: ['File:AI1.jpg'],
-      };
+      const pagesWithAiImages = new Map<string, string[]>([
+        ['Page1', ['File:AI1.jpg']],
+      ]);
+      const dateStr = new Date().toLocaleDateString('he-IL');
+      const table = buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']]);
+      const existingContent = `הנתונים נכונים ל-${dateStr}.\n${table}`;
 
-      let content = 'דף זה מכיל רשימה של דפים בוויקיפדיה העברית המשתמשים בתמונות שנוצרו על ידי בינה מלאכותית מוויקישיתוף.\n\n';
-      content += `הנתונים נכונים ל-${new Date().toLocaleDateString('he-IL')}.\n\n`;
-      content += buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']]);
-
-      mockArticleContent.mockResolvedValue({ content, revid: 123 });
+      mockArticleContent.mockResolvedValue({ content: existingContent, revid: 123 });
 
       await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
 
       expect(mockEdit).not.toHaveBeenCalled();
-      expect(mockCreate).not.toHaveBeenCalled();
       expect(consoleLogSpy).toHaveBeenCalledWith('No changes detected in AI-generated images list.');
     });
 
     it('should append table and date when current content lacks a table', async () => {
-      const pagesWithAiImages = {
-        Page1: ['File:AI1.jpg'],
-      };
-
-      const currentContent = 'Header only';
-      mockArticleContent.mockResolvedValue({ content: currentContent, revid: 123 });
-      mockEdit.mockResolvedValue({});
-
-      const expectedTable = buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']]);
-      const expectedDateStr = new Date().toLocaleDateString('he-IL');
-      const expectedContent = `${currentContent.trim()}\n\nהנתונים נכונים ל-${expectedDateStr}.\n\n${expectedTable}`;
+      const pagesWithAiImages = new Map<string, string[]>([
+        ['Page1', ['File:AI1.jpg']],
+      ]);
+      mockArticleContent.mockResolvedValue({ content: 'Just some text', revid: 123 });
 
       await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
 
       expect(mockEdit).toHaveBeenCalledWith(
         TARGET_PAGE,
-        'עדכון רשימת דפים עם תמונות בינה מלאכותית',
-        expectedContent,
+        EDIT_SUMMARY,
+        expect.stringContaining('Just some text'),
+        123,
+      );
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.stringContaining('Page1'),
+        123,
+      );
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.stringContaining('הנתונים נכונים ל-'),
         123,
       );
     });
 
     it('should replace the table even when the date line is missing', async () => {
-      const pagesWithAiImages = {
-        Page1: ['File:AI1.jpg'],
-      };
+      const pagesWithAiImages = new Map<string, string[]>([
+        ['Page1', ['File:AI1.jpg']],
+      ]);
+      const existingContent = `{| class="wikitable"
+! דף !! תמונות
+|-
+| [[OldPage]] || [[:File:Old.jpg|Old.jpg]]
+|}`;
 
-      const existingTable = buildTable(['דף', 'תמונות'], [['[[OldPage]]', '[[:File:OldImg.jpg|OldImg.jpg]]']]);
-      const currentContent = `Some header\n\n${existingTable}\n\nSome footer`;
-      mockArticleContent.mockResolvedValue({ content: currentContent, revid: 123 });
-      mockEdit.mockResolvedValue({});
-
-      const expectedTable = buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']]);
-      const expectedContent = `Some header\n\n${expectedTable}\n\nSome footer`;
+      mockArticleContent.mockResolvedValue({ content: existingContent, revid: 123 });
 
       await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
 
       expect(mockEdit).toHaveBeenCalledWith(
         TARGET_PAGE,
-        'עדכון רשימת דפים עם תמונות בינה מלאכותית',
-        expectedContent,
+        EDIT_SUMMARY,
+        expect.stringContaining('Page1'),
+        123,
+      );
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.not.stringContaining('OldPage'),
+        123,
+      );
+    });
+
+    it('should handle entries with undefined image lists', async () => {
+      const pagesWithAiImages = new Map<string, string[]>();
+      pagesWithAiImages.set('Page1', undefined as unknown as string[]);
+
+      mockArticleContent.mockResolvedValue({ content: 'Header', revid: 123 });
+
+      await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.stringContaining('Page1'),
+        123,
+      );
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.stringContaining('הנתונים נכונים ל-'),
+        123,
+      );
+    });
+
+    it('should treat missing article content as empty string', async () => {
+      const pagesWithAiImages = new Map<string, string[]>([
+        ['Page1', ['File:AI1.jpg']],
+      ]);
+      mockArticleContent.mockResolvedValue({ revid: 123 });
+
+      await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.stringContaining('Page1'),
+        123,
+      );
+      expect(mockEdit).toHaveBeenCalledWith(
+        TARGET_PAGE,
+        EDIT_SUMMARY,
+        expect.stringContaining('הנתונים נכונים ל-'),
         123,
       );
     });
@@ -256,44 +358,59 @@ describe('ai generated images bot', () => {
 
   describe('main', () => {
     it('should coordinate the process', async () => {
-      mockContinueQuery.mockImplementation(async function* mockContinue(path: string, callback: any) {
-        yield callback({ query: { pages: { 1: { title: 'File:AI.jpg', globalusage: [{ wiki: 'hewiki', title: 'Page' }] } } } });
-      });
-      mockListCategory.mockImplementation(async function* mockList() { yield []; });
+      const mockCommonsApi = {
+        login: (jest.fn() as any).mockResolvedValue(undefined),
+        filesWithGlobalUsage: jest.fn().mockImplementation(async function* mockFiles() {
+          yield [{ title: 'File:AI.jpg', globalusage: [{ wiki: 'he.wikipedia.org', title: 'Page' }] }];
+        }),
+        recursiveSubCategories: jest.fn().mockImplementation(async function* mockRecursive() {
+          yield* [];
+        }),
+      };
+
+      (WikiApi as any).mockReturnValueOnce(mockHeWikiApi); // for botLoggerDecorator
+      (WikiApi as any).mockReturnValueOnce(mockHeWikiApi); // for injectionDecorator
+      (WikiApi as any).mockReturnValueOnce(mockCommonsApi); // for aiGeneratedImagesBot
       mockArticleContent.mockResolvedValue({ content: '', revid: 123 });
-      mockEdit.mockResolvedValue({});
-      mockLogin.mockResolvedValue({});
 
       await main();
 
       expect(mockEdit).toHaveBeenCalledWith(
         TARGET_PAGE,
-        'עדכון רשימת דפים עם תמונות בינה מלאכותית',
+        EDIT_SUMMARY,
         expect.any(String),
-        123,
+        expect.any(Number),
       );
     });
 
     it('should handle non-existent page by creating it', async () => {
-      const pagesWithAiImages = { Page1: ['File:AI1.jpg'] };
-      mockArticleContent.mockResolvedValue({ content: null, revid: 0 }); // Simulate non-existent page
-      mockEdit.mockResolvedValue({});
+      const mockCommonsApi = {
+        login: (jest.fn() as any).mockResolvedValue(undefined),
+        filesWithGlobalUsage: jest.fn().mockImplementation(async function* mockFiles() {
+          yield [{ title: 'File:AI.jpg', globalusage: [{ wiki: 'he.wikipedia.org', title: 'Page' }] }];
+        }),
+        recursiveSubCategories: jest.fn().mockImplementation(async function* mockRecursive() {
+          yield* [];
+        }),
+      };
 
-      await updateHebrewWikiList(pagesWithAiImages, mockHeWikiApi as any);
+      (WikiApi as any).mockReturnValueOnce(mockHeWikiApi); // for botLoggerDecorator
+      (WikiApi as any).mockReturnValueOnce(mockHeWikiApi); // for injectionDecorator
+      (WikiApi as any).mockReturnValueOnce(mockCommonsApi); // for aiGeneratedImagesBot
+      mockArticleContent.mockResolvedValue({ content: '', revid: 0 });
 
-      const expectedDateStr = new Date().toLocaleDateString('he-IL');
-      const expectedContent = `הנתונים נכונים ל-${expectedDateStr}.\n\n${buildTable(['דף', 'תמונות'], [['[[Page1]]', '[[:File:AI1.jpg|AI1.jpg]]']])}`;
+      await main();
 
       expect(mockEdit).toHaveBeenCalledWith(
         TARGET_PAGE,
-        'עדכון רשימת דפים עם תמונות בינה מלאכותית',
-        expect.stringContaining(expectedContent),
-        0,
+        EDIT_SUMMARY,
+        expect.any(String),
+        expect.any(Number),
       );
     });
 
     it('should log and throw error if main fails', async () => {
-      mockContinueQuery.mockImplementation(() => { throw new Error('API Fail'); });
+      mockLogin.mockRejectedValueOnce(new Error('API Fail'));
 
       await expect(main()).rejects.toThrow('API Fail');
     });

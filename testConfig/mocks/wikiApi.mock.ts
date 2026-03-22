@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import { IWikiApi } from '../../bot/wiki/WikiApi';
 import { Mocked } from './types';
 import {
+  FileWithGlobalUsage,
   LogEvent, RecentChange, Revision, UserContribution, WikiPage,
   WikiRedirectData,
 } from '../../bot/types';
@@ -110,5 +111,8 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     recentChanges: base.recentChanges ?? jest.fn<(namespaces: number[], endTimestamp: string, limit?: number,
       type?: string, props?: string
     ) => AsyncGenerator<RecentChange[], void, void>>(),
+    filesWithGlobalUsage: base.filesWithGlobalUsage
+      ?? jest.fn<(category: string, site?: string, type?: string, limit?: number) =>
+        AsyncGenerator<FileWithGlobalUsage[], void, void>>(),
   };
 }

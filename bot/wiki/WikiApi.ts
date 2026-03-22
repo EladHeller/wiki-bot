@@ -1,7 +1,10 @@
 import {
   LogEvent,
   RecentChange,
-  Revision, UserContribution, WikiPage,
+  Revision,
+  UserContribution,
+  WikiPage,
+  FileWithGlobalUsage,
   WikiRedirectData,
 } from '../types';
 import { objectToFormData } from '../utilities';
@@ -46,6 +49,9 @@ export interface IWikiApi {
   listCategory(category: string, limit?: number, type?: string): AsyncGenerator<WikiPage[], void, void>;
   categoriesStartsWith(prefix: string): AsyncGenerator<WikiPage[], void, void>;
   fileUsage(pageIds: string[], limit?: number): AsyncGenerator<WikiPage[], void, void>;
+  filesWithGlobalUsage(
+    category: string, site?: string, type?: string, limit?: number
+  ): AsyncGenerator<FileWithGlobalUsage[], void, void>;
   getWikiDataItem(title: string): Promise<string | undefined>;
   recentChanges(
     namespaces: number[], endTimestamp: string, limit?: number, type?: string, props?: string
@@ -335,13 +341,21 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     ));
   }
 
-  async function* recursiveSubCategories(category: string, limit = 500) {
+  async function* recursiveSubCategories(
+    category: string,
+    limit = 500,
+    seen = new Set<string>(),
+  ) {
     const generator = listCategory(category, limit, 'subcat');
 
     for await (const subCategory of generator) {
       for (const page of subCategory) {
-        yield page;
-        yield* recursiveSubCategories(page.title.replace('קטגוריה:', ''), limit);
+        const title = page.title.replace(/^(Category|קטגוריה):/i, '');
+        if (!seen.has(title)) {
+          seen.add(title);
+          yield page;
+          yield* recursiveSubCategories(title, limit, seen);
+        }
       }
     }
   }
@@ -373,6 +387,24 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const path = `?action=query&format=json&list=fileusage&fuprop=${props}&fulimit=${limit}&pageids=${pageIdsString}`;
 
     yield* baseWikiApi.continueQuery(path);
+  }
+
+  async function* filesWithGlobalUsage(
+    category: string,
+    site?: string,
+    type = 'file',
+    limit = 500,
+  ) {
+    const encodedType = encodeURIComponent(type);
+    const siteParam = site ? `&gusite=${encodeURIComponent(site)}` : '';
+    const path = `?action=query&format=json&generator=categorymembers&gcmtitle=Category:${encodeURIComponent(category)}`
+      + `&gcmtype=${encodedType}&gcmlimit=${limit}&prop=globalusage`
+      + `${siteParam}`;
+
+    yield* baseWikiApi.continueQuery(
+      path,
+      (result) => Object.values(result?.query?.pages ?? {}),
+    );
   }
 
   async function protect(title: string, protections: string, expiry: string, reason: string) {
@@ -480,5 +512,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     parsePage,
     getUserGroups,
     recentChanges,
+    filesWithGlobalUsage,
   };
 }

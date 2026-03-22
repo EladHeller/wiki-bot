@@ -8,14 +8,15 @@ import parseTableText, { buildTable } from '../../wiki/wikiTableParser';
 const COMMONS_API_URL = 'https://commons.wikimedia.org/w/api.php';
 const TARGET_PAGE = 'ויקיפדיה:תחזוקה/תמונות שנוצרו על ידי בינה מלאכותית';
 
-export async function updateHebrewWikiList(pagesWithAiImages: Record<string, string[]>, heWikiApi: IWikiApi) {
-  const sortedPages = Object.keys(pagesWithAiImages).sort();
+export async function updateHebrewWikiList(pagesWithAiImages: Map<string, string[]>, heWikiApi: IWikiApi) {
+  const sortedPages = Array.from(pagesWithAiImages.keys()).sort();
   const rows = sortedPages.map((page) => {
-    const images = pagesWithAiImages[page].map((img) => {
+    const pages = pagesWithAiImages.get(page) || [];
+    const images = pages.map((img) => {
       const display = img.replace('File:', '');
       return `[[:${img}|${display}]]`;
     }).join(', ');
-    return [`[[${page}]]`, images];
+    return [`[[${page.replace(/_/g, ' ')}]]`, images];
   });
 
   const newTable = buildTable(['דף', 'תמונות'], rows);

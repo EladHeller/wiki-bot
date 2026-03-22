@@ -40,6 +40,15 @@ export type WikiPage = {
   sortkeyprefix?: string;
   length?: number;
 }
+export type GlobalUsage = {
+  title?: string;
+  wiki?: string;
+  url?: string;
+};
+
+export type FileWithGlobalUsage = WikiPage & {
+  globalusage?: GlobalUsage[];
+};
 export interface WikiApiConfig {
   baseUrl: string;
   userName: string;

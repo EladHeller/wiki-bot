@@ -1,49 +1,31 @@
-import { WikiPage } from '../../types';
+import { promiseSequence } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
 
 const CATEGORY_NAME = 'AI-generated images';
 
-interface GlobalUsage {
-  title: string;
-  wiki: string;
-  url: string;
-}
-
-interface FileWithGlobalUsage extends WikiPage {
-  globalusage?: GlobalUsage[];
-}
-
 export interface IAiGeneratedImagesModel {
-  getAiGeneratedImagesFromCommons(): Promise<Record<string, string[]>>;
+  getAiGeneratedImagesFromCommons(): Promise<Map<string, string[]>>;
 }
 
 async function getFilesWithGlobalUsageInSubcategory(
   commonsApi: IWikiApi,
   category: string,
-  pagesWithAiImages: Record<string, string[]>,
+  pagesWithAiImages: Map<string, string[]>,
 ) {
-  const path = `?action=query&generator=categorymembers&gcmtitle=Category:${encodeURIComponent(category)}&gcmtype=file&gcmlimit=500&prop=globalusage&gusite=hewiki&format=json`;
-  const resultGenerator = commonsApi.continueQuery(path, (res: any) => {
-    const pages = res?.query?.pages;
-    if (pages) {
-      return Object.values(pages);
-    }
-    return [];
-  });
-
-  const currentPagesWithAiImages = pagesWithAiImages;
+  const resultGenerator = commonsApi.filesWithGlobalUsage(category, 'hewiki');
 
   for await (const files of resultGenerator) {
-    for (const file of (files as FileWithGlobalUsage[])) {
+    for (const file of files) {
       const { globalusage } = file;
       if (globalusage) {
         for (const usage of globalusage) {
-          if (usage.wiki === 'hewiki' && usage.title) {
-            if (!currentPagesWithAiImages[usage.title]) {
-              currentPagesWithAiImages[usage.title] = [];
+          if (usage.wiki === 'he.wikipedia.org' && usage.title) {
+            if (!pagesWithAiImages.has(usage.title)) {
+              pagesWithAiImages.set(usage.title, []);
             }
-            if (!currentPagesWithAiImages[usage.title].includes(file.title)) {
-              currentPagesWithAiImages[usage.title].push(file.title);
+            const images = pagesWithAiImages.get(usage.title);
+            if (images && !images.includes(file.title)) {
+              images.push(file.title);
             }
           }
         }
@@ -55,33 +37,15 @@ async function getFilesWithGlobalUsageInSubcategory(
 export default function AiGeneratedImagesModel(commonsApi: IWikiApi): IAiGeneratedImagesModel {
   return {
     async getAiGeneratedImagesFromCommons() {
-      const pagesWithAiImages: Record<string, string[]> = {};
-      const seenCategories = new Set<string>();
-      const queue: string[] = [CATEGORY_NAME];
-      const CONCURRENCY = 10;
+      const pagesWithAiImages = new Map<string, string[]>();
+      const categories = [CATEGORY_NAME];
 
-      const processQueue = async () => {
-        let category = queue.pop();
-        while (category) {
-          if (!seenCategories.has(category)) {
-            seenCategories.add(category);
-
-            await getFilesWithGlobalUsageInSubcategory(commonsApi, category, pagesWithAiImages);
-
-            const subCatsGenerator = commonsApi.listCategory(category, 500, 'subcat');
-            for await (const subCats of subCatsGenerator) {
-              for (const subCat of subCats) {
-                const subCatName = subCat.title.replace(/^Category:/, '');
-                queue.push(subCatName);
-              }
-            }
-          }
-          category = queue.pop();
-        }
-      };
-
-      // Run multiple workers
-      await Promise.all(Array.from({ length: CONCURRENCY }, () => processQueue()));
+      for await (const subCategory of commonsApi.recursiveSubCategories(CATEGORY_NAME)) {
+        categories.push(subCategory.title.replace(/^(Category|קטגוריה):/i, ''));
+      }
+      await promiseSequence(10, categories.map(
+        (cat) => () => getFilesWithGlobalUsageInSubcategory(commonsApi, cat, pagesWithAiImages),
+      ));
 
       return pagesWithAiImages;
     },
