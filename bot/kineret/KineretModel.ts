@@ -4,22 +4,11 @@ import {
   LevelData,
   updateTemplate,
   updateElevationClaim,
+  KineretApiResponse,
 } from './utils';
 
 const SEA_OF_GALILEE_ITEM = 'Q126982';
 const REFERENCE_URL = 'https://data.gov.il/he/datasets/water_authority/https-www-data-gov-il-dataset-682';
-
-interface KineretLevelRecord {
-  Survey_Date: string;
-  Kinneret_Level: number;
-  _id: number;
-}
-
-interface KineretApiResponse {
-  result: {
-    records: KineretLevelRecord[];
-  };
-}
 
 interface KineretConfig {
   templatePage: string;

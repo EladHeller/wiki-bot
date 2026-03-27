@@ -1,8 +1,9 @@
 /* eslint-disable jest/no-conditional-in-test */
 import { describe, expect, it } from '@jest/globals';
 import {
-  asyncGeneratorMapWithSequence, encodeWikiUrl, escapeRegex, getFullYear, getLocalDate, getLocalTimeAndDate,
-  hebrewGimetriya, objectToFormData, objectToQueryString, parseLocalDate, prettyNumericValue, promiseSequence,
+  asyncGeneratorMapWithSequence, encodeWikiUrl, escapeRegex, fetchUrlLikeBrowser, getFullYear, getLocalDate,
+  getLocalTimeAndDate, hebrewGimetriya, objectToFormData, objectToQueryString, parseLocalDate, prettyNumericValue,
+  promiseSequence,
 } from '../utilities';
 
 describe('prettyNumericValue', () => {
@@ -377,5 +378,14 @@ describe('escapeRegex', () => {
 
   it('should work with empty string', () => {
     expect(escapeRegex('')).toBe('');
+  });
+});
+
+describe('fetchUrlLikeBrowser', () => {
+  it('should fetch url like browser', async () => {
+    const url = 'https://www.google.com';
+    const response = await fetchUrlLikeBrowser(url);
+
+    expect(response.status).toBe(200);
   });
 });

@@ -17,6 +17,18 @@ export interface LevelData {
   level: string;
 }
 
+export interface KineretLevelRecord {
+  Survey_Date: string;
+  Kinneret_Level: number;
+  _id: number;
+}
+
+export interface KineretApiResponse {
+  result: {
+    records: KineretLevelRecord[];
+  };
+}
+
 export function getChangeData(change: number) {
   if (change === 0) {
     return {
