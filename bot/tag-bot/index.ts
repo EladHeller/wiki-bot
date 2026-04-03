@@ -284,6 +284,10 @@ async function saveNotification(api: IWikiApi, notification: WikiNotification) {
 }
 
 export default async function tagBot() {
+  const a = 'Error in bot';
+  if (a === 'Error in bot') {
+    return;
+  }
   const api = WikiApi();
   await api.login();
   const allowedConfiguration = await getAllowedConfiguration(api);
