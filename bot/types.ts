@@ -74,6 +74,7 @@ export type RecentChange = {
   title: string;
   oldlen: number;
   newlen: number;
+  timestamp?: string;
 }
 
 export type IBaseWikiApi = {

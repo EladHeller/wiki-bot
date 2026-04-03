@@ -74,8 +74,13 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
       ?? jest.fn<(title: string, limit: number) => Promise<Revision[]>>(),
     logs:
       base.logs
-      ?? jest.fn<(type: string, namespaces: number[], endTimestamp: string, limit?: number) =>
-        AsyncGenerator<LogEvent[], void, void>>(),
+      ?? jest.fn<(type: string,
+        namespaces: number[],
+        endTimestamp: string,
+        startTimestamp?: string,
+        dir?: 'older' | 'newer',
+        limit?: number,
+      ) => AsyncGenerator<LogEvent[], void, void>>(),
     movePage:
       base.movePage
       ?? jest.fn<(from: string, to: string, reason: string) => Promise<void>>(),
@@ -108,8 +113,13 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     allPages: base.allPages ?? jest.fn<(namespace: number) => AsyncGenerator<WikiPage[], void, void>>(),
     parsePage: base.parsePage ?? jest.fn<(title: string) => Promise<string>>(),
     getUserGroups: base.getUserGroups ?? jest.fn<(username: string) => Promise<string[]>>(),
-    recentChanges: base.recentChanges ?? jest.fn<(namespaces: number[], endTimestamp: string, limit?: number,
-      type?: string, props?: string
+    recentChanges: base.recentChanges ?? jest.fn<(namespaces: number[],
+      endTimestamp: string,
+      startTimestamp?: string,
+      dir?: 'older' | 'newer',
+      limit?: number,
+      type?: string,
+      props?: string,
     ) => AsyncGenerator<RecentChange[], void, void>>(),
     filesWithGlobalUsage: base.filesWithGlobalUsage
       ?? jest.fn<(category: string, site?: string, type?: string, limit?: number) =>

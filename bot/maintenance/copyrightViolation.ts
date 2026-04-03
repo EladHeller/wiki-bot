@@ -5,7 +5,7 @@ import type { ArticleLog } from '../admin/types';
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 import type { LogEvent, RecentChange } from '../types';
-import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
+import { promiseSequence } from '../utilities';
 import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import { Paragraph } from '../wiki/paragraphParser';
@@ -227,54 +227,135 @@ export async function handlePage(title: string, isMainNameSpace: boolean, isNewP
 
 export default async function copyrightViolationBot() {
   const api = WikiApi();
+  const startTime = Date.now();
   const currentRun = new Date();
   const lastRun = await getLastRun(api);
   const { content: tempErrorsContent, revid: tempErrorsRevid } = await api.articleContent(TEMP_ERRORS_PAGE);
   const tempErrors = getInnerLinks(tempErrorsContent);
-  const generator = api.recentChanges([0, 2, 118], lastRun.content);
 
   const allLogs: ArticleLog[] = [];
   const allOtherLogs: ArticleLog[] = [];
   const processedPages = new Set<string>();
+  const state = {
+    isTimeout: false,
+    lastTimestamp: lastRun.content,
+  };
 
-  await asyncGeneratorMapWithSequence(3, generator, (change: RecentChange) => async () => {
-    if (processedPages.has(change.title)) {
-      return;
+  const checkTimeout = () => {
+    if (Date.now() - startTime > 13 * 60 * 1000) { // 13 minutes
+      logger.logInfo('Approaching timeout, stopping...');
+      return true;
     }
-    if (change.type === 'edit' && (change.newlen - change.oldlen) < EDIT_SIZE_THRESHOLD) {
-      return;
-    }
-    processedPages.add(change.title);
-    const { logs, otherLogs } = await handlePage(change.title, change.ns === 0, change.type === 'new');
-    allLogs.push(...logs);
-    allOtherLogs.push(...otherLogs);
-  });
-  const logsGenerator = api.logs('move', [0, 2, 118], lastRun.content);
+    return false;
+  };
 
-  await asyncGeneratorMapWithSequence(3, logsGenerator, (log: LogEvent) => async () => {
-    if (!log.title || log.params?.target_ns == null || log.params.target_title == null
-      || log.params.target_ns === log.ns) {
-      return;
-    }
-    if (processedPages.has(log.params.target_title)) {
-      return;
-    }
-    processedPages.add(log.params.target_title);
-    const { logs, otherLogs } = await handlePage(log.params.target_title, log.params.target_ns === 0);
-    allLogs.push(...logs);
-    allOtherLogs.push(...otherLogs);
-  });
+  const generator = api.recentChanges(
+    [0, 2, 118],
+    currentRun.toJSON(),
+    lastRun.content,
+    'newer',
+    500,
+    'edit|new',
+    'title|sizes|timestamp',
+  );
 
-  await promiseSequence(3, tempErrors.map(({ link }) => async () => {
-    if (processedPages.has(link)) {
-      return;
+  for await (const changes of generator) {
+    if (checkTimeout()) {
+      state.isTimeout = true;
+      break;
     }
-    processedPages.add(link);
-    const [pageInfo] = await api.info([link]);
-    const { logs, otherLogs } = await handlePage(link, pageInfo.ns === 0);
-    allLogs.push(...logs);
-    allOtherLogs.push(...otherLogs);
-  }));
+    const results = await promiseSequence(3, changes.map((change: RecentChange) => async () => {
+      if (state.isTimeout || processedPages.has(change.title)) {
+        return null;
+      }
+      if (checkTimeout()) {
+        state.isTimeout = true;
+        return null;
+      }
+      if (change.type === 'edit' && (change.newlen - change.oldlen) < EDIT_SIZE_THRESHOLD) {
+        return null;
+      }
+      processedPages.add(change.title);
+      const res = await handlePage(change.title, change.ns === 0, change.type === 'new');
+      return {
+        ...res,
+        timestamp: change.timestamp,
+      };
+    }));
+
+    results.forEach((res) => {
+      if (!res) return;
+      allLogs.push(...res.logs);
+      allOtherLogs.push(...res.otherLogs);
+      if (res.timestamp && res.timestamp > state.lastTimestamp) {
+        state.lastTimestamp = res.timestamp;
+      }
+    });
+
+    if (state.isTimeout) {
+      break;
+    }
+  }
+
+  if (!state.isTimeout) {
+    const logsGenerator = api.logs('move', [0, 2, 118], currentRun.toJSON(), lastRun.content, 'newer', 100);
+    for await (const logEvents of logsGenerator) {
+      if (checkTimeout()) {
+        state.isTimeout = true;
+        break;
+      }
+      const results = await promiseSequence(3, logEvents.map((log: LogEvent) => async () => {
+        if (state.isTimeout || !log.title || log.params?.target_ns == null || log.params.target_title == null
+          || log.params.target_ns === log.ns) {
+          return null;
+        }
+        if (processedPages.has(log.params.target_title)) {
+          return null;
+        }
+        if (checkTimeout()) {
+          state.isTimeout = true;
+          return null;
+        }
+        processedPages.add(log.params.target_title);
+        const res = await handlePage(log.params.target_title, log.params.target_ns === 0);
+        return {
+          ...res,
+          timestamp: log.timestamp,
+        };
+      }));
+
+      results.forEach((res) => {
+        if (!res) return;
+        allLogs.push(...res.logs);
+        allOtherLogs.push(...res.otherLogs);
+        if (res.timestamp && res.timestamp > state.lastTimestamp) {
+          state.lastTimestamp = res.timestamp;
+        }
+      });
+
+      if (state.isTimeout) {
+        break;
+      }
+    }
+  }
+
+  if (!state.isTimeout) {
+    await promiseSequence(3, tempErrors.map(({ link }) => async () => {
+      if (state.isTimeout || processedPages.has(link)) {
+        return;
+      }
+      if (checkTimeout()) {
+        state.isTimeout = true;
+        return;
+      }
+      processedPages.add(link);
+      const [pageInfo] = await api.info([link]);
+      const { logs, otherLogs } = await handlePage(link, pageInfo.ns === 0);
+      allLogs.push(...logs);
+      allOtherLogs.push(...otherLogs);
+    }));
+  }
+
   allLogs.sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
 
   await writeAdminBotLogs(api, allLogs, BASE_PAGE, false);
@@ -306,7 +387,8 @@ export default async function copyrightViolationBot() {
     content: notFoundText,
   }].filter((p) => p.content) satisfies Paragraph[];
   await writeAdminBotLogs(api, paragraphs, LOG_PAGE, false);
-  await api.edit(LAST_RUN_PAGE, 'עדכון זמן ריצה', currentRun.toJSON(), lastRun.revid);
+  const nextRunTime = state.isTimeout ? state.lastTimestamp : currentRun.toJSON();
+  await api.edit(LAST_RUN_PAGE, 'עדכון זמן ריצה', nextRunTime, lastRun.revid);
   if (searchErrorText !== tempErrorsContent) {
     await api.edit(TEMP_ERRORS_PAGE, 'עדכון שגיאות', searchErrorText, tempErrorsRevid);
   }

@@ -54,11 +54,22 @@ export interface IWikiApi {
   ): AsyncGenerator<FileWithGlobalUsage[], void, void>;
   getWikiDataItem(title: string): Promise<string | undefined>;
   recentChanges(
-    namespaces: number[], endTimestamp: string, limit?: number, type?: string, props?: string
+    namespaces: number[],
+    endTimestamp: string,
+    startTimestamp?: string,
+    dir?: 'older' | 'newer',
+    limit?: number,
+    type?: string,
+    props?: string,
   ): AsyncGenerator<RecentChange[], void, void>;
   getArticleRevisions(title: string, limit: number, props?: string): Promise<Revision[]>;
   logs(
-    type: string, namespaces: number[], endTimestamp: string, limit?: number
+    type: string,
+    namespaces: number[],
+    endTimestamp: string,
+    startTimestamp?: string,
+    dir?: 'older' | 'newer',
+    limit?: number,
   ): AsyncGenerator<LogEvent[], void, void>;
   movePage(from: string, to: string, reason: string): Promise<void>;
   getRedirecTarget: (title: string) => Promise<{
@@ -427,19 +438,32 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
   async function* recentChanges(
     namespaces: number[],
     endTimestamp: string,
+    startTimestamp?: string,
+    dir: 'older' | 'newer' = 'older',
     limit = 500,
     type = 'edit|new',
-    props = 'title|sizes',
+    props = 'title|sizes|timestamp',
   ) {
-    const path = `?action=query&format=json&list=recentchanges&rcprop=${encodeURIComponent(props)}&rcnamespace=${namespaces.join('|')}&rctype=${encodeURIComponent(type)}&rcshow=!bot&rclimit=${limit}&rcend=${endTimestamp}`;
+    const rcdir = `&rcdir=${dir}`;
+    const rcstart = startTimestamp ? `&rcstart=${startTimestamp}` : '';
+    const path = `?action=query&format=json&list=recentchanges&rcprop=${encodeURIComponent(props)}&rcnamespace=${namespaces.join('|')}&rctype=${encodeURIComponent(type)}&rcshow=!bot&rclimit=${limit}&rcend=${endTimestamp}${rcdir}${rcstart}`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(
       result?.query?.recentchanges ?? {},
     ));
   }
 
-  async function* logs(type: string, namespaces: number[], endTimestamp: string, limit = 100) {
+  async function* logs(
+    type: string,
+    namespaces: number[],
+    endTimestamp: string,
+    startTimestamp?: string,
+    dir: 'older' | 'newer' = 'older',
+    limit = 100,
+  ) {
+    const ledir = `&ledir=${dir}`;
+    const lestart = startTimestamp ? `&lestart=${startTimestamp}` : '';
     for (const namespace of namespaces) {
-      const path = `?action=query&format=json&list=logevents&letype=${encodeURIComponent(type)}&lenamespace=${namespace}&leend=${endTimestamp}&lelimit=${limit}`;
+      const path = `?action=query&format=json&list=logevents&letype=${encodeURIComponent(type)}&lenamespace=${namespace}&leend=${endTimestamp}&lelimit=${limit}${ledir}${lestart}`;
       yield* baseWikiApi.continueQuery(path, (result) => Object.values(
         result?.query?.logevents ?? {},
       ));
