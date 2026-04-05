@@ -158,7 +158,7 @@ Resources:
         Schedule:
           Type: Schedule
           Properties:
-            Schedule: cron(0 8 5,6,8 * ? *)
+            Schedule: cron(0 11 5,6,8 * ? *)
             Name: archive-logs-scheduler
 
   ArchiveClosedDiscussionsFunction:
@@ -305,7 +305,7 @@ Resources:
         Schedule:
           Type: Schedule
           Properties:
-            Schedule: cron(0 7 ? * 1 *)
+            Schedule: cron(0 10 ? * 1 *)
             Name: drafts-on-wrong-categories-scheduler
 
   SportPersonalityTemplatesYearsFormatFunction:
@@ -321,7 +321,7 @@ Resources:
         Schedule:
           Type: Schedule
           Properties:
-            Schedule: cron(0 7 ? * 1#1 *)
+            Schedule: cron(0 9 ? * 1#1 *)
             Name: sport-personality-templates-years-format-scheduler
 
   ExchangeRatesFunction:
