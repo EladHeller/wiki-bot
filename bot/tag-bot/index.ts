@@ -277,7 +277,12 @@ async function saveNotification(api: IWikiApi, notification: WikiNotification) {
   try {
     const content = `@[[משתמש:החבלן]], שים לב: [${notification['*'].links.primary.url} ${notification['*'].links.primary.label}]. ~~~~`;
     const title = notification['*'].header;
-    await api.edit('user:Sapper-bot/אימיילים', title, content, -1, title);
+    const [info] = await api.info(['user:Sapper-bot/אימיילים']);
+    const revid = info?.lastrevid;
+    if (!revid) {
+      throw new Error('No revid for user:Sapper-bot/אימיילים');
+    }
+    await api.edit('user:Sapper-bot/אימיילים', title, content, revid, title);
   } catch (e) {
     logger.logError(`Failed to save notification: ${e.message || e.data || e.toString()}`);
   }
