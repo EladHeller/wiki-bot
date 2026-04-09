@@ -21,7 +21,8 @@ export default async function chronologyTemplate() {
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
     try {
       const content = page.revisions?.[0].slots.main['*'];
-      if (!content) {
+      const revId = page.revisions?.[0]?.revid;
+      if (!content || !revId) {
         return;
       }
       if (titles.has(page.title)) {
@@ -57,7 +58,7 @@ export default async function chronologyTemplate() {
         });
       });
       if (newContent !== content && changed) {
-        await api.updateArticle(page.title, 'הסרת טקסט נטוי מתבנית כרונולוגיה', newContent);
+        await api.edit(page.title, 'הסרת טקסט נטוי מתבנית כרונולוגיה', newContent, revId);
         number += 1;
       }
     } catch (error) {

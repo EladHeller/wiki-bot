@@ -23,8 +23,12 @@ export async function fixMissingQuotation() {
     const beforeContent = revisions[1].slots.main['*'];
     const wikiDataApi = WikiDataAPI();
     const parsedBefore = await parseContent(api, wikiDataApi, title, beforeContent, {});
-
-    await api.updateArticle(title, 'הוספת מירכאות חסרות לקישורים', parsedBefore);
+    const { revid } = revisions[0];
+    if (!revid) {
+      console.log(`No revid for page ${title}`);
+      return;
+    }
+    await api.edit(title, 'הוספת מירכאות חסרות לקישורים', parsedBefore, revid);
   }
 }
 
@@ -50,7 +54,12 @@ export default async function fixLanguageLinks() {
       if (afterContent !== parsedContent) {
         console.log(`not equal ${contribution.title}`);
         if (botRevisionIndex === 0) {
-          await api.updateArticle(contribution.title, 'החזרת תבנית קישור שפה', parsedContent);
+          const { revid } = revisions[0];
+          if (!revid) {
+            console.log(`No revid for page ${contribution.title}`);
+            return null;
+          }
+          await api.edit(contribution.title, 'החזרת תבנית קישור שפה', parsedContent, revid);
           return null;
         }
         return contribution.title;

@@ -69,13 +69,10 @@ async function getTemplatesByDate(api: IWikiApi) {
   return needToProtect;
 }
 
-async function getTemplatesByCategory(api: IWikiApi, category: string, exceptCategryFormat?: string) {
+export async function getTemplatesByCategory(api: IWikiApi, category: string, exceptCategryFormat?: string) {
   const generator = api.listCategory(category);
-  let res: IteratorResult<any, void>;
   const needToProtect: string[] = [];
-  do {
-    res = await generator.next();
-    const pages = res.value?.query?.categorymembers ?? [];
+  for await (const pages of generator) {
     const relevent = pages.filter((page: any) => !page.sortkeyprefix.startsWith('*')) ?? [];
     const releventToProtect = relevent.filter((page) => !page.title.startsWith('קטגוריה:'));
     const batches: any[] = [];
@@ -94,7 +91,7 @@ async function getTemplatesByCategory(api: IWikiApi, category: string, exceptCat
       const categoryNeedToProtect = await getTemplatesByCategory(api, cat);
       needToProtect.push(...categoryNeedToProtect);
     }
-  } while (!res?.done);
+  }
   return needToProtect;
 }
 

@@ -12,7 +12,8 @@ export default async function beshevaToInn() {
   const number = 0;
   await asyncGeneratorMapWithSequence<WikiPage>(5, generator, (page) => async () => {
     const content = page.revisions?.[0]?.slots.main['*'];
-    if (!content) {
+    const revId = page.revisions?.[0]?.revid;
+    if (!content || !revId) {
       console.log(`No content for page ${page.title}`);
       return;
     }
@@ -58,7 +59,7 @@ export default async function beshevaToInn() {
       newContent = newContent.replace(template, newTemplate);
     }));
     if (newContent !== content) {
-      await api.updateArticle(page.title, 'החלפת תבנית בשבע בתבנית ערוץ 7', newContent);
+      await api.edit(page.title, 'החלפת תבנית בשבע בתבנית ערוץ 7', newContent, revId);
       console.log('success', page.title);
     }
   });

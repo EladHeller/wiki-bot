@@ -19,6 +19,11 @@ const urlRegex = 'https?:\\/\\/archive\\.kan\\.org\\.il\\/(?:[-a-zA-Z/]*(\\d+)|m
 async function convert(page: WikiPage, api: IWikiApi) {
   all.push(page.title);
   const content = page.revisions?.[0].slots.main['*'];
+  const revId = page.revisions?.[0]?.revid;
+  if (!content || !revId) {
+    console.log(`No content for page ${page.title}`);
+    return;
+  }
   if (content && page.title) {
     let newContent = content;
     const refMatches = content
@@ -50,7 +55,7 @@ async function convert(page: WikiPage, api: IWikiApi) {
       return;
     }
     try {
-      await api.updateArticle(page.title, 'המרת קישור לתבנית:כאן ארכיון', newContent);
+      await api.edit(page.title, 'המרת קישור לתבנית:כאן ארכיון', newContent, revId);
       converted.push(page.title);
     } catch (error) {
       console.log(error?.data || error?.message || error?.toString());
