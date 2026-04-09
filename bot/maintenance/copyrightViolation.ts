@@ -231,7 +231,7 @@ export default async function copyrightViolationBot() {
   const lastRun = await getLastRun(api);
   const { content: tempErrorsContent, revid: tempErrorsRevid } = await api.articleContent(TEMP_ERRORS_PAGE);
   const tempErrors = getInnerLinks(tempErrorsContent);
-  const generator = api.recentChanges([0, 2, 118], lastRun.content);
+  const generator = api.recentChanges([0, 2, 118], lastRun.content, 500, 'new');
 
   const allLogs: ArticleLog[] = [];
   const allOtherLogs: ArticleLog[] = [];
