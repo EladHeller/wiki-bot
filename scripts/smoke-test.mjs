@@ -5,7 +5,7 @@
 import { JSDOM } from 'jsdom';
 
 const entryPoints = [
-  '../bot/maintenance/copyrightViolation.ts',
+  '../bot/maintenance/copyrightViolationCore.ts',
   '../bot/usMarketValue/index.ts',
   '../bot/kineret/index.ts',
   '../bot/admin/deleteRedirects.ts',
