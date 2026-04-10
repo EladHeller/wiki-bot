@@ -127,10 +127,9 @@ export async function checkHamichlol(title: string, wikipediaTitle: string) {
   }
 }
 
-export async function handlePage(title: string, isMainNameSpace: boolean, isNewPage = true) {
+export async function handlePage(title: string, isMainNameSpace: boolean) {
   const logs: ArticleLog[] = [];
   const otherLogs: ArticleLog[] = [];
-  const editMarker = isNewPage ? '' : ' (שינוי)';
   if (title.includes(`(${DISAMBIGUATION})`)) {
     otherLogs.push({
       text: DISAMBIGUATION,
@@ -194,7 +193,7 @@ export async function handlePage(title: string, isMainNameSpace: boolean, isNewP
       console.log(res.error);
       logs.push({
         title,
-        text: `[[${escapeTitle(title)}]]${editMarker} - ${res.error?.info}`,
+        text: `[[${escapeTitle(title)}]] - ${res.error?.info}`,
         error: true,
       });
 
@@ -205,7 +204,7 @@ export async function handlePage(title: string, isMainNameSpace: boolean, isNewP
     if (violation === 'none') {
       otherLogs.push({
         title,
-        text: `[[${escapeTitle(title)}]]${editMarker} ${confidence.toFixed(2)}`,
+        text: `[[${escapeTitle(title)}]] ${confidence.toFixed(2)}`,
         rank: confidence,
       });
       return;
@@ -213,7 +212,7 @@ export async function handlePage(title: string, isMainNameSpace: boolean, isNewP
     const matchText = textFromMatch(confidence, violation, url, title);
     logs.push({
       title,
-      text: `[[${escapeTitle(title)}]]${editMarker}{{כ}}${matchText}`,
+      text: `[[${escapeTitle(title)}}] {{כ}}${matchText}`,
       rank: confidence,
     });
   });
@@ -249,7 +248,7 @@ export async function runCopyrightViolationBot(basePage: string, runMode: 'new' 
       return;
     }
     processedPages.add(change.title);
-    const { logs, otherLogs } = await handlePage(change.title, change.ns === 0, change.type === 'new');
+    const { logs, otherLogs } = await handlePage(change.title, change.ns === 0);
     allLogs.push(...logs);
     allOtherLogs.push(...otherLogs);
   });
