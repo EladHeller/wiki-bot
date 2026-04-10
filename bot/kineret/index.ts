@@ -7,7 +7,7 @@ import DeadSeaModel from './DeadSeaModel';
 import { fetchUrlLikeBrowser } from '../utilities';
 import { KineretApiResponse } from './utils';
 
-const KINERET_API_URL = 'https://data.gov.il/api/3/action/datastore_search?resource_id=2de7b543-e13d-4e7e-b4c8-56071bc4d3c8&limit=1';
+// const KINERET_API_URL = 'https://data.gov.il/api/3/action/datastore_search?resource_id=2de7b543-e13d-4e7e-b4c8-56071bc4d3c8&limit=1';
 const DEAD_SEA_API_URL = 'https://data.gov.il/api/3/action/datastore_search?resource_id=823479b4-4771-43d8-9189-6a2a1dcaaf10&limit=1';
 
 export const defaultDataFetcher = async (url: string) => {
@@ -52,8 +52,8 @@ export default async function kineretBot() {
 
   const kineretModel = KineretModel(wikiApi, wikiDataApi, {
     templatePage: 'תבנית:מפלס הכנרת',
-    apiUrl: KINERET_API_URL,
-  }, defaultDataFetcher, getCurrentDate);
+    apiUrl: 'https://kineret.org.il/',
+  }, kineretDataFetcher, getCurrentDate);
 
   const deadSeaModel = DeadSeaModel(wikiApi, wikiDataApi, {
     templatePage: 'תבנית:מפלס ים המלח',
