@@ -149,6 +149,18 @@ Resources:
             Schedule: cron(0 6,18 ? * * *)
             Name: copyright-violation-scheduler
 
+  CopyrightViolationEditFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: copyright-violation-edit-function
+      Handler: dist/maintenance/copyrightViolationEdit.main
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 6,18 ? * * *)
+            Name: copyright-violation-edit-scheduler
+
   ArchiveLogsFunction:
     Type: AWS::Serverless::Function
     Properties:
