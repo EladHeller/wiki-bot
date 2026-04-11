@@ -8,11 +8,14 @@ import { $ } from 'zx';
 import updateS3 from './update-s3';
 
 const region = process.env.REGION;
+const regionIl = 'il-central-1';
 const bucketCodeName = process.env.CODE_BUCKET;
 
 const cf = new CloudFormation({ region });
+const cfIl = new CloudFormation({ region: regionIl });
 
 async function runTemplate(
+  client: CloudFormation,
   templatePath: string,
   name: string,
   parameters?: Parameter[],
@@ -20,7 +23,7 @@ async function runTemplate(
 ): Promise<void> {
   let newStack = false;
   try {
-    await cf.describeStacks({ StackName: name });
+    await client.describeStacks({ StackName: name });
   } catch (e: any) {
     if (e.name === 'ValidationError' && e.message.includes('does not exist')) {
       newStack = true;
@@ -31,7 +34,7 @@ async function runTemplate(
 
   const template = await fs.readFile(templatePath, 'utf-8');
   if (newStack) {
-    await cf.createStack({
+    await client.createStack({
       StackName: name,
       TemplateBody: template,
       Capabilities: capabilities,
@@ -39,7 +42,7 @@ async function runTemplate(
     });
   } else {
     try {
-      await cf.updateStack({
+      await client.updateStack({
         StackName: name,
         TemplateBody: template,
         Capabilities: capabilities,
@@ -57,7 +60,7 @@ async function runTemplate(
   console.log(`Waiting for ${newStack ? 'creation' : 'update'} of ${name}...`);
   const waiter = newStack ? waitUntilStackCreateComplete : waitUntilStackUpdateComplete;
   const { state, reason } = await waiter(
-    { client: cf, maxWaitTime: 1000 * 60 * 30 },
+    { client, maxWaitTime: 1000 * 60 * 30 },
     { StackName: name },
   );
 
@@ -69,10 +72,11 @@ async function runTemplate(
 }
 
 async function main() {
-  await runTemplate('./build/t00.cf.yaml', 'Market-value-code-bucket', [{
+  await runTemplate(cf, './build/t00.cf.yaml', 'Market-value-code-bucket', [{
     ParameterKey: 'BucketCodeName',
     ParameterValue: bucketCodeName,
   }]);
+
   const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   process.env.IMAGE_VERSION = randomString;
   console.log('randomString', randomString);
@@ -85,6 +89,7 @@ async function main() {
   console.log('finnish deploy!');
 
   await runTemplate(
+    cf,
     './build/t01.cf.yaml',
     'wiki-bot',
     [{
@@ -118,6 +123,20 @@ async function main() {
     }, {
       ParameterKey: 'ImageVersion',
       ParameterValue: randomString,
+    }, {
+      ParameterKey: 'DistCodeVersionId',
+      ParameterValue: distVersion,
+    }],
+    ['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'],
+  );
+
+  await runTemplate(
+    cfIl,
+    './build/t02.cf.yaml',
+    'wiki-bot-il',
+    [{
+      ParameterKey: 'BucketCodeName',
+      ParameterValue: bucketCodeName,
     }, {
       ParameterKey: 'DistCodeVersionId',
       ParameterValue: distVersion,
