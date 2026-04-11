@@ -147,6 +147,12 @@ async function main() {
     }, {
       ParameterKey: 'DistCodeVersionId',
       ParameterValue: distVersionIl,
+    }, {
+      ParameterKey: 'WikiUserName',
+      ParameterValue: process.env.USER_NAME,
+    }, {
+      ParameterKey: 'WikiPassword',
+      ParameterValue: process.env.PASSWORD,
     }],
     ['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'],
   );
