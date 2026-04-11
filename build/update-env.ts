@@ -10,6 +10,7 @@ import updateS3 from './update-s3';
 const region = process.env.REGION;
 const regionIl = 'il-central-1';
 const bucketCodeName = process.env.CODE_BUCKET;
+const bucketCodeNameIl = `${bucketCodeName}-il`;
 
 const cf = new CloudFormation({ region });
 const cfIl = new CloudFormation({ region: regionIl });
@@ -77,6 +78,11 @@ async function main() {
     ParameterValue: bucketCodeName,
   }]);
 
+  await runTemplate(cfIl, './build/t00-il.cf.yaml', 'Market-value-code-bucket-il', [{
+    ParameterKey: 'BucketCodeName',
+    ParameterValue: bucketCodeNameIl,
+  }]);
+
   const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   process.env.IMAGE_VERSION = randomString;
   console.log('randomString', randomString);
@@ -85,7 +91,8 @@ async function main() {
   await $`sh ./build/build.sh`;
   console.log('finnish build!');
 
-  const { distVersion } = await updateS3();
+  const { distVersion } = await updateS3(bucketCodeName as string, region as string);
+  const { distVersion: distVersionIl } = await updateS3(bucketCodeNameIl, regionIl);
   console.log('finnish deploy!');
 
   await runTemplate(
@@ -136,10 +143,10 @@ async function main() {
     'wiki-bot-il',
     [{
       ParameterKey: 'BucketCodeName',
-      ParameterValue: bucketCodeName,
+      ParameterValue: bucketCodeNameIl,
     }, {
       ParameterKey: 'DistCodeVersionId',
-      ParameterValue: distVersion,
+      ParameterValue: distVersionIl,
     }],
     ['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'],
   );
