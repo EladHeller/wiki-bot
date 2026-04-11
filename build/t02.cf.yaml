@@ -8,6 +8,12 @@ Parameters:
     Type: String
   DistCodeVersionId:
     Type: String
+  WikiUserName:
+    Description: The name of wiki user.
+    Type: String
+  WikiPassword:
+    Description: The password of wiki user.
+    Type: String
 
 Globals:
   Function:
@@ -18,6 +24,10 @@ Globals:
       Bucket: !Ref BucketCodeName
       Key: dist.zip
       Version: !Ref DistCodeVersionId
+    Environment:
+      Variables:
+        USER_NAME: !Ref WikiUserName
+        PASSWORD: !Ref WikiPassword
 
 Resources:
   KineretLevelFunction:

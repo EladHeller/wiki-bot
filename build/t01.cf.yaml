@@ -77,7 +77,6 @@ Resources:
             Schedule: cron(0 22 ? * * *)
             Name: US-stocks-scheduler
 
-
   PurgeBirthdayFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -145,7 +144,7 @@ Resources:
         Schedule:
           Type: Schedule
           Properties:
-            Schedule: cron(0 6,18 ? * * *)
+            Schedule: cron(30 6,18 ? * * *)
             Name: copyright-violation-edit-scheduler
 
   ArchiveLogsFunction:
