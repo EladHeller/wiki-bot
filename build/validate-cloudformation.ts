@@ -6,6 +6,7 @@ import { resolve } from 'path';
 const templates = [
   'build/t00.cf.yaml',
   'build/t01.cf.yaml',
+  'build/t02.cf.yaml',
 ];
 
 const validateTemplate = async (templatePath: string): Promise<void> => {

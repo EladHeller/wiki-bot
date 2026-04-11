@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Wiki Bot Serverless Application - IL Central 1
+
+Parameters:
+  BucketCodeName:
+    Description: The name of code bucket.
+    Type: String
+  DistCodeVersionId:
+    Type: String
+
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Timeout: 900
+    MemorySize: 1024
+    CodeUri:
+      Bucket: !Ref BucketCodeName
+      Key: dist.zip
+      Version: !Ref DistCodeVersionId
+
+Resources:
+  KineretLevelFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Kineret-level-function
+      Handler: dist/kineret/index.main
+      Timeout: 20
+      MemorySize: 512
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 5,10,15,20 ? * * *)
+            Name: Kineret-level-scheduler

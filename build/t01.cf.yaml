@@ -77,19 +77,6 @@ Resources:
             Schedule: cron(0 22 ? * * *)
             Name: US-stocks-scheduler
 
-  KineretLevelFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: Kineret-level-function
-      Handler: dist/kineret/index.main
-      Timeout: 20
-      MemorySize: 512
-      Events:
-        Schedule:
-          Type: Schedule
-          Properties:
-            Schedule: cron(0 5,10,15,20 ? * * *)
-            Name: Kineret-level-scheduler
 
   PurgeBirthdayFunction:
     Type: AWS::Serverless::Function
