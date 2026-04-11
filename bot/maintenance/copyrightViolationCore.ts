@@ -212,7 +212,7 @@ export async function handlePage(title: string, isMainNameSpace: boolean) {
     const matchText = textFromMatch(confidence, violation, url, title);
     logs.push({
       title,
-      text: `[[${escapeTitle(title)}}] {{כ}}${matchText}`,
+      text: `[[${escapeTitle(title)}]] {{כ}}${matchText}`,
       rank: confidence,
     });
   });
