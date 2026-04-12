@@ -235,9 +235,6 @@ Resources:
       Role: !GetAtt IronSwordsFunctionRole.Arn
       Code:
         ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:${ImageVersion}
-      ImageConfig:
-        Command:
-          - dist/ironSwords/index.main
       Timeout: 900
       MemorySize: 2048
       Environment:
