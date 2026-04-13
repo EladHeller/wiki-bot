@@ -16,6 +16,7 @@ const mockDeadSeaModel = {
 };
 
 const wikiApiMock = WikiApiMock();
+const fetchUrlLikeBrowserMock: any = jest.fn();
 
 jest.unstable_mockModule('../wiki/WikiApi', () => ({
   default: jest.fn(() => wikiApiMock),
@@ -33,7 +34,17 @@ jest.unstable_mockModule('../kineret/DeadSeaModel', () => ({
   default: jest.fn(() => mockDeadSeaModel),
 }));
 
-const { default: kineretBot, defaultDataFetcher, getCurrentDate } = await import('../kineret/index');
+jest.unstable_mockModule('../utilities', () => ({
+  fetchUrlLikeBrowser: (url: string) => fetchUrlLikeBrowserMock(url),
+  getLocalTimeAndDate: (dateString: string) => dateString,
+}));
+
+const {
+  default: kineretBot,
+  defaultDataFetcher,
+  getCurrentDate,
+  kineretDataFetcher,
+} = await import('../kineret/index');
 
 describe('kineretBot', () => {
   beforeEach(() => {
@@ -79,7 +90,7 @@ describe('kineretBot', () => {
     it('should throw error on fetch failure', async () => {
       jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: false,
-      } as any);
+      } as Response);
 
       await expect(defaultDataFetcher('https://example.com')).rejects.toThrow('Failed to fetch data from https://example.com');
     });
@@ -90,6 +101,45 @@ describe('kineretBot', () => {
       const result = getCurrentDate();
 
       expect(result).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('kineretDataFetcher', () => {
+    it('should parse level and date from html', async () => {
+      fetchUrlLikeBrowserMock.mockResolvedValue({
+        text: async () => `
+          <div class="hp_miflas_height">-209.55</div>
+          <div class="hp_miflas_date">13/04/2026</div>
+        `,
+      });
+
+      const result = await kineretDataFetcher('https://kineret.org.il/');
+
+      expect(fetchUrlLikeBrowserMock).toHaveBeenCalledWith('https://kineret.org.il/');
+      expect(result).toStrictEqual({
+        result: {
+          records: [
+            {
+              Survey_Date: '13/04/2026',
+              Kinneret_Level: -209.55,
+              _id: 0,
+            },
+          ],
+        },
+      });
+    });
+
+    it('should throw when missing level or date', async () => {
+      fetchUrlLikeBrowserMock.mockResolvedValue({
+        text: async () => `
+          <div class="hp_miflas_height"></div>
+          <div class="hp_miflas_date">no-date</div>
+        `,
+      });
+
+      await expect(kineretDataFetcher('https://kineret.org.il/'))
+        .rejects
+        .toThrow('Failed to parse level or date');
     });
   });
 });
