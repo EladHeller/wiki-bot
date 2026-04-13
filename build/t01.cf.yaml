@@ -264,6 +264,7 @@ Resources:
     UpdateReplacePolicy: Retain
     Properties:
       QueueName: wiki-bot-dlq
+      VisibilityTimeout: 120
       MessageRetentionPeriod: 1209600
 
   GeneralDlqProcessorFunction:
