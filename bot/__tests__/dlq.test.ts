@@ -92,8 +92,8 @@ describe('dlq handler', () => {
     const editCall = moduleMockApi.edit.mock.calls[0];
     const content = editCall[2] as string;
 
-    expect(content).toContain('\"messageId\": \"msg-2\"');
-    expect(content).toContain('\"body\": \"not-json\"');
+    expect(content).toContain('"messageId": "msg-2"');
+    expect(content).toContain('"body": "not-json"');
   });
 
   it('should handle record without body', async () => {
@@ -112,6 +112,6 @@ describe('dlq handler', () => {
     const editCall = moduleMockApi.edit.mock.calls[0];
     const content = editCall[2] as string;
 
-    expect(content).toContain('\"messageId\": \"msg-3\"');
+    expect(content).toContain('"messageId": "msg-3"');
   });
 });
