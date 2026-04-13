@@ -43,6 +43,9 @@ Globals:
       Bucket: !Ref BucketCodeName
       Key: dist.zip
       Version: !Ref DistCodeVersionId
+    DeadLetterQueue:
+      Type: SQS
+      TargetArn: !GetAtt GeneralDlqQueue.Arn
     Environment:
       Variables:
         USER_NAME: !Ref WikiUserName
@@ -235,17 +238,38 @@ Resources:
       Role: !GetAtt IronSwordsFunctionRole.Arn
       Code:
         ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:${ImageVersion}
-      ImageConfig:
-        Command:
-          - dist/ironSwords/index.main
       Timeout: 900
       MemorySize: 2048
+      DeadLetterConfig:
+        TargetArn: !GetAtt GeneralDlqQueue.Arn
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
       EphemeralStorage:
         Size: 2048
+
+  GeneralDlqQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: wiki-bot-dlq
+      MessageRetentionPeriod: 1209600
+
+  GeneralDlqProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: wiki-bot-dlq-logger
+      Handler: dist/dlq/index.main
+      Timeout: 60
+      MemorySize: 512
+      Events:
+        DLQEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt GeneralDlqQueue.Arn
+            BatchSize: 1
 
   IronSwordsEventRule:
     Type: AWS::Events::Rule
