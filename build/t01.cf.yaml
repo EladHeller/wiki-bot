@@ -267,6 +267,20 @@ Resources:
       VisibilityTimeout: 120
       MessageRetentionPeriod: 1209600
 
+  GeneralDlqProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: wiki-bot-dlq-logger
+      Handler: dist/dlq/index.main
+      Timeout: 60
+      MemorySize: 512
+      Events:
+        DLQEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt GeneralDlqQueue.Arn
+            BatchSize: 1
+
   IronSwordsEventRule:
     Type: AWS::Events::Rule
     Properties:
