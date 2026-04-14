@@ -20,6 +20,7 @@ export default async function handleDlq(event: SqsEvent): Promise<void> {
   }
 
   records.forEach((record, index) => {
+    console.log(record);
     let parsedBody: unknown = record.body;
     if (record.body) {
       try {
@@ -33,7 +34,7 @@ export default async function handleDlq(event: SqsEvent): Promise<void> {
       resources?: string;
     };
 
-    const resource = body?.resources?.split('/')[1] ?? undefined;
+    const resource = body?.resources?.split?.('/')[1] ?? undefined;
     const errorMessage = record.messageAttributes?.ErrorMessage;
 
     logger.logError({
