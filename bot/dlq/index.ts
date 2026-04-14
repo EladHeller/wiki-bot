@@ -24,7 +24,7 @@ export default async function handleDlq(event: SqsEvent): Promise<void> {
     records.forEach((record, index) => {
       console.log(record);
 
-      const resource = record?.eventSourceARN?.split?.('/')[1] ?? undefined;
+      const resource = record?.eventSourceARN?.split?.(':')[1] ?? undefined;
       const errorMessage = record.messageAttributes?.ErrorMessage;
 
       logger.logError({

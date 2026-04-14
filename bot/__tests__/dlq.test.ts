@@ -118,7 +118,7 @@ describe('dlq handler', () => {
       Records: [
         {
           messageId: 'msg-4',
-          body: JSON.stringify({ resources: 'type/resource-id' }),
+          eventSourceARN: 'type:resource-id',
         },
       ],
     };
