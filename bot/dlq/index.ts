@@ -6,6 +6,7 @@ type SqsRecord = {
   body?: string;
   attributes?: Record<string, string>;
   messageAttributes?: Record<string, unknown>;
+  eventSourceARN?: string;
 };
 
 type SqsEvent = {
@@ -13,38 +14,30 @@ type SqsEvent = {
 };
 
 export default async function handleDlq(event: SqsEvent): Promise<void> {
-  const records = event?.Records ?? [];
-  if (!records.length) {
-    logger.logInfo('DLQ event received with no records');
-    return;
-  }
-
-  records.forEach((record, index) => {
-    console.log(record);
-    let parsedBody: unknown = record.body;
-    if (record.body) {
-      try {
-        parsedBody = JSON.parse(record.body);
-      } catch {
-        parsedBody = record.body;
-      }
+  try {
+    const records = event?.Records ?? [];
+    if (!records.length) {
+      logger.logInfo('DLQ event received with no records');
+      return;
     }
 
-    const body = parsedBody as {
-      resources?: string;
-    };
+    records.forEach((record, index) => {
+      console.log(record);
 
-    const resource = body?.resources?.split?.('/')[1] ?? undefined;
-    const errorMessage = record.messageAttributes?.ErrorMessage;
+      const resource = record?.eventSourceARN?.split?.(':')[1] ?? undefined;
+      const errorMessage = record.messageAttributes?.ErrorMessage;
 
-    logger.logError({
-      source: 'lambda-dlq',
-      index,
-      messageId: record.messageId,
-      resource,
-      errorMessage,
+      logger.logError({
+        source: 'lambda-dlq',
+        index,
+        messageId: record.messageId,
+        resource,
+        errorMessage,
+      });
     });
-  });
+  } catch (error) { // prevent endless loop
+    logger.logError(error);
+  }
 }
 
 export const main = botLoggerDecorator(handleDlq, { botName: 'DLQ' });

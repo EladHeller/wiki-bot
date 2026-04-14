@@ -118,7 +118,7 @@ describe('dlq handler', () => {
       Records: [
         {
           messageId: 'msg-4',
-          body: JSON.stringify({ resources: 'type/resource-id' }),
+          eventSourceARN: 'type:resource-id',
         },
       ],
     };
@@ -149,5 +149,21 @@ describe('dlq handler', () => {
     const content = editCall[2] as string;
 
     expect(content).toContain('"errorMessage": "Something went wrong"');
+  });
+
+  it('should not throw error when there is internal error', async () => {
+    const event = {
+      Records: [null],
+    };
+
+    await main(event);
+
+    expect(moduleMockApi.edit).toHaveBeenCalledTimes(1);
+
+    const editCall = moduleMockApi.edit.mock.calls[0];
+    const content = editCall[2] as string;
+
+    expect(content).toContain('===שגיאות===');
+    expect(content).toContain('Cannot read properties of null (reading ');
   });
 });
