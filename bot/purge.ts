@@ -34,8 +34,11 @@ export default async function purgeBot() {
   console.log('Login success');
   const wikipediaArticles = await getWikipediaBirthdays(api);
   const wikiDataArticles = await getWikiDataArticles();
-  const articles = new Set([...wikipediaArticles, ...wikiDataArticles]);
-  console.log(await api.purge([...articles]));
+  const articles = [...new Set([...wikipediaArticles, ...wikiDataArticles])];
+  for (let i = 0; i < articles.length; i += 500) {
+    const batch = articles.slice(i, i + 500);
+    console.log(await api.purge(batch));
+  }
 }
 
 export const main = botLoggerDecorator(purgeBot, { botName: 'בוט רענון דפים שחוגגים יום הולדת' });

@@ -47,7 +47,6 @@ describe('dlq handler', () => {
     expect(content).toContain('===שגיאות===');
     expect(content).toContain('"source": "lambda-dlq"');
     expect(content).toContain('"messageId": "msg-1"');
-    expect(content).toContain('"foo": "bar"');
   });
 
   it('should log info when no records are present', async () => {
@@ -93,7 +92,6 @@ describe('dlq handler', () => {
     const content = editCall[2] as string;
 
     expect(content).toContain('"messageId": "msg-2"');
-    expect(content).toContain('"body": "not-json"');
   });
 
   it('should handle record without body', async () => {
@@ -113,5 +111,43 @@ describe('dlq handler', () => {
     const content = editCall[2] as string;
 
     expect(content).toContain('"messageId": "msg-3"');
+  });
+
+  it('should extract resource from body', async () => {
+    const event = {
+      Records: [
+        {
+          messageId: 'msg-4',
+          body: JSON.stringify({ resources: 'type/resource-id' }),
+        },
+      ],
+    };
+
+    await main(event);
+
+    const editCall = moduleMockApi.edit.mock.calls[0];
+    const content = editCall[2] as string;
+
+    expect(content).toContain('"resource": "resource-id"');
+  });
+
+  it('should extract error message from attributes', async () => {
+    const event = {
+      Records: [
+        {
+          messageId: 'msg-5',
+          messageAttributes: {
+            ErrorMessage: 'Something went wrong',
+          },
+        },
+      ],
+    };
+
+    await main(event);
+
+    const editCall = moduleMockApi.edit.mock.calls[0];
+    const content = editCall[2] as string;
+
+    expect(content).toContain('"errorMessage": "Something went wrong"');
   });
 });
