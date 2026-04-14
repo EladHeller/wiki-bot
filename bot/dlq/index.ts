@@ -29,13 +29,19 @@ export default async function handleDlq(event: SqsEvent): Promise<void> {
       }
     }
 
+    const body = parsedBody as {
+      resources?: string;
+    };
+
+    const resource = body?.resources?.split('/')[1] ?? undefined;
+    const errorMessage = record.messageAttributes?.ErrorMessage;
+
     logger.logError({
       source: 'lambda-dlq',
       index,
       messageId: record.messageId,
-      body: parsedBody,
-      attributes: record.attributes,
-      messageAttributes: record.messageAttributes,
+      resource,
+      errorMessage,
     });
   });
 }
