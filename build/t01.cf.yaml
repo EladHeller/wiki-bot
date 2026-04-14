@@ -272,6 +272,7 @@ Resources:
       Handler: dist/dlq/index.main
       Timeout: 60
       MemorySize: 512
+      DeadLetterQueue: "" # Override global DLQ to prevent endless loop
       Events:
         DLQEvent:
           Type: SQS
