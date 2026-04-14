@@ -5,13 +5,27 @@ globals:
   RequestCredentials: readonly
 extends:
   - airbnb-base
-parserOptions: 
+parserOptions:
   ecmaVersion: 2023
   sourceType: module
 rules:
+  indent: ["error", 2]
   no-console: off
   no-await-in-loop: off
   no-restricted-syntax: off
-  max-len: [error, { code: 120, ignoreStrings: true, ignoreTemplateLiterals: true, ignoreComments: true }]
+  max-len:
+    [
+      error,
+      {
+        code: 120,
+        ignoreStrings: true,
+        ignoreTemplateLiterals: true,
+        ignoreComments: true,
+      },
+    ]
   import/extensions:
-      ['error', 'ignorePackages', {'js': 'never', 'jsx': 'never', 'ts': 'never', 'tsx': 'never'}]
+    [
+      "error",
+      "ignorePackages",
+      { "js": "never", "jsx": "never", "ts": "never", "tsx": "never" },
+    ]

@@ -47,8 +47,8 @@ export default async function getCasualties() {
     const counters = Array.from(window.document.querySelectorAll('.counter-parent'));
     const soldiersKilled = getCounter(counters, 'חללים מתחילת המלחמה');
     const soldiersKilledManeuver = getCounter(counters, 'חללים מהתמרון בעזה');
-    const soldiersWounded = getCounter(counters, 'סה"כ', 0);
-    const soldiersWoundedManeuver = getCounter(counters, 'סה"כ', 1);
+    const soldiersWounded = getCounter(counters, 'סה"כ', 1);
+    const soldiersWoundedManeuver = getCounter(counters, 'סה"כ', 2);
     return {
       soldiersKilled,
       soldiersKilledManeuver,
