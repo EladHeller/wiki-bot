@@ -85,7 +85,7 @@ Resources:
     Properties:
       FunctionName: purge-birthday-function
       Handler: dist/purge.main
-      Timeout: 21
+      Timeout: 900
       MemorySize: 512
       Events:
         Schedule:
