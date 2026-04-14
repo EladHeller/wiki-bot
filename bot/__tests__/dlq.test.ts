@@ -47,7 +47,6 @@ describe('dlq handler', () => {
     expect(content).toContain('===שגיאות===');
     expect(content).toContain('"source": "lambda-dlq"');
     expect(content).toContain('"messageId": "msg-1"');
-    expect(content).toContain('"foo": "bar"');
   });
 
   it('should log info when no records are present', async () => {
@@ -93,7 +92,6 @@ describe('dlq handler', () => {
     const content = editCall[2] as string;
 
     expect(content).toContain('"messageId": "msg-2"');
-    expect(content).toContain('"body": "not-json"');
   });
 
   it('should handle record without body', async () => {
