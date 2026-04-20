@@ -41,7 +41,7 @@ function getFieldString(
 
     const numericString = prettyNumericValue(fixedFieldData, currency);
     const commentKey = `דוח${year}-${name}`;
-    const comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference.replace(companyReportView, companyFinanceView)} נתונים כספיים] באתר [[מאי"ה]].` : ''}}}`;
+    const comment = `{{הערה|שם=${commentKey}${isFirst ? `|1=${name}: [${reference.replace(companyReportView, companyFinanceView)} נתונים כספיים] באתר [[מאיה (הודעות לבורסה)|מאיה]].` : ''}}}`;
     finalString += `${numericString} ([[${year}]])${comment}`;
   }
 
