@@ -357,6 +357,20 @@ Resources:
           Properties:
             Schedule: cron(0 9 ? * 1#1 *)
             Name: sport-personality-templates-years-format-scheduler
+  InformationTemplateCleanupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: information-template-cleanup-function
+      Handler: dist/informationTemplateCleanup/index.main
+      MemorySize: 2048
+      EphemeralStorage:
+        Size: 2048
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 10 ? * 1#1 *)
+            Name: information-template-cleanup-scheduler
 
   ExchangeRatesFunction:
     Type: AWS::Serverless::Function

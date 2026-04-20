@@ -8,6 +8,7 @@ export default async function changeLinksTo(
   currentTarget: string,
   newTarget: string,
   reason: string,
+  namespaces: string[] = ['0'],
   saveText = true,
   isCategory = false,
   isTemplate = false,
@@ -16,7 +17,7 @@ export default async function changeLinksTo(
   await api.login();
 
   const generator = isCategory ? api.categroyPages(currentTarget.replace('קטגוריה:', ''))
-    : api.backlinksTo(currentTarget, '*');
+    : api.backlinksTo(currentTarget, namespaces.join(','));
 
   await asyncGeneratorMapWithSequence<WikiPage>(10, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
