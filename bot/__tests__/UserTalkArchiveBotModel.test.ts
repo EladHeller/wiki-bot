@@ -47,6 +47,7 @@ describe('userTalkArchiveBotModel', () => {
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        archiveDeliveryOnlyMessages: false,
       });
     });
 
@@ -67,6 +68,7 @@ describe('userTalkArchiveBotModel', () => {
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון הדט}}',
         createNewArchive: true,
+        archiveDeliveryOnlyMessages: false,
       });
     });
 
@@ -118,6 +120,18 @@ describe('userTalkArchiveBotModel', () => {
       const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
 
       expect(config?.createNewArchive).toBe(false);
+    });
+
+    it('should parse archiveDeliveryOnlyMessages when set to כן', () => {
+      const pageContent = `{{בוט ארכוב אוטומטי|ארכוב הודעות תפוצה=כן}}
+==דיון==
+תוכן`;
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
+
+      expect(config?.archiveDeliveryOnlyMessages).toBe(true);
     });
 
     it('should return null when template not found', () => {
@@ -298,7 +312,7 @@ Old discussion that should not be archived
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
 
       const pageContent = `
-==חדשופדיה 2024 שבוע 41==
+==Any other title 2024 שבוע 41==
 Some content here without a standard signature.
 
 ==Any other title 2025 שבוע 4==
@@ -314,7 +328,7 @@ Should not be matched now.
       const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
 
       expect(result).toHaveLength(1);
-      expect(result[0]).toContain('חדשופדיה 2024 שבוע 41');
+      expect(result[0]).toContain('Any other title 2024 שבוע 41');
       expect(result).not.toContain('Pattern without adjacency');
     });
 
@@ -324,6 +338,39 @@ Should not be matched now.
       const pageContent = `
 ==Some title 2025 שבוע 4==
 Recent content.
+`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should not archive message-delivery-only paragraphs by default', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+
+      const pageContent = `
+==Notification==
+[[משתמש:MediaWiki message delivery]] delivered a message.
+12:00, 1 בינואר 2026 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should not archive חדשופדיה weekly sections by default even without signatures', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+
+      const pageContent = `
+==חדשופדיה 2026 שבוע 16==
+תוכן ניוזלטר.
 `;
 
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
@@ -2224,6 +2271,98 @@ Old discussion
 
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
+    it('should delete message-delivery-only paragraph without archiving by default', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון 1]]}}
+==Notification==
+[[משתמש:MediaWiki message delivery]] delivered a message.
+12:00, 1 בינואר 2026 (IDT)`;
+
+      async function* mockGenerator() {
+        yield [{
+          pageid: 1,
+          ns: 3,
+          title: 'שיחת משתמש:דוגמה',
+          extlinks: [],
+          revisions: [{
+            user: 'test',
+            size: 100,
+            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
+          }],
+        }];
+      }
+
+      wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 99 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
+        expect.not.stringContaining('MediaWiki message delivery'),
+        99,
+      );
+      expect(wikiApi.create).not.toHaveBeenCalled();
+    });
+
+    it('should archive delivery message when ארכוב הודעות תפוצה=כן', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום תבנית תיבת ארכיון=[[שיחת משתמש:דוגמה/ארכיונים]]|ארכוב הודעות תפוצה=כן}}
+==Notification==
+[[משתמש:MediaWiki message delivery]] delivered a message.
+12:00, 1 בינואר 2026 (IDT)`;
+
+      const archiveBoxContent = `{{תיבת ארכיון|
+* [[/ארכיון 1]]
+}}`;
+
+      async function* mockGenerator() {
+        yield [{
+          pageid: 1,
+          ns: 3,
+          title: 'שיחת משתמש:דוגמה',
+          extlinks: [],
+          revisions: [{
+            user: 'test',
+            size: 100,
+            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
+          }],
+        }];
+      }
+
+      wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
+      wikiApi.info.mockResolvedValueOnce([{}]); // latest talk page exists
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 100 }); // latest talk page content
+      wikiApi.info.mockResolvedValueOnce([{}]); // archive box exists
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 }); // archive box content
+      wikiApi.info.mockResolvedValueOnce([{}]); // archive page exists
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]); // archive page content missing => create
+      wikiApi.info.mockResolvedValueOnce([{}]); // talk page exists before removal
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 100 }); // talk page content for removal
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.stringContaining('MediaWiki message delivery'),
+        expect.any(Number),
+      );
+      expect(wikiApi.edit).not.toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
+        expect.any(String),
+        expect.any(Number),
+      );
     });
 
     it('should skip processPage when title is תבנית:תיבת ארכיון אוטומטי', async () => {

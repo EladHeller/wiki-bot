@@ -25,6 +25,7 @@ export interface UserTalkArchiveConfig {
   maxArchiveSize: number;
   archiveHeader: string;
   createNewArchive: boolean;
+  archiveDeliveryOnlyMessages?: boolean;
 }
 
 function getPageContent(page: WikiPage): string | null {
@@ -158,6 +159,9 @@ export default function UserTalkArchiveBotModel(
 
     const createNewArchiveStr = params['יצירת דף ארכיון חדש']?.trim();
     const createNewArchive = createNewArchiveStr !== 'לא';
+    const archiveDeliveryOnlyMessages = ['כן', 'yes', 'true', '1'].includes(
+      params['ארכוב הודעות תפוצה']?.trim().toLowerCase() ?? '',
+    );
 
     return {
       talkPage: pageTitle,
@@ -167,6 +171,7 @@ export default function UserTalkArchiveBotModel(
       maxArchiveSize,
       archiveHeader,
       createNewArchive,
+      archiveDeliveryOnlyMessages,
     };
   }
 
@@ -193,20 +198,62 @@ export default function UserTalkArchiveBotModel(
     return date;
   }
 
+  function isNewsletterHeader(paragraph: string): boolean {
+    const headerMatch = paragraph.match(/^[ \t]*==+[ \t]*(.+?)[ \t]*==+[ \t]*$/m);
+    if (!headerMatch) {
+      return false;
+    }
+    return /חדשופדיה \d{4} שבוע \d{1,2}\b/u.test(headerMatch[1]);
+  }
+
+  function hasMessageDeliverySender(paragraph: string): boolean {
+    return /משתמש:MediaWiki message delivery/u.test(paragraph);
+  }
+
+  function shouldDeleteOnlyParagraph(
+    paragraph: string,
+    archiveDeliveryOnlyMessages: boolean,
+  ): boolean {
+    if (archiveDeliveryOnlyMessages) {
+      return false;
+    }
+    const signatures = paragraph.match(/(\d{1,2}):(\d{2}),\s+(\d{1,2})\s+ב([א-ת]+)\s+(\d{4})/gu) ?? [];
+    const hasNoDiscussionReplies = signatures.length <= 1;
+    return (hasMessageDeliverySender(paragraph) && hasNoDiscussionReplies) || isNewsletterHeader(paragraph);
+  }
+
+  function classifyArchivableParagraphs(
+    allParagraphs: string[],
+    inactivityDays: number,
+    archiveDeliveryOnlyMessages: boolean,
+  ): { archive: string[]; deleteOnly: string[] } {
+    const paragraphsToArchive: string[] = [];
+    const deleteOnly: string[] = [];
+
+    allParagraphs.forEach((paragraph) => {
+      if (hasNoArchiveTemplate(paragraph)) {
+        return;
+      }
+      if (shouldDeleteOnlyParagraph(paragraph, archiveDeliveryOnlyMessages)) {
+        deleteOnly.push(paragraph);
+        return;
+      }
+      const lastSignatureDate = extractLastSignatureDate(paragraph) || extractYearAndWeekDate(paragraph);
+      if (lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays)) {
+        paragraphsToArchive.push(paragraph);
+      }
+    });
+
+    return { archive: paragraphsToArchive, deleteOnly };
+  }
+
   async function getArchivableParagraphs(
     pageTitle: string,
     inactivityDays: number,
   ): Promise<string[]> {
     const { content } = await getContent(wikiApi, pageTitle);
     const allParagraphs = getAllParagraphs(content, pageTitle);
-
-    return allParagraphs.filter((paragraph) => {
-      if (hasNoArchiveTemplate(paragraph)) {
-        return false;
-      }
-      const lastSignatureDate = extractLastSignatureDate(paragraph) || extractYearAndWeekDate(paragraph);
-      return lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays);
-    });
+    return classifyArchivableParagraphs(allParagraphs, inactivityDays, false).archive;
   }
 
   async function archiveParagraphs(
@@ -579,10 +626,23 @@ export default function UserTalkArchiveBotModel(
       return;
     }
 
-    const archivableParagraphs = await getArchivableParagraphs(
-      config.talkPage,
+    const { content: latestContent, revid } = await getContent(wikiApi, config.talkPage);
+    const allParagraphs = getAllParagraphs(latestContent, config.talkPage);
+    const { archive: archivableParagraphs, deleteOnly: paragraphsToDeleteOnly } = classifyArchivableParagraphs(
+      allParagraphs,
       config.inactivityDays,
+      Boolean(config.archiveDeliveryOnlyMessages),
     );
+
+    if (paragraphsToDeleteOnly.length > 0) {
+      const updatedContent = removeParagraphsFromContent(latestContent, paragraphsToDeleteOnly);
+      await wikiApi.edit(
+        config.talkPage,
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
+        updatedContent,
+        revid,
+      );
+    }
 
     if (archivableParagraphs.length > 0) {
       await archive(config, archivableParagraphs);
