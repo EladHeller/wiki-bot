@@ -13,17 +13,19 @@ This bot operates in the AWS environment, and updates the Hebrew Wikipedia.
 #### Scheduled Bots (e.g., Market Value, Kineret Level)
 ```mermaid
 graph LR
-    Cron[EventBridge Scheduler] --> Lambda[AWS Lambda Functions]
-    Lambda --> WikiAPI[Wikipedia API]
+    Cron[EventBridge Scheduler] --> LambdaRuntime[Lambda Runtime]
+    LambdaRuntime --> WikiAPI[Wikipedia API]
+    LambdaRuntime -. "On failure" .-> DLQ[SQS: wiki-bot-dlq]
+    DLQ --> DLQLogger[GeneralDlqProcessorFunction]
     
-    subgraph Functions [Bot Functions]
+    subgraph LambdaGroup["AWS Lambda Functions - Bot Code"]
         F1[MarketValueFunction]
         F2[KineretLevelFunction]
         F3[ArchiveUserTalkFunction]
         F4[...]
     end
     
-    Cron -.-> Functions
+    LambdaRuntime --- LambdaGroup
 ```
 
 #### Tag Bot (Full Cycle)
