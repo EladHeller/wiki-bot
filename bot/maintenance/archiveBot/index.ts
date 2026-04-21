@@ -9,7 +9,10 @@ const pages = [
   'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים/לוג',
 ];
 
-const archiveBySignatureDatePages = ['משתמש:Sapper-bot/אימיילים'];
+const archiveBySignatureDatePages = [
+  'משתמש:Sapper-bot/אימיילים',
+  'משתמש:Sapper-bot/לוג ריצות',
+];
 
 export default async function archiveBot() {
   console.log('Starting archive bot');
