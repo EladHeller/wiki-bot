@@ -45,7 +45,7 @@ describe('dlq handler', () => {
     const content = editCall[2] as string;
 
     expect(content).toContain('===שגיאות===');
-    expect(content).toContain('"source": "lambda-dlq"');
+    expect(content).toContain('"resource": "No-resource"');
     expect(content).toContain('"messageId": "msg-1"');
   });
 
@@ -118,7 +118,7 @@ describe('dlq handler', () => {
       Records: [
         {
           messageId: 'msg-4',
-          eventSourceARN: 'type:resource-id',
+          body: '{"resources": ["prefix/resource-id"]}',
         },
       ],
     };
@@ -164,6 +164,6 @@ describe('dlq handler', () => {
     const content = editCall[2] as string;
 
     expect(content).toContain('===שגיאות===');
-    expect(content).toContain('Cannot read properties of null (reading ');
+    expect(content).toContain("Cannot destructure property 'body' of ");
   });
 });

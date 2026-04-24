@@ -13,6 +13,17 @@ type SqsEvent = {
   Records?: SqsRecord[];
 };
 
+type ParsedBody = {
+  version?: string,
+  id?: string,
+  'detail-type'?: string,
+  source?: string,
+  account?: string,
+  region?: string,
+  resources?: string[],
+  detail?: object
+}
+
 export default async function handleDlq(event: SqsEvent): Promise<void> {
   try {
     const records = event?.Records ?? [];
@@ -23,15 +34,22 @@ export default async function handleDlq(event: SqsEvent): Promise<void> {
 
     records.forEach((record, index) => {
       console.log(record);
-
-      const resource = record?.eventSourceARN?.split?.(':')[1] ?? undefined;
+      let resource;
+      const { body } = record;
+      if (body && typeof body === 'string') {
+        try {
+          const parsedBody: ParsedBody = JSON.parse(body);
+          resource = parsedBody.resources?.map((r) => r.split('/').at(-1)).join(', ');
+        } catch {
+          console.error(`Could not parse body: ${body}`);
+        }
+      }
       const errorMessage = record.messageAttributes?.ErrorMessage;
 
       logger.logError({
-        source: 'lambda-dlq',
         index,
         messageId: record.messageId,
-        resource,
+        resource: resource ?? 'No-resource',
         errorMessage,
       });
     });
