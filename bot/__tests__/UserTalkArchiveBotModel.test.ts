@@ -2311,6 +2311,44 @@ Old discussion
       expect(wikiApi.create).not.toHaveBeenCalled();
     });
 
+    it('should not delete message-delivery-only paragraph before inactivity period', async () => {
+      fakerTimers.setSystemTime(new Date('2026-01-10T00:00:00Z'));
+
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון 1]]|ימים מתגובה אחרונה=30}}
+==Notification==
+[[משתמש:MediaWiki message delivery]] delivered a message.
+12:00, 1 בינואר 2026 (IDT)`;
+
+      async function* mockGenerator() {
+        yield [{
+          pageid: 1,
+          ns: 3,
+          title: 'שיחת משתמש:דוגמה',
+          extlinks: [],
+          revisions: [{
+            user: 'test',
+            size: 100,
+            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
+          }],
+        }];
+      }
+
+      wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 100 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).not.toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
+        expect.any(String),
+        expect.any(Number),
+      );
+      expect(wikiApi.create).not.toHaveBeenCalled();
+    });
+
     it('should archive delivery message when ארכוב הודעות תפוצה=כן', async () => {
       fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
 

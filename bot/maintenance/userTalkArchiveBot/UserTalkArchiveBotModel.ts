@@ -235,7 +235,10 @@ export default function UserTalkArchiveBotModel(
         return;
       }
       if (shouldDeleteOnlyParagraph(paragraph, archiveDeliveryOnlyMessages)) {
-        deleteOnly.push(paragraph);
+        const lastSignatureDate = extractLastSignatureDate(paragraph) || extractYearAndWeekDate(paragraph);
+        if (lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays)) {
+          deleteOnly.push(paragraph);
+        }
         return;
       }
       const lastSignatureDate = extractLastSignatureDate(paragraph) || extractYearAndWeekDate(paragraph);
