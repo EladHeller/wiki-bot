@@ -60,8 +60,8 @@ function textToMarketCap(marketCap: string): MarketCap | null {
 export default async function getStockData(
   googleFinanceUrl: string,
 ): Promise<GoogleFinanceData | null> {
-  const dom = await JSDOM.fromURL(googleFinanceUrl);
-  const { document } = dom.window;
+  const dom = await fetch(googleFinanceUrl).then((res) => res.text());
+  const { document } = new JSDOM(dom.replace(/<style[^>]*>[^<]*<\/style>/g, '')).window;
   const mainElement = document.querySelector('main');
   if (!mainElement) {
     return null;
