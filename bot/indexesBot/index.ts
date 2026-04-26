@@ -150,7 +150,7 @@ export default async function indexesBot() {
 
   const newTemplateDataRecord = Object.fromEntries(newTemplateData);
 
-  validateDataChanges(oldData, newTemplateDataRecord, 'מדד תל אביב בסיס');
+  validateDataChanges(oldData, newTemplateDataRecord, 'מדד תל אביב בסיס', 10, 1);
 
   const newTemplateText = templateFromKeyValueData(newTemplateDataRecord, templateStart);
   const newContent = content.replace(oldTemplate, newTemplateText);

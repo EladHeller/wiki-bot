@@ -58,7 +58,7 @@ export async function checkWikidata() {
   const wikidataResults = await companiesWithTicker();
   const results = await getGoogleFinanceLinks(api);
   const companiesWithTickers: Record<string, {
-    wikiDataTickers: { companyId: string, exchange: string, ticker }[], templateTicker: string
+    wikiDataTickers: { companyId: string, exchange: string, ticker: string }[], templateTicker: string
   }> = {};
   for (const result of wikidataResults) {
     const {
