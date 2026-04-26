@@ -1,6 +1,7 @@
 import { JSDOM } from 'jsdom';
 import { WikiPage } from '../types';
 import { logger, stringify } from '../utilities/logger';
+import { CurrencyCode, currencyName } from '../utilities';
 
 function getTextNodeByText(textNodes: Text[], label: string): Text | undefined {
   return textNodes.find((textNode) => textNode.textContent?.trim().toUpperCase() === label);
@@ -17,7 +18,7 @@ const numberSignToHebrewNumber = {
 
 export interface MarketCap {
   number: string;
-  currency: string;
+  currency: CurrencyCode;
   date?: string;
 }
 
@@ -31,19 +32,28 @@ export interface WikiPageWithGoogleFinance {
   ticker: string;
 }
 
-function textToMarketCao(marketCap: string): MarketCap {
+function isCurrency(str: string): str is CurrencyCode {
+  return Object.keys(currencyName).includes(str);
+}
+
+function isNumberName(str: string): str is keyof typeof numberSignToHebrewNumber {
+  return Object.keys(numberSignToHebrewNumber).includes(str);
+}
+
+function textToMarketCap(marketCap: string): MarketCap | null {
   const matches = marketCap.match(/(\d{1,3}(?:\.\d{1,2}))(\w) (\w+)/);
   if (!matches?.[1]) {
-    return {
-      number: '0',
-      currency: 'USD',
-    };
+    return null;
   }
   const num = matches[1];
   const numberName = matches[2];
+  const currencyCode = matches[3];
+  if (!isCurrency(currencyCode)) {
+    return null;
+  }
   return {
-    number: `${num}${(numberName && numberSignToHebrewNumber[numberName]) ? ` [[${numberSignToHebrewNumber[numberName]}]]` : ''}`,
-    currency: matches[3],
+    number: `${num}${isNumberName(numberName) ? ` [[${numberSignToHebrewNumber[numberName]}]]` : ''}`,
+    currency: currencyCode,
   };
 }
 
@@ -75,8 +85,12 @@ export default async function getStockData(
   if (date > now) {
     date.setFullYear(date.getFullYear() - 1);
   }
+  const marketCapData = textToMarketCap(marketCap ?? '');
+  if (!marketCapData) {
+    return null;
+  }
   return {
-    marketCap: { ...textToMarketCao(marketCap ?? ''), date: date.toJSON() },
+    marketCap: { ...marketCapData, date: date.toJSON() },
   };
 }
 
