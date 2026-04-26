@@ -48,7 +48,7 @@ describe('indexesBot validation', () => {
   });
 
   describe('base index template validation', () => {
-    it('should throw error when more than 20% of indexes are deleted', async () => {
+    it('should throw error when more than 10% of indexes are deleted', async () => {
       const oldTemplateContent = `{{#switch: {{{1}}}
 | מדד 1 = חברה א • חברה ב
 | מדד 2 = חברה ג • חברה ד
@@ -101,7 +101,7 @@ describe('indexesBot validation', () => {
       expect(mockApi.edit).not.toHaveBeenCalled();
     });
 
-    it('should log warning when 10-20% of indexes are deleted', async () => {
+    it('should log warning when 1-10% of indexes are deleted', async () => {
       const oldTemplateContent = `{{#switch: {{{1}}}
 | מדד 1 = חברה א
 | מדד 2 = חברה ב
@@ -122,7 +122,7 @@ describe('indexesBot validation', () => {
       const pageResponses: Record<string, { content: string; revid: number }> = {
         'תבנית:מדד תל אביב בסיס/נתונים': { content: oldTemplateContent, revid: 123 },
         'תבנית:מדד תל אביב בסיס': {
-          content: `== מדדים נכללים ==\n${Array.from({ length: 8 }, (_, i) => `[[מדד ${i + 1}]]`).join('\n')}`,
+          content: `== מדדים נכללים ==\n${Array.from({ length: 9 }, (_, i) => `[[מדד ${i + 1}]]`).join('\n')}`,
           revid: 124,
         },
         'תבנית:מדדי הבורסה לניירות ערך בתל אביב': {
@@ -139,7 +139,7 @@ describe('indexesBot validation', () => {
       ));
 
       (jest.mocked(getIndicesList)).mockResolvedValue(
-        Array.from({ length: 8 }, (_, i) => ({
+        Array.from({ length: 9 }, (_, i) => ({
           IndexHebName: `מדד ${i + 1}`,
           IndexId: `${i + 1}`,
           Id: `${i + 1}`,
