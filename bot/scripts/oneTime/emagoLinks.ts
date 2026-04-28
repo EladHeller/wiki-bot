@@ -3,7 +3,7 @@ import { asyncGeneratorMapWithSequence } from '../../utilities';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const webArchivePrefix = 'https://web.archive.org/web/20230403233921/';
-const doubleWebArchiveRegex = /https:\/\/web\.archive\.org\/web\/\d+\/https:\/\/web\.archive\.org\/web\/\d+\//g;
+const doubleWebArchiveRegex = /(https:\/\/web\.archive\.org\/web\/\d+\/)(https:\/\/web\.archive\.org\/web\/\d+\/)/g;
 const regex = /(http:\/\/www\.e-mago\.co\.il\/\w+)/g;
 async function fixPage(api: IWikiApi, page: WikiPage) {
   const content = page.revisions?.[0].slots.main['*'];
@@ -14,15 +14,10 @@ async function fixPage(api: IWikiApi, page: WikiPage) {
   }
 
   let newContent = content.replaceAll(regex, `${webArchivePrefix}$1`);
-  newContent = content.replaceAll(webArchivePrefix + webArchivePrefix, webArchivePrefix);
-  newContent = content.replaceAll(webArchivePrefix + webArchivePrefix, webArchivePrefix);
-  newContent = content.replaceAll(webArchivePrefix + webArchivePrefix, webArchivePrefix);
-  newContent = content.replaceAll(webArchivePrefix + webArchivePrefix, webArchivePrefix);
-  newContent = content.replaceAll(webArchivePrefix + webArchivePrefix, webArchivePrefix);
-  newContent = content.replaceAll(doubleWebArchiveRegex, webArchivePrefix);
-  newContent = content.replaceAll(doubleWebArchiveRegex, webArchivePrefix);
-  newContent = content.replaceAll(doubleWebArchiveRegex, webArchivePrefix);
-  newContent = content.replaceAll(doubleWebArchiveRegex, webArchivePrefix);
+  newContent = newContent.replaceAll(webArchivePrefix + webArchivePrefix, webArchivePrefix);
+  newContent = newContent.replaceAll(webArchivePrefix + webArchivePrefix, webArchivePrefix);
+  newContent = newContent.replaceAll(doubleWebArchiveRegex, '$1');
+  newContent = newContent.replaceAll(doubleWebArchiveRegex, '$1');
 
   if (newContent === content) {
     console.warn(`no change for page ${page.title}`);
@@ -33,7 +28,7 @@ async function fixPage(api: IWikiApi, page: WikiPage) {
   console.log(`Fix ${page.title}`);
 }
 
-export default async function fixEmagoLinks() {
+export async function fixEmagoContribs() {
   const api = WikiApi();
   await api.login();
 
@@ -71,4 +66,13 @@ export default async function fixEmagoLinks() {
     };
     await fixPage(api, page);
   });
+}
+
+export default async function fixEmagoLinks() {
+  const api = WikiApi();
+  await api.login();
+
+  const generator = api.externalUrl('www.e-mago.co.il', 'http', '*');
+
+  await asyncGeneratorMapWithSequence(50, generator, (page: WikiPage) => async () => fixPage(api, page));
 }
