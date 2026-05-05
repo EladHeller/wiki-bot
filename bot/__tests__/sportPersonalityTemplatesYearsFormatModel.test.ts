@@ -236,7 +236,11 @@ describe('processArticle', () => {
     const title = 'אלי אוחנה';
     const content = 'Some text {{אישיות כדורגל|שנות נוער=[[1990]] - [[1991]]}} more text';
 
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123, contentmodel: 'wikitext', pageid: 123, result: 'Success', title: 'pageTitle',
+      },
+    });
 
     const result = await processArticle(api, {
       title,
@@ -261,7 +265,7 @@ describe('processArticle', () => {
 
     expect(api.edit).toHaveBeenCalledWith(
       title,
-      'תיקון עיצוב טווחי שנים בתבניות אישיות ספורט',
+      'עיצוב טווחי שנים בתבניות אישיות ספורט',
       expect.stringContaining('שנות נוער=1990–1991'),
       123,
     );
@@ -330,7 +334,11 @@ describe('processArticle', () => {
     const title = 'Some Article';
     const content = '{{אישיות כדורגל|שנות נוער=[[1990]] - [[1991]]}} {{אישיות כדורגל|שנים כשחקן=[[1995]] - [[2000]]}}';
 
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123, contentmodel: 'wikitext', pageid: 123, result: 'Success', title: 'pageTitle',
+      },
+    });
 
     const result = await processArticle(api, {
       title,
@@ -355,7 +363,7 @@ describe('processArticle', () => {
 
     expect(api.edit).toHaveBeenCalledWith(
       title,
-      'תיקון עיצוב טווחי שנים בתבניות אישיות ספורט',
+      'עיצוב טווחי שנים בתבניות אישיות ספורט',
       expect.stringContaining('שנות נוער=1990–1991'),
       123,
     );
@@ -381,7 +389,11 @@ describe('processArticle', () => {
     const title = 'Basketball Player';
     const content = 'Some text {{אישיות כדורסל|שנים כשחקן=[[1990]] - [[1991]]|שנים כמאמן=1995-2000}} more text';
 
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123, contentmodel: 'wikitext', pageid: 123, result: 'Success', title: 'pageTitle',
+      },
+    });
 
     const result = await processArticle(api, {
       title,
@@ -406,7 +418,7 @@ describe('processArticle', () => {
 
     expect(api.edit).toHaveBeenCalledWith(
       title,
-      'תיקון עיצוב טווחי שנים בתבניות אישיות ספורט',
+      'עיצוב טווחי שנים בתבניות אישיות ספורט',
       expect.stringContaining('שנים כשחקן=1990–1991'),
       123,
     );
@@ -417,7 +429,11 @@ describe('processArticle', () => {
     const title = 'Some Article';
     const content = '{{אישיות כדורגל|שנות נוער=[[1990]] - [[1991]]}} {{אישיות כדורסל|שנים כשחקן=[[1995]] - [[2000]]}}';
 
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123, contentmodel: 'wikitext', pageid: 123, result: 'Success', title: 'pageTitle',
+      },
+    });
 
     await processArticle(api, {
       title,
@@ -442,13 +458,13 @@ describe('processArticle', () => {
 
     expect(api.edit).toHaveBeenCalledWith(
       title,
-      'תיקון עיצוב טווחי שנים בתבניות אישיות ספורט',
+      'עיצוב טווחי שנים בתבניות אישיות ספורט',
       expect.stringContaining('שנות נוער=1990–1991'),
       123,
     );
     expect(api.edit).toHaveBeenCalledWith(
       title,
-      'תיקון עיצוב טווחי שנים בתבניות אישיות ספורט',
+      'עיצוב טווחי שנים בתבניות אישיות ספורט',
       expect.stringContaining('שנים כשחקן=1995–2000'),
       123,
     );
@@ -539,7 +555,11 @@ describe('sportPersonalityTemplatesYearsFormatModel', () => {
     ];
 
     mockApi.login.mockResolvedValue(undefined);
-    mockApi.edit.mockResolvedValue({});
+    mockApi.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123, contentmodel: 'wikitext', pageid: 123, result: 'Success', title: 'pageTitle',
+      },
+    });
 
     async function* mockGenerator() {
       yield pages;
@@ -553,7 +573,7 @@ describe('sportPersonalityTemplatesYearsFormatModel', () => {
     expect(mockApi.getArticlesWithTemplate).toHaveBeenCalledWith('אישיות כדורגל');
     expect(mockApi.edit).toHaveBeenCalledWith(
       'אלי אוחנה',
-      'תיקון עיצוב טווחי שנים בתבניות אישיות ספורט',
+      'עיצוב טווחי שנים בתבניות אישיות ספורט',
       expect.stringContaining('שנות נוער=1990–1991'),
       123,
     );
@@ -606,8 +626,11 @@ describe('sportPersonalityTemplatesYearsFormatModel', () => {
     ];
 
     mockApi.login.mockResolvedValue(undefined);
-    mockApi.edit.mockResolvedValue({});
-
+    mockApi.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123, contentmodel: 'wikitext', pageid: 123, result: 'Success', title: 'pageTitle',
+      },
+    });
     async function* footballGenerator() {
       yield footballPages;
     }

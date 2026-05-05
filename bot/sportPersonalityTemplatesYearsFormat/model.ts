@@ -26,6 +26,7 @@ const TEMPLATES_CONFIG: Record<TemplateName, string[]> = {
     'שנים כשחקן',
     'שנים כמאמן',
     'שנים כג\'נרל מנג\'ר',
+    'מכללה',
   ],
 };
 
@@ -113,7 +114,7 @@ export async function processArticle(
     if (hasChanges && updatedContent !== originalContent) {
       await api.edit(
         page.title,
-        'תיקון עיצוב טווחי שנים בתבניות אישיות ספורט',
+        'עיצוב טווחי שנים בתבניות אישיות ספורט',
         updatedContent,
         revid,
       );

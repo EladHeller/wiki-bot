@@ -37,9 +37,17 @@ describe('archiveParagraph', () => {
   });
 
   it('should archive the paragraph successfully', async () => {
-    api.info.mockResolvedValue([{ }]);
+    api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValue({ content: 'existingContent', revid: 456 });
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = 'paragraphContent';
@@ -63,9 +71,17 @@ describe('archiveParagraph', () => {
   });
 
   it('should handle archive page start with /', async () => {
-    api.info.mockResolvedValue([{ }]);
+    api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValue({ content: 'existingContent', revid: 456 });
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const pageTitle = 'pageTitle';
     const archiveBox = '{{תיבת ארכיון|[[/archiveBoxContent]]}}';
@@ -92,9 +108,17 @@ describe('archiveParagraph', () => {
   const userSign = '[[user:Homer Simpson|Homer]] [[user talk:Homer Simpson|Mmmm donats!]] 12:23 7 במאי 2025.';
 
   it('should replace archive command with bot comment', async () => {
-    api.info.mockResolvedValue([{ }]);
+    api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValue({ content: 'existingContent', revid: 456 });
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `paragraphContent\n:@[[משתמש:Sapper-bot]] ארכב: ${userSign}`;
@@ -120,10 +144,18 @@ describe('archiveParagraph', () => {
   const statusTemplate = '{{מצב|טופל|Lisa|ליזה}}';
 
   it('should archive template with status template', async () => {
-    api.info.mockResolvedValue([{ }]);
+    api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
@@ -159,11 +191,19 @@ ${statusTemplate}
   });
 
   it('should create new page if not exists', async () => {
-    api.info.mockResolvedValue([{ }]);
+    api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
-    api.info.mockResolvedValueOnce([{ }]);
+    api.info.mockResolvedValueOnce([{}]);
     api.info.mockResolvedValueOnce([{ missing: '1' }]);
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
@@ -198,10 +238,18 @@ ${statusTemplate}
   });
 
   it('should archive template with status template when target is not link', async () => {
-    api.info.mockResolvedValue([{ }]);
+    api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
@@ -237,10 +285,18 @@ ${statusTemplate}
   });
 
   it('should return error when there is wrong arguments', async () => {
-    api.info.mockResolvedValue([{ }]);
+    api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==
@@ -254,10 +310,18 @@ paragraphContent
   });
 
   it('should support old format with יעד (backward compatibility)', async () => {
-    api.info.mockResolvedValue([{ }]);
+    api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValueOnce({ content: 'existingContent', revid: 456 });
     api.articleContent.mockResolvedValueOnce({ content: 'targetContent', revid: 678 });
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
     const paragraphContent = `==paragraph headline==

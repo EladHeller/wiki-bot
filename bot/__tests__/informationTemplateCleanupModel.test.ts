@@ -98,7 +98,15 @@ describe('processArticle', () => {
     const title = 'קובץ:Example.jpg';
     const content = 'פתיח {{מידע|תיאור=אין|מקור=אתר רשמי|יוצר=לא ידוע}} סיום';
 
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const result = await processArticle(api, buildFilePage(title, content));
 
@@ -164,7 +172,15 @@ describe('informationTemplateCleanupModel', () => {
     ];
 
     mockApi.login.mockResolvedValue(undefined);
-    mockApi.edit.mockResolvedValue({});
+    mockApi.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     async function* mockGenerator() {
       yield pages;

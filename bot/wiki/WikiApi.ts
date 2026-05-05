@@ -6,6 +6,7 @@ import {
   WikiPage,
   FileWithGlobalUsage,
   WikiRedirectData,
+  EditResponse,
 } from '../types';
 import { objectToFormData } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
@@ -23,7 +24,7 @@ export interface IWikiApi {
   updateArticle(articleTitle: string, summary: string, content: string, newSectionTitle?: string): Promise<any>;
   edit(
     articleTitle: string, summary: string, content: string, baseRevId: number, newSectionTitle?: string
-  ): Promise<any>;
+  ): Promise<EditResponse>;
   create(
     articleTitle: string, summary: string, content: string
   ): Promise<any>;
