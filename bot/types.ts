@@ -13,6 +13,19 @@ export type Revision = {
   }
 };
 
+export type EditResponse = {
+  edit: {
+    result: string;
+    pageid: number;
+    title: string;
+    contentmodel: string;
+    oldrevid?: number;
+    newrevid?: number;
+    newtimestamp?: string;
+    nochange?: string;
+  }
+}
+
 export type WikiPage = {
   pageid: number;
   ns: number;
