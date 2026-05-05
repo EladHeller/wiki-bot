@@ -19,7 +19,15 @@ describe('moveTo', () => {
   it('should move the paragraph successfully to an existing page', async () => {
     api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValue({ content: 'targetContent', revid: 678 });
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
@@ -58,7 +66,15 @@ paragraphContent
   it('should move the paragraph successfully to a new page', async () => {
     api.info.mockResolvedValue([{ missing: '1' }]);
     api.create.mockResolvedValue({});
-    api.edit.mockResolvedValue({});
+    api.edit.mockResolvedValue({
+      edit: {
+        newrevid: 123,
+        contentmodel: 'wikitext',
+        pageid: 123,
+        result: 'Success',
+        title: 'pageTitle',
+      },
+    });
 
     const paragraphContent = `==paragraph headline==
 paragraphContent
