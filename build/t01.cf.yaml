@@ -89,7 +89,7 @@ Resources:
         Schedule:
           Type: Schedule
           Properties:
-            Schedule: cron(0 0 ? * * *)
+            Schedule: cron(17 0 ? * * *)
             Name: purge-birthday-scheduler
 
   ProtectTemplatesFunction:
