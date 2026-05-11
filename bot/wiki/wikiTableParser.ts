@@ -25,7 +25,7 @@ function getNextRowDelimiterIndex(rowText: string, currIndex: number, delimiter:
 function getTableRow(rowText: string, isHeader: boolean): TableRow {
   const text = rowText.replace(/\n\s*\|}/g, '');
   const delimiter = isHeader ? '!' : '|';
-  const row: TableRow = { fields: [], style: '' };
+  const row: TableRow = { fields: [], style: '', isHeader };
   let currIndex = 0;
 
   if (text[currIndex] === delimiter) {

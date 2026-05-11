@@ -255,10 +255,8 @@ adasd
       wikiApi.info.mockResolvedValue([{ missing: '' }]);
 
       archiveBotModel = ArchiveBotModel(wikiApi);
-
       await archiveBotModel.archiveContent('logPage', 'signatureDate');
 
-      expect(wikiApi.create).toHaveBeenCalledTimes(1);
       expect(wikiApi.create).toHaveBeenCalledWith(
         'logPage/ארכיון פברואר 2020',
         'ארכוב פברואר 2020',
@@ -272,10 +270,7 @@ adasd
 טקסט סיום
 `,
       );
-
-      // It should edit the source page, removing B and D, leaving A, C, E intact.
       expect(wikiApi.edit).toHaveBeenCalledTimes(1);
-
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'logPage',
         'ארכוב פברואר 2020',
@@ -296,7 +291,7 @@ adasd
     });
 
     it('does nothing when no paragraph contains a signature for the target month', async () => {
-      fakerTimers.setSystemTime(new Date('2020-03-02T00:00:00Z')); // target month: Feb 2020
+      fakerTimers.setSystemTime(new Date('2020-03-02T00:00:00Z'));
 
       const pageContent = `
 ==Only January==
@@ -312,16 +307,18 @@ adasd
       wikiApi.info.mockResolvedValue([{ missing: '' }]);
 
       archiveBotModel = ArchiveBotModel(wikiApi);
-
       await archiveBotModel.archiveContent('logPage', 'signatureDate');
 
-      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.create).not.toHaveBeenCalledWith(
+        expect.stringContaining('logPage'),
+        expect.any(String),
+        expect.any(String),
+      );
       expect(wikiApi.edit).not.toHaveBeenCalled();
     });
 
     it('respects explicit archiveMonthDate (e.g., יולי 2025)', async () => {
       const archiveMonthDate = new Date('2025-07-01T00:00:00Z');
-
       const pageContent = `
 
 
@@ -339,7 +336,6 @@ adasd
         ...defaultConfig,
         archiveMonthDate,
       });
-
       await archiveBotModel.archiveContent('logPage', 'signatureDate');
 
       expect(wikiApi.create).toHaveBeenCalledWith(
@@ -360,6 +356,56 @@ adasd
 01:00, 1 באוגוסט 2025 (IDT)
 `,
         12,
+      );
+    });
+
+    it('tracks undated paragraph on first detection and does not archive it immediately', async () => {
+      fakerTimers.setSystemTime(new Date('2020-03-02T00:00:00Z'));
+      const pageContent = '\n==No date paragraph==\nאין חתימה\n';
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 10 });
+      wikiApi.info.mockResolvedValue([{ missing: '' }]);
+
+      archiveBotModel = ArchiveBotModel(wikiApi);
+      await archiveBotModel.archiveContent('logPage', 'signatureDate');
+
+      expect(wikiApi.create).toHaveBeenCalledTimes(1);
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'ויקיפדיה:בוט/ארכוב פסקאות ללא תאריך',
+        'בוט ארכוב: עדכון טבלת פסקאות ללא תאריך',
+        expect.stringContaining('No date paragraph'),
+      );
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
+    it('archives undated paragraph after it stayed in tracker long enough', async () => {
+      fakerTimers.setSystemTime(new Date('2020-03-02T00:00:00Z'));
+      const pageContent = '\n==No date paragraph==\nאין חתימה\n';
+      const trackerContent = `{| class="wikitable sortable"
+! דף !! כותרת פסקה !! תאריך הוספה
+|-
+| logPage || No date paragraph || 2020-02-10
+|}`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 10 });
+      wikiApi.articleContent.mockResolvedValue({ content: trackerContent, revid: 5 });
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      wikiApi.info.mockResolvedValue([{}]);
+
+      archiveBotModel = ArchiveBotModel(wikiApi);
+      await archiveBotModel.archiveContent('logPage', 'signatureDate');
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'logPage/ארכיון פברואר 2020',
+        'ארכוב פברואר 2020',
+        '{{ארכיון}}\n==No date paragraph==\nאין חתימה\n',
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith('logPage', 'ארכוב פברואר 2020', '\n', 10);
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'ויקיפדיה:בוט/ארכוב פסקאות ללא תאריך',
+        'בוט ארכוב: עדכון טבלת פסקאות ללא תאריך',
+        expect.not.stringContaining('No date paragraph'),
+        5,
       );
     });
   });

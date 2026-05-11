@@ -249,6 +249,29 @@ No signature here
       expect(result).toHaveLength(0);
     });
 
+    it('should archive undated paragraph after it has been tracked long enough', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion 1==
+No signature here
+`;
+      const trackerContent = `{| class="wikitable sortable"
+! דף !! כותרת פסקה !! תאריך הוספה
+|-
+| שיחת משתמש:דוגמה || Discussion 1 || 2025-01-01
+|}`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockResolvedValue({ content: trackerContent, revid: 2 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toContain('Discussion 1');
+    });
+
     it('should use custom inactivity days', async () => {
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
 
@@ -2424,6 +2447,64 @@ Old discussion
       await model.run();
 
       expect(wikiApi.articleContent).not.toHaveBeenCalled();
+    });
+
+    it('should archive a tracked undated paragraph during run', async () => {
+      fakerTimers.setSystemTime(new Date('2026-02-01T00:00:00Z'));
+
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום תבנית תיבת ארכיון=[[שיחת משתמש:דוגמה/ארכיונים]]|ימים מתגובה אחרונה=14}}
+==Discussion 1==
+No signature here`;
+      const archiveBoxContent = `{{תיבת ארכיון|
+* [[/ארכיון 1]]
+}}`;
+      const trackerContent = `{| class="wikitable sortable"
+! דף !! כותרת פסקה !! תאריך הוספה
+|-
+| שיחת משתמש:דוגמה || Discussion 1 || 2026-01-01
+|}`;
+
+      async function* mockGenerator() {
+        yield [{
+          pageid: 1,
+          ns: 3,
+          title: 'שיחת משתמש:דוגמה',
+          extlinks: [],
+          revisions: [{
+            user: 'test',
+            size: 100,
+            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
+          }],
+        }];
+      }
+
+      wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
+      wikiApi.info.mockResolvedValue([{}]);
+      wikiApi.articleContent
+        .mockResolvedValueOnce({ content: pageContent, revid: 100 })
+        .mockResolvedValueOnce({ content: trackerContent, revid: 2 })
+        .mockResolvedValueOnce({ content: archiveBoxContent, revid: 3 })
+        .mockResolvedValueOnce({ content: pageContent, revid: 100 })
+        .mockResolvedValueOnce({ content: trackerContent, revid: 2 });
+      wikiApi.info
+        .mockResolvedValueOnce([{}]) // talk page exists
+        .mockResolvedValueOnce([{}]) // tracker page exists
+        .mockResolvedValueOnce([{}]) // archive box page exists
+        .mockResolvedValueOnce([{}]) // archive page exists
+        .mockResolvedValueOnce([{}]) // talk page exists before removal
+        .mockResolvedValueOnce([{}]) // tracker page exists before cleanup
+        .mockResolvedValueOnce([{}]); // tracker page exists for save
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.stringContaining('Discussion 1'),
+        expect.any(Number),
+      );
     });
   });
 });
