@@ -8,6 +8,7 @@ export default async function rollback(
   user: string,
 ) {
   const api = WikiApi();
+  await api.login();
   const startTime = new Date();
   startTime.setHours(startTime.getHours() - hoursAgo);
   const endTime = new Date();
