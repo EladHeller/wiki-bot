@@ -15,6 +15,7 @@ describe('closedDiscussionsArchiveBotModel', () => {
 
   beforeEach(() => {
     wikiApi = WikiApiMock();
+    wikiApi.info.mockResolvedValue([{ missing: '' }]);
     loggerLogWarningSpy = jest.spyOn(logger, 'logWarning').mockImplementation(() => { });
   });
 
@@ -201,6 +202,64 @@ No signature here
       const result = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
 
       expect(result).toHaveLength(0);
+    });
+
+    it('should archive undated paragraph after it has been tracked long enough', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion 1==
+{{מצב|הועבר}}
+No signature here
+`;
+      const trackerContent = `{| class="wikitable sortable"
+! דף !! כותרת פסקה !! תאריך הוספה
+|-
+| TestPage || Discussion 1 || 2025-01-01
+|}`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockResolvedValue({ content: trackerContent, revid: 2 });
+      wikiApi.info.mockResolvedValue([{}]);
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const result = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toContain('Discussion 1');
+    });
+
+    it('should use current date for undated paragraph during quarterly archive', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion 1==
+{{מצב|הועבר}}
+No signature here
+`;
+      const trackerContent = `{| class="wikitable sortable"
+! דף !! כותרת פסקה !! תאריך הוספה
+|-
+| TestPage || Discussion 1 || 2025-01-01
+|}`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockResolvedValue({ content: trackerContent, revid: 2 });
+      wikiApi.info.mockResolvedValue([{}]);
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
+
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+
+      await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
+
+      expect(wikiApi.create).toHaveBeenCalledTimes(1);
+
+      const createCall = (jest.mocked(wikiApi.create)).mock.calls[0];
+
+      expect(createCall[0]).toContain('ארכיון');
     });
 
     it('should use custom inactivity days', async () => {
@@ -467,13 +526,16 @@ This has an unparseable date
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
       // Should only archive the valid discussion
-      expect(wikiApi.create).toHaveBeenCalledTimes(1);
-      expect(wikiApi.edit).toHaveBeenCalledTimes(1);
-
-      const createCall = (jest.mocked(wikiApi.create)).mock.calls[0];
-
-      expect(createCall[2]).toContain('Valid Discussion');
-      expect(createCall[2]).not.toContain('Invalid Date Discussion');
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        expect.stringContaining('ארכיון'),
+        expect.any(String),
+        expect.stringContaining('Valid Discussion'),
+      );
+      expect(wikiApi.create).not.toHaveBeenCalledWith(
+        expect.stringContaining('ארכיון'),
+        expect.any(String),
+        expect.stringContaining('Invalid Date Discussion'),
+      );
     });
 
     it('should skip paragraphs with no parseable dates at all', async () => {
@@ -501,13 +563,16 @@ This has no date at all, just text
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
       // Should only archive the valid discussion
-      expect(wikiApi.create).toHaveBeenCalledTimes(1);
-      expect(wikiApi.edit).toHaveBeenCalledTimes(1);
-
-      const createCall = (jest.mocked(wikiApi.create)).mock.calls[0];
-
-      expect(createCall[2]).toContain('Valid Discussion');
-      expect(createCall[2]).not.toContain('No Date Discussion');
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        expect.stringContaining('ארכיון'),
+        expect.any(String),
+        expect.stringContaining('Valid Discussion'),
+      );
+      expect(wikiApi.create).not.toHaveBeenCalledWith(
+        expect.stringContaining('ארכיון'),
+        expect.any(String),
+        expect.stringContaining('No Date Discussion'),
+      );
     });
 
     it('should add multiple paragraphs to the same archive page sequentially', async () => {
@@ -733,7 +798,6 @@ Discussion content
 
       await model.archive('TestPage', archivableParagraphs, 'תבנית ארכיון', 'TestPage/Navigate');
 
-      expect(wikiApi.info).toHaveBeenCalledTimes(1);
       expect(wikiApi.info).toHaveBeenCalledWith(['TestPage/ארכיון 2']);
 
       expect(wikiApi.edit).toHaveBeenCalledWith(

@@ -2,6 +2,11 @@ import { escapeRegex } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
 import { getAllParagraphs, getParagraphContent } from '../../wiki/paragraphParser';
+import {
+  getUndatedParagraphsToArchive,
+  removeArchivedUndatedParagraphsFromTracker,
+} from '../../utilities/archiveUtils';
+import { extractLastSignatureDate } from '../../utilities/signatureUtils';
 
 type ArchiveMode = 'titles' | 'signatureDate';
 
@@ -58,15 +63,16 @@ function getArchiveContentByTitles(archiveMonthDate: Date, config: ArchiveConfig
   while (newContent.includes('\n\n\n')) {
     newContent = newContent.replace(/\n\n\n/g, '\n\n');
   }
-  return { newContent, text };
+  return { newContent, text, archivedParagraphs: [] as string[] };
 }
 
 function getArchiveContentBySignatureDate(
+  wikiApi: IWikiApi,
   archiveMonthDate: Date,
   config: ArchiveConfig,
   pageContent: string,
   pageTitle: string,
-) {
+): Promise<{ newContent: string; text: string; archivedParagraphs: string[] }> {
   let text = '';
   const targetMonthName = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(archiveMonthDate);
   const targetYear = archiveMonthDate.getFullYear();
@@ -78,18 +84,29 @@ function getArchiveContentBySignatureDate(
 
   let newContent = pageContent;
   const paragraphs = getAllParagraphs(pageContent, pageTitle);
+  const paragraphsWithNoDate = paragraphs.filter((paragraph) => extractLastSignatureDate(paragraph) == null);
+  return getUndatedParagraphsToArchive(
+    wikiApi,
+    pageTitle,
+    paragraphsWithNoDate,
+    { type: 'archiveMonth', archiveMonthDate },
+  ).then((trackedUndatedParagraphs) => {
+    const trackedUndatedParagraphsSet = new Set(trackedUndatedParagraphs.map((item) => item.paragraph));
+    const paragraphsToArchive = paragraphs.filter(
+      (paragraph) => signatureRegex.test(paragraph) || trackedUndatedParagraphsSet.has(paragraph),
+    );
 
-  const paragraphsToArchive = paragraphs.filter((p) => signatureRegex.test(p));
-  paragraphsToArchive.forEach((p) => {
-    text += p;
-    newContent = newContent.replace(p, '');
+    paragraphsToArchive.forEach((paragraph) => {
+      text += paragraph;
+      newContent = newContent.replace(paragraph, '');
+    });
+
+    while (newContent.includes('\n\n\n')) {
+      newContent = newContent.replace(/\n\n\n/g, '\n\n');
+    }
+
+    return { newContent, text, archivedParagraphs: paragraphsToArchive };
   });
-
-  while (newContent.includes('\n\n\n')) {
-    newContent = newContent.replace(/\n\n\n/g, '\n\n');
-  }
-
-  return { newContent, text };
 }
 
 export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig = defaultConfig): IArchiveBotModel {
@@ -142,8 +159,12 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
 
     const { content, revid } = await getContent(wikiApi, logPage);
 
-    const { newContent, text } = archiveMode === 'signatureDate'
-      ? getArchiveContentBySignatureDate(archiveMonthDate, config, content, logPage)
+    const {
+      newContent,
+      text,
+      archivedParagraphs,
+    } = archiveMode === 'signatureDate'
+      ? await getArchiveContentBySignatureDate(wikiApi, archiveMonthDate, config, content, logPage)
       : getArchiveContentByTitles(archiveMonthDate, config, content);
 
     if (text === '') {
@@ -152,6 +173,9 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
 
     await wikiApi.create(archivePageTitle, `ארכוב ${month} ${year}`, `{{${config.archiveTemplate}}}\n${text}`);
     await wikiApi.edit(logPage, `ארכוב ${month} ${year}`, newContent, revid);
+    if (archiveMode === 'signatureDate') {
+      await removeArchivedUndatedParagraphsFromTracker(wikiApi, logPage, archivedParagraphs);
+    }
   }
 
   return {

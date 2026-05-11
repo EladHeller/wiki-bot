@@ -10,6 +10,7 @@ import { logger } from '../utilities/logger';
 // Mock getAllParagraphs before importing the model
 jest.unstable_mockModule('../wiki/paragraphParser', () => ({
   getAllParagraphs: jest.fn(),
+  parseParagraph: jest.fn(),
 }));
 
 // Dynamic import for the mocked module

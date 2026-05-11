@@ -2,7 +2,11 @@ import { IWikiApi } from '../../wiki/WikiApi';
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
 import { getAllParagraphs, parseParagraph } from '../../wiki/paragraphParser';
 import parseTableText from '../../wiki/wikiTableParser';
-import { getArchiveTitle } from '../../utilities/archiveUtils';
+import {
+  getArchiveTitle,
+  getUndatedParagraphsToArchive,
+  removeArchivedUndatedParagraphsFromTracker,
+} from '../../utilities/archiveUtils';
 import { getInnerLink } from '../../wiki/wikiLinkParser';
 import {
   extractLastSignatureDate,
@@ -155,15 +159,38 @@ export default function ClosedDiscussionsArchiveBotModel(
   ): Promise<string[]> {
     const { content } = await getContent(wikiApi, pageTitle);
     const allParagraphs = getAllParagraphs(content, pageTitle);
+    const archivableBySignatureDate: string[] = [];
+    const undatedParagraphs: string[] = [];
 
-    return allParagraphs.filter((paragraph) => {
+    allParagraphs.forEach((paragraph) => {
       if (!hasValidStatusTemplate(paragraph, pageTitle, validStatuses)) {
-        return false;
+        return;
       }
 
       const lastSignatureDate = extractLastSignatureDate(paragraph);
-      return lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays);
+      if (!lastSignatureDate) {
+        undatedParagraphs.push(paragraph);
+        return;
+      }
+
+      if (isInactiveForDays(lastSignatureDate, inactivityDays)) {
+        archivableBySignatureDate.push(paragraph);
+      }
     });
+
+    const archivableUndatedParagraphs = await getUndatedParagraphsToArchive(
+      wikiApi,
+      pageTitle,
+      undatedParagraphs,
+      { type: 'inactivityDays', inactivityDays },
+    );
+
+    const archivableParagraphsSet = new Set([
+      ...archivableBySignatureDate,
+      ...archivableUndatedParagraphs.map((item) => item.paragraph),
+    ]);
+
+    return allParagraphs.filter((paragraph) => archivableParagraphsSet.has(paragraph));
   }
 
   async function archiveSingleParagraphQuarterly(
@@ -211,15 +238,15 @@ export default function ClosedDiscussionsArchiveBotModel(
     pageTitle: string,
     archivableParagraphs: string[],
   ): Promise<void> {
-    const paragraphsWithDates = archivableParagraphs
-      .map((paragraph) => ({
-        paragraph,
-        firstDate: extractFirstSignatureDate(paragraph),
-      }))
-      .filter((item): item is { paragraph: string; firstDate: Date } => item.firstDate != null);
-
-    for (const { paragraph, firstDate } of paragraphsWithDates) {
-      await archiveSingleParagraphQuarterly(pageTitle, paragraph, firstDate);
+    const archivedParagraphs: string[] = [];
+    try {
+      for (const paragraph of archivableParagraphs) {
+        const firstDate = extractFirstSignatureDate(paragraph) ?? new Date();
+        await archiveSingleParagraphQuarterly(pageTitle, paragraph, firstDate);
+        archivedParagraphs.push(paragraph);
+      }
+    } finally {
+      await removeArchivedUndatedParagraphsFromTracker(wikiApi, pageTitle, archivedParagraphs);
     }
   }
 
@@ -283,8 +310,14 @@ export default function ClosedDiscussionsArchiveBotModel(
 
     const { archiveTitle } = archiveTitleResult;
 
-    for (const paragraph of archivableParagraphs) {
-      await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle);
+    const archivedParagraphs: string[] = [];
+    try {
+      for (const paragraph of archivableParagraphs) {
+        await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle);
+        archivedParagraphs.push(paragraph);
+      }
+    } finally {
+      await removeArchivedUndatedParagraphsFromTracker(wikiApi, pageTitle, archivedParagraphs);
     }
   }
 

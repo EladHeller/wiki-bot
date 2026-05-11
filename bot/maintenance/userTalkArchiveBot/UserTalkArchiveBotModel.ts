@@ -3,7 +3,11 @@ import { findTemplate, getTemplateArrayData, getTemplateKeyValueData } from '../
 import { getAllParagraphs } from '../../wiki/paragraphParser';
 import { getInnerLink, getInnerLinks } from '../../wiki/wikiLinkParser';
 import { extractLastSignatureDate, isInactiveForDays } from '../../utilities/signatureUtils';
-import { getArchiveTitle } from '../../utilities/archiveUtils';
+import {
+  getArchiveTitle,
+  getUndatedParagraphsToArchive,
+  removeArchivedUndatedParagraphsFromTracker,
+} from '../../utilities/archiveUtils';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 import { WikiPage } from '../../types';
 import { logger, stringify } from '../../utilities/logger';
@@ -226,9 +230,10 @@ export default function UserTalkArchiveBotModel(
     allParagraphs: string[],
     inactivityDays: number,
     archiveDeliveryOnlyMessages: boolean,
-  ): { archive: string[]; deleteOnly: string[] } {
+  ): { archive: string[]; deleteOnly: string[]; undated: string[] } {
     const paragraphsToArchive: string[] = [];
     const deleteOnly: string[] = [];
+    const undated: string[] = [];
 
     allParagraphs.forEach((paragraph) => {
       if (hasNoArchiveTemplate(paragraph)) {
@@ -244,10 +249,11 @@ export default function UserTalkArchiveBotModel(
       const lastSignatureDate = extractLastSignatureDate(paragraph) || extractYearAndWeekDate(paragraph);
       if (lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays)) {
         paragraphsToArchive.push(paragraph);
+      } else if (lastSignatureDate == null) {
+        undated.push(paragraph);
       }
     });
-
-    return { archive: paragraphsToArchive, deleteOnly };
+    return { archive: paragraphsToArchive, deleteOnly, undated };
   }
 
   async function getArchivableParagraphs(
@@ -256,7 +262,20 @@ export default function UserTalkArchiveBotModel(
   ): Promise<string[]> {
     const { content } = await getContent(wikiApi, pageTitle);
     const allParagraphs = getAllParagraphs(content, pageTitle);
-    return classifyArchivableParagraphs(allParagraphs, inactivityDays, false).archive;
+    const {
+      archive: paragraphsToArchive, undated,
+    } = classifyArchivableParagraphs(allParagraphs, inactivityDays, false);
+    const undatedParagraphsToArchive = await getUndatedParagraphsToArchive(
+      wikiApi,
+      pageTitle,
+      undated,
+      { type: 'inactivityDays', inactivityDays },
+    );
+    const archivableParagraphsSet = new Set([
+      ...paragraphsToArchive,
+      ...undatedParagraphsToArchive.map((item) => item.paragraph),
+    ]);
+    return allParagraphs.filter((paragraph) => archivableParagraphsSet.has(paragraph));
   }
 
   async function archiveParagraphs(
@@ -481,9 +500,10 @@ export default function UserTalkArchiveBotModel(
     createNewArchive: boolean,
     paragraphs: string[],
     strategy: ArchiveStrategy,
-  ): Promise<void> {
+  ): Promise<string[]> {
     let currentArchiveTitle = strategy.archiveTitle;
     let remainingParagraphs = paragraphs;
+    const archivedParagraphs: string[] = [];
 
     while (remainingParagraphs.length > 0) {
       const archiveInfo = await getPageInfo(wikiApi, currentArchiveTitle);
@@ -497,7 +517,9 @@ export default function UserTalkArchiveBotModel(
           strategy.onNewArchiveCreated,
           strategy.maxSizeNotification,
         );
-        if (!newTitle) return;
+        if (!newTitle) {
+          return archivedParagraphs;
+        }
         currentArchiveTitle = newTitle;
       } else {
         const currentSize = archiveInfo.exists ? archiveInfo.size : 0;
@@ -508,6 +530,7 @@ export default function UserTalkArchiveBotModel(
         );
 
         await archiveParagraphs(talkPage, batch, currentArchiveTitle, archiveHeader);
+        archivedParagraphs.push(...batch);
         remainingParagraphs = remaining;
 
         if (remaining.length > 0) {
@@ -519,11 +542,15 @@ export default function UserTalkArchiveBotModel(
             strategy.onNewArchiveCreated,
             `דף הארכיון [[${currentArchiveTitle}]] הגיע לגודל המקסימלי ויש עוד תוכן לארכוב. יש ליצור דף ארכיון חדש.`,
           );
-          if (!newTitle) return;
+          if (!newTitle) {
+            return archivedParagraphs;
+          }
           currentArchiveTitle = newTitle;
         }
       }
     }
+
+    return archivedParagraphs;
   }
 
   async function archiveWithArchiveBox(
@@ -533,7 +560,7 @@ export default function UserTalkArchiveBotModel(
     maxArchiveSize: number,
     createNewArchive: boolean,
     paragraphs: string[],
-  ): Promise<void> {
+  ): Promise<string[]> {
     const archiveTitleResult = await getArchiveTitleFromBox(wikiApi, archiveBoxPage, talkPage);
 
     if ('error' in archiveTitleResult) {
@@ -542,8 +569,7 @@ export default function UserTalkArchiveBotModel(
         const archiveTitle = `${talkPage}/${firstArchiveName}`;
 
         await updateArchiveBoxWithNewPage(wikiApi, archiveBoxPage, archiveTitle);
-
-        await performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
+        return performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
           archiveTitle,
           maxSizeNotification: `דף הארכיון [[${archiveTitle}]] הגיע לגודל המקסימלי. `
             + 'יש ליצור דף ארכיון חדש ולעדכן את תיבת הארכיון.',
@@ -553,13 +579,12 @@ export default function UserTalkArchiveBotModel(
             newArchiveTitle,
           ),
         });
-        return;
       }
       await notifyUserAboutArchive(wikiApi, talkPage, archiveTitleResult.error);
-      return;
+      return [];
     }
 
-    await performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
+    return performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
       archiveTitle: archiveTitleResult.archiveTitle,
       maxSizeNotification: `דף הארכיון [[${archiveTitleResult.archiveTitle}]] הגיע לגודל המקסימלי. יש ליצור דף ארכיון חדש ולעדכן את תיבת הארכיון.`,
       onNewArchiveCreated: (newArchiveTitle) => updateArchiveBoxWithNewPage(wikiApi, archiveBoxPage, newArchiveTitle),
@@ -573,8 +598,8 @@ export default function UserTalkArchiveBotModel(
     maxArchiveSize: number,
     createNewArchive: boolean,
     paragraphs: string[],
-  ): Promise<void> {
-    await performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
+  ): Promise<string[]> {
+    return performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
       archiveTitle: directArchivePage,
       maxSizeNotification: `דף הארכיון [[${directArchivePage}]] הגיע לגודל המקסימלי. יש ליצור דף ארכיון חדש ולעדכן את {{תב|בוט ארכוב אוטומטי}}.`,
       onNewArchiveCreated: (newArchiveTitle) => updateDirectArchiveTemplateParameter(
@@ -589,9 +614,10 @@ export default function UserTalkArchiveBotModel(
     if (paragraphs.length === 0) {
       return;
     }
+    let archivedParagraphs: string[] = [];
 
     if (config.archiveBoxPage) {
-      await archiveWithArchiveBox(
+      archivedParagraphs = await archiveWithArchiveBox(
         config.talkPage,
         config.archiveBoxPage,
         config.archiveHeader,
@@ -600,7 +626,7 @@ export default function UserTalkArchiveBotModel(
         paragraphs,
       );
     } else if (config.directArchivePage) {
-      await archiveWithDirectPage(
+      archivedParagraphs = await archiveWithDirectPage(
         config.talkPage,
         config.directArchivePage,
         config.archiveHeader,
@@ -611,6 +637,8 @@ export default function UserTalkArchiveBotModel(
     } else {
       throw new Error('Either archive box page or direct archive page must be provided');
     }
+
+    await removeArchivedUndatedParagraphsFromTracker(wikiApi, config.talkPage, archivedParagraphs);
   }
 
   async function processPage(page: WikiPage): Promise<void> {
@@ -631,11 +659,26 @@ export default function UserTalkArchiveBotModel(
 
     const { content: latestContent, revid } = await getContent(wikiApi, config.talkPage);
     const allParagraphs = getAllParagraphs(latestContent, config.talkPage);
-    const { archive: archivableParagraphs, deleteOnly: paragraphsToDeleteOnly } = classifyArchivableParagraphs(
+    const {
+      archive: archivableByDate,
+      deleteOnly: paragraphsToDeleteOnly,
+      undated: undatedParagraphs,
+    } = classifyArchivableParagraphs(
       allParagraphs,
       config.inactivityDays,
       Boolean(config.archiveDeliveryOnlyMessages),
     );
+    const undatedParagraphsToArchive = await getUndatedParagraphsToArchive(
+      wikiApi,
+      config.talkPage,
+      undatedParagraphs,
+      { type: 'inactivityDays', inactivityDays: config.inactivityDays },
+    );
+    const archivableParagraphsSet = new Set([
+      ...archivableByDate,
+      ...undatedParagraphsToArchive.map((item) => item.paragraph),
+    ]);
+    const archivableParagraphs = allParagraphs.filter((paragraph) => archivableParagraphsSet.has(paragraph));
 
     if (paragraphsToDeleteOnly.length > 0) {
       const updatedContent = removeParagraphsFromContent(latestContent, paragraphsToDeleteOnly);

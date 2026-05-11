@@ -56,7 +56,8 @@ export async function first(templateName = 'סינגלי אלבום') {
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     try {
       const content = page.revisions?.[0].slots.main['*'];
-      if (!content) {
+      const revid = page.revisions?.[0].revid;
+      if (!content || !revid) {
         return;
       }
       if (titles.has(page.title)) {
@@ -103,7 +104,7 @@ export async function first(templateName = 'סינגלי אלבום') {
         newContent = newContent.replace(template, text);
       });
       if (newContent !== content && changed) {
-        await api.updateArticle(page.title, `הסרת עיצוב מתבנית ${templateName}`, newContent);
+        await api.edit(page.title, `הסרת עיצוב מתבנית ${templateName}`, newContent, revid);
         number += 1;
       }
     } catch (error) {
@@ -122,7 +123,8 @@ export async function second(templateName = 'אלבום') {
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     try {
       const content = page.revisions?.[0].slots.main['*'];
-      if (!content) {
+      const revid = page.revisions?.[0].revid;
+      if (!content || !revid) {
         return;
       }
       if (titles.has(page.title)) {
@@ -169,8 +171,8 @@ export async function second(templateName = 'אלבום') {
         const text = templateFromKeyValueData(newData, templateName);
         newContent = newContent.replace(template, text);
       });
-      if (newContent !== content && changed) {
-        await api.updateArticle(page.title, `הסרת עיצוב מתבנית ${templateName}`, newContent);
+      if (newContent !== content && changed && revid) {
+        await api.edit(page.title, `הסרת עיצוב מתבנית ${templateName}`, newContent, revid);
         number += 1;
       }
     } catch (error) {
@@ -189,7 +191,8 @@ export async function third(templateName = 'סינגל') {
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     try {
       const content = page.revisions?.[0].slots.main['*'];
-      if (!content) {
+      const revid = page.revisions?.[0].revid;
+      if (!content || !revid) {
         return;
       }
       if (titles.has(page.title)) {
@@ -252,7 +255,7 @@ export async function third(templateName = 'סינגל') {
         newContent = newContent.replace(template, text);
       });
       if (newContent !== content && changed) {
-        await api.updateArticle(page.title, `הסרת עיצוב מתבנית ${templateName}`, newContent);
+        await api.edit(page.title, `הסרת עיצוב מתבנית ${templateName}`, newContent, revid);
         number += 1;
       }
     } catch (error) {

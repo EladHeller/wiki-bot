@@ -49,7 +49,8 @@ async function ynetEncyclopedia() {
         return;
       }
       try {
-        await api.updateArticle(page.title, 'הסרת קישור לאנציקלופדיית ynet', newContent);
+        const { revid } = await api.articleContent(page.title);
+        await api.edit(page.title, 'הסרת קישור לאנציקלופדיית ynet', newContent, revid);
       } catch (error) {
         console.log(error?.data || error?.message || error?.toString());
       }

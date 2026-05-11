@@ -5,13 +5,13 @@ import { findTemplates, getTemplateData, templateFromTemplateData } from '../../
 
 type DateFromPageCallback = (id: string, title: string, section?: string) => Promise<string>;
 type TemplateData = {
-    id: string;
-    date: string;
-    section?: string;
+  id: string;
+  date: string;
+  section?: string;
 }
 
 function defaultDataFromArrayData(data: string[]): TemplateData {
-  const [,, id, date, section] = data;
+  const [, , id, date, section] = data;
   return {
     id,
     date,
@@ -41,8 +41,9 @@ export default async function appendDatesToTepmlate(
   await asyncGeneratorMapWithSequence<WikiPage>(10, generator, (page) => async () => {
     allCount += 1;
     const content = page.revisions?.[0].slots.main['*'];
-    if (!content) {
-      console.log('Missing content', page.title);
+    const revid = page.revisions?.[0].revid;
+    if (!content || !revid) {
+      console.log('Missing content or revid', page.title);
       return;
     }
     let newContent = content;
@@ -78,7 +79,7 @@ export default async function appendDatesToTepmlate(
     if (newContent === content) {
       return;
     }
-    await api.updateArticle(page.title, `הוספת תאריך לתבנית ${templateName}`, newContent);
+    await api.edit(page.title, `הוספת תאריך לתבנית ${templateName}`, newContent, revid);
     successCount += 1;
     console.log('success', page.title);
   });

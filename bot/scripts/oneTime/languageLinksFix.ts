@@ -90,7 +90,7 @@ export default async function fixLanguageLinks() {
 
       // if (newContent !== content) {
       //   console.log(`Updating ${contribution.title}!!!!!!!!!`);
-      //   await api.updateArticle(contribution.title, 'הוצאת עיצוב מטקסט הקישור', newContent);
+      //   await api.edit(contribution.title, 'הוצאת עיצוב מטקסט הקישור', newContent, -1);
       // }
       // return returnValue;
     }
