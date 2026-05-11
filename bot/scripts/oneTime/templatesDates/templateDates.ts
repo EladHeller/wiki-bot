@@ -12,13 +12,13 @@ const exactHebrewDateRegex = /^\s*(?:[א-ת]['׳] |[א-ת]["״][א-ת] )?[א-ת]
 
 type DateFromPageCallback = (id: string, title: string, section?: string) => Promise<string>;
 type TemplateData = {
-    id: string;
-    date: string;
-    section?: string;
+  id: string;
+  date: string;
+  section?: string;
 }
 
 function defaultGetTemplateData(data: string[]): TemplateData {
-  const [,, id, date, section] = data;
+  const [, , id, date, section] = data;
   return {
     id,
     date,
@@ -38,8 +38,9 @@ export default async function templateDates(
   const generator = api.categroyPages(`שגיאות פרמטריות בתבנית ${templateName}`);
   await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
-    if (!content) {
-      console.log('Missing content', page.title);
+    const revid = page.revisions?.[0].revid;
+    if (!content || !revid) {
+      console.log('Missing content or revid', page.title);
       return;
     }
     let newContent = content;
@@ -67,10 +68,10 @@ export default async function templateDates(
         .trim();
       let newDate: string | null = '';
       if (date.trim().match(exactHebrewDateRegex)
-          || justDate.match(/^([א-ת]{3,10},? )?\d{4}[.,]?$/) // במאי 2014
-          || justDate.match(/^\d{1,2} ב?[א-ת]{3,9}[.,]?$/) // 1 במאי
-          || justDate.match(/^ב?\[?\[?[א-ת]{3,9}\]?\]?[,.]? \[?\[?\d{4}\]?\]?[,.]?$/) // ב[[מאי]] [[2014]]
-          || !justDate) {
+        || justDate.match(/^([א-ת]{3,10},? )?\d{4}[.,]?$/) // במאי 2014
+        || justDate.match(/^\d{1,2} ב?[א-ת]{3,9}[.,]?$/) // 1 במאי
+        || justDate.match(/^ב?\[?\[?[א-ת]{3,9}\]?\]?[,.]? \[?\[?\d{4}\]?\]?[,.]?$/) // ב[[מאי]] [[2014]]
+        || !justDate) {
         newDate = await getDataFromPage(id, page.title, section);
         if (newDate) {
           console.log('DateFromDoc', date, newDate, page.title);
@@ -86,7 +87,7 @@ export default async function templateDates(
       }
     }));
     if (newContent !== content) {
-      await api.updateArticle(page.title, `תבנית ${templateName}: תיקון פורמט תאריך`, newContent);
+      await api.edit(page.title, `תבנית ${templateName}: תיקון פורמט תאריך`, newContent, revid);
       console.log('Updated', page.title);
     }
   });

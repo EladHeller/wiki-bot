@@ -54,7 +54,7 @@ export default async function innTemplate() {
       }
     }));
     if (newContent !== content) {
-      // await api.updateArticle(page.title, 'ערוץ7: פורמט חדש של פרמטר מדור', newContent);
+      // await api.edit(page.title, 'ערוץ7: פורמט חדש של פרמטר מדור', newContent, -1);
       console.log(`Updated page ${page.title}`);
     }
   });

@@ -18,10 +18,6 @@ export interface IWikiApi {
     AsyncGenerator<any, void, void>;
   recursiveSubCategories(category: string, limit?: number): AsyncGenerator<WikiPage, WikiPage, void>;
   backlinksTo(target: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
-  /**
-   * @deprecated Use edit api instead
-   */
-  updateArticle(articleTitle: string, summary: string, content: string, newSectionTitle?: string): Promise<any>;
   edit(
     articleTitle: string, summary: string, content: string, baseRevId: number, newSectionTitle?: string
   ): Promise<EditResponse>;
@@ -158,23 +154,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const path = `?action=query&format=json&generator=backlinks&gblnamespace=${namespace}&gbltitle=${encodeURIComponent(target)}&gbllimit=500`
       + `&gblfilterredir=nonredirects&prop=revisions&rvprop=${rvProps}&rvslots=*`;
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
-  }
-
-  async function updateArticle(
-    articleTitle: string,
-    summary: string,
-    content: string,
-    newSectionTitle?: string,
-  ) {
-    const data: Record<string, string> = {
-      title: articleTitle, text: content, token, summary,
-    };
-    if (newSectionTitle) {
-      data.sectiontitle = newSectionTitle;
-      data.section = 'new';
-    }
-
-    return request('?action=edit&format=json&assert=bot&bot=true', 'post', objectToFormData(data));
   }
 
   async function edit(
@@ -480,7 +459,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     continueQuery: baseWikiApi.continueQuery,
     recursiveSubCategories,
     backlinksTo,
-    updateArticle,
     articleContent,
     externalUrl,
     categroyTitles,

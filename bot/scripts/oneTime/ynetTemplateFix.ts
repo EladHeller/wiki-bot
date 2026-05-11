@@ -12,8 +12,9 @@ export default async function ynetTemplateFix() {
 
   await asyncGeneratorMapWithSequence(25, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
-    if (!content) {
-      throw new Error(`Missing content ${page.title}`);
+    const revid = page.revisions?.[0].revid;
+    if (!content || !revid) {
+      throw new Error(`Missing content or revid ${page.title}`);
     }
     let newContent = content;
 
@@ -33,7 +34,7 @@ export default async function ynetTemplateFix() {
     });
 
     if (newContent !== content) {
-      await api.updateArticle(page.title, 'תבנית ynet - תיקון מזהה כתבה', newContent);
+      await api.edit(page.title, 'תבנית ynet - תיקון מזהה כתבה', newContent, revid);
       console.log('Updated', page.title);
     }
   });

@@ -21,13 +21,13 @@ async function main() {
   do {
     res = await generator.next();
     res?.value.query.allcategories.forEach((page) => {
-      const name:string = page['*'];
+      const name: string = page['*'];
       allcategories.push({
         name,
         size: page.size,
       });
       if (name.match(/^ספורטאים ([^() ]+ )+ב[^() ]+( [^() ]+)*$/)
-       && !name.match(/ספורטאים ש[^ו]/)
+        && !name.match(/ספורטאים ש[^ו]/)
         && !name.match(/אולימפ|להט"ב| זרים /)) {
         pages.push({
           name,
@@ -79,7 +79,7 @@ async function main() {
       }));
       await api.deletePage(`קטגוריה:${page.name}`, 'קטגוריה מיותרת').then(() => {
         console.log(`deleted: ${page.name}`);
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }
 
@@ -93,7 +93,7 @@ async function main() {
         });
         if (newContent !== content) {
           console.log(`updating: ${title}`);
-          await api.updateArticle(title, 'המרת קטגוריות', newContent);
+          await api.edit(title, 'המרת קטגוריות', newContent, -1);
         }
       }),
   );
@@ -106,7 +106,7 @@ async function main() {
   }
 
   const text = [...pages, ...parents].map((p) => `* [[:קטגוריה:${p.name}]] - ${p.size} דפים וקטגוריות משנה`).join('\n');
-  await api.updateArticle('user:sapper-bot/קטגוריות ספורטאים לפי מדינות', 'רשימה', text);
+  await api.create('user:sapper-bot/קטגוריות ספורטאים לפי מדינות', 'רשימה', text);
 }
 
 main();
