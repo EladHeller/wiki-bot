@@ -1,5 +1,5 @@
 import Company from './company';
-import { getFinanceReport } from '../API/mayaAPI';
+import { getAllDetails, getFinanceReport } from '../API/mayaAPI';
 import { WikiPage } from '../types';
 import { buildTable } from '../wiki/wikiTableParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
@@ -62,6 +62,7 @@ export default async function yearlyReport(year: string) {
   const companies: Company[] = [];
   for (const result of validResults) {
     const maya = await getFinanceReport(result.mayaId);
+    const allDetails = await getAllDetails(result.mayaId);
     const wikiContent = await api.articleContent(result.articleName);
     const w: WikiPage = {
       title: result.articleName,
@@ -101,6 +102,7 @@ export default async function yearlyReport(year: string) {
         result.mayaId,
         api,
         year,
+        allDetails?.CompanyDetails?.CompanyLongName ?? result.articleName,
       );
       companies.push(company);
 

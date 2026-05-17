@@ -17,7 +17,6 @@ const fieldsForWiki = [
   { mayaName: ['סך מאזן'], wikiName: 'סך המאזן' },
 ];
 const NAME_FIELD = 'שם';
-const NAME_STRING = '{{שם הדף בלי הסוגריים}}';
 const companyFinanceView = '?view=finance';
 const companyReportView = '?view=reports';
 
@@ -87,15 +86,18 @@ export default class Company {
 
   api: IWikiApi;
 
+  officialName: string;
+
   currentYear: string;
 
   constructor(
     name: string,
-    mayData: MayaCompany,
+    mayaData: MayaCompany,
     wikiData: WikiPage,
     companyId: string,
     api: IWikiApi,
     year: string,
+    officialName: string,
   ) {
     const revision = wikiData.revisions?.[0];
     if (!revision || !revision.revid) {
@@ -106,24 +108,25 @@ export default class Company {
     this.companyId = companyId;
     this.name = name;
     this.api = api;
-    this.currency = currencyDict[mayData.CurrencyName];
+    this.officialName = officialName;
+    this.currency = currencyDict[mayaData.CurrencyName];
     if (!this.currency) {
       throw new Error(`${name}: Currency missing!`);
     }
     const mayaDetails = new Map();
     let rowsField = '';
     let periodField = 'CurrentPeriod';
-    if (mayData.PreviousYear.Title === `שנתי ${this.currentYear}`) {
+    if (mayaData.PreviousYear.Title === `שנתי ${this.currentYear}`) {
       rowsField = 'PrevYearValue';
       periodField = 'PreviousYear';
-    } else if (mayData.CurrentPeriod.Title === `שנתי ${this.currentYear}`) {
+    } else if (mayaData.CurrentPeriod.Title === `שנתי ${this.currentYear}`) {
       periodField = 'CurrentPeriod';
       rowsField = 'CurrPeriodValue';
     }
-    mayData.AllRows.forEach((row) => {
+    mayaData.AllRows.forEach((row) => {
       mayaDetails.set(row.Name, row[rowsField]);
     });
-    const mayaYear = mayData[periodField].Year;
+    const mayaYear = mayaData[periodField].Year;
 
     this.appendMayaData(mayaDetails, mayaYear);
     this.appendWikiData(wikiData);
@@ -137,7 +140,7 @@ export default class Company {
       const referenceData = getTemplateKeyValueData(reference);
       const referenceKey = referenceData.שם;
       const previousYear = Number(this.currentYear) - 1;
-      if (referenceKey && referenceKey.startsWith(`דוח${previousYear}-${this.templateData[NAME_FIELD] || NAME_STRING}`)) {
+      if (referenceKey && referenceKey.startsWith(`דוח${previousYear}-${this.templateData[NAME_FIELD] || this.officialName}`)) {
         finalContent = finalContent.replace(reference, '');
       }
     });
@@ -153,7 +156,7 @@ export default class Company {
           fieldData,
           this.wikiTemplateData.year,
           this.reference,
-          this.templateData[NAME_FIELD] || NAME_STRING,
+          this.templateData[NAME_FIELD] || this.officialName,
           isFirst,
           this.currency,
         );
