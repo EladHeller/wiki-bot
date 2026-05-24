@@ -34,6 +34,10 @@ const validProtects = ['autoconfirmed', 'sysop', 'editautopatrolprotected', 'tem
 const MAIN_PAGE_PROTECT = 'edit=editautopatrolprotected|move=editautopatrolprotected';
 const UNIT_NAMESPACE_PROTECT = 'edit=autoconfirmed|move=autoconfirmed';
 
+const TEMPLATE_NAMESPACE = 10;
+const MODULE_NAMESPACE = 828;
+const TEMPLATE_CSS_SEARCH = 'contentmodel:sanitized-css';
+
 async function needProtectFromTitles(api: IWikiApi, titles: string[]): Promise<string[]> {
   const promises: any[] = [];
   for (let i = 0; i < titles.length; i += 50) {
@@ -100,10 +104,24 @@ export async function getTemplatesByCategory(api: IWikiApi, category: string, ex
 }
 
 async function getUnitPagesToProtect(api: IWikiApi) {
-  const generator = api.allPages(828);
+  const generator = api.allPages(MODULE_NAMESPACE);
   const needToProtect: string[] = [];
   for await (const pages of generator) {
     const titles = pages.map((p) => p.title).filter((title) => !title.endsWith('/תיעוד') && !title.startsWith('יחידה:ארגז חול'));
+    const needProtection = await needProtectFromTitles(api, titles);
+    needToProtect.push(...needProtection);
+  }
+  return needToProtect;
+}
+
+const shouldProtectTemplateCssPages = false;
+async function getTemplateCssPagesToProtect(api: IWikiApi) {
+  if (!shouldProtectTemplateCssPages) {
+    return [];
+  }
+  const needToProtect: string[] = [];
+  for await (const pages of api.searchPages(TEMPLATE_CSS_SEARCH, [TEMPLATE_NAMESPACE])) {
+    const titles = pages.map((p) => p.title).filter((title): title is string => title?.endsWith('.css'));
     const needProtection = await needProtectFromTitles(api, titles);
     needToProtect.push(...needProtection);
   }
@@ -223,6 +241,14 @@ async function writeUnitPageLogs(api: IWikiApi, unitPages: string[], unitErrors:
   await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/הגנת דפי מרחב יחידה');
 }
 
+async function writeTemplateCssPageLogs(api: IWikiApi, templateCssPages: string[], templateCssErrors: string[]) {
+  if (!templateCssPages.length) {
+    return;
+  }
+  const logs = articleLogsFromTitles(templateCssPages, templateCssErrors);
+  await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/הגנת דפי CSS במרחב תבנית');
+}
+
 async function writeMainPageProtectionLogs(
   api: IWikiApi,
   needToProtect: string[],
@@ -251,6 +277,7 @@ export async function protectBot() {
   await api.login();
 
   const unitPages = await getUnitPagesToProtect(api);
+  const templateCssPages = await getTemplateCssPagesToProtect(api);
   const needToProtect = await collectMainPagePagesToProtect(api);
   const allConvertPages = await getConvertBotPagesToProtect(api);
   const convertPages = filterConvertBotPages(allConvertPages);
@@ -258,9 +285,11 @@ export async function protectBot() {
   const errors = await protectPages(api, needToProtect, MAIN_PAGE_PROTECT, 'מופיע בעמוד הראשי');
   const convertErrors = await protectPages(api, convertPages, MAIN_PAGE_PROTECT, 'דפי מפרט של בוט ההסבה');
   const unitErrors = await protectPages(api, unitPages, UNIT_NAMESPACE_PROTECT, 'הגנה על מרחב יחידה');
+  const templateCssErrors = await protectPages(api, templateCssPages, UNIT_NAMESPACE_PROTECT, 'הגנה על דפי CSS במרחב תבנית');
 
   await writeConvertPageLogs(api, allConvertPages, convertPages, convertErrors);
   await writeUnitPageLogs(api, unitPages, unitErrors);
+  await writeTemplateCssPageLogs(api, templateCssPages, templateCssErrors);
   await writeMainPageProtectionLogs(api, needToProtect, errors);
   await writeCopyrightLogsIfNeeded(api);
 }

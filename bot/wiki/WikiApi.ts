@@ -38,6 +38,7 @@ export interface IWikiApi {
     templateName: string, continueObject?: Record<string, string>, prefix?: string, namespace?: string
   ): AsyncGenerator<WikiPage[], void, void>;
   search(text: string): AsyncGenerator<WikiPage[], void, void>;
+  searchPages(searchText: string, namespaces?: number[], limit?: number): AsyncGenerator<WikiPage[], void, void>;
   getRedirectsFrom(namespace: number, toNamespace: number, limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
   userContributes(
@@ -225,6 +226,21 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
       path,
       (result) => Object.values(result?.query?.pages ?? {}),
     );
+  }
+
+  async function* searchPages(
+    searchText: string,
+    namespaces: number[] = [0],
+    limit = 500,
+  ) {
+    const ns = namespaces.join('|');
+    const path = '?action=query&format=json'
+      + `&generator=search&gsrsearch=${encodeURIComponent(searchText)}`
+      + `&gsrnamespace=${ns}`
+      + `&gsrlimit=${Math.min(limit, 500)}`
+      + '&prop=info';
+
+    yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
   async function* search(text: string) {
@@ -472,6 +488,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     deletePage,
     getArticlesWithTemplate,
     search,
+    searchPages,
     getRedirectsFrom,
     getRedirectsTo,
     userContributes,
