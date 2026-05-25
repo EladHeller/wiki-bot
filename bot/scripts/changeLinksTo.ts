@@ -12,6 +12,7 @@ export default async function changeLinksTo(
   saveText = true,
   isCategory = false,
   isTemplate = false,
+  newText: string = '',
 ) {
   const api = WikiApi();
   await api.login();
@@ -19,7 +20,7 @@ export default async function changeLinksTo(
   const generator = isCategory ? api.categroyPages(currentTarget.replace('קטגוריה:', ''))
     : api.backlinksTo(currentTarget, namespaces.join(','));
 
-  await asyncGeneratorMapWithSequence<WikiPage>(10, generator, (page) => async () => {
+  await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {
     const content = page.revisions?.[0].slots.main['*'];
     const revid = page.revisions?.[0].revid;
     if (!content || !revid) {
@@ -41,7 +42,7 @@ export default async function changeLinksTo(
     releventLinks.forEach((link) => {
       const isTextDifferent = link.text !== link.link;
       const oldLink = isTextDifferent ? `[[${link.link}|${link.text}]]` : `[[${link.link}]]`;
-      const newLink = (isTextDifferent || saveText) && newTarget !== link.text ? `[[${newTarget}|${link.text}]]` : `[[${newTarget}]]`;
+      const newLink = (isTextDifferent || saveText) && newTarget !== link.text ? `[[${newTarget}|${link.text}]]` : `[[${newTarget}${newText ? `|${newText}` : ''}]]`;
       newContent = newContent.replace(oldLink, newLink);
     });
     longTemplates.forEach((template) => {

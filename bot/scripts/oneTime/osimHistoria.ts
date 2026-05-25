@@ -1,8 +1,10 @@
 import { JSDOM } from 'jsdom';
-import fs from 'fs/promises';
-// import WikiApi from '../../wiki/WikiApi';
+import WikiApi from '../../wiki/WikiApi';
 
-const allLinks = [{ link: 'https://www.osimhistoria.com/osimpolitica/episode/867c3a62/', page: 'שיחה:הקפאת הבנייה ביהודה ושומרון' },
+const WEB_ARCHIVE_PREFIX = 'https://web.archive.org/web/20240229113029/';
+
+const rawLinks = [
+  { link: 'https://www.osimhistoria.com/osimpolitica/episode/867c3a62/', page: 'שיחה:הקפאת הבנייה ביהודה ושומרון' },
   { link: 'https://www.osimhistoria.com/osim-tanach/osimtanach_ep16', page: 'שיחה:דת ומדע' },
   { link: 'https://www.osimhistoria.com/theanswer/hatshuva_ep45', page: 'רומן שלוש הממלכות' },
   { link: 'https://www.osimhistoria.com/osim-tanach/osimtanach_ep73', page: 'שיחה:יום הכיפורים' },
@@ -449,18 +451,8 @@ const allLinks = [{ link: 'https://www.osimhistoria.com/osimpolitica/episode/867
   { link: 'https://www.osimhistoria.com/show/osim-tech', page: 'יובל דרור (סוציולוג)' },
   { link: 'https://www.osimhistoria.com/osim-tanach/ep106-abraham-sarah-p1', page: 'אברהם' },
   { link: 'https://www.osimhistoria.com/osim-tanach', page: 'אברהם' }];
-// export async function geOsimHistoriaLinksList() {
-//   const api = WikiApi();
-//   await api.login();
-//   const links: string[] = [];
-//   const generator1 = api.externalUrl('osimhistoria.com', 'http', '*');
 
-//   for await (const pages of generator1) {
-//     pages.
-//   }
-
-//   await fs.writeFile('./links.txt', '');
-// }
+const allLinks = rawLinks;
 
 export async function getAllShowEpisodes(showName: string): Promise<string[]> {
   const links: string[] = [];
@@ -483,9 +475,12 @@ export async function getAllShowEpisodes(showName: string): Promise<string[]> {
         }));
         const pageLinks = Array.from(document.window.document.querySelectorAll('.podcast .elementor-button.elementor-button-link[href]').values())
           .map((e) => e.getAttribute('href'))
-          .filter((x: string | null) : x is string => !!x);
-
+          .filter((x: string | null): x is string => !!x);
+        if (pageLinks.length === 0) {
+          pageExists = false;
+        }
         links.push(...pageLinks);
+        console.log(`${showName} page ${currentPage} : ${pageLinks.length}`);
         currentPage += 1;
       }
     } catch (e) {
@@ -500,10 +495,75 @@ export function getAllShowLinks(showName: string) {
   allLinks.filter((l) => l.link.startsWith(start) && l.link.replace(start, '').length > 1);
 }
 
-export default async function osimHistoria() {
-  const show = 'osimhistoria';
-  //   const links = getAllShowLinks(show);
-  const episeds = await getAllShowEpisodes(show);
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-  await fs.writeFile(`./${show}.json`, JSON.stringify(episeds, null, 2));
+function replaceLinkOnlyInsideExternalLink(
+  content: string,
+  link: string,
+): { newContent: string; replacements: number } {
+  const escapedLink = escapeRegex(link);
+  const regex = new RegExp(`\\[${escapedLink}(?=\\s|\\])`, 'g');
+  let replacements = 0;
+  const newContent = content.replace(regex, () => {
+    replacements += 1;
+    return `[${WEB_ARCHIVE_PREFIX}${link}`;
+  });
+  return { newContent, replacements };
+}
+
+async function updatePageLinks(
+  api: ReturnType<typeof WikiApi>,
+  page: string,
+  links: string[],
+) {
+  let article;
+  try {
+    article = await api.articleContent(page);
+  } catch (e) {
+    console.log(`Failed to fetch ${page}`, e?.message || e?.toString?.());
+    return;
+  }
+
+  let newContent = article.content;
+  let totalReplacements = 0;
+
+  links.forEach((link) => {
+    if (!link || link.startsWith(WEB_ARCHIVE_PREFIX)) {
+      return;
+    }
+    const replacement = replaceLinkOnlyInsideExternalLink(newContent, link);
+    newContent = replacement.newContent;
+    totalReplacements += replacement.replacements;
+  });
+
+  if (!totalReplacements || newContent === article.content) {
+    return;
+  }
+
+  await api.edit(
+    page,
+    'הוספת קידומת ארכיון האינטרנט לקישורי עושים היסטוריה ([[מיוחד:הבדל/43269438|בקשה בוק:בב]])',
+    newContent,
+    article.revid,
+  );
+  console.log(`Updated ${page}: ${totalReplacements} replacements`);
+}
+
+export default async function osimHistoria() {
+  const api = WikiApi();
+  await api.login();
+
+  const linksByPage = new Map<string, Set<string>>();
+  rawLinks.forEach((item) => {
+    if (!linksByPage.has(item.page)) {
+      linksByPage.set(item.page, new Set<string>());
+    }
+    linksByPage.get(item.page)?.add(item.link);
+  });
+
+  for (const [page, links] of linksByPage.entries()) {
+    await updatePageLinks(api, page, Array.from(links));
+  }
 }

@@ -111,5 +111,8 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     filesWithGlobalUsage: base.filesWithGlobalUsage
       ?? jest.fn<(category: string, site?: string, type?: string, limit?: number) =>
         AsyncGenerator<FileWithGlobalUsage[], void, void>>(),
+    searchPages: base.searchPages
+      ?? jest.fn<(searchText: string, namespaces?: number[], limit?: number) =>
+        AsyncGenerator<WikiPage[], void, void>>(),
   };
 }
