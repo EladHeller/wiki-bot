@@ -114,11 +114,7 @@ async function getUnitPagesToProtect(api: IWikiApi) {
   return needToProtect;
 }
 
-const shouldProtectTemplateCssPages = false;
 async function getTemplateCssPagesToProtect(api: IWikiApi) {
-  if (!shouldProtectTemplateCssPages) {
-    return [];
-  }
   const needToProtect: string[] = [];
   for await (const pages of api.searchPages(TEMPLATE_CSS_SEARCH, [TEMPLATE_NAMESPACE])) {
     const titles = pages.map((p) => p.title).filter((title): title is string => title?.endsWith('.css'));
