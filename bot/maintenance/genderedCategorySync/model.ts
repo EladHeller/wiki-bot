@@ -1,4 +1,5 @@
 import { WikiPage } from '../../types';
+import { asyncGeneratorMapWithSequence } from '../../utilities';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import WikiDataAPI, { IWikiDataAPI } from '../../wiki/WikidataAPI';
 
@@ -206,12 +207,12 @@ function buildCategoryText(categories: ParsedCategory[]): string {
 function normalizeCategoryOrdering(categories: ParsedCategory[], pairs: CategoryPair[]): ParsedCategory[] {
   const working = [...categories];
 
-  for (const pair of pairs) {
+  pairs.forEach((pair) => {
     const femIndex = working.findIndex((c) => c.name === pair.feminine);
     const genIndex = working.findIndex((c) => c.name === pair.general);
 
-    if (femIndex === -1 || genIndex === -1) continue;
-    if (genIndex === femIndex + 1) continue;
+    if (femIndex === -1 || genIndex === -1) return;
+    if (genIndex === femIndex + 1) return;
 
     const fem = working[femIndex];
     const gen = working[genIndex];
@@ -220,7 +221,7 @@ function normalizeCategoryOrdering(categories: ParsedCategory[], pairs: Category
     const filtered = working.filter((c) => c.name !== pair.feminine && c.name !== pair.general);
     filtered.splice(firstIndex, 0, fem, gen);
     working.splice(0, working.length, ...filtered);
-  }
+  });
 
   const normal: ParsedCategory[] = [];
   const birth: ParsedCategory[] = [];
@@ -448,7 +449,7 @@ export default async function genderedCategorySyncModel(
   for (const pair of validPairs) {
     for await (const batch of api.categroyPages(pair.feminine, config.maxCategoryMembers)) {
       for (const page of batch) {
-        const title = page.title;
+        const { title } = page;
         const pageState = await fetchPageState(api, title, page);
         const categories = new Set(parseCategories(pageState.content).map((c) => c.name));
         if (!categories.has(pair.general)) {
@@ -456,21 +457,20 @@ export default async function genderedCategorySyncModel(
         }
       }
     }
+    const generator = api.categroyPages(pair.general, config.maxCategoryMembers);
 
-    for await (const batch of api.categroyPages(pair.general, config.maxCategoryMembers)) {
-      for (const page of batch) {
-        const title = page.title;
-        const pageState = await fetchPageState(api, title, page);
-        const categories = new Set(parseCategories(pageState.content).map((c) => c.name));
+    await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
+      const { title } = page;
+      const pageState = await fetchPageState(api, title, page);
+      const categories = new Set(parseCategories(pageState.content).map((c) => c.name));
 
-        if (categories.has(pair.feminine)) continue;
+      if (categories.has(pair.feminine)) return;
 
-        const gender = await detectFemale(api, wikidataApi, title, pageState.content, feminineCategorySet);
-        if (!gender.female) continue;
+      const gender = await detectFemale(api, wikidataApi, title, pageState.content, feminineCategorySet);
+      if (!gender.female) return;
 
-        upsertPlannedChange(title, pair.feminine, pair.rule, gender.autoDetected);
-      }
-    }
+      upsertPlannedChange(title, pair.feminine, pair.rule, gender.autoDetected);
+    });
   }
 
   const plannedChanges = [...planned.values()].sort((a, b) => a.pageTitle.localeCompare(b.pageTitle, 'he'));
@@ -480,10 +480,13 @@ export default async function genderedCategorySyncModel(
       const { content, revid } = await api.articleContent(plan.pageTitle);
       const relevantPairs = validPairs.filter((pair) => plan.categoriesAdded.includes(pair.general)
         || plan.categoriesAdded.includes(pair.feminine)
-        || parseCategories(content).some((category) => category.name === pair.general || category.name === pair.feminine));
+        || parseCategories(content).some(
+          (category) => category.name === pair.general || category.name === pair.feminine,
+        ));
       const next = applyCategoryChanges(content, plan.categoriesAdded, relevantPairs);
-      if (!next.changed) continue;
-      await api.edit(plan.pageTitle, config.editSummary, next.content, revid);
+      if (next.changed) {
+        await api.edit(plan.pageTitle, config.editSummary, next.content, revid);
+      }
     }
   }
 

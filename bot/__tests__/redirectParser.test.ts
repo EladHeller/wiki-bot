@@ -8,6 +8,12 @@ describe('getRedirectTargetFromContent', () => {
     expect(getRedirectTargetFromContent(content)).toBe('עב-ידיים');
   });
 
+  it('returns null for empty page content', () => {
+    const content = ' \n ';
+
+    expect(getRedirectTargetFromContent(content)).toBeNull();
+  });
+
   it('extracts redirect target from English redirect', () => {
     const content = '#REDIRECT [[Handedness]]';
 
