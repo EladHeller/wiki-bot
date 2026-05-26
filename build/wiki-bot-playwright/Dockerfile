@@ -1,3 +1,5 @@
+FROM mcr.microsoft.com/playwright:v1.59.1-jammy AS playwright-browsers
+
 FROM node:24
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -34,16 +36,14 @@ RUN npm run build && \
     cp ./package.json ./dist/package.json && \
     cp ./package-lock.json ./dist/package-lock.json && \
     cd ./dist && \
-    npm --quiet ci --omit=dev --no-bin-links && \
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm --quiet ci --omit=dev --no-bin-links && \
     rm -rf ./package-lock.json ./scripts && \
     cd ..
 
 RUN npm install aws-lambda-ric@3.3.0
 
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright-browsers
-ENV PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
-RUN mkdir -p /ms-playwright-browsers && \
-    DEBUG=pw:install PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT=600000 npx playwright install chromium --only-shell
+COPY --from=playwright-browsers /ms-playwright /ms-playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 
 ENTRYPOINT ["/usr/local/bin/npx", "aws-lambda-ric"]
