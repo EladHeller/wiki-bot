@@ -41,8 +41,9 @@ RUN npm run build && \
 RUN npm install aws-lambda-ric@3.3.0
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright-browsers
-RUN mkdir -p /ms-playwright-browsers
-RUN npx playwright install chromium
+ENV PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
+RUN mkdir -p /ms-playwright-browsers && \
+    npx playwright install chromium --only-shell
 
 
 ENTRYPOINT ["/usr/local/bin/npx", "aws-lambda-ric"]
