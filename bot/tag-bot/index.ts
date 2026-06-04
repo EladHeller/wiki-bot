@@ -17,7 +17,6 @@ const notSupportedCommandMessage = `מצטער, אבל הפקודה שהזנת �
 
 type AllowedConfiguration = {
   users: string[];
-  pages: string[];
 };
 
 async function getAllowedConfiguration(api: IWikiApi): Promise<AllowedConfiguration> {
@@ -27,28 +26,8 @@ async function getAllowedConfiguration(api: IWikiApi): Promise<AllowedConfigurat
   if (usersParagraphContent) {
     users = getInnerLinks(usersParagraphContent).map(({ link }) => link.replace('משתמש:', '').replace('user:', ''));
   }
-
-  const pagesParagraphContent = getParagraphContent(content, 'דפים נתמכים');
-  const pages: string[] = [];
-  if (pagesParagraphContent) {
-    pagesParagraphContent.split('\n').forEach((line) => {
-      if (!line.trim().startsWith('*')) {
-        return;
-      }
-      const page = line.replace(/^\s*\*/, '').trim();
-      if (page.startsWith('[[')) {
-        const links = getInnerLinks(page);
-        if (links.length === 1) {
-          pages.push(links[0].link);
-        }
-      } else {
-        pages.push(page);
-      }
-    });
-  }
   return {
     users,
-    pages,
   };
 }
 
@@ -227,11 +206,6 @@ async function handleNotification(
   }
   const title = notification.title.full;
   console.log({ title });
-  const isInWhiteList = allowedConfiguration.pages.some((whiteListTitle) => title.startsWith(whiteListTitle));
-  if (!isInWhiteList) {
-    console.log('Not in white list');
-    return;
-  }
   const { body } = notification['*'];
   console.log({ body });
   if (!body.trim().match(/^@(?:(?:משתמש|user):)?Sapper-bot/i)) {
