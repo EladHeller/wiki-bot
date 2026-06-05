@@ -11,11 +11,12 @@ export function getRedirectTargetFromContent(content: string): string | null {
     return null;
   }
 
-  if (!firstNonEmptyLine.match(/^#(?:redirect|הפניה)(?:\s|$)/i)) {
+  if (!firstNonEmptyLine.match(/^#\S+\s\[\[[^\]]+\]\]$/i)) {
     return null;
   }
 
   const redirectLink = getInnerLink(firstNonEmptyLine);
+
   if (!redirectLink?.link) {
     return null;
   }

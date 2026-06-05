@@ -37,6 +37,12 @@ describe('getRedirectTargetFromContent', () => {
 
     expect(getRedirectTargetFromContent(content)).toBeNull();
   });
+
+  it('returns null when redirect wikilink has no link part', () => {
+    const content = '#REDIRECT [[|text]]';
+
+    expect(getRedirectTargetFromContent(content)).toBeNull();
+  });
 });
 
 describe('isRedirectContent', () => {
