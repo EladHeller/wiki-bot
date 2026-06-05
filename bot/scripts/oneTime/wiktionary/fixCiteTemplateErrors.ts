@@ -99,7 +99,7 @@ export async function listAllErrors() {
   const errors: {error: string, title: string}[] = [];
   for await (const pages of generator) {
     for (const page of pages) {
-      const parsedContent = await api.parsePage(page.title);
+      const parsedContent = await api.getParsedContent(page.title);
       const dom = new JSDOM(parsedContent);
       const errorElements = dom.window.document.querySelectorAll('.scribunto-error');
       errorElements.forEach((errorElement) => {
@@ -119,7 +119,7 @@ export async function listAllErrors() {
 
 async function getWikisourceText(wikisourceAPI: IWikiApi, title: string): Promise<string> {
   try {
-    const parsedContent = await wikisourceAPI.parsePage(title);
+    const parsedContent = await wikisourceAPI.getParsedContent(title);
     const dom = new JSDOM(parsedContent);
     return dom.window.document.body.textContent?.replaceAll(/ [א-ת]+ \[([^\]]+)\]/g, ' $1') || '';
   } catch {
