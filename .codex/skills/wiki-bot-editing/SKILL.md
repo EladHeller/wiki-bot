@@ -21,6 +21,13 @@ description: Guides Hebrew Wikipedia and Wikidata editing, parsing, and API usag
 - Reserve explicit `for await` loops for cases with side effects that cannot be expressed cleanly as a transformation, such as early exits, edit submission with per-item error handling, or stateful batching. Even then, keep the body small and delegate parsing/transformation work to named functions.
 - Avoid mixing parsing, API calls, filtering, and edit decisions in one loop. Prefer small pure helpers and pipeline-style composition so each step can be tested independently.
 
+## Tests and coverage
+
+- Add focused unit tests for every behavior change, including parser edge cases, generated wikitext, API decision logic, and generator pipeline behavior.
+- Keep unit tests close to the changed code and prefer small fixtures that expose the behavior being protected.
+- Coverage must remain at 100% for statements, branches, functions, and lines. There are no exceptions for generated code, one-off scripts, defensive branches, or error paths; either test the behavior or reshape the code so the requirement remains meaningful.
+- Do not finish wiki editing work until `npm run test:ci` has passed locally.
+
 ## APIs
 
 - Reuse types from `bot/types.ts` (`WikiPage`, `WikiDataEntity`, `WikiApiConfig`, etc.)
