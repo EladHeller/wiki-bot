@@ -1,5 +1,5 @@
 import { IWikiApi } from '../../wiki/WikiApi';
-import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
+import { findTemplate, getTemplateData } from '../../wiki/newTemplateParser';
 import { getAllParagraphs, parseParagraph } from '../../wiki/paragraphParser';
 import parseTableText from '../../wiki/wikiTableParser';
 import {
@@ -15,7 +15,7 @@ import {
 } from '../../utilities/signatureUtils';
 import { logger } from '../../utilities/logger';
 
-export type ArchiveType = 'רבעון' | 'תבנית ארכיון';
+export type ArchiveType = 'רבעון' | 'תבנית ארכיון' | 'תבנית ארכיון עם יעד';
 const CONFIG_PAGE_TITLE = 'ויקיפדיה:בוט/ארכוב דיונים';
 export type PageToArchive = {
   page: string;
@@ -58,21 +58,22 @@ async function getContent(wikiApi: IWikiApi, title: string) {
 function getStatusTemplateData(
   paragraphContent: string,
   pageTitle: string,
-): { status: string; handler?: string } | null {
+): { status: string; handler?: string; archive?: string } | null {
   const statusTemplate = findTemplate(paragraphContent, TEMPLATE_NAME, pageTitle);
   if (!statusTemplate) {
     return null;
   }
 
-  const templateData = getTemplateArrayData(statusTemplate, TEMPLATE_NAME, pageTitle);
-  if (templateData.length === 0) {
+  const { arrayData, keyValueData } = getTemplateData(statusTemplate, TEMPLATE_NAME, pageTitle);
+  if (!arrayData || arrayData.length === 0) {
     return null;
   }
 
-  const status = templateData[0].trim();
-  const handler = templateData.length > 1 ? templateData[1].trim() : undefined;
+  const status = arrayData[0].trim();
+  const handler = arrayData.length > 1 ? arrayData[1].trim() : undefined;
+  const archive = keyValueData?.['ארכוב']?.trim();
 
-  return { status, handler };
+  return { status, handler, archive };
 }
 
 function hasValidStatusTemplate(
@@ -193,12 +194,12 @@ export default function ClosedDiscussionsArchiveBotModel(
     return allParagraphs.filter((paragraph) => archivableParagraphsSet.has(paragraph));
   }
 
-  async function archiveSingleParagraphQuarterly(
+  async function archiveSingleParagraphTemplate(
     pageTitle: string,
     paragraph: string,
-    firstDate: Date,
+    archiveTitle: string,
+    isTargeted: boolean,
   ): Promise<void> {
-    const archivePageName = getArchivePageName(pageTitle, firstDate);
     const { name: paragraphName } = parseParagraph(paragraph);
     const templateData = getStatusTemplateData(paragraph, pageTitle);
 
@@ -207,6 +208,56 @@ export default function ClosedDiscussionsArchiveBotModel(
       return;
     }
 
+    const archiveSummary = createArchiveSummary(
+      paragraphName,
+      templateData.status,
+      templateData.handler,
+    );
+
+    const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
+
+    const paragraphToArchive = isTargeted
+      ? `{{הועבר|מ=${pageTitle}}}\n${paragraph}\n{{סוף העברה}}`
+      : paragraph;
+
+    if (existingArchiveContent) {
+      const newContent = `${existingArchiveContent.content}\n\n${paragraphToArchive}`;
+      await wikiApi.edit(
+        archiveTitle,
+        archiveSummary,
+        newContent,
+        existingArchiveContent.revid,
+      );
+    } else {
+      const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${paragraphToArchive}`;
+      await wikiApi.create(archiveTitle, archiveSummary, newContent);
+    }
+
+    // Remove the paragraph from the source page
+    const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, pageTitle);
+    const updatedContent = removeParagraphsFromContent(sourceContent, [paragraph]);
+    await wikiApi.edit(pageTitle, archiveSummary, updatedContent, sourceRevid);
+  }
+
+  async function archiveSingleParagraphQuarterly(
+    pageTitle: string,
+    paragraph: string,
+    firstDate: Date,
+  ): Promise<void> {
+    const templateData = getStatusTemplateData(paragraph, pageTitle);
+    const { name: paragraphName } = parseParagraph(paragraph);
+
+    if (!templateData) {
+      logger.logWarning(`No status template found for paragraph: ${pageTitle}: ${paragraphName}`);
+      return;
+    }
+
+    if (templateData.archive && templateData.archive !== 'ארכיון') {
+      await archiveSingleParagraphTemplate(pageTitle, paragraph, templateData.archive, true);
+      return;
+    }
+
+    const archivePageName = getArchivePageName(pageTitle, firstDate);
     const archiveSummary = createArchiveSummary(
       paragraphName,
       templateData.status,
@@ -250,46 +301,6 @@ export default function ClosedDiscussionsArchiveBotModel(
     }
   }
 
-  async function archiveSingleParagraphTemplate(
-    pageTitle: string,
-    paragraph: string,
-    archiveTitle: string,
-  ): Promise<void> {
-    const { name: paragraphName } = parseParagraph(paragraph);
-    const templateData = getStatusTemplateData(paragraph, pageTitle);
-
-    if (!templateData) {
-      logger.logWarning(`No status template found for paragraph: ${pageTitle}: ${paragraphName}`);
-      return;
-    }
-
-    const archiveSummary = createArchiveSummary(
-      paragraphName,
-      templateData.status,
-      templateData.handler,
-    );
-
-    const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
-
-    if (existingArchiveContent) {
-      const newContent = `${existingArchiveContent.content}\n\n${paragraph}`;
-      await wikiApi.edit(
-        archiveTitle,
-        archiveSummary,
-        newContent,
-        existingArchiveContent.revid,
-      );
-    } else {
-      const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${paragraph}`;
-      await wikiApi.create(archiveTitle, archiveSummary, newContent);
-    }
-
-    // Remove the paragraph from the source page
-    const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, pageTitle);
-    const updatedContent = removeParagraphsFromContent(sourceContent, [paragraph]);
-    await wikiApi.edit(pageTitle, archiveSummary, updatedContent, sourceRevid);
-  }
-
   async function archiveWithTemplateAlgorithm(
     pageTitle: string,
     archivableParagraphs: string[],
@@ -313,8 +324,74 @@ export default function ClosedDiscussionsArchiveBotModel(
     const archivedParagraphs: string[] = [];
     try {
       for (const paragraph of archivableParagraphs) {
-        await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle);
+        const templateData = getStatusTemplateData(paragraph, pageTitle);
+        if (templateData?.archive && templateData.archive !== 'ארכיון') {
+          await archiveSingleParagraphTemplate(pageTitle, paragraph, templateData.archive, true);
+        } else {
+          await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle, false);
+        }
         archivedParagraphs.push(paragraph);
+      }
+    } finally {
+      await removeArchivedUndatedParagraphsFromTracker(wikiApi, pageTitle, archivedParagraphs);
+    }
+  }
+
+  async function archiveSingleParagraphWithTargetedArchive(
+    pageTitle: string,
+    paragraph: string,
+    getDefaultArchiveTitle: () => Promise<string>,
+  ): Promise<boolean> {
+    const templateData = getStatusTemplateData(paragraph, pageTitle);
+    if (!templateData?.archive) {
+      return false;
+    }
+
+    const isDefaultArchive = templateData.archive === 'ארכיון';
+    const archiveTitle = isDefaultArchive
+      ? await getDefaultArchiveTitle()
+      : templateData.archive;
+
+    await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle, !isDefaultArchive);
+    return true;
+  }
+
+  async function archiveWithTargetTemplateAlgorithm(
+    pageTitle: string,
+    archivableParagraphs: string[],
+    archiveNavigatePage: string,
+  ): Promise<void> {
+    const archivedParagraphs: string[] = [];
+    let defaultArchiveTitle: string | null = null;
+
+    const getDefaultArchiveTitle = async (): Promise<string> => {
+      if (!defaultArchiveTitle) {
+        const navigateContent = await getContent(wikiApi, archiveNavigatePage);
+        const archiveTitleResult = await getArchiveTitle(
+          wikiApi,
+          navigateContent.content,
+          pageTitle,
+          true,
+        );
+
+        if ('error' in archiveTitleResult) {
+          throw new Error(`Failed to get archive title: ${archiveTitleResult.error}`);
+        }
+        defaultArchiveTitle = archiveTitleResult.archiveTitle;
+      }
+      return defaultArchiveTitle;
+    };
+
+    try {
+      for (const paragraph of archivableParagraphs) {
+        const archived = await archiveSingleParagraphWithTargetedArchive(
+          pageTitle,
+          paragraph,
+          getDefaultArchiveTitle,
+        );
+        if (archived) {
+          archivedParagraphs.push(paragraph);
+        }
       }
     } finally {
       await removeArchivedUndatedParagraphsFromTracker(wikiApi, pageTitle, archivedParagraphs);
@@ -335,6 +412,8 @@ export default function ClosedDiscussionsArchiveBotModel(
       await archiveWithQuarterlyAlgorithm(pageTitle, archivableParagraphs);
     } else if (archiveType === 'תבנית ארכיון') {
       await archiveWithTemplateAlgorithm(pageTitle, archivableParagraphs, archiveNavigatePage);
+    } else if (archiveType === 'תבנית ארכיון עם יעד') {
+      await archiveWithTargetTemplateAlgorithm(pageTitle, archivableParagraphs, archiveNavigatePage);
     } else {
       throw new Error(`Unknown archive type: ${archiveType}`);
     }
