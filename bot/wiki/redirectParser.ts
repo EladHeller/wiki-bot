@@ -1,6 +1,9 @@
 import { getInnerLink } from './wikiLinkParser';
 
-export function getRedirectTargetFromContent(content: string): string | null {
+const REDIRECT_ONLY_REGEX = /^\s*#\S+\s*\[\[[^\]]+\]\]$/i;
+const REDIRECT_START_REGEX = /^\s*#\S+\s*\[\[[^\]]+\]\]/i;
+
+export function getRedirectTargetFromContent(content: string, redirectOnly = true): string | null {
   const normalized = content.replace(/\r\n/g, '\n').replace(/^\uFEFF/, '');
   const firstNonEmptyLine = normalized
     .split('\n')
@@ -10,8 +13,8 @@ export function getRedirectTargetFromContent(content: string): string | null {
   if (!firstNonEmptyLine) {
     return null;
   }
-
-  if (!firstNonEmptyLine.match(/^#\S+\s\[\[[^\]]+\]\]$/i)) {
+  const regex = redirectOnly ? REDIRECT_ONLY_REGEX : REDIRECT_START_REGEX;
+  if (!firstNonEmptyLine.match(regex)) {
     return null;
   }
 
