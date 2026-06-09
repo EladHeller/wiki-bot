@@ -102,7 +102,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     getNotifications: base.getNotifications ?? jest.fn<() => Promise<any>>(),
     addComment: base.addComment
       ?? jest.fn<(page: string, summary: string, content: string, commentid: string) => Promise<any>>(),
-    allPages: base.allPages ?? jest.fn<(namespace: number) => AsyncGenerator<WikiPage[], void, void>>(),
+    allPages: base.allPages ?? jest.fn<(namespace?: number, from?: string) => AsyncGenerator<WikiPage[], void, void>>(),
     getParsedContent: base.getParsedContent ?? jest.fn<(title: string) => Promise<string>>(),
     getUserGroups: base.getUserGroups ?? jest.fn<(username: string) => Promise<string[]>>(),
     recentChanges: base.recentChanges ?? jest.fn<(namespaces: number[], endTimestamp: string, limit?: number,

@@ -183,7 +183,7 @@ async function askAction(api: IWikiApi, notification: WikiNotification) {
   }
 }
 
-const actions = {
+const actions: Record<string, (api: IWikiApi, notification: WikiNotification) => Promise<any>> = {
   ארכב: archiveAction,
   'ארכב ל': archiveAction,
   ענה: askAction,

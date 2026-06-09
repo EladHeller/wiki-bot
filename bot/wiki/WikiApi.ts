@@ -341,7 +341,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     category: string,
     limit = 500,
     seen = new Set<string>(),
-  ) {
+  ): AsyncGenerator<WikiPage, any, void> {
     const generator = listCategory(category, limit, 'subcat');
 
     for await (const subCategory of generator) {

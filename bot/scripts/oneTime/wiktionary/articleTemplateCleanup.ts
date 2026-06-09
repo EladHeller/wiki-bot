@@ -114,7 +114,7 @@ export default async function wikitionaryArticleTemplateCleanup() {
     console.log('pagesForCleanup', pagesForCleanup.length);
   }
 }
-const resultsDict = {};
+const resultsDict: Record<string, number> = {};
 export async function cleanupArticles() {
   const baseApi = BaseWikiApi({
     ...defaultConfig,

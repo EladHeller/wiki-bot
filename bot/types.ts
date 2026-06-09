@@ -236,3 +236,8 @@ export type WikiNotification = {
     iconUrl: string;
   };
 }
+
+declare global {
+  // eslint-disable-next-line vars-on-top, no-var
+  var continueObject: any;
+}
