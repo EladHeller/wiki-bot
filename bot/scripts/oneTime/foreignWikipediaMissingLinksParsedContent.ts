@@ -12,7 +12,7 @@ import { getRedirectTargetFromContent } from '../../wiki/redirectParser';
 import { WikiPage } from '../../types';
 
 const CATEGORY_TITLE = 'קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה';
-const LOG_PAGE_TITLE = 'user:sapper-bot/קישורי שפה - הפניות - ריצה 4';
+const LOG_PAGE_TITLE = 'user:sapper-bot/קישורי שפה - הפניות - ריצה 5';
 const EDIT_SUMMARY = 'תיקון קישורי שפה: החלפת הפניה בערך היעד';
 const VALIDATOR_ERROR_SELECTOR = '.paramvalidator-error';
 const VALIDATOR_ERROR_REGEX = /שימוש בתבנית\s+(.+?)\s+עבור\s+"(.+?)"\s+בשפה\s+([a-z-]+)\s+אך ערך זה לא קיים בשפה זו/i;
@@ -186,8 +186,8 @@ async function checkMissingRedirect(api: IWikiApi, title:string, failedReason?: 
       isMissing: true,
     };
   }
-  const newTitle = res.value[0].title;
-  if (newTitle.toLowerCase() === title.toLowerCase()) {
+  const newTitle = res.value[0]?.title;
+  if (newTitle?.toLowerCase() === title.toLowerCase()) {
     return {
       isMissing: false,
       newTitle,
