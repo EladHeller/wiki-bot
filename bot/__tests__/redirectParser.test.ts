@@ -43,6 +43,12 @@ describe('getRedirectTargetFromContent', () => {
 
     expect(getRedirectTargetFromContent(content)).toBeNull();
   });
+
+  it('should returns redirect target when redirectOnly=false and the content contains category', () => {
+    const content = '#REDIRECT [[text]] [[category:redirect not to delete]]';
+
+    expect(getRedirectTargetFromContent(content, false)).toBe('text');
+  });
 });
 
 describe('isRedirectContent', () => {

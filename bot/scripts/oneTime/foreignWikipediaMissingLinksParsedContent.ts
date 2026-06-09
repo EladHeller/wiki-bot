@@ -12,10 +12,11 @@ import { getRedirectTargetFromContent } from '../../wiki/redirectParser';
 import { WikiPage } from '../../types';
 
 const CATEGORY_TITLE = 'קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה';
-const LOG_PAGE_TITLE = 'user:sapper-bot/קישורי שפה - הפניות';
+const LOG_PAGE_TITLE = 'user:sapper-bot/קישורי שפה - הפניות - ריצה 4';
 const EDIT_SUMMARY = 'תיקון קישורי שפה: החלפת הפניה בערך היעד';
 const VALIDATOR_ERROR_SELECTOR = '.paramvalidator-error';
 const VALIDATOR_ERROR_REGEX = /שימוש בתבנית\s+(.+?)\s+עבור\s+"(.+?)"\s+בשפה\s+([a-z-]+)\s+אך ערך זה לא קיים בשפה זו/i;
+const WATCHED_TEMPLATES = ['צרפ', 'גרמ', 'אנג', 'טורק', 'ייד'];
 
 export type ParamValidatorError = {
   templateName: string;
@@ -71,22 +72,40 @@ function hasSectionTarget(title: string): boolean {
 }
 
 export function readRedirectTarget(content: string): string | null {
-  const target = getRedirectTargetFromContent(content);
+  const target = getRedirectTargetFromContent(content, false);
   return target && !hasSectionTarget(target) ? target : null;
 }
 
-async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string): Promise<string | null> {
+async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string): Promise<{
+  redirectTarget?: string;
+  failedReason?: string;
+}> {
   const [{ redirect }, revisions] = await Promise.all([
     languageApi.getRedirecTarget(foreignTitle),
-    languageApi.getArticleRevisions(foreignTitle, 2, 'content|ids'),
+    languageApi.getArticleRevisions(foreignTitle, 21, 'content|ids'),
   ]);
 
-  if (!redirect?.to || redirect.tofragment != null || redirect.tosection != null || revisions.length !== 1) {
-    return null;
+  if (!redirect?.to) {
+    return {
+      failedReason: 'redirect not found or invalid',
+    };
   }
-
-  const redirectTargetFromContent = readRedirectTarget(revisions[0]?.slots?.main?.['*'] ?? '');
-  return redirectTargetFromContent === redirect.to ? redirect.to : null;
+  if (redirect.tosection != null || redirect.tofragment != null) {
+    return {
+      failedReason: 'redirect has section target',
+    };
+  }
+  if (revisions.length > 20) {
+    return {
+      failedReason: 'more than 20 revisions',
+    };
+  }
+  const redirectTargetsFromContent = revisions.map((rev) => readRedirectTarget(rev?.slots?.main?.['*'] ?? ''));
+  const matchContent = redirectTargetsFromContent.every((target) => target === redirect.to);
+  return {
+    redirectTarget: matchContent ? redirect.to : undefined,
+    failedReason: matchContent ? undefined : 'redirect targets changed after the redirect was created',
+  };
 }
 
 function replaceFirst(content: string, from: string, to: string): string {
@@ -144,16 +163,31 @@ function addLog(log: TemplateCheckLog): void {
 }
 
 async function handleError(pageTitle: string, content: string, error: ParamValidatorError): Promise<string> {
-  const redirectTarget = await getEasyRedirectTarget(getLanguageApi(error.languageCode), error.foreignTitle);
+  const redirectTargetResult = await getEasyRedirectTarget(getLanguageApi(error.languageCode), error.foreignTitle);
 
-  if (!redirectTarget) {
+  if (redirectTargetResult.redirectTarget == null) {
     addLog({
       ...error,
       pageTitle,
       success: false,
-      reason: 'not an easy redirect',
+      reason: redirectTargetResult.failedReason,
     });
     return content;
+  }
+  const { redirectTarget } = redirectTargetResult;
+  if (WATCHED_TEMPLATES.includes(error.templateName)) {
+    const foreignHasBrackets = error.foreignTitle.includes('(') || error.foreignTitle.includes(')');
+    const targetHasBrackets = redirectTarget.includes('(') || redirectTarget.includes(')');
+    if (!foreignHasBrackets && targetHasBrackets) {
+      addLog({
+        ...error,
+        pageTitle,
+        redirectTarget,
+        success: false,
+        reason: 'target title has brackets but source does not',
+      });
+      return content;
+    }
   }
 
   const newContent = replaceTemplateForeignTitle(
@@ -182,13 +216,16 @@ function formatLog(log: TemplateCheckLog): string {
 }
 
 async function writeLogs(api: IWikiApi): Promise<void> {
-  const logContent = logs.map(formatLog).join('\n');
+  const successLogs = logs.filter((log) => log.success);
+  const logContent = successLogs.map(formatLog).join('\n');
+  const failedLogs = logs.filter((log) => !log.success);
+  const failedLogContent = failedLogs.map(formatLog).join('\n');
 
   try {
     const { revid } = await api.articleContent(LOG_PAGE_TITLE);
-    await api.edit(LOG_PAGE_TITLE, EDIT_SUMMARY, logContent, revid);
+    await api.edit(LOG_PAGE_TITLE, EDIT_SUMMARY, `${logContent}\n\n${failedLogContent}`, revid);
   } catch {
-    await api.create(LOG_PAGE_TITLE, EDIT_SUMMARY, logContent);
+    await api.create(LOG_PAGE_TITLE, EDIT_SUMMARY, `${logContent}\n\n${failedLogContent}`);
   }
 }
 
@@ -234,7 +271,7 @@ export default async function foreignWikipediaMissingLinksParsedContent(): Promi
   await api.login();
 
   await asyncGeneratorMapWithSequence(
-    1,
+    50,
     api.categroyPages(normalizeCategoryName(CATEGORY_TITLE)),
     (page) => async () => handlePageSafely(api, page),
   );

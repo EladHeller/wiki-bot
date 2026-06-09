@@ -7,6 +7,12 @@ import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 import { logger } from '../utilities/logger';
 
+const getMockResponse = <T>(
+  responses: Record<string, T>,
+  key: string,
+  defaultValue: T,
+): T => responses[key] || defaultValue;
+
 describe('closedDiscussionsArchiveBotModel', () => {
   let model: IClosedDiscussionsArchiveBotModel;
   let wikiApi: Mocked<IWikiApi>;
@@ -933,6 +939,276 @@ Discussion content without template
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalled();
       expect(loggerLogWarningSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should archive to target specified in ארכוב field for תבנית ארכיון עם יעד', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const paragraphWithTarget = `
+==Discussion 1==
+{{מצב|טופל|ארכוב=TargetPage}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+      const paragraphWithDefault = `
+==Discussion 2==
+{{מצב|טופל|ארכוב=ארכיון}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+      const paragraphWithoutArchive = `
+==Discussion 3==
+{{מצב|טופל}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+
+      const navigatePageContent = `
+{{תיבת ארכיון|
+[[/ארכיון 1]]
+}}
+`;
+
+      const sourceContent = `${paragraphWithTarget}\n${paragraphWithDefault}\n${paragraphWithoutArchive}`;
+
+      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+        'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
+        TestPage: { content: sourceContent, revid: 1 },
+      }, title, { content: '', revid: 0 }));
+
+      wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
+        'TestPage/ארכיון 1': {},
+      }, title, { missing: '' })));
+
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await model.archive('TestPage', [paragraphWithTarget, paragraphWithDefault, paragraphWithoutArchive], 'תבנית ארכיון עם יעד', 'TestPage/Navigate');
+
+      // Verify Discussion 1 was archived to TargetPage with wrapping
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'TargetPage',
+        expect.stringContaining('Discussion 1'),
+        expect.stringMatching(/\{\{הועבר\|מ=TestPage\}\}\n\n==Discussion 1==[\s\S]*\{\{סוף העברה\}\}/),
+      );
+
+      // Verify Discussion 2 was archived to TestPage/ארכיון 1 WITHOUT wrapping
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'TestPage/ארכיון 1',
+        expect.stringContaining('Discussion 2'),
+        expect.not.stringContaining('{{הועבר'),
+      );
+
+      // Verify removals from source page
+      expect(wikiApi.edit).toHaveBeenCalledWith('TestPage', expect.stringContaining('Discussion 1'), expect.not.stringContaining('Discussion 1'), 1);
+      expect(wikiApi.edit).toHaveBeenCalledWith('TestPage', expect.stringContaining('Discussion 2'), expect.not.stringContaining('Discussion 2'), 1);
+
+      // Verify Discussion 3 was NOT archived
+      expect(wikiApi.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw error when archive title lookup fails in תבנית ארכיון עם יעד', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const paragraphWithDefault = `
+==Discussion==
+{{מצב|טופל|ארכוב=ארכיון}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+      const navigatePageContent = 'No archive box here';
+
+      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+        'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
+        TestPage: { content: paragraphWithDefault, revid: 1 },
+      }, title, { content: '', revid: 0 }));
+
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await expect(
+        model.archive('TestPage', [paragraphWithDefault], 'תבנית ארכיון עם יעד', 'TestPage/Navigate'),
+      ).rejects.toThrow('Failed to get archive title: תיבת ארכיון לא נמצאה');
+    });
+
+    it('should use cached default archive title in תבנית ארכיון עם יעד', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const paragraph1 = `
+==Discussion 1==
+{{מצב|טופל|ארכוב=ארכיון}}
+Discussion 1 content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+      const paragraph2 = `
+==Discussion 2==
+{{מצב|טופל|ארכוב=ארכיון}}
+Discussion 2 content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+      const navigatePageContent = `
+{{תיבת ארכיון|
+[[/ארכיון 1]]
+}}
+`;
+
+      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+        'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
+        TestPage: { content: `${paragraph1}\n${paragraph2}`, revid: 1 },
+      }, title, { content: '', revid: 0 }));
+
+      wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
+        'TestPage/ארכיון 1': {},
+      }, title, { missing: '' })));
+
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await model.archive('TestPage', [paragraph1, paragraph2], 'תבנית ארכיון עם יעד', 'TestPage/Navigate');
+
+      // Verify navigate page was only read once despite two paragraphs needing default archive
+      const articleContentCalls = (jest.mocked(wikiApi.articleContent)).mock.calls;
+      const navigateReads = articleContentCalls.filter((call) => call[0] === 'TestPage/Navigate');
+
+      expect(navigateReads).toHaveLength(1);
+    });
+
+    it('should cover both branches of isTargeted in archiveSingleParagraphTemplate', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const paragraphWithoutTarget = `
+==Discussion 1==
+{{מצב|טופל}}
+Content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+      const paragraphWithTarget = `
+==Discussion 2==
+{{מצב|טופל|ארכוב=TargetPage}}
+Content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+      const navigatePageContent = `
+{{תיבת ארכיון|
+[[/ארכיון 1]]
+}}
+`;
+
+      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+        'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
+        TestPage: { content: `${paragraphWithoutTarget}\n${paragraphWithTarget}`, revid: 1 },
+      }, title, { content: '', revid: 0 }));
+
+      wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
+        'TestPage/ארכיון 1': {},
+      }, title, { missing: '' })));
+
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      // 1. isTargeted = false (via תבנית ארכיון algorithm for paragraph without ארכוב)
+      await model.archive('TestPage', [paragraphWithoutTarget], 'תבנית ארכיון', 'TestPage/Navigate');
+
+      expect(wikiApi.create).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.not.stringContaining('{{הועבר'));
+
+      wikiApi.create.mockClear();
+
+      // 2. isTargeted = true (via תבנית ארכיון עם יעד algorithm for paragraph with ארכוב)
+      await model.archive('TestPage', [paragraphWithTarget], 'תבנית ארכיון עם יעד', 'TestPage/Navigate');
+
+      expect(wikiApi.create).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.stringContaining('{{הועבר'));
+    });
+
+    it('should support optional ארכוב field in רבעון archive', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const paragraphWithTarget = `
+==Discussion 1==
+{{מצב|טופל|ארכוב=TargetPage}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+      const paragraphWithoutTarget = `
+==Discussion 2==
+{{מצב|טופל}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+
+      const sourceContent = `${paragraphWithTarget}\n${paragraphWithoutTarget}`;
+
+      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+        TestPage: { content: sourceContent, revid: 1 },
+      }, title, { content: '', revid: 0 }));
+
+      wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
+        'TestPage/ארכיון 1': {},
+      }, title, { missing: '' })));
+
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await model.archive('TestPage', [paragraphWithTarget, paragraphWithoutTarget], 'רבעון', 'TestPage');
+
+      // Verify Discussion 1 was archived to TargetPage with wrapping
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'TargetPage',
+        expect.stringContaining('Discussion 1'),
+        expect.stringContaining('{{הועבר|מ=TestPage}}\n\n==Discussion 1=='),
+      );
+
+      // Verify Discussion 2 was archived to quarterly archive WITHOUT wrapping
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'TestPage/ארכיון ינואר-מרץ 2025',
+        expect.stringContaining('Discussion 2'),
+        expect.not.stringContaining('{{הועבר'),
+      );
+    });
+
+    it('should support optional ארכוב field in תבנית ארכיון archive', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const paragraphWithTarget = `
+==Discussion 1==
+{{מצב|טופל|ארכוב=TargetPage}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+      const paragraphWithoutTarget = `
+==Discussion 2==
+{{מצב|טופל}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+
+      const navigatePageContent = `
+{{תיבת ארכיון|
+[[/ארכיון 1]]
+}}
+`;
+
+      const sourceContent = `${paragraphWithTarget}\n${paragraphWithoutTarget}`;
+      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+        'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
+        TestPage: { content: sourceContent, revid: 1 },
+      }, title, { content: '', revid: 0 }));
+
+      wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
+        'TestPage/ארכיון 1': {},
+      }, title, { missing: '' })));
+
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await model.archive('TestPage', [paragraphWithTarget, paragraphWithoutTarget], 'תבנית ארכיון', 'TestPage/Navigate');
+
+      // Verify Discussion 1 was archived to TargetPage with wrapping
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'TargetPage',
+        expect.stringContaining('Discussion 1'),
+        expect.stringContaining('{{הועבר|מ=TestPage}}\n\n==Discussion 1=='),
+      );
+
+      // Verify Discussion 2 was archived to default archive WITHOUT wrapping
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'TestPage/ארכיון 1',
+        expect.stringContaining('Discussion 2'),
+        expect.not.stringContaining('{{הועבר'),
+      );
     });
   });
 });
