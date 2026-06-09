@@ -37,7 +37,7 @@ export interface IWikiApi {
   getArticlesWithTemplate(
     templateName: string, continueObject?: Record<string, string>, prefix?: string, namespace?: string
   ): AsyncGenerator<WikiPage[], void, void>;
-  search(text: string): AsyncGenerator<WikiPage[], void, void>;
+  search(text: string, exact?: boolean): AsyncGenerator<WikiPage[], void, void>;
   searchPages(searchText: string, namespaces?: number[], limit?: number): AsyncGenerator<WikiPage[], void, void>;
   getRedirectsFrom(namespace: number, toNamespace: number, limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
@@ -243,11 +243,11 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
-  async function* search(text: string) {
+  async function* search(text: string, exact = false) {
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content|ids');
 
-    const path = `?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=50`
+    const path = `?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=50&${exact ? 'gsrwhat=nearmatch' : ''}`
       + `&prop=${props}`
       + `&rvprop=${rvprops}&rvslots=*`;
 
