@@ -13,7 +13,7 @@ export default async function DuplicateRedirects(api: IWikiApi) {
         const releventPages = res.value?.filter((x) => x.links?.length === 1);
 
         const infos = await api.info(releventPages.map((x) => x.links?.[0].title ?? '').filter((x) => x));
-        const redirectWithProblem = infos.filter((x) => x.missing || x.redirect);
+        const redirectWithProblem = infos.filter((x) => x.missing != null || x.redirect);
         if (redirectWithProblem.length > 0) {
           console.log(redirectWithProblem);
         }
