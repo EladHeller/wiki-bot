@@ -13,7 +13,7 @@ import { WikiPage } from '../../types';
 
 const CATEGORY_TITLE = 'קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה';
 const LOG_PAGE_TITLE = 'user:sapper-bot/קישורי שפה - הפניות - ריצה 5';
-const EDIT_SUMMARY = 'תיקון קישורי שפה: החלפת הפניה בערך היעד';
+const EDIT_SUMMARY = 'תיקון קישורי שפה';
 const VALIDATOR_ERROR_SELECTOR = '.paramvalidator-error';
 const VALIDATOR_ERROR_REGEX = /שימוש בתבנית\s+(.+?)\s+עבור\s+"(.+?)"\s+בשפה\s+([a-z-]+)\s+אך ערך זה לא קיים בשפה זו/i;
 const WATCHED_TEMPLATES = ['צרפ', 'גרמ', 'אנג', 'טורק', 'ייד'];
@@ -53,7 +53,7 @@ export function parseParamValidatorError(text: string): ParamValidatorError | nu
 
 export function getParamValidatorErrors(parsedContent: string): ParamValidatorError[] {
   return Array.from(new JSDOM(parsedContent).window.document.querySelectorAll(VALIDATOR_ERROR_SELECTOR))
-    .map((errorElement) => parseParamValidatorError(errorElement.textContent ?? ''))
+    .map((errorElement: HTMLElement) => parseParamValidatorError(errorElement.textContent ?? ''))
     .filter((error): error is ParamValidatorError => error != null);
 }
 
@@ -82,7 +82,7 @@ async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string
 }> {
   const [{ redirect }, revisions] = await Promise.all([
     languageApi.getRedirecTarget(foreignTitle),
-    languageApi.getArticleRevisions(foreignTitle, 21, 'content|ids'),
+    languageApi.getArticleRevisions(foreignTitle, 1, 'content|ids'),
   ]);
 
   if (!redirect?.to) {
@@ -95,11 +95,12 @@ async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string
       failedReason: 'redirect has section target',
     };
   }
-  if (revisions.length > 20) {
-    return {
-      failedReason: 'more than 20 revisions',
-    };
-  }
+  // Not relevant since we get only 1 version
+  // if (revisions.length > 20) {
+  //   return {
+  //     failedReason: 'more than 20 revisions',
+  //   };
+  // }
   const redirectTargetsFromContent = revisions.map((rev) => readRedirectTarget(rev?.slots?.main?.['*'] ?? ''));
   const matchContent = redirectTargetsFromContent.every((target) => target === redirect.to);
   return {
@@ -138,6 +139,14 @@ function replaceTemplateParam(
   }, templateName);
 }
 
+function fixTitleBracketsAndDots(title: string): string | null {
+  if (title.match(/^[.()]/)) {
+    return title.replace(/^(\.+)(.*)/, '$2$1').replace(/^[()](.*)/, '$1)');
+  }
+
+  return null;
+}
+
 export function replaceTemplateForeignTitle(
   content: string,
   pageTitle: string,
@@ -161,7 +170,7 @@ function addLog(log: TemplateCheckLog): void {
   logs.push(log);
   console.log(`${log.success ? 'Fixed' : 'Skipped'}: ${log.pageTitle} / ${log.templateName} / ${log.languageCode}:${log.foreignTitle}${log.reason ? ` / ${log.reason}` : ''}`);
 }
-
+const latinComparer = new Intl.Collator(undefined, { sensitivity: 'base' });
 async function checkMissingRedirect(api: IWikiApi, title:string, failedReason?: string) {
   if (failedReason !== 'redirect not found or invalid') {
     return {
@@ -169,6 +178,11 @@ async function checkMissingRedirect(api: IWikiApi, title:string, failedReason?: 
     };
   }
   const [info] = await api.info([title]);
+  if (!info) {
+    return {
+      isInterwiki: true,
+    };
+  }
   if (info.missing == null) {
     return {
       isMissing: false,
@@ -181,17 +195,25 @@ async function checkMissingRedirect(api: IWikiApi, title:string, failedReason?: 
       isMissing: true,
     };
   }
-  if (res.value.length > 1) {
-    return {
-      isMissing: true,
-    };
-  }
+
   const newTitle = res.value[0]?.title;
-  if (newTitle?.toLowerCase() === title.toLowerCase()) {
+
+  if (res.value.length === 1 && latinComparer.compare(newTitle, title) === 0) {
     return {
       isMissing: false,
       newTitle,
     };
+  }
+
+  const normalizedTitle = fixTitleBracketsAndDots(title);
+  if (normalizedTitle && normalizedTitle !== title) {
+    const [normalizedTitleInfo] = await api.info([normalizedTitle]);
+    if (normalizedTitleInfo.missing == null) {
+      return {
+        isMissing: false,
+        newTitle: normalizedTitle,
+      };
+    }
   }
   return {
     isMissing: true,
@@ -201,11 +223,20 @@ async function checkMissingRedirect(api: IWikiApi, title:string, failedReason?: 
 async function handleError(pageTitle: string, content: string, error: ParamValidatorError): Promise<string> {
   const languageApi = getLanguageApi(error.languageCode);
   const redirectTargetResult = await getEasyRedirectTarget(languageApi, error.foreignTitle);
-  const { isMissing, newTitle } = await checkMissingRedirect(
+  const { isMissing, newTitle, isInterwiki } = await checkMissingRedirect(
     languageApi,
     error.foreignTitle,
     redirectTargetResult.failedReason,
   );
+  if (isInterwiki) {
+    addLog({
+      ...error,
+      pageTitle,
+      success: false,
+      reason: 'probably interwiki',
+    });
+    return content;
+  }
   if (redirectTargetResult.redirectTarget == null && !newTitle) {
     if (isMissing) {
       addLog({

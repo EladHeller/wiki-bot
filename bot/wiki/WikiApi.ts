@@ -211,8 +211,13 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const path = `?action=query&format=json&rvprop=${encodedProps}&rvslots=*&prop=revisions&titles=${encodeURIComponent(title)}&rvlimit=${limit}`;
     const result = await request(path);
     const wikiPages: Record<string, Partial<WikiPage>> = result.query.pages;
-
-    return Object.values(wikiPages)[0]?.revisions ?? [];
+    if (result.query.normalized) {
+      console.log(`${title} normalized`, result.query.normalized);
+    }
+    if (result.query.interwiki) {
+      console.log(`${title} interwiki`, result.query.interwiki);
+    }
+    return Object.values(wikiPages ?? {})[0]?.revisions ?? [];
   }
 
   async function* externalUrl(link: string, protocol: string = 'https', namespace = '0') {
