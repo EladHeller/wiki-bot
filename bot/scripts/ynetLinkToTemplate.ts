@@ -1,6 +1,6 @@
 import { JSDOM } from 'jsdom';
 import { WikiLink } from '../wiki/wikiLinkParser';
-import { GeneralLinkTemplateData } from './types';
+import { GeneralLinkTemplateData, CiteNewsTemplate } from './types';
 import { linksToTemplates } from './utils';
 import { getAttr, getMetaValue, getSchemaData } from '../scraping';
 import { getLocalDate } from '../utilities';
@@ -62,18 +62,20 @@ async function getArticleData(url: string, linkText: string): Promise<PageData |
   }
 }
 
-async function generalLinkConverter(generalLink: GeneralLinkTemplateData) {
-  const url = generalLink['כתובת'];
+async function generalLinkConverter(generalLink: GeneralLinkTemplateData | CiteNewsTemplate) {
+  const generalLinkData = generalLink as GeneralLinkTemplateData;
+  const citeNews = generalLink as CiteNewsTemplate;
+  const url = generalLinkData?.['כתובת'] || citeNews?.url || '';
   const match = url?.match(articleRegex);
   const articleId = match?.[1] ?? url?.match(generalRegex)?.[1] ?? '';
   if (!articleId) {
     console.log('Failed to get article id', url);
     return '';
   }
-  const date = generalLink['תאריך'] ?? '';
-  const otherData = generalLink['מידע נוסף'] ?? '';
+  const date = generalLinkData?.['תאריך'] ?? citeNews?.['access-date'] ?? '';
+  const otherData = (generalLink as any)['מידע נוסף'] ?? '';
   const otherWords = (otherData || date) ? `|${date}${(date && otherData) ? ', ' : ''}${otherData}` : '';
-  return `{{ynet|${generalLink['הכותב'] ?? ''}|${generalLink['כותרת']}|${articleId}${otherWords}}}`;
+  return `{{ynet|${generalLinkData?.['הכותב'] || citeNews?.author || ''}|${generalLinkData?.['כותרת'] || citeNews?.title || ''}|${articleId}${otherWords}}}`;
 }
 
 export async function externalLinkConverter(originalText: string, { link, text }: WikiLink, wikiPageTitle: string) {

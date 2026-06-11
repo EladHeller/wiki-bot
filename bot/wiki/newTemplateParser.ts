@@ -50,7 +50,7 @@ export function findTemplate(text: string, templateName: string, title: string):
 }
 
 export function getTemplateKeyValueData(templateText: string): Record<string, string> {
-  const obj = {};
+  const obj: Record<string, string> = {};
   if (templateText) {
     let currIndex = templateText.indexOf('|') + 1;
     if (currIndex === 0) {
