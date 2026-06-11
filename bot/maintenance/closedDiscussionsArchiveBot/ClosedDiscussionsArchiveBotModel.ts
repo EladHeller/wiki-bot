@@ -121,7 +121,7 @@ function getArchivePageName(basePageTitle: string, date: Date): string {
 
 function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: string[]): string {
   const newContent = paragraphsToRemove.reduce(
-    (content, paragraph) => content.replace(paragraph, ''),
+    (content, paragraph) => content.split(paragraph).join(''),
     pageContent,
   );
 
@@ -199,6 +199,7 @@ export default function ClosedDiscussionsArchiveBotModel(
     paragraph: string,
     archiveTitle: string,
     isTargeted: boolean,
+    regularArchivePage = '',
   ): Promise<void> {
     const { name: paragraphName } = parseParagraph(paragraph);
     const templateData = getStatusTemplateData(paragraph, pageTitle);
@@ -233,10 +234,17 @@ export default function ClosedDiscussionsArchiveBotModel(
       await wikiApi.create(archiveTitle, archiveSummary, newContent);
     }
 
-    // Remove the paragraph from the source page
     const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, pageTitle);
+
     const updatedContent = removeParagraphsFromContent(sourceContent, [paragraph]);
     await wikiApi.edit(pageTitle, archiveSummary, updatedContent, sourceRevid);
+
+    if (isTargeted) {
+      const { content, revid } = await getContent(wikiApi, regularArchivePage);
+      const statusTemplate = findTemplate(paragraph, TEMPLATE_NAME, pageTitle);
+      const newContent = `${content}\n==${paragraphName}==\n${statusTemplate}\n{{הועבר|ל=${archiveTitle}}}\n~~~~`;
+      await wikiApi.edit(regularArchivePage, archiveSummary, newContent, revid, paragraphName);
+    }
   }
 
   async function archiveSingleParagraphQuarterly(
@@ -252,12 +260,13 @@ export default function ClosedDiscussionsArchiveBotModel(
       return;
     }
 
+    const archivePageName = getArchivePageName(pageTitle, firstDate);
+
     if (templateData.archive && templateData.archive !== 'ארכיון') {
-      await archiveSingleParagraphTemplate(pageTitle, paragraph, templateData.archive, true);
+      await archiveSingleParagraphTemplate(pageTitle, paragraph, templateData.archive, true, archivePageName);
       return;
     }
 
-    const archivePageName = getArchivePageName(pageTitle, firstDate);
     const archiveSummary = createArchiveSummary(
       paragraphName,
       templateData.status,
@@ -326,7 +335,7 @@ export default function ClosedDiscussionsArchiveBotModel(
       for (const paragraph of archivableParagraphs) {
         const templateData = getStatusTemplateData(paragraph, pageTitle);
         if (templateData?.archive && templateData.archive !== 'ארכיון') {
-          await archiveSingleParagraphTemplate(pageTitle, paragraph, templateData.archive, true);
+          await archiveSingleParagraphTemplate(pageTitle, paragraph, templateData.archive, true, archiveTitle);
         } else {
           await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle, false);
         }
@@ -348,11 +357,12 @@ export default function ClosedDiscussionsArchiveBotModel(
     }
 
     const isDefaultArchive = templateData.archive === 'ארכיון';
+    const defaultArchiveTitle = await getDefaultArchiveTitle();
     const archiveTitle = isDefaultArchive
-      ? await getDefaultArchiveTitle()
+      ? defaultArchiveTitle
       : templateData.archive;
 
-    await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle, !isDefaultArchive);
+    await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle, !isDefaultArchive, defaultArchiveTitle);
     return true;
   }
 

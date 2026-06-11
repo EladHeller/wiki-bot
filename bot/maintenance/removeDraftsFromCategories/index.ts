@@ -90,7 +90,7 @@ const removeDraftsFromCategory = async (draft: string, api: IWikiApi): Promise<A
   } catch (error) {
     try {
       const [info] = await api.info([nameWithoutUnderscores]);
-      if (info?.missing) {
+      if (info?.missing != null) {
         console.log(`Draft ${nameWithoutUnderscores} is missing, skipping`);
         return null;
       }

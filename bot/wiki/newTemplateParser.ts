@@ -13,8 +13,8 @@ const isStructureInsideAnother = (
 
 export function findTemplates(text: string, templateName: string, title: string): string[] {
   const structures = parseWikiStructures(text, 0, title);
-  const templateStart = `{{${templateName}`;
-  const templateRegex = new RegExp(`^{{${escapeRegex(templateName)}\\s*[|}]`);
+  const templateStartRegex = new RegExp(`^{{\\s*${escapeRegex(templateName)}`);
+  const templateRegex = new RegExp(`^{{\\s*${escapeRegex(templateName)}\\s*[|}]`);
 
   const templateStructures = structures.filter((s) => s.type === 'template' || s.type === 'parameter');
   const skipRanges: Array<{ start: number; end: number }> = [];
@@ -28,9 +28,9 @@ export function findTemplates(text: string, templateName: string, title: string)
     }
 
     const templateText = text.substring(structure.start, structure.end);
-    const startsWithName = templateText.startsWith(templateStart);
+    const startsWithName = templateText.match(templateStartRegex);
 
-    if (startsWithName) {
+    if (startsWithName != null) {
       const matchesRegex = templateText.match(templateRegex);
 
       if (matchesRegex) {
@@ -148,7 +148,8 @@ export function getTemplateData(
   templateName: string,
   title: string,
 ): TemplateData {
-  const templateContent = templateText.replace(`{{${templateName}`, '').replace(/}}$/, '');
+  const templateStartRegex = new RegExp(`^{{\\s*${escapeRegex(templateName)}`);
+  const templateContent = templateText.replace(templateStartRegex, '').replace(/}}$/, '');
   if (!templateContent.match(/^\s*\|/)) {
     return {};
   }

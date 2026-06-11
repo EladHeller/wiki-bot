@@ -169,7 +169,7 @@ function isLikelyPeopleCategory(categoryName: string): boolean {
 
 async function categoryExists(api: IWikiApi, category: string): Promise<boolean> {
   const [info] = await api.info([`קטגוריה:${category}`]);
-  return !info?.missing;
+  return info?.missing == null;
 }
 
 async function validatePair(api: IWikiApi, pair: CategoryPair): Promise<{ valid: boolean; reason?: string }> {

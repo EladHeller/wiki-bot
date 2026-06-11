@@ -974,6 +974,7 @@ Discussion content
       wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: sourceContent, revid: 1 },
+        'TestPage/ארכיון 1': { content: '{{ארכיון הדט}}', revid: 3 },
       }, title, { content: '', revid: 0 }));
 
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
@@ -991,19 +992,37 @@ Discussion content
         expect.stringMatching(/\{\{הועבר\|מ=TestPage\}\}\n\n==Discussion 1==[\s\S]*\{\{סוף העברה\}\}/),
       );
 
-      // Verify Discussion 2 was archived to TestPage/ארכיון 1 WITHOUT wrapping
-      expect(wikiApi.create).toHaveBeenCalledWith(
+      // Verify Discussion 2 was archived to TestPage/ארכיון 1 WITHOUT wrapping (via EDIT since page exists)
+      expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון 1',
         expect.stringContaining('Discussion 2'),
-        expect.not.stringContaining('{{הועבר'),
+        expect.stringMatching(/\{\{ארכיון הדט\}\}[\s\S]*==Discussion 2==[\s\S]*Discussion content/),
+        3,
       );
 
-      // Verify removals from source page
-      expect(wikiApi.edit).toHaveBeenCalledWith('TestPage', expect.stringContaining('Discussion 1'), expect.not.stringContaining('Discussion 1'), 1);
+      // Verify Discussion 1 source edit: full paragraph removed (paragraph itself is gone)
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage',
+        expect.stringContaining('Discussion 1'),
+        expect.not.stringContaining('Discussion 1'),
+        1,
+      );
+
+      // Verify Discussion 2 source edit: paragraph fully removed (not targeted)
       expect(wikiApi.edit).toHaveBeenCalledWith('TestPage', expect.stringContaining('Discussion 2'), expect.not.stringContaining('Discussion 2'), 1);
 
       // Verify Discussion 3 was NOT archived
-      expect(wikiApi.create).toHaveBeenCalledTimes(2);
+      expect(wikiApi.create).toHaveBeenCalledTimes(1);
+
+      // Verify stub was added to TestPage/ארכיון 1 (edited with הועבר marker and ~~~~)
+      // eslint-disable-next-line jest/max-expects
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage/ארכיון 1',
+        expect.any(String),
+        expect.stringContaining('{{הועבר|ל=TargetPage}}'),
+        expect.any(Number),
+        expect.any(String),
+      );
     });
 
     it('should throw error when archive title lookup fails in תבנית ארכיון עם יעד', async () => {
@@ -1094,6 +1113,7 @@ Content
       wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: `${paragraphWithoutTarget}\n${paragraphWithTarget}`, revid: 1 },
+        'TestPage/ארכיון 1': { content: '{{ארכיון הדט}}', revid: 3 },
       }, title, { content: '', revid: 0 }));
 
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
@@ -1105,14 +1125,25 @@ Content
       // 1. isTargeted = false (via תבנית ארכיון algorithm for paragraph without ארכוב)
       await model.archive('TestPage', [paragraphWithoutTarget], 'תבנית ארכיון', 'TestPage/Navigate');
 
-      expect(wikiApi.create).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.not.stringContaining('{{הועבר'));
+      expect(wikiApi.edit).toHaveBeenCalledWith('TestPage/ארכיון 1', expect.any(String), expect.not.stringContaining('{{הועבר'), expect.any(Number));
+      // Source page edit should fully remove the paragraph (no stub for non-targeted)
+      expect(wikiApi.edit).toHaveBeenCalledWith('TestPage', expect.any(String), expect.not.stringContaining('~~~~'), expect.any(Number));
 
       wikiApi.create.mockClear();
+      wikiApi.edit.mockClear();
 
       // 2. isTargeted = true (via תבנית ארכיון עם יעד algorithm for paragraph with ארכוב)
       await model.archive('TestPage', [paragraphWithTarget], 'תבנית ארכיון עם יעד', 'TestPage/Navigate');
 
       expect(wikiApi.create).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.stringContaining('{{הועבר'));
+      // Archive page edit should include stub with הועבר|ל and ~~~~
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage/ארכיון 1',
+        expect.any(String),
+        expect.stringContaining('{{הועבר|ל=TargetPage}}'),
+        expect.any(Number),
+        expect.any(String),
+      );
     });
 
     it('should support optional ארכוב field in רבעון archive', async () => {
@@ -1135,6 +1166,7 @@ Discussion content
 
       wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
         TestPage: { content: sourceContent, revid: 1 },
+        'TestPage/ארכיון ינואר-מרץ 2025': { content: '{{ארכיון הדט}}', revid: 2 },
       }, title, { content: '', revid: 0 }));
 
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
@@ -1152,11 +1184,21 @@ Discussion content
         expect.stringContaining('{{הועבר|מ=TestPage}}\n\n==Discussion 1=='),
       );
 
-      // Verify Discussion 2 was archived to quarterly archive WITHOUT wrapping
-      expect(wikiApi.create).toHaveBeenCalledWith(
+      // Verify Discussion 2 was archived to quarterly archive WITHOUT wrapping (via EDIT since page exists)
+      expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
         expect.stringContaining('Discussion 2'),
-        expect.not.stringContaining('{{הועבר'),
+        expect.stringMatching(/\{\{ארכיון הדט\}\}[\s\S]*==Discussion 2==/),
+        expect.any(Number),
+      );
+
+      // Verify Discussion 1 source edit: paragraph removed and stub added to quarterly archive
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage/ארכיון ינואר-מרץ 2025',
+        expect.stringContaining('Discussion 1'),
+        expect.stringContaining('{{הועבר|ל=TargetPage}}'),
+        expect.any(Number),
+        expect.any(String),
       );
     });
 
@@ -1186,6 +1228,7 @@ Discussion content
       wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: sourceContent, revid: 1 },
+        'TestPage/ארכיון 1': { content: '{{ארכיון הדט}}', revid: 3 },
       }, title, { content: '', revid: 0 }));
 
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
@@ -1204,10 +1247,26 @@ Discussion content
       );
 
       // Verify Discussion 2 was archived to default archive WITHOUT wrapping
-      expect(wikiApi.create).toHaveBeenCalledWith(
+      expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון 1',
         expect.stringContaining('Discussion 2'),
-        expect.not.stringContaining('{{הועבר'),
+        expect.stringContaining('Discussion 2'),
+        expect.any(Number),
+      );
+      expect(wikiApi.edit).not.toHaveBeenCalledWith(
+        'TestPage/ארכיון 1',
+        expect.any(String),
+        expect.stringContaining('{{הועבר'),
+        expect.any(Number),
+      );
+
+      // Verify Discussion 1 source edit: stub added with status template + הועבר|ל=TargetPage + ~~~~
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage/ארכיון 1',
+        expect.stringContaining('Discussion 1'),
+        expect.stringMatching(/\{\{מצב\|טופל[^}]*\}\}[\s\S]*\{\{הועבר\|ל=TargetPage\}\}[\s\S]*~~~~$/),
+        expect.any(Number),
+        'Discussion 1',
       );
     });
   });
