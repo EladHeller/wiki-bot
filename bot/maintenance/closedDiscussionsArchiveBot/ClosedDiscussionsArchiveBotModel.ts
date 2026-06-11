@@ -217,8 +217,9 @@ export default function ClosedDiscussionsArchiveBotModel(
 
     const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
 
+    const parsedParagraph = parseParagraph(paragraph);
     const paragraphToArchive = isTargeted
-      ? `{{הועבר|מ=${pageTitle}}}\n${paragraph}\n{{סוף העברה}}`
+      ? `==${parsedParagraph.name}==\n{{הועבר|מ=${pageTitle}}}\n${parsedParagraph.content}\n{{סוף העברה}}`
       : paragraph;
 
     if (existingArchiveContent) {

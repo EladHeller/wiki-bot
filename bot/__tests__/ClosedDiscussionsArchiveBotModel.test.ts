@@ -989,7 +989,7 @@ Discussion content
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TargetPage',
         expect.stringContaining('Discussion 1'),
-        expect.stringMatching(/\{\{הועבר\|מ=TestPage\}\}\n\n==Discussion 1==[\s\S]*\{\{סוף העברה\}\}/),
+        expect.stringMatching(/==Discussion 1==\n\{\{הועבר\|מ=TestPage\}\}\n[\s\S]*\{\{סוף העברה\}\}/),
       );
 
       // Verify Discussion 2 was archived to TestPage/ארכיון 1 WITHOUT wrapping (via EDIT since page exists)
@@ -1181,7 +1181,7 @@ Discussion content
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TargetPage',
         expect.stringContaining('Discussion 1'),
-        expect.stringContaining('{{הועבר|מ=TestPage}}\n\n==Discussion 1=='),
+        expect.stringContaining('==Discussion 1==\n{{הועבר|מ=TestPage}}'),
       );
 
       // Verify Discussion 2 was archived to quarterly archive WITHOUT wrapping (via EDIT since page exists)
@@ -1243,7 +1243,7 @@ Discussion content
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TargetPage',
         expect.stringContaining('Discussion 1'),
-        expect.stringContaining('{{הועבר|מ=TestPage}}\n\n==Discussion 1=='),
+        expect.stringContaining('==Discussion 1==\n{{הועבר|מ=TestPage}}'),
       );
 
       // Verify Discussion 2 was archived to default archive WITHOUT wrapping
