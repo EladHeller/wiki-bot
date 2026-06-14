@@ -250,6 +250,21 @@ Some content
       );
     });
 
+    it('should not add paragraph to tracker when title missing', async () => {
+      wikiApi.info.mockResolvedValue([{ missing: '' }]);
+
+      const result = await getUndatedParagraphsToArchive(
+        wikiApi,
+        'TestPage',
+        ['\nNo parsable date\n'],
+        { type: 'inactivityDays', inactivityDays: 14 },
+      );
+
+      expect(result).toStrictEqual([]);
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
     it('should return tracked paragraph when inactivity time passed', async () => {
       const trackerContent = `{| class="wikitable sortable"
 ! דף !! כותרת פסקה !! תאריך הוספה
