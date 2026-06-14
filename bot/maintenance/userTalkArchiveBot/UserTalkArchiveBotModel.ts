@@ -15,6 +15,7 @@ import { logger, stringify } from '../../utilities/logger';
 const ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון';
 const AUTO_ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון אוטומטי';
 const AUTO_ARCHIVE_TEMPLATE = 'בוט ארכוב אוטומטי';
+const DELETE_DELIVERY_TEMPLATE = 'מחיקת הודעות תפוצה';
 const NO_ARCHIVE_TEMPLATE = 'לא לארכוב';
 const BOT_NOTIFICATION_HEADER = '== הודעה מבוט הארכוב ==';
 const DEFAULT_INACTIVITY_DAYS = 30;
@@ -30,6 +31,7 @@ export interface UserTalkArchiveConfig {
   archiveHeader: string;
   createNewArchive: boolean;
   archiveDeliveryOnlyMessages?: boolean;
+  shouldArchive: boolean;
 }
 
 function getPageContent(page: WikiPage): string | null {
@@ -40,7 +42,6 @@ function getPageContent(page: WikiPage): string | null {
 export interface IUserTalkArchiveBotModel {
   run(): Promise<void>;
   getConfigFromPageContent(pageTitle: string, content: string): UserTalkArchiveConfig | null;
-  getArchivableParagraphs(pageTitle: string, inactivityDays: number): Promise<string[]>;
   archive(config: UserTalkArchiveConfig, paragraphs: string[]): Promise<void>;
 }
 
@@ -134,8 +135,10 @@ export default function UserTalkArchiveBotModel(
   wikiApi: IWikiApi,
 ): IUserTalkArchiveBotModel {
   function getConfigFromPageContent(pageTitle: string, content: string): UserTalkArchiveConfig | null {
+    const deleteDeliveryTemplate = findTemplate(content, DELETE_DELIVERY_TEMPLATE, pageTitle);
+
     const template = findTemplate(content, AUTO_ARCHIVE_TEMPLATE, pageTitle)
-      || findTemplate(content, AUTO_ARCHIVE_BOX_TEMPLATE, pageTitle);
+      || findTemplate(content, AUTO_ARCHIVE_BOX_TEMPLATE, pageTitle) || deleteDeliveryTemplate;
     if (!template) {
       return null;
     }
@@ -144,6 +147,20 @@ export default function UserTalkArchiveBotModel(
 
     const inactivityDaysStr = params['ימים מתגובה אחרונה']?.trim();
     const inactivityDays = inactivityDaysStr ? parseInt(inactivityDaysStr, 10) : DEFAULT_INACTIVITY_DAYS;
+
+    if (deleteDeliveryTemplate) {
+      return {
+        talkPage: pageTitle,
+        inactivityDays,
+        archiveBoxPage: '',
+        directArchivePage: '',
+        maxArchiveSize: Number.MAX_SAFE_INTEGER,
+        archiveHeader: '',
+        createNewArchive: false,
+        archiveDeliveryOnlyMessages: false,
+        shouldArchive: false,
+      };
+    }
 
     const archiveBoxPageStr = params['מיקום תבנית תיבת ארכיון']?.trim();
     const archiveBoxPage = archiveBoxPageStr
@@ -176,6 +193,7 @@ export default function UserTalkArchiveBotModel(
       archiveHeader,
       createNewArchive,
       archiveDeliveryOnlyMessages,
+      shouldArchive: true,
     };
   }
 
@@ -184,12 +202,7 @@ export default function UserTalkArchiveBotModel(
   }
 
   function extractYearAndWeekDate(paragraph: string): Date | null {
-    const headerMatch = paragraph.match(/^[ \t]*==+[ \t]*(.+?)[ \t]*==+[ \t]*$/m);
-    if (!headerMatch) {
-      return null;
-    }
-    const header = headerMatch[1];
-    const match = header.match(/(20\d{2}) שבוע (\d{1,2})\b/);
+    const match = paragraph.match(/^[ \t]*==+[ \t]*.*?(20\d{2}) שבוע (\d{1,2})\b.*[ \t]*==+[ \t]*$/m);
 
     if (!match) {
       return null;
@@ -203,11 +216,7 @@ export default function UserTalkArchiveBotModel(
   }
 
   function isNewsletterHeader(paragraph: string): boolean {
-    const headerMatch = paragraph.match(/^[ \t]*==+[ \t]*(.+?)[ \t]*==+[ \t]*$/m);
-    if (!headerMatch) {
-      return false;
-    }
-    return /חדשופדיה \d{4} שבוע \d{1,2}\b/u.test(headerMatch[1]);
+    return /^[ \t]*==+[ \t]*.*חדשופדיה \d{4} שבוע \d{1,2}\b.*[ \t]*==+[ \t]*$/mu.test(paragraph);
   }
 
   function hasMessageDeliverySender(paragraph: string): boolean {
@@ -230,6 +239,7 @@ export default function UserTalkArchiveBotModel(
     allParagraphs: string[],
     inactivityDays: number,
     archiveDeliveryOnlyMessages: boolean,
+    shouldArchive: boolean,
   ): { archive: string[]; deleteOnly: string[]; undated: string[] } {
     const paragraphsToArchive: string[] = [];
     const deleteOnly: string[] = [];
@@ -246,6 +256,9 @@ export default function UserTalkArchiveBotModel(
         }
         return;
       }
+      if (!shouldArchive) {
+        return;
+      }
       const lastSignatureDate = extractLastSignatureDate(paragraph) || extractYearAndWeekDate(paragraph);
       if (lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays)) {
         paragraphsToArchive.push(paragraph);
@@ -254,28 +267,6 @@ export default function UserTalkArchiveBotModel(
       }
     });
     return { archive: paragraphsToArchive, deleteOnly, undated };
-  }
-
-  async function getArchivableParagraphs(
-    pageTitle: string,
-    inactivityDays: number,
-  ): Promise<string[]> {
-    const { content } = await getContent(wikiApi, pageTitle);
-    const allParagraphs = getAllParagraphs(content, pageTitle);
-    const {
-      archive: paragraphsToArchive, undated,
-    } = classifyArchivableParagraphs(allParagraphs, inactivityDays, false);
-    const undatedParagraphsToArchive = await getUndatedParagraphsToArchive(
-      wikiApi,
-      pageTitle,
-      undated,
-      { type: 'inactivityDays', inactivityDays },
-    );
-    const archivableParagraphsSet = new Set([
-      ...paragraphsToArchive,
-      ...undatedParagraphsToArchive.map((item) => item.paragraph),
-    ]);
-    return allParagraphs.filter((paragraph) => archivableParagraphsSet.has(paragraph));
   }
 
   async function archiveParagraphs(
@@ -667,6 +658,7 @@ export default function UserTalkArchiveBotModel(
       allParagraphs,
       config.inactivityDays,
       Boolean(config.archiveDeliveryOnlyMessages),
+      config.shouldArchive,
     );
     const undatedParagraphsToArchive = await getUndatedParagraphsToArchive(
       wikiApi,
@@ -698,6 +690,7 @@ export default function UserTalkArchiveBotModel(
   async function run(): Promise<void> {
     const generator = wikiApi.getArticlesWithTemplate(AUTO_ARCHIVE_TEMPLATE, undefined, 'תבנית', '*');
     const generator2 = wikiApi.getArticlesWithTemplate(AUTO_ARCHIVE_BOX_TEMPLATE, undefined, 'תבנית', '*');
+    const generator3 = wikiApi.getArticlesWithTemplate(DELETE_DELIVERY_TEMPLATE, undefined, 'תבנית', '*');
     const generatorCallback = (page: WikiPage) => async () => {
       try {
         await processPage(page);
@@ -715,12 +708,16 @@ export default function UserTalkArchiveBotModel(
       generator2,
       generatorCallback,
     );
+    await asyncGeneratorMapWithSequence(
+      5,
+      generator3,
+      generatorCallback,
+    );
   }
 
   return {
     run,
     getConfigFromPageContent,
-    getArchivableParagraphs,
     archive,
   };
 }

@@ -48,6 +48,7 @@ describe('userTalkArchiveBotModel', () => {
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
         archiveDeliveryOnlyMessages: false,
+        shouldArchive: true,
       });
     });
 
@@ -69,6 +70,7 @@ describe('userTalkArchiveBotModel', () => {
         archiveHeader: '{{ארכיון הדט}}',
         createNewArchive: true,
         archiveDeliveryOnlyMessages: false,
+        shouldArchive: true,
       });
     });
 
@@ -134,6 +136,28 @@ describe('userTalkArchiveBotModel', () => {
       expect(config?.archiveDeliveryOnlyMessages).toBe(true);
     });
 
+    it('should parse delete delivery template config', () => {
+      const pageContent = `{{מחיקת הודעות תפוצה|ימים מתגובה אחרונה=21}}
+==דיון==
+תוכן`;
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
+
+      expect(config).toStrictEqual({
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 21,
+        archiveBoxPage: '',
+        directArchivePage: '',
+        maxArchiveSize: Number.MAX_SAFE_INTEGER,
+        archiveHeader: '',
+        createNewArchive: false,
+        archiveDeliveryOnlyMessages: false,
+        shouldArchive: false,
+      });
+    });
+
     it('should return null when template not found', () => {
       const pageContent = `==דיון==
 תוכן ללא תבנית`;
@@ -184,244 +208,27 @@ describe('userTalkArchiveBotModel', () => {
     });
   });
 
-  describe('getArchivableParagraphs', () => {
-    it('should return paragraphs with old signatures', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Discussion 1==
-Old discussion
-12:42, 1 בינואר 2025 (IDT)
-
-==Discussion 2==
-Another old discussion
-09:00, 5 בינואר 2025 (IDT)
-
-==Discussion 3==
-Recent discussion
-23:59, 25 בינואר 2025 (IDT)
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toContain('Discussion 1');
-      expect(result[1]).toContain('Discussion 2');
-    });
-
-    it('should return empty array when no archivable paragraphs', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Discussion 1==
-Recent discussion
-23:59, 20 בינואר 2025 (IDT)
-
-==Discussion 2==
-Another recent discussion
-10:00, 25 בינואר 2025 (IDT)
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(0);
-    });
-
-    it('should not archive paragraphs without signatures', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Discussion 1==
-No signature here
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(0);
-    });
-
-    it('should archive undated paragraph after it has been tracked long enough', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Discussion 1==
-No signature here
-`;
-      const trackerContent = `{| class="wikitable sortable"
-! דף !! כותרת פסקה !! תאריך הוספה
-|-
-| שיחת משתמש:דוגמה || Discussion 1 || 2025-01-01
-|}`;
-
-      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
-      wikiApi.articleContent.mockResolvedValue({ content: trackerContent, revid: 2 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toContain('Discussion 1');
-    });
-
-    it('should use custom inactivity days', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Discussion 1==
-Discussion content
-12:42, 25 בינואר 2025 (IDT)
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 7);
-
-      expect(result).toHaveLength(1);
-    });
-
-    it('should handle multiple signatures and use the last one', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Discussion 1==
-First signature: 10:00, 1 בינואר 2025 (IDT)
-Second signature: 12:00, 2 בינואר 2025 (IDT)
-Last signature: 15:00, 20 בינואר 2025 (IDT)
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(0);
-    });
-
-    it('should skip paragraphs with no archive template', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Discussion 1==
-Old discussion
-12:42, 1 בינואר 2025 (IDT)
-
-==Discussion 2==
-{{לא לארכוב}}
-Old discussion that should not be archived
-12:42, 1 בינואר 2025 (IDT)
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toContain('Discussion 1');
-      expect(result[0]).not.toContain('Discussion 2');
-    });
-
-    it('should return paragraphs with year and week in the title if they are old enough', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Any other title 2024 שבוע 41==
-Some content here without a standard signature.
-
-==Any other title 2025 שבוע 4==
-This one is recent.
-
-==Pattern without adjacency: 2024 some text שבוע 42==
-Should not be matched now.
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toContain('Any other title 2024 שבוע 41');
-      expect(result).not.toContain('Pattern without adjacency');
-    });
-
-    it('should return empty array if year and week in the title is recent', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Some title 2025 שבוע 4==
-Recent content.
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(0);
-    });
-
-    it('should not archive message-delivery-only paragraphs by default', async () => {
-      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
-
-      const pageContent = `
-==Notification==
-[[משתמש:MediaWiki message delivery]] delivered a message.
-12:00, 1 בינואר 2026 (IDT)
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(0);
-    });
-
-    it('should not archive חדשופדיה weekly sections by default even without signatures', async () => {
-      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
-
-      const pageContent = `
-==חדשופדיה 2026 שבוע 16==
-תוכן ניוזלטר.
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(0);
-    });
-
-    it('should handle paragraphs where headerMatch fails (malformed header) by returning empty array', async () => {
-      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
-
-      const pageContent = `
-==Malformed Header== with extra text after closing marks
-No signature here.
-`;
-
-      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      const result = await model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14);
-
-      expect(result).toHaveLength(0);
-    });
-  });
-
   describe('archive with archive box', () => {
+    it('should throw when archive box page content is missing', async () => {
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: 'שיחת משתמש:דוגמה/ארכיונים',
+        directArchivePage: null,
+        maxArchiveSize: 150000,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: true,
+        shouldArchive: true,
+      };
+
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await expect(model.archive(config, ['==Discussion==\nOld\n'])).rejects.toThrow(
+        'Missing content for שיחת משתמש:דוגמה/ארכיונים',
+      );
+    });
+
     it('should archive to last archive page from archive box', async () => {
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
 
@@ -449,6 +256,7 @@ Old content`;
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -498,6 +306,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -562,6 +371,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -618,6 +428,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -669,6 +480,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -715,6 +527,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: false,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -763,6 +576,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -824,6 +638,7 @@ Old discussion 2
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -885,6 +700,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -935,6 +751,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -983,6 +800,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -1037,6 +855,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -1084,6 +903,7 @@ Old discussion
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -1116,6 +936,7 @@ Old discussion
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -1175,6 +996,7 @@ Old
         maxArchiveSize: 10,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       const p1 = '==Discussion 1==\nOld\n12:42, 1 בינואר 2025 (IDT)';
@@ -1251,6 +1073,7 @@ Old
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -1297,6 +1120,7 @@ Old content`;
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -1339,6 +1163,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
@@ -1389,6 +1214,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: false,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
@@ -1430,6 +1256,7 @@ Old discussion
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
@@ -1469,6 +1296,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
@@ -1500,6 +1328,7 @@ Old discussion
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       model = UserTalkArchiveBotModel(wikiApi);
@@ -1526,6 +1355,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
@@ -1569,6 +1399,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
@@ -1596,6 +1427,7 @@ Old discussion
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       model = UserTalkArchiveBotModel(wikiApi);
@@ -1606,16 +1438,6 @@ Old discussion
 12:42, 1 בינואר 2025 (IDT)
 `]),
       ).rejects.toThrow('Either archive box page or direct archive page must be provided');
-    });
-
-    it('should throw error when page content is missing', async () => {
-      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
-
-      model = UserTalkArchiveBotModel(wikiApi);
-
-      await expect(
-        model.getArchivableParagraphs('שיחת משתמש:דוגמה', 14),
-      ).rejects.toThrow('Missing content for שיחת משתמש:דוגמה');
     });
 
     it('should handle error when archive box update fails due to missing template', async () => {
@@ -1633,6 +1455,7 @@ Old discussion
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -1664,6 +1487,7 @@ Old discussion
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -1697,6 +1521,7 @@ Previous message from bot
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -1728,6 +1553,7 @@ Previous message from bot
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -1759,6 +1585,7 @@ Previous message from bot
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -1791,6 +1618,7 @@ Previous message from bot
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
@@ -1826,6 +1654,7 @@ Previous message from bot
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
@@ -1872,6 +1701,7 @@ Old discussion 3
         maxArchiveSize: 50000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{}]);
@@ -1947,6 +1777,7 @@ Old discussion 3
         maxArchiveSize: 1000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       const hugeParagraph = `==Discussion==\n${'x'.repeat(2000)}\n`;
@@ -1977,6 +1808,7 @@ Old discussion 3
         maxArchiveSize: 100,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: false,
+        shouldArchive: true,
       };
 
       const paragraph1 = '==Discussion 1==\nContent 1\n';
@@ -2012,6 +1844,7 @@ Old discussion 3
         maxArchiveSize: 100,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       const paragraph1 = '==Discussion 1==\nContent 1\n';
@@ -2047,6 +1880,7 @@ Old discussion 3
         maxArchiveSize: 100,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       const paragraph1 = '==Discussion 1==\nContent 1\n';
@@ -2089,6 +1923,7 @@ Old discussion 3
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       model = UserTalkArchiveBotModel(wikiApi);
@@ -2120,6 +1955,7 @@ More content`;
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון}}',
         createNewArchive: true,
+        shouldArchive: true,
       };
 
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
@@ -2294,6 +2130,78 @@ Old discussion
 
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
+    it('should skip archiving regular and no-archive paragraphs for delete-delivery template', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+      const pageContent = `{{מחיקת הודעות תפוצה|ימים מתגובה אחרונה=14}}
+==דיון חסום==
+{{לא לארכוב}}
+12:00, 1 בינואר 2026 (IDT)
+
+==דיון רגיל==
+תוכן כללי
+12:00, 1 בינואר 2026 (IDT)`;
+
+      async function* mockGenerator() {
+        yield [{
+          pageid: 1,
+          ns: 3,
+          title: 'שיחת משתמש:דוגמה',
+          extlinks: [],
+          revisions: [{
+            user: 'test',
+            size: 100,
+            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
+          }],
+        }];
+      }
+
+      wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 11 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+      expect(wikiApi.create).not.toHaveBeenCalled();
+    });
+
+    it('should delete inactive newsletter by year-week header for delete-delivery template', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+      const pageContent = `{{מחיקת הודעות תפוצה|ימים מתגובה אחרונה=14}}
+==חדשופדיה 2025 שבוע 1==
+תוכן`;
+
+      async function* mockGenerator() {
+        yield [{
+          pageid: 1,
+          ns: 3,
+          title: 'שיחת משתמש:דוגמה',
+          extlinks: [],
+          revisions: [{
+            user: 'test',
+            size: 100,
+            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
+          }],
+        }];
+      }
+
+      wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 12 });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
+        expect.any(String),
+        12,
+      );
+      expect(wikiApi.create).not.toHaveBeenCalled();
     });
 
     it('should delete message-delivery-only paragraph without archiving by default', async () => {
