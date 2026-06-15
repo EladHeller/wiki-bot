@@ -1,5 +1,5 @@
 import {
-  describe, expect, it, jest, beforeEach, afterEach,
+  describe, expect, it, jest, beforeEach, afterEach, beforeAll, afterAll,
 } from '@jest/globals';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 
@@ -51,10 +51,6 @@ describe('kineretBot', () => {
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
   it('should call kineret model methods', async () => {
     await kineretBot();
 
@@ -73,24 +69,34 @@ describe('kineretBot', () => {
   });
 
   describe('defaultDataFetcher', () => {
+    let fetchSpy: any;
+
+    beforeAll(() => {
+      fetchSpy = jest.spyOn(global, 'fetch');
+    });
+
+    afterAll(() => {
+      fetchSpy.mockRestore();
+    });
+
     it('should fetch data successfully', async () => {
       const mockResponse = { data: 'test' };
-      const spy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         json: jest.fn<() => Promise<any>>().mockResolvedValue(mockResponse),
       } as any);
 
       const result = await defaultDataFetcher('https://example.com');
 
-      expect(spy).toHaveBeenCalledWith('https://example.com');
+      expect(fetchSpy).toHaveBeenCalledWith('https://example.com');
 
       expect(result).toStrictEqual(mockResponse);
     });
 
     it('should throw error on fetch failure', async () => {
-      jest.spyOn(global, 'fetch').mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: false,
-      } as Response);
+      } as any);
 
       await expect(defaultDataFetcher('https://example.com')).rejects.toThrow('Failed to fetch data from https://example.com');
     });

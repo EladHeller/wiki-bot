@@ -1,5 +1,5 @@
 import { IWikiApi } from '../../wiki/WikiApi';
-import { findTemplate, getTemplateData } from '../../wiki/newTemplateParser';
+import { findTemplate, getTemplateData, templateFromKeyValueData, templateFromTemplateData } from '../../wiki/newTemplateParser';
 import { getAllParagraphs, parseParagraph } from '../../wiki/paragraphParser';
 import parseTableText from '../../wiki/wikiTableParser';
 import {
@@ -217,11 +217,16 @@ export default function ClosedDiscussionsArchiveBotModel(
 
     const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
 
+    const statusTemplate = findTemplate(paragraph, TEMPLATE_NAME, pageTitle);
+    const {keyValueData, arrayData} = getTemplateData(statusTemplate, TEMPLATE_NAME, pageTitle);templateData
+    delete keyValueData?.['ארכוב'];
+    const newTemplate = templateFromTemplateData({keyValueData, arrayData}, TEMPLATE_NAME)
+
     const parsedParagraph = parseParagraph(paragraph);
     const paragraphToArchive = isTargeted
-      ? `==${parsedParagraph.name}==\n{{הועבר|מ=${pageTitle}}}\n${parsedParagraph.content}\n{{סוף העברה}}`
+      ? `==${parsedParagraph.name}==\n{{הועבר|מ=${pageTitle}}}\n${parsedParagraph.content.replace(statusTemplate, newTemplate)}\n{{סוף העברה}}`
       : paragraph;
-
+    
     if (existingArchiveContent) {
       const newContent = `${existingArchiveContent.content}\n\n${paragraphToArchive}`;
       await wikiApi.edit(
@@ -242,9 +247,8 @@ export default function ClosedDiscussionsArchiveBotModel(
 
     if (isTargeted) {
       const { content, revid } = await getContent(wikiApi, regularArchivePage);
-      const statusTemplate = findTemplate(paragraph, TEMPLATE_NAME, pageTitle);
-      const newContent = `${content}\n==${paragraphName}==\n${statusTemplate}\n{{הועבר|ל=${archiveTitle}}}\n~~~~`;
-      await wikiApi.edit(regularArchivePage, archiveSummary, newContent, revid, paragraphName);
+      const newContent = `${content}\n==${paragraphName}==\n${newTemplate}\n{{הועבר|ל=${archiveTitle}}}\n~~~~`;
+      await wikiApi.edit(regularArchivePage, archiveSummary, newContent, revid);
     }
   }
 
