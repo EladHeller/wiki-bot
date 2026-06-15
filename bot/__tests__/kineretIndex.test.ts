@@ -1,5 +1,5 @@
 import {
-  describe, expect, it, jest, beforeEach, afterEach, beforeAll, afterAll,
+  describe, expect, it, jest, beforeEach, beforeAll, afterAll,
 } from '@jest/globals';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 
