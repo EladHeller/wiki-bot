@@ -1021,7 +1021,6 @@ Discussion content
         expect.any(String),
         expect.stringContaining('{{הועבר|ל=TargetPage}}'),
         expect.any(Number),
-        expect.any(String),
       );
     });
 
@@ -1142,7 +1141,6 @@ Content
         expect.any(String),
         expect.stringContaining('{{הועבר|ל=TargetPage}}'),
         expect.any(Number),
-        expect.any(String),
       );
     });
 
@@ -1198,7 +1196,6 @@ Discussion content
         expect.stringContaining('Discussion 1'),
         expect.stringContaining('{{הועבר|ל=TargetPage}}'),
         expect.any(Number),
-        expect.any(String),
       );
     });
 
@@ -1253,20 +1250,12 @@ Discussion content
         expect.stringContaining('Discussion 2'),
         expect.any(Number),
       );
-      expect(wikiApi.edit).not.toHaveBeenCalledWith(
-        'TestPage/ארכיון 1',
-        expect.any(String),
-        expect.stringContaining('{{הועבר'),
-        expect.any(Number),
-      );
-
       // Verify Discussion 1 source edit: stub added with status template + הועבר|ל=TargetPage + ~~~~
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון 1',
         expect.stringContaining('Discussion 1'),
-        expect.stringMatching(/\{\{מצב\|טופל[^}]*\}\}[\s\S]*\{\{הועבר\|ל=TargetPage\}\}[\s\S]*~~~~$/),
+        expect.stringMatching(/\{\{מצב\|טופל\}\}[\s\S]*\{\{הועבר\|ל=TargetPage\}\}[\s\S]*~~~~$/),
         expect.any(Number),
-        'Discussion 1',
       );
     });
   });
