@@ -4,6 +4,8 @@ import { findTemplates, getTemplateArrayData, templateFromArrayData } from '../w
 import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 
+const REQUESTS_FROM_BOTS_PAGE = 'ויקיפדיה:בוט/בקשות';
+
 export default async function changeLinksTo(
   currentTarget: string,
   newTarget: string,
@@ -21,6 +23,10 @@ export default async function changeLinksTo(
     : api.backlinksTo(currentTarget, namespaces.join(','));
 
   await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {
+    if (page.title === REQUESTS_FROM_BOTS_PAGE) {
+      console.log(`Not updated ${page.title}`);
+      return;
+    }
     const content = page.revisions?.[0].slots.main['*'];
     const revid = page.revisions?.[0].revid;
     if (!content || !revid) {
