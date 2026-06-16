@@ -40,7 +40,7 @@ RUN npm run build && \
     rm -rf ./package-lock.json ./scripts && \
     cd ..
 
-RUN npm install aws-lambda-ric@4.0.2
+RUN npm install aws-lambda-ric@3.3.0
 
 COPY --from=playwright-browsers /ms-playwright /ms-playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
