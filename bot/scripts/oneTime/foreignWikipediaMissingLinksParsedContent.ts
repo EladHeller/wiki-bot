@@ -109,15 +109,6 @@ async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string
   };
 }
 
-function replaceFirst(content: string, from: string, to: string): string {
-  const index = content.indexOf(from);
-  if (index === -1) {
-    return content;
-  }
-
-  return `${content.substring(0, index)}${to}${content.substring(index + from.length)}`;
-}
-
 function replaceTemplateParam(
   template: string,
   pageTitle: string,
@@ -162,7 +153,7 @@ export function replaceTemplateForeignTitle(
     .find(({ newTemplate }) => newTemplate != null);
 
   return replacement?.newTemplate
-    ? replaceFirst(content, replacement.template, replacement.newTemplate)
+    ? content.replaceAll(replacement.template, replacement.newTemplate)
     : content;
 }
 
