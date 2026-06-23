@@ -43,12 +43,12 @@ describe('fixKnessetBillLinks', () => {
 
     expect(mockLogin).toHaveBeenCalledTimes(1);
     expect(mockExternalUrl).toHaveBeenCalledWith(
-      'main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx',
+      'main.knesset.gov.il/activity/legislation/laws/pages/lawbill.aspx',
       'http',
       '*',
     );
     expect(mockExternalUrl).toHaveBeenCalledWith(
-      'main.knesset.gov.il/Activity/Legislation/Laws/Pages/LawBill.aspx',
+      'main.knesset.gov.il/activity/legislation/laws/pages/lawbill.aspx',
       'https',
       '*',
     );
