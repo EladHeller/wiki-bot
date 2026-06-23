@@ -1,0 +1,1063 @@
+import {
+  beforeEach, describe, expect, it, jest,
+} from '@jest/globals';
+import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
+import { Mocked } from '../../testConfig/mocks/types';
+import { IWikiApi } from '../wiki/WikiApi';
+import { WikiPage } from '../types';
+import BaseWikiApiMock from '../../testConfig/mocks/baseWikiApi.mock';
+
+const mockLanguageApi = WikiApiMock();
+const mockBaseWikiApi = BaseWikiApiMock();
+
+jest.unstable_mockModule('../wiki/WikiApi', () => ({
+  default: () => mockLanguageApi,
+}));
+
+jest.unstable_mockModule('../wiki/BaseWikiApi', () => ({
+  default: () => mockBaseWikiApi,
+  defaultConfig: {},
+}));
+
+const {
+  default: foreignWikipediaMissingLinksParsedContent,
+  parseParamValidatorError,
+  getParamValidatorErrors,
+  readRedirectTarget,
+  replaceTemplateForeignTitle,
+  fixTitleBracketsAndDots,
+  handlePageSafely,
+  runSinglePage,
+} = await import('../scripts/oneTime/foreignWikipediaMissingLinksParsedContent');
+
+describe('foreignWikipediaMissingLinksParsedContent', () => {
+  let api: Mocked<IWikiApi>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    api = WikiApiMock();
+    api.getParsedContent.mockResolvedValue('<div>No errors</div>');
+    api.articleContent.mockResolvedValue({ content: '', revid: 1 });
+    api.create.mockResolvedValue({ revid: 1 });
+    api.getRedirecTarget.mockResolvedValue({});
+    api.getArticleRevisions.mockResolvedValue([]);
+    api.info.mockResolvedValue([]);
+    api.search.mockImplementation(async function* generator() {
+      yield [];
+    });
+  });
+
+  it('handles log creation when log page fetch fails', async () => {
+    api.categroyPages.mockImplementation(async function* generator() {
+      const x: WikiPage[] = [{
+        title: 'Page1', pageid: 1, ns: 0, extlinks: [], revisions: [],
+      }];
+      yield x;
+    });
+    api.articleContent.mockRejectedValueOnce(new Error('does not exist'));
+    api.create.mockResolvedValueOnce(undefined);
+
+    await foreignWikipediaMissingLinksParsedContent(api);
+
+    expect(api.create).toHaveBeenCalledWith(
+      'user:sapper-bot/קישורי שפה - הפניות - ריצה 5',
+      'תיקון קישורי שפה',
+      '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: no errors found',
+    );
+  });
+
+  it('handles log edit when log page fetch fails', async () => {
+    api.categroyPages.mockImplementation(async function* generator() {
+      const x: WikiPage[] = [{
+        title: 'Page1', pageid: 1, ns: 0, extlinks: [], revisions: [],
+      }];
+      yield x;
+    });
+    api.articleContent.mockResolvedValueOnce({ revid: 1, content: '' });
+    await foreignWikipediaMissingLinksParsedContent(api);
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'user:sapper-bot/קישורי שפה - הפניות - ריצה 5',
+      'תיקון קישורי שפה',
+      '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: no errors found',
+      1,
+    );
+  });
+});
+
+describe('parseParamValidatorError', () => {
+  it('parses valid error messages', () => {
+    const text = 'שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו';
+
+    expect(parseParamValidatorError(text)).toStrictEqual({
+      templateName: 'אנג',
+      foreignTitle: 'Google',
+      languageCode: 'en',
+    });
+  });
+
+  it('returns null for invalid strings', () => {
+    expect(parseParamValidatorError('invalid string')).toBeNull();
+  });
+});
+
+describe('getParamValidatorErrors', () => {
+  it('extracts errors from parsed html content', () => {
+    const html = `
+      <div>
+        <span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>
+        <span class="paramvalidator-error">invalid</span>
+      </div>
+    `;
+
+    expect(getParamValidatorErrors(html)).toStrictEqual([
+      {
+        templateName: 'אנג',
+        foreignTitle: 'Google',
+        languageCode: 'en',
+      },
+    ]);
+  });
+
+  it('handles element with empty string textContent', () => {
+    const html = '<span class="paramvalidator-error"></span>';
+
+    expect(getParamValidatorErrors(html)).toStrictEqual([]);
+  });
+});
+
+describe('readRedirectTarget', () => {
+  it('extracts redirect target', () => {
+    expect(readRedirectTarget('#הפניה [[עב-ידיים]]')).toBe('עב-ידיים');
+    expect(readRedirectTarget('#REDIRECT [[Handedness]]')).toBe('Handedness');
+    expect(readRedirectTarget('#REDIRECT [[Handedness#Section]]')).toBeNull();
+    expect(readRedirectTarget('no redirect')).toBeNull();
+  });
+});
+
+describe('replaceTemplateForeignTitle', () => {
+  it('replaces foreign title parameter', () => {
+    const content = '{{אנג|Google}}';
+
+    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle')).toBe('{{אנג|NewGoogle}}');
+  });
+
+  it('replaces foreign title in multi-param template, preserving other params', () => {
+    const content = '{{אנג|Google|ExtraParam}}';
+
+    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle')).toBe('{{אנג|NewGoogle|ExtraParam}}');
+  });
+
+  it('returns same content if template has no params (no pipe separator)', () => {
+    const content = '{{אנג}}';
+
+    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle')).toBe(content);
+  });
+
+  it('returns same content if template not found', () => {
+    const content = '{{אנג|Google}}';
+
+    expect(replaceTemplateForeignTitle(content, 'Title', 'גרמ', 'Google', 'NewGoogle')).toBe(content);
+  });
+
+  it('returns same content if parameter not found in arrayData', () => {
+    const content = '{{אנג|Google}}';
+
+    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'NotInTemplate', 'NewGoogle')).toBe(content);
+  });
+});
+
+describe('fixTitleBracketsAndDots', () => {
+  it('returns null when no changes are needed', () => {
+    expect(fixTitleBracketsAndDots('English Title')).toBeNull();
+    expect(fixTitleBracketsAndDots('עברית')).toBeNull();
+    expect(fixTitleBracketsAndDots('Title.')).toBeNull();
+    expect(fixTitleBracketsAndDots('(עברית)')).toBeNull();
+    expect(fixTitleBracketsAndDots('[עברית]')).toBeNull();
+  });
+
+  it('strips leading commas and dots only', () => {
+    expect(fixTitleBracketsAndDots('.Title')).toBe('Title');
+    expect(fixTitleBracketsAndDots(',Title')).toBe('Title');
+    expect(fixTitleBracketsAndDots('...Title')).toBe('Title');
+    expect(fixTitleBracketsAndDots(',,,Title')).toBe('Title');
+  });
+
+  it('removes unmatched ending brackets', () => {
+    expect(fixTitleBracketsAndDots('Title)')).toBe('Title');
+    expect(fixTitleBracketsAndDots('Title]')).toBe('Title');
+    expect(fixTitleBracketsAndDots('Title))')).toBe('Title');
+    expect(fixTitleBracketsAndDots('Title]]')).toBe('Title');
+  });
+
+  it('does not strip unsupported punctuation', () => {
+    expect(fixTitleBracketsAndDots('Title,')).toBeNull();
+    expect(fixTitleBracketsAndDots('.Title.')).toBe('.Title');
+    expect(fixTitleBracketsAndDots('(Title')).toBeNull();
+  });
+});
+
+describe('handlePageSafely and page processing logic', () => {
+  let api: Mocked<IWikiApi>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    api = WikiApiMock();
+    api.login.mockResolvedValue(undefined);
+    api.getParsedContent.mockResolvedValue('<div>No errors</div>');
+    api.articleContent.mockResolvedValue({ content: '', revid: 1 });
+    api.create.mockResolvedValue({});
+    api.getRedirecTarget.mockResolvedValue({});
+    api.getArticleRevisions.mockResolvedValue([]);
+    api.info.mockResolvedValue([]);
+    api.categroyPages.mockImplementation(async function* generator() {
+      const x: WikiPage[] = [];
+      yield x;
+    });
+  });
+
+  it('handles page with no validator errors found', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<div>No errors</div>');
+    const page = {
+      title: 'TestPage', pageid: 1, ns: 0, extlinks: [], revisions: [],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('no errors found'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles page with no revisions content', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    const page = {
+      title: 'TestPage', pageid: 1, ns: 0, extlinks: [], revisions: [],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("Cannot read properties of undefined (reading 'slots')"));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles page with revisions but missing content or revid', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 0, // invalid revid
+        slots: { main: { '*': '', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 0,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith('No content or revid for', 'TestPage');
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles interwiki check error', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    api.getRedirecTarget.mockResolvedValueOnce({});
+    api.info.mockResolvedValueOnce([]); // empty info => isInterwiki: true
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("Cannot read properties of undefined (reading 'redirect')"));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles missing redirect but not interwiki and missing info check (empty array value)', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    api.getRedirecTarget.mockResolvedValueOnce({});
+    api.info.mockResolvedValueOnce([{ missing: '' }]);
+    api.categroyPages.mockImplementation(async function* generator() {
+      yield [];
+    });
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("Cannot read properties of undefined (reading 'redirect')"));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles missing redirect when search returns no value (undefined)', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    api.getRedirecTarget.mockResolvedValueOnce({});
+    api.info.mockResolvedValueOnce([{ missing: '' }]);
+    api.categroyPages.mockImplementation(async function* generator() {
+      yield [];
+    });
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("Cannot read properties of undefined (reading 'redirect')"));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles redirect not found or invalid but has a search match', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    api.getRedirecTarget.mockResolvedValueOnce({});
+    api.info.mockResolvedValueOnce([{ missing: '' }]);
+    api.categroyPages.mockImplementation(async function* generator() {
+      const page: WikiPage = {
+        title: 'Google', pageid: 2, ns: 0, extlinks: [], revisions: [],
+      };
+      yield [page];
+    });
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("Cannot read properties of undefined (reading 'redirect')"));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles checkMissingRedirect original title exists (info.missing is null)', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    api.getRedirecTarget.mockResolvedValueOnce({});
+    api.info.mockResolvedValueOnce([{ missing: undefined }]); // original title exists
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("Cannot read properties of undefined (reading 'redirect')"));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles redirect not found but has a different title normalized match', async () => {
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({});
+    mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]); // for original title
+    mockLanguageApi.search.mockImplementation(async function* generator() {
+      yield [{
+        title: 'Google', pageid: 2, ns: 0, extlinks: [], revisions: [],
+      }];
+    });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור ".Google." בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    api.categroyPages.mockImplementation(async function* generator() {
+      yield [];
+    });
+    mockLanguageApi.info.mockResolvedValueOnce([{ missing: undefined }]); // for normalized title
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|.Google.}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(api.edit).toHaveBeenCalledTimes(1);
+    expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|Google}}', 123);
+  });
+
+  it('handles successful redirect translation and does edit', async () => {
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle' } });
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      size: 100,
+      user: 'User',
+      slots: {
+        main: {
+          '*': '#REDIRECT [[NewGoogle]]',
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+    }]);
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|NewGoogle}}', 123);
+  });
+
+  it('skips edit when redirect content changed after creation', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle' } });
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      size: 100,
+      user: 'User',
+      slots: {
+        main: {
+          '*': '#REDIRECT [[OtherGoogle]]',
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+    }]);
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('redirect targets changed after the redirect was created'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('does not edit when there are brackets in the target', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'TestPage (test)' } });
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      size: 100,
+      user: 'User',
+      slots: {
+        main: {
+          '*': '#REDIRECT [[TestPage (test)]]',
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+    }]);
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('target title has brackets but source does not'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handle interwiki likns', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({
+      redirect: {
+        from: '',
+        to: '',
+      },
+    });
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([
+      {
+        size: 100,
+        user: 'User',
+        slots: {
+          main: {
+            '*': '#REDIRECT [[Google]]',
+            contentmodel: 'wikitext',
+            contentformat: 'text/x-wiki',
+          },
+        },
+      },
+    ]);
+    mockLanguageApi.info.mockResolvedValue([]);
+
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|en:TestPage}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('probably interwiki'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handle missing', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({
+      redirect: {
+        from: '',
+        to: '',
+      },
+    });
+    mockLanguageApi.info.mockResolvedValue([{
+      missing: '',
+    }]);
+    mockLanguageApi.search.mockImplementation(async function* generator() {
+      yield [];
+    });
+
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('target not found'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handle page exists', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({
+      redirect: {
+        from: '',
+        to: '',
+      },
+    });
+    mockLanguageApi.info.mockResolvedValue([{
+      missing: '',
+    }]);
+    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
+
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('redirect not found or invalid'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handle search - no results', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({
+      redirect: {
+        from: '',
+        to: '',
+      },
+    });
+    mockLanguageApi.info.mockResolvedValue([{
+      missing: '',
+    }]);
+    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google', missing: '' }]);
+
+    // @ts-ignore
+    mockLanguageApi.search.mockImplementation(async function* generator() {
+      yield null;
+    });
+
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('target not found'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handle search - with many results', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({
+      redirect: {
+        from: '',
+        to: '',
+      },
+    });
+    mockLanguageApi.info.mockResolvedValue([{
+      missing: '',
+    }]);
+    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google', missing: '' }]);
+
+    mockLanguageApi.search.mockImplementation(async function* generator() {
+      yield [
+        {
+          title: 'Google',
+          pageid: 1,
+          ns: 0,
+          extlinks: [],
+        },
+        {
+          title: 'Google2',
+          pageid: 2,
+          ns: 0,
+          extlinks: [],
+        },
+      ];
+    });
+
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('target not found'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handle search - with one result', async () => {
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({
+      redirect: {
+        from: '',
+        to: '',
+      },
+    });
+    mockLanguageApi.info.mockResolvedValue([{
+      missing: '',
+    }]);
+    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google', missing: '' }]);
+
+    mockLanguageApi.search.mockImplementation(async function* generator() {
+      yield [
+        {
+          title: 'google',
+          pageid: 1,
+          ns: 0,
+          extlinks: [],
+        },
+      ];
+    });
+
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|google}}', 123);
+  });
+
+  it('handles normalized title that exists after search does not match exactly', async () => {
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור ".Google." בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({});
+    mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
+    mockLanguageApi.search.mockImplementation(async function* generator() {
+      yield [
+        {
+          title: 'Google2',
+          pageid: 1,
+          ns: 0,
+          extlinks: [],
+        },
+      ];
+    });
+    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
+
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|.Google.}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+
+    await handlePageSafely(api, page);
+
+    expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|Google}}', 123);
+  });
+
+  it('keeps page unchanged when normalized title is also missing', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור ".Google." בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({});
+    mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
+    mockLanguageApi.search.mockImplementation(async function* generator() {
+      yield [
+        {
+          title: 'Google2',
+          pageid: 1,
+          ns: 0,
+          extlinks: [],
+        },
+      ];
+    });
+    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google', missing: '' }]);
+
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|.Google.}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('target not found'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles redirect with section', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle', tosection: 'section' } });
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      size: 100,
+      user: 'User',
+      slots: {
+        main: {
+          '*': '#REDIRECT [[NewGoogle#section]]',
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+    }]);
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('redirect has section target'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles redirect with fragment', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle', tofragment: 'fragment' } });
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      size: 100,
+      user: 'User',
+      slots: {
+        main: {
+          '*': '#REDIRECT [[NewGoogle#section]]',
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+    }]);
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('redirect has section target'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles error safely in handlePageSafely', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockRejectedValueOnce(new Error('api error'));
+    const page = {
+      title: 'TestPage', pageid: 1, ns: 0, extlinks: [], revisions: [],
+    };
+
+    await expect(handlePageSafely(api, page)).resolves.not.toThrow();
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('api error'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles error with data property but no message', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    const errWithData = { data: 'some error data', toString: () => 'error string' };
+    api.getParsedContent.mockRejectedValueOnce(errWithData);
+    const page = {
+      title: 'TestPage', pageid: 1, ns: 0, extlinks: [], revisions: [],
+    };
+
+    await expect(handlePageSafely(api, page)).resolves.not.toThrow();
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('some error data'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles error with no message or data, falls back to toString()', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    const errNoMessage = { toString: () => 'fallback error string' };
+    api.getParsedContent.mockRejectedValueOnce(errNoMessage);
+    const page = {
+      title: 'TestPage', pageid: 1, ns: 0, extlinks: [], revisions: [],
+    };
+
+    await expect(handlePageSafely(api, page)).resolves.not.toThrow();
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('fallback error string'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+});
+
+describe('runSinglePage', () => {
+  let api: Mocked<IWikiApi>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    api = WikiApiMock();
+    api.login.mockResolvedValue(undefined);
+    api.getParsedContent.mockResolvedValue('<div>No errors</div>');
+    api.articleContent.mockResolvedValue({ content: '', revid: 1 });
+    api.create.mockResolvedValue({ revid: 1 });
+    api.getRedirecTarget.mockResolvedValue({});
+    api.getArticleRevisions.mockResolvedValue([]);
+    api.info.mockResolvedValue([]);
+    api.search.mockImplementation(async function* generator() {
+      yield* [];
+    });
+  });
+
+  it('runs successfully for single page', async () => {
+    api.articleContent.mockResolvedValueOnce({ content: '{{אנג|Google}}', revid: 123 });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle' } });
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      user: 'User',
+      size: 100,
+      slots: {
+        main: {
+          '*': '#REDIRECT [[NewGoogle]]',
+          contentformat: 'text/x-wiki',
+          contentmodel: 'wikitext',
+        },
+      },
+    }]);
+
+    await runSinglePage('TestPage', api);
+
+    expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|NewGoogle}}', 123);
+  });
+
+  it('writes skipped log with target when replacement template is not found', async () => {
+    api.articleContent.mockResolvedValueOnce({ content: '{{גרמ|Google}}', revid: 123 });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    api.categroyPages.mockImplementation(async function* generator() {
+      yield [];
+    });
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle' } });
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      user: 'User',
+      size: 100,
+      slots: {
+        main: {
+          '*': '#REDIRECT [[NewGoogle]]',
+          contentformat: 'text/x-wiki',
+          contentmodel: 'wikitext',
+        },
+      },
+    }]);
+
+    await runSinglePage('TestPage', api);
+    await foreignWikipediaMissingLinksParsedContent(api);
+
+    expect(api.edit).toHaveBeenCalledTimes(1);
+    expect(api.edit.mock.calls[0]).toStrictEqual([
+      'user:sapper-bot/קישורי שפה - הפניות - ריצה 5',
+      'תיקון קישורי שפה',
+      expect.stringContaining('* [[TestPage]]: <nowiki>{{אנג|Google}}</nowiki> - [[:en:Google]] ← [[:en:NewGoogle]] - דולג: matching template not found'),
+      1,
+    ]);
+  });
+});
