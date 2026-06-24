@@ -130,26 +130,46 @@ function replaceTemplateParam(
   }, templateName);
 }
 
+function addTemplateKeyValueParam(
+  template: string,
+  pageTitle: string,
+  templateName: string,
+  key: string,
+  value: string,
+): string {
+  const templateData = getTemplateData(template, templateName, pageTitle);
+  return templateFromTemplateData({
+    ...templateData,
+    keyValueData: {
+      ...templateData.keyValueData,
+      [key]: value,
+    },
+  }, templateName);
+}
+
 export function fixTitleBracketsAndDots(title: string): string | null {
   let newTitle = title;
 
-  while (newTitle.startsWith('.') || newTitle.startsWith(',')) {
+  while (newTitle.startsWith('.') || newTitle.startsWith(',') || newTitle.startsWith('}')
+    || (newTitle.startsWith('{') && !newTitle.includes('}'))) {
     newTitle = newTitle.slice(1);
   }
 
   while (newTitle.length > 0) {
     const lastChar = newTitle[newTitle.length - 1];
-    if (lastChar === ')' && !newTitle.includes('(')) {
-      newTitle = newTitle.slice(0, -1);
-      continue;
-    }
-    if (lastChar === ']' && !newTitle.includes('[')) {
-      newTitle = newTitle.slice(0, -1);
-      continue;
-    }
-    if (/\p{L}|\p{N}/u.test(lastChar) || (lastChar !== ')' && lastChar !== ']')) {
+    const isClosingParenthesis = lastChar === ')';
+    const isClosingBracket = lastChar === ']';
+    const hasMatchingOpeningChar = (isClosingParenthesis && newTitle.includes('('))
+      || (isClosingBracket && newTitle.includes('['));
+
+    if (!isClosingParenthesis && !isClosingBracket) {
       break;
     }
+    if (hasMatchingOpeningChar) {
+      break;
+    }
+
+    newTitle = newTitle.slice(0, -1);
   }
 
   return newTitle === title ? null : newTitle;
@@ -174,21 +194,50 @@ export function replaceTemplateForeignTitle(
     : content;
 }
 
+export function addTemplateWithoutWikidataItem(
+  content: string,
+  pageTitle: string,
+  templateName: string,
+  foreignTitle: string,
+): string {
+  const replacement = findTemplates(content, templateName, pageTitle)
+    .map((template) => ({
+      template,
+      newTemplate: addTemplateKeyValueParam(template, pageTitle, templateName, 'ללא פריט', 'כן'),
+    }))
+    .find(({ template }) => getTemplateArrayData(template, templateName, pageTitle, true)
+      .some((value) => value === foreignTitle));
+
+  return replacement?.newTemplate
+    ? content.replaceAll(replacement.template, replacement.newTemplate)
+    : content;
+}
+
 function addLog(log: TemplateCheckLog): void {
   logs.push(log);
   console.log(`${log.success ? 'Fixed' : 'Skipped'}: ${log.pageTitle} / ${log.templateName} / ${log.languageCode}:${log.foreignTitle}${log.reason ? ` / ${log.reason}` : ''}`);
 }
 const latinComparer = new Intl.Collator(undefined, { sensitivity: 'base' });
-async function checkMissingRedirect(api: IWikiApi, title: string, failedReason?: string) {
-  if (failedReason !== 'redirect not found or invalid') {
-    return {
-      isMissing: false,
-    };
-  }
+async function checkMissingRedirect(api: IWikiApi, title: string) {
   const [info] = await api.info([title]);
   if (!info) {
     return {
       isInterwiki: true,
+    };
+  }
+  if (info.invalid != null) {
+    const normalizedTitle = decodeURIComponent((fixTitleBracketsAndDots(title) ?? title).replaceAll('_', ' '));
+    if (normalizedTitle !== title) {
+      const [normalizedTitleInfo] = await api.info([normalizedTitle]);
+      if (normalizedTitleInfo?.invalid == null) {
+        return {
+          isMissing: false,
+          newTitle: normalizedTitle,
+        };
+      }
+    }
+    return {
+      invalid: true,
     };
   }
   if (info.missing == null) {
@@ -213,7 +262,7 @@ async function checkMissingRedirect(api: IWikiApi, title: string, failedReason?:
     };
   }
 
-  const normalizedTitle = fixTitleBracketsAndDots(title);
+  const normalizedTitle = decodeURIComponent((fixTitleBracketsAndDots(title) ?? title).replaceAll('_', ' '));
   if (normalizedTitle && normalizedTitle !== title) {
     const [normalizedTitleInfo] = await api.info([normalizedTitle]);
     if (normalizedTitleInfo.missing == null) {
@@ -231,10 +280,11 @@ async function checkMissingRedirect(api: IWikiApi, title: string, failedReason?:
 async function handleError(pageTitle: string, content: string, error: ParamValidatorError): Promise<string> {
   const languageApi = getLanguageApi(error.languageCode);
   const redirectTargetResult = await getEasyRedirectTarget(languageApi, error.foreignTitle);
-  const { isMissing, newTitle, isInterwiki } = await checkMissingRedirect(
+  const {
+    isMissing, newTitle, isInterwiki, invalid,
+  } = await checkMissingRedirect(
     languageApi,
     error.foreignTitle,
-    redirectTargetResult.failedReason,
   );
   if (isInterwiki) {
     addLog({
@@ -245,10 +295,45 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
     });
     return content;
   }
+  if (invalid) {
+    addLog({
+      ...error,
+      pageTitle,
+      success: false,
+      reason: 'invalid title',
+    });
+    return content;
+  }
   const { redirectTarget } = redirectTargetResult;
   const newTarget = newTitle || redirectTarget;
 
   if (newTarget == null) {
+    if (!isMissing && redirectTargetResult.failedReason === 'redirect not found or invalid') {
+      const [redirectTargetInfo] = await languageApi.info([error.foreignTitle]);
+      if (redirectTargetInfo?.missing == null) {
+        const titleToCheck = newTitle || error.foreignTitle;
+        const wikidataItem = await languageApi.getWikiDataItem(titleToCheck);
+
+        if (wikidataItem == null) {
+          const newContent = addTemplateWithoutWikidataItem(
+            content,
+            pageTitle,
+            error.templateName,
+            error.foreignTitle,
+          );
+
+          addLog({
+            ...error,
+            pageTitle,
+            success: newContent !== content,
+            reason: newContent === content ? 'matching template not found' : undefined,
+          });
+
+          return newContent;
+        }
+      }
+    }
+
     if (isMissing) {
       addLog({
         ...error,

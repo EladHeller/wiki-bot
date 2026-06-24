@@ -26,6 +26,18 @@ export type EditResponse = {
   }
 }
 
+export type PageInfo = {
+  missing?: string;
+  invalid?: string;
+  lastrevid?: number;
+  length?: number;
+  redirect?: string;
+  ns?: number;
+  pageid?: number;
+  title?: string;
+  invalidreason?: string;
+}
+
 export type WikiPage = {
   pageid: number;
   ns: number;
