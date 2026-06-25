@@ -7,6 +7,7 @@ import {
   FileWithGlobalUsage,
   WikiRedirectData,
   EditResponse,
+  PageInfo,
 } from '../types';
 import { objectToFormData } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
@@ -26,7 +27,7 @@ export interface IWikiApi {
   ): Promise<any>;
   articleContent(title: string): Promise<{ content: string, revid: number }>;
   externalUrl(link: string, protocol?: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
-  info(titles: string[]): Promise<Partial<WikiPage>[]>;
+  info(titles: string[]): Promise<PageInfo[]>;
   purge(titles: string[]): Promise<any>;
   rollback(title: string, user: string, summary: string): Promise<any>;
   undo(title: string, summary: string, revision: number): Promise<any>;
@@ -286,7 +287,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const encodedTitles = encodeURIComponent(titles.join('|'));
     const path = `?action=query&format=json&prop=info&inprop=${props}&titles=${encodedTitles}`;
     const result = await request(path);
-    const res: Record<string, Partial<WikiPage>> = result.query?.pages ?? {};
+    const res: Record<string, PageInfo> = result.query?.pages ?? {};
     return Object.values(res);
   }
 

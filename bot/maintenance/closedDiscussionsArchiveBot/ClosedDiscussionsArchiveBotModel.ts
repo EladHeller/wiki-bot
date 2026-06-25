@@ -17,7 +17,7 @@ import {
 } from '../../utilities/signatureUtils';
 import { logger } from '../../utilities/logger';
 
-export type ArchiveType = 'רבעון' | 'תבנית ארכיון' | 'תבנית ארכיון עם יעד';
+export type ArchiveType = 'רבעון' | 'תבנית ארכיון' | 'תבנית ארכיון עם יעד' | 'מחיקה';
 const CONFIG_PAGE_TITLE = 'ויקיפדיה:בוט/ארכוב דיונים';
 export type PageToArchive = {
   page: string;
@@ -126,6 +126,9 @@ function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: st
     (content, paragraph) => content.split(paragraph).join(''),
     pageContent,
   );
+  if (newContent === pageContent) {
+    return pageContent;
+  }
 
   const cleanedContent = newContent.replace(/\n\n\n+/g, '\n\n');
   return cleanedContent.trim();
@@ -353,6 +356,15 @@ export default function ClosedDiscussionsArchiveBotModel(
     }
   }
 
+  async function deleteParagraphs(pageTitle: string, archivableParagraphs: string[]): Promise<void> {
+    const pageContent = await getContent(wikiApi, pageTitle);
+    const newContent = removeParagraphsFromContent(pageContent.content, archivableParagraphs);
+    if (newContent === pageContent.content) {
+      return;
+    }
+    await wikiApi.edit(pageTitle, 'בוט ארכוב דיונים: מחיקת דיונים שהסתיימו', newContent, pageContent.revid);
+  }
+
   async function archiveSingleParagraphWithTargetedArchive(
     pageTitle: string,
     paragraph: string,
@@ -431,6 +443,8 @@ export default function ClosedDiscussionsArchiveBotModel(
       await archiveWithTemplateAlgorithm(pageTitle, archivableParagraphs, archiveNavigatePage);
     } else if (archiveType === 'תבנית ארכיון עם יעד') {
       await archiveWithTargetTemplateAlgorithm(pageTitle, archivableParagraphs, archiveNavigatePage);
+    } else if (archiveType === 'מחיקה') {
+      await deleteParagraphs(pageTitle, archivableParagraphs);
     } else {
       throw new Error(`Unknown archive type: ${archiveType}`);
     }

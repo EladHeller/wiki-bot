@@ -53,7 +53,7 @@ export function parseParamValidatorError(text: string): ParamValidatorError | nu
 
 export function getParamValidatorErrors(parsedContent: string): ParamValidatorError[] {
   return Array.from(new JSDOM(parsedContent).window.document.querySelectorAll(VALIDATOR_ERROR_SELECTOR))
-    .map((errorElement: HTMLElement) => parseParamValidatorError(errorElement.textContent ?? ''))
+    .map((errorElement: HTMLElement) => parseParamValidatorError(errorElement.textContent))
     .filter((error): error is ParamValidatorError => error != null);
 }
 
@@ -101,21 +101,12 @@ async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string
   //     failedReason: 'more than 20 revisions',
   //   };
   // }
-  const redirectTargetsFromContent = revisions.map((rev) => readRedirectTarget(rev?.slots?.main?.['*'] ?? ''));
+  const redirectTargetsFromContent = revisions.map((rev) => readRedirectTarget(rev.slots.main['*']));
   const matchContent = redirectTargetsFromContent.every((target) => target === redirect.to);
   return {
     redirectTarget: matchContent ? redirect.to : undefined,
     failedReason: matchContent ? undefined : 'redirect targets changed after the redirect was created',
   };
-}
-
-function replaceFirst(content: string, from: string, to: string): string {
-  const index = content.indexOf(from);
-  if (index === -1) {
-    return content;
-  }
-
-  return `${content.substring(0, index)}${to}${content.substring(index + from.length)}`;
 }
 
 function replaceTemplateParam(
@@ -139,12 +130,49 @@ function replaceTemplateParam(
   }, templateName);
 }
 
-function fixTitleBracketsAndDots(title: string): string | null {
-  if (title.match(/^[.()]/)) {
-    return title.replace(/^(\.+)(.*)/, '$2$1').replace(/^[()](.*)/, '$1)');
+function addTemplateKeyValueParam(
+  template: string,
+  pageTitle: string,
+  templateName: string,
+  key: string,
+  value: string,
+): string {
+  const templateData = getTemplateData(template, templateName, pageTitle);
+  return templateFromTemplateData({
+    ...templateData,
+    keyValueData: {
+      ...templateData.keyValueData,
+      [key]: value,
+    },
+  }, templateName);
+}
+
+export function fixTitleBracketsAndDots(title: string): string | null {
+  let newTitle = title;
+
+  while (newTitle.startsWith('.') || newTitle.startsWith(',') || newTitle.startsWith('}')
+    || (newTitle.startsWith('{') && !newTitle.includes('}'))) {
+    newTitle = newTitle.slice(1);
   }
 
-  return null;
+  while (newTitle.length > 0) {
+    const lastChar = newTitle[newTitle.length - 1];
+    const isClosingParenthesis = lastChar === ')';
+    const isClosingBracket = lastChar === ']';
+    const hasMatchingOpeningChar = (isClosingParenthesis && newTitle.includes('('))
+      || (isClosingBracket && newTitle.includes('['));
+
+    if (!isClosingParenthesis && !isClosingBracket) {
+      break;
+    }
+    if (hasMatchingOpeningChar) {
+      break;
+    }
+
+    newTitle = newTitle.slice(0, -1);
+  }
+
+  return newTitle === title ? null : newTitle;
 }
 
 export function replaceTemplateForeignTitle(
@@ -162,7 +190,26 @@ export function replaceTemplateForeignTitle(
     .find(({ newTemplate }) => newTemplate != null);
 
   return replacement?.newTemplate
-    ? replaceFirst(content, replacement.template, replacement.newTemplate)
+    ? content.replaceAll(replacement.template, replacement.newTemplate)
+    : content;
+}
+
+export function addTemplateWithoutWikidataItem(
+  content: string,
+  pageTitle: string,
+  templateName: string,
+  foreignTitle: string,
+): string {
+  const replacement = findTemplates(content, templateName, pageTitle)
+    .map((template) => ({
+      template,
+      newTemplate: addTemplateKeyValueParam(template, pageTitle, templateName, 'ללא פריט', 'כן'),
+    }))
+    .find(({ template }) => getTemplateArrayData(template, templateName, pageTitle, true)
+      .some((value) => value === foreignTitle));
+
+  return replacement?.newTemplate
+    ? content.replaceAll(replacement.template, replacement.newTemplate)
     : content;
 }
 
@@ -171,16 +218,26 @@ function addLog(log: TemplateCheckLog): void {
   console.log(`${log.success ? 'Fixed' : 'Skipped'}: ${log.pageTitle} / ${log.templateName} / ${log.languageCode}:${log.foreignTitle}${log.reason ? ` / ${log.reason}` : ''}`);
 }
 const latinComparer = new Intl.Collator(undefined, { sensitivity: 'base' });
-async function checkMissingRedirect(api: IWikiApi, title:string, failedReason?: string) {
-  if (failedReason !== 'redirect not found or invalid') {
-    return {
-      isMissing: false,
-    };
-  }
+async function checkMissingRedirect(api: IWikiApi, title: string) {
   const [info] = await api.info([title]);
   if (!info) {
     return {
       isInterwiki: true,
+    };
+  }
+  if (info.invalid != null) {
+    const normalizedTitle = decodeURIComponent((fixTitleBracketsAndDots(title) ?? title).replaceAll('_', ' '));
+    if (normalizedTitle !== title) {
+      const [normalizedTitleInfo] = await api.info([normalizedTitle]);
+      if (normalizedTitleInfo?.invalid == null) {
+        return {
+          isMissing: false,
+          newTitle: normalizedTitle,
+        };
+      }
+    }
+    return {
+      invalid: true,
     };
   }
   if (info.missing == null) {
@@ -205,7 +262,7 @@ async function checkMissingRedirect(api: IWikiApi, title:string, failedReason?: 
     };
   }
 
-  const normalizedTitle = fixTitleBracketsAndDots(title);
+  const normalizedTitle = decodeURIComponent((fixTitleBracketsAndDots(title) ?? title).replaceAll('_', ' '));
   if (normalizedTitle && normalizedTitle !== title) {
     const [normalizedTitleInfo] = await api.info([normalizedTitle]);
     if (normalizedTitleInfo.missing == null) {
@@ -223,10 +280,11 @@ async function checkMissingRedirect(api: IWikiApi, title:string, failedReason?: 
 async function handleError(pageTitle: string, content: string, error: ParamValidatorError): Promise<string> {
   const languageApi = getLanguageApi(error.languageCode);
   const redirectTargetResult = await getEasyRedirectTarget(languageApi, error.foreignTitle);
-  const { isMissing, newTitle, isInterwiki } = await checkMissingRedirect(
+  const {
+    isMissing, newTitle, isInterwiki, invalid,
+  } = await checkMissingRedirect(
     languageApi,
     error.foreignTitle,
-    redirectTargetResult.failedReason,
   );
   if (isInterwiki) {
     addLog({
@@ -237,7 +295,45 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
     });
     return content;
   }
-  if (redirectTargetResult.redirectTarget == null && !newTitle) {
+  if (invalid) {
+    addLog({
+      ...error,
+      pageTitle,
+      success: false,
+      reason: 'invalid title',
+    });
+    return content;
+  }
+  const { redirectTarget } = redirectTargetResult;
+  const newTarget = newTitle || redirectTarget;
+
+  if (newTarget == null) {
+    if (!isMissing && redirectTargetResult.failedReason === 'redirect not found or invalid') {
+      const [redirectTargetInfo] = await languageApi.info([error.foreignTitle]);
+      if (redirectTargetInfo?.missing == null) {
+        const titleToCheck = newTitle || error.foreignTitle;
+        const wikidataItem = await languageApi.getWikiDataItem(titleToCheck);
+
+        if (wikidataItem == null) {
+          const newContent = addTemplateWithoutWikidataItem(
+            content,
+            pageTitle,
+            error.templateName,
+            error.foreignTitle,
+          );
+
+          addLog({
+            ...error,
+            pageTitle,
+            success: newContent !== content,
+            reason: newContent === content ? 'matching template not found' : undefined,
+          });
+
+          return newContent;
+        }
+      }
+    }
+
     if (isMissing) {
       addLog({
         ...error,
@@ -256,7 +352,6 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
 
     return content;
   }
-  const { redirectTarget } = redirectTargetResult;
   if (WATCHED_TEMPLATES.includes(error.templateName) && redirectTarget) {
     const foreignHasBrackets = error.foreignTitle.includes('(') || error.foreignTitle.includes(')');
     const targetHasBrackets = redirectTarget.includes('(') || redirectTarget.includes(')');
@@ -270,17 +365,6 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
       });
       return content;
     }
-  }
-  const newTarget = newTitle || redirectTarget;
-  if (!newTarget) {
-    addLog({
-      ...error,
-      pageTitle,
-      redirectTarget,
-      success: false,
-      reason: 'new new title and no redirect target, thats strange!',
-    });
-    return content;
   }
 
   const newContent = replaceTemplateForeignTitle(
@@ -320,6 +404,7 @@ async function writeLogs(api: IWikiApi): Promise<void> {
   } catch {
     await api.create(LOG_PAGE_TITLE, EDIT_SUMMARY, `${logContent}\n\n${failedLogContent}`);
   }
+  logs.splice(0, logs.length);
 }
 
 async function handlePage(api: IWikiApi, page: WikiPage): Promise<void> {
@@ -349,6 +434,7 @@ async function handlePage(api: IWikiApi, page: WikiPage): Promise<void> {
 
   if (newContent !== content) {
     await api.edit(page.title, EDIT_SUMMARY, newContent, revid);
+    console.log('success');
   }
 }
 
@@ -367,10 +453,7 @@ export async function handlePageSafely(api: IWikiApi, page: WikiPage): Promise<v
   }
 }
 
-export async function runSinglePage(title: string) : Promise<void> {
-  const api = WikiApi();
-  await api.login();
-
+export async function runSinglePage(title: string, api: IWikiApi): Promise<void> {
   const { content, revid } = await api.articleContent(title);
 
   const page: WikiPage = {
@@ -395,10 +478,7 @@ export async function runSinglePage(title: string) : Promise<void> {
   await handlePage(api, page);
 }
 
-export default async function foreignWikipediaMissingLinksParsedContent(): Promise<void> {
-  const api = WikiApi();
-  await api.login();
-
+export default async function foreignWikipediaMissingLinksParsedContent(api: IWikiApi): Promise<void> {
   await asyncGeneratorMapWithSequence(
     50,
     api.categroyPages(normalizeCategoryName(CATEGORY_TITLE)),

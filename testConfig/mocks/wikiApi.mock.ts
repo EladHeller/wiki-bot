@@ -3,7 +3,7 @@ import { IWikiApi } from '../../bot/wiki/WikiApi';
 import { Mocked } from './types';
 import {
   FileWithGlobalUsage,
-  LogEvent, RecentChange, Revision, UserContribution, WikiPage,
+  LogEvent, PageInfo, RecentChange, Revision, UserContribution, WikiPage,
   WikiRedirectData,
 } from '../../bot/types';
 
@@ -28,7 +28,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     externalUrl:
       base.externalUrl
       ?? jest.fn<(link: string, protocol?: string, namespace?: string) => AsyncGenerator<WikiPage[], void, void>>(),
-    info: base.info ?? jest.fn<(titles: string[]) => Promise<Partial<WikiPage>[]>>(),
+    info: base.info ?? jest.fn<(titles: string[]) => Promise<PageInfo[]>>(),
     purge: base.purge ?? jest.fn<(titles: string[]) => Promise<any>>(),
     rollback: base.rollback ?? jest.fn<(title: string, user: string, summary: string) => Promise<any>>(),
     undo:

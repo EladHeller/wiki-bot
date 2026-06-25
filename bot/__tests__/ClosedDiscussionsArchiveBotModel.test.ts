@@ -1259,4 +1259,62 @@ Discussion content
       );
     });
   });
+
+  describe('delete algorithm', () => {
+    it('should delete paragraphs from page', async () => {
+      const pageContent = `
+==Discussion 1==
+{{מצב|הועבר}}
+Some discussion content
+12:42, 1 בינואר 2025 (IDT)
+More content
+
+==Discussion 2==
+{{מצב|טופל}}
+Another discussion
+09:00, 15 בינואר 2025 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+      const archiveableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 7);
+      await model.archive('TestPage', archiveableParagraphs, 'מחיקה', '');
+
+      expect(wikiApi.edit).toHaveBeenCalledTimes(1);
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage',
+        'בוט ארכוב דיונים: מחיקת דיונים שהסתיימו',
+        `==Discussion 2==
+{{מצב|טופל}}
+Another discussion
+09:00, 15 בינואר 2025 (IDT)`,
+        1,
+      );
+    });
+
+    it('should not delete paragraphs from page if no paragraphs are archivable', async () => {
+      const pageContent = `
+==Discussion 1==
+{{מצב|הועבר}}
+Some discussion content
+12:42, 1 בינואר 2025 (IDT)
+More content
+
+
+
+==Discussion 2==
+{{מצב|טופל}}
+Another discussion
+09:00, 15 בינואר 2025 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+      await model.archive('TestPage', ['text not from page'], 'מחיקה', '');
+
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+      expect(wikiApi.create).not.toHaveBeenCalled();
+    });
+  });
 });
