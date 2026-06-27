@@ -3,10 +3,11 @@ import { WikiNotification } from '../types';
 import { getLocalTimeAndDate } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getAllParagraphs, getParagraphContent, parseParagraph } from '../wiki/paragraphParser';
-import { getInnerLinks } from '../wiki/wikiLinkParser';
+import { getInnerLink, getInnerLinks } from '../wiki/wikiLinkParser';
 import archiveParagraph, { moveTo } from './actions/archive';
 import askGPT from './gpt-bot/askGPT';
 import { logger } from '../utilities/logger';
+import { checkExternalLinks } from './actions/checkPage';
 
 const TAG_PAGE_NAME = 'משתמש:Sapper-bot/בוט התיוג';
 const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
@@ -183,11 +184,39 @@ async function askAction(api: IWikiApi, notification: WikiNotification) {
   }
 }
 
+async function checkAction(api: IWikiApi, notification: WikiNotification) {
+  const title = notification.title.full;
+  const user = notification.agent.name;
+  const commentSummary = getCommentSummary(user);
+  const commentPrefix = getCommentPrefix(user);
+  const url = new URL(notification['*'].links.primary.url);
+  const commentId = decodeURIComponent(url.hash.replace('#', ''));
+
+  try {
+    const page = notification['*'].body.split(':')[1].trim();
+    const link = getInnerLink(page);
+    if (!link) {
+      await api.addComment(title, commentSummary, `${commentPrefix}לא נמצא קישור לדף`, commentId);
+      return;
+    }
+    const content = await api.articleContent(link.link);
+    const externalLinks = await checkExternalLinks(content.content);
+
+    const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}\n${externalLinks}.`, commentId);
+    console.log({ commentRes });
+  } catch (error) {
+    logger.logError(`Failed to check page: ${error.message || error.data || error.toString()}`);
+    const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}${failedMessage}`, commentId);
+    console.log({ commentRes });
+  }
+}
+
 const actions = {
   ארכב: archiveAction,
   'ארכב ל': archiveAction,
   ענה: askAction,
   העבר: moveAction,
+  בדוק: checkAction,
 };
 const supportedActions = Object.keys(actions);
 const allowedGroups = ['autopatrolled', 'sysop', 'bureaucrat', 'patroller', 'templateeditor'];
