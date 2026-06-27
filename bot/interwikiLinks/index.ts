@@ -1,15 +1,16 @@
 import { JSDOM } from 'jsdom';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
-import BaseWikiApi, { defaultConfig } from '../../wiki/BaseWikiApi';
-import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
+import { asyncGeneratorMapWithSequence } from '../utilities';
+import BaseWikiApi, { defaultConfig } from '../wiki/BaseWikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import {
   findTemplates,
   getTemplateArrayData,
   getTemplateData,
   templateFromTemplateData,
-} from '../../wiki/newTemplateParser';
-import { getRedirectTargetFromContent } from '../../wiki/redirectParser';
-import { WikiPage } from '../../types';
+} from '../wiki/newTemplateParser';
+import { getRedirectTargetFromContent } from '../wiki/redirectParser';
+import { WikiPage } from '../types';
+import botLoggerDecorator from '../decorators/botLoggerDecorator';
 
 const CATEGORY_TITLE = 'קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה';
 const LOG_PAGE_TITLE = 'user:sapper-bot/קישורי שפה - הפניות - ריצה 5';
@@ -277,6 +278,10 @@ async function checkMissingRedirect(api: IWikiApi, title: string) {
   };
 }
 
+function titleCouldBeRelevantToNoWikidata(title: string) {
+  return !title.match(/[#:]/);
+}
+
 async function handleError(pageTitle: string, content: string, error: ParamValidatorError): Promise<string> {
   const languageApi = getLanguageApi(error.languageCode);
   const redirectTargetResult = await getEasyRedirectTarget(languageApi, error.foreignTitle);
@@ -308,7 +313,7 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
   const newTarget = newTitle || redirectTarget;
 
   if (newTarget == null) {
-    if (!isMissing && redirectTargetResult.failedReason === 'redirect not found or invalid') {
+    if (!isMissing && redirectTargetResult.failedReason === 'redirect not found or invalid' && titleCouldBeRelevantToNoWikidata(error.foreignTitle)) {
       const [redirectTargetInfo] = await languageApi.info([error.foreignTitle]);
       if (redirectTargetInfo?.missing == null) {
         const titleToCheck = newTitle || error.foreignTitle;
@@ -487,3 +492,5 @@ export default async function foreignWikipediaMissingLinksParsedContent(api: IWi
 
   await writeLogs(api);
 }
+
+export const main = botLoggerDecorator(foreignWikipediaMissingLinksParsedContent, { botName: 'בוט קישורי שפה - הפניות' });

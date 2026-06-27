@@ -29,7 +29,7 @@ const {
   fixTitleBracketsAndDots,
   handlePageSafely,
   runSinglePage,
-} = await import('../scripts/oneTime/foreignWikipediaMissingLinksParsedContent');
+} = await import('../interwikiLinks');
 
 describe('foreignWikipediaMissingLinksParsedContent', () => {
   let api: Mocked<IWikiApi>;
