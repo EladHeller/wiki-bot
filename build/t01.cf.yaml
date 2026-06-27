@@ -398,3 +398,17 @@ Resources:
           Properties:
             Schedule: cron(0 7 ? * 1 *)
             Name: ai-generated-images-scheduler
+
+  InterwikiLinksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: interwiki-links-function
+      Handler: dist/interwikiLinks/index.main
+      MemorySize: 2048
+      Timeout: 900
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 5,17 ? * * *)
+            Name: interwiki-links-scheduler
