@@ -3,7 +3,7 @@ import { logger } from '../utilities/logger';
 
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';
 const jsonAllLink = 'https://mayaapi.tase.co.il/api/company/alldetails?companyId=';
-const indicesListApiUrl = 'https://api.tase.co.il/api/index/indiceslistfornavigator?idxId=undefined&lang=0';
+const indicesListApiUrl = 'https://api.tase.co.il/api/index/indiceslistmarketdata';
 const indexComponentsApiUrl = 'https://api.tase.co.il/api/index/components';
 
 const mayaGetOptions = {
@@ -100,9 +100,9 @@ export type MayaAllDetails = {
     Site: string;
     IncorporationPlace: string;
     CompanyIndicators: {
-        Key: string;
-        Value: boolean;
-        Desc: string;
+      Key: string;
+      Value: boolean;
+      Desc: string;
     }[];
     IndicatorToDisplay: string;
     ShowAnalysis: boolean;
@@ -123,17 +123,17 @@ export type MayaAllDetails = {
   ManagementDetails: {
     UpdateDate: string;
     ManagementAndSeniorExecutives: [{
-        Id: string;
-        Name: string;
-        RoleType: string;
-        IsManager: boolean;
-        SecurityName: string;
-        EndBalance: string;
-        LastBalanceDate: string;
-        CapitalPercent: string;
-        VoteCapital: string;
-        IsFinancialExpert: number;
-        IsInspectionComitee: number;
+      Id: string;
+      Name: string;
+      RoleType: string;
+      IsManager: boolean;
+      SecurityName: string;
+      EndBalance: string;
+      LastBalanceDate: string;
+      CapitalPercent: string;
+      VoteCapital: string;
+      IsFinancialExpert: number;
+      IsInspectionComitee: number;
     }];
   };
 };
@@ -155,30 +155,6 @@ export interface SymbolResult {
   englishName: string;
 }
 
-type Index = {
-  TradeDate: string;
-  TradeTime: string;
-  Name: string;
-  Id: string;
-  IndexId: string;
-  IndexHebName: string;
-  LastRate: number;
-  Change: number;
-  Turnover: number;
-  Gainers: number;
-  Decliners: number;
-  NoChanges: number;
-  TradingStage: string;
-  TradingStageDesc: string;
-  TradingStageMob: string;
-  InDay: number;
-  IndexCategoryType: string;
-  CategoryName: string;
-  IsRezef: number;
-  IsBond: boolean;
-  MarketOpen: boolean;
-}
-
 type Stock = {
   ShortName: string;
   Symbol: string;
@@ -186,10 +162,60 @@ type Stock = {
   Weight: number;
 }
 
+type Index = {
+  Description?: string,
+  BaseRate: number,
+  OpenRate?: number,
+  HighRate?: number,
+  LowRate?: number,
+  MonthYield: number,
+  AnnualYield: number,
+  Turnover: number,
+  MarketValue: number,
+  MarketValueDate?: string,
+  IsPrivate: boolean,
+  IsAssetValue: boolean,
+  IsComponentsNextTradeDate: boolean,
+  IsOtcLoaded: boolean,
+  UnderlingAsset?: string,
+  UnderlingAssetCd?: string,
+  TradeDate?: string,
+  TradeTime: string,
+  Name: string,
+  Id: string,
+  LastRate: number,
+  Change: number,
+  Gainers?: number,
+  Decliners?: number,
+  NoChanges?: number,
+  TradingStage: string,
+  TradingStageDesc: string,
+  TradingStageMob: string,
+  InDay: number,
+  IndexCategoryType: string,
+  CategoryName: string,
+  IsRezef: number,
+  IsBond: boolean,
+  MarketOpen: boolean,
+}
+
 export async function getIndicesList(): Promise<Index[]> {
+  const items: Index[] = [];
+  let totalCount = 1;
+  let pageNum = 1;
   try {
-    const response = await axios(indicesListApiUrl, mayaGetOptions);
-    return response.data?.NavCmpnIndicesData;
+    while (items.length < totalCount) {
+      const response = await axios(indicesListApiUrl, {
+        ...mayaPostOptions,
+        data: {
+          dType: 1, oId: 0, TotalRec: 200, pageNum, lang: '0',
+        },
+      });
+      totalCount = response.data.TotalRec;
+      items.push(...response.data.Items);
+      pageNum += 1;
+    }
+    return items;
   } catch (e) {
     logger.logError(
       `getIndicesList error: ${e?.data || e?.message || e}`,

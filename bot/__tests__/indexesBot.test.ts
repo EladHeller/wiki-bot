@@ -86,8 +86,8 @@ describe('indexesBot validation', () => {
       ));
 
       (jest.mocked(getIndicesList)).mockResolvedValue([
-        { IndexHebName: 'מדד 1', IndexId: '1', Id: '1' } as any,
-        { IndexHebName: 'מדד 2', IndexId: '2', Id: '2' } as any,
+        { Name: 'מדד 1', Id: '1' } as any,
+        { Name: 'מדד 2', Id: '2' } as any,
       ]);
 
       (jest.mocked(getIndexStocks)).mockResolvedValue([
@@ -140,8 +140,7 @@ describe('indexesBot validation', () => {
 
       (jest.mocked(getIndicesList)).mockResolvedValue(
         Array.from({ length: 9 }, (_, i) => ({
-          IndexHebName: `מדד ${i + 1}`,
-          IndexId: `${i + 1}`,
+          Name: `מדד ${i + 1}`,
           Id: `${i + 1}`,
         } as any)),
       );
@@ -198,8 +197,7 @@ describe('indexesBot validation', () => {
 
       (jest.mocked(getIndicesList)).mockResolvedValue(
         Array.from({ length: 10 }, (_, i) => ({
-          IndexHebName: `מדד ${i + 1}`,
-          IndexId: `${i + 1}`,
+          Name: `מדד ${i + 1}`,
           Id: `${i + 1}`,
         } as any)),
       );
@@ -255,7 +253,7 @@ describe('indexesBot validation', () => {
       ));
 
       (jest.mocked(getIndicesList)).mockResolvedValue([
-        { IndexHebName: 'מדד 1', IndexId: '1', Id: '1' } as any,
+        { Name: 'מדד 1', Id: '1' } as any,
       ]);
 
       (jest.mocked(getIndexStocks)).mockResolvedValue([
@@ -303,7 +301,7 @@ describe('indexesBot validation', () => {
       ));
 
       (jest.mocked(getIndicesList)).mockResolvedValue([
-        { IndexHebName: 'מדד 1', IndexId: '1', Id: '1' } as any,
+        { Name: 'מדד 1', Id: '1' } as any,
       ]);
 
       (jest.mocked(getIndexStocks)).mockResolvedValue([
@@ -360,7 +358,7 @@ describe('indexesBot validation', () => {
       ));
 
       (jest.mocked(getIndicesList)).mockResolvedValue([
-        { IndexHebName: 'מדד 1', IndexId: '1', Id: '1' } as any,
+        { Name: 'מדד 1', Id: '1' } as any,
       ]);
 
       (jest.mocked(getIndexStocks)).mockResolvedValue([
@@ -423,7 +421,7 @@ describe('indexesBot validation', () => {
       ));
 
       (jest.mocked(getIndicesList)).mockResolvedValue([
-        { IndexHebName: 'מדד 1', IndexId: '1', Id: '1' } as any,
+        { Name: 'מדד 1', Id: '1' } as any,
       ]);
 
       (jest.mocked(getIndexStocks)).mockResolvedValue([
@@ -465,8 +463,8 @@ describe('indexesBot validation', () => {
       ));
 
       (jest.mocked(getIndicesList)).mockResolvedValue([
-        { IndexHebName: 'מדד 1', Id: '1' } as any,
-        { IndexHebName: 'מדד לא רלוונטי', IndexId: '2', Id: '2' } as any,
+        { Name: 'מדד 1', Id: '1' } as any,
+        { Name: 'מדד לא רלוונטי', Id: '2' } as any,
       ]);
 
       (jest.mocked(getIndexStocks)).mockResolvedValue([
