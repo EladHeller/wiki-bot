@@ -8,6 +8,7 @@ import archiveParagraph, { moveTo } from './actions/archive';
 import askGPT from './gpt-bot/askGPT';
 import { logger } from '../utilities/logger';
 import { checkExternalLinks } from './actions/checkPage';
+import { getRedirectTargetFromContent } from '../wiki/redirectParser';
 
 const TAG_PAGE_NAME = 'משתמש:Sapper-bot/בוט התיוג';
 const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
@@ -205,6 +206,11 @@ async function checkAction(api: IWikiApi, notification: WikiNotification) {
     } | null = null;
     try {
       content = await api.articleContent(checkTitle);
+      let redirect = getRedirectTargetFromContent(content.content, false);
+      while (redirect != null) {
+        content = await api.articleContent(redirect);
+        redirect = getRedirectTargetFromContent(content.content, false);
+      }
     } catch (e) {
       console.error(e);
       await api.addComment(title, commentSummary, `${commentPrefix}אירעה שגיאה בהבאת תוכן הדף ${checkTitle}`, commentId);
