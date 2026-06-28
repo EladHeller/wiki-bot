@@ -370,12 +370,12 @@ Too recent
       expect(createCalls).toHaveLength(2);
       expect(createCalls[0]).toStrictEqual([
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'בוט ארכוב דיונים: ארכוב "Q1 Discussion", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Q1 Discussion", הועבר.',
         expect.stringContaining('{{ארכיון הדט}}'),
       ]);
       expect(createCalls[1]).toStrictEqual([
         'TestPage/ארכיון אפריל-יוני 2025',
-        'בוט ארכוב דיונים: ארכוב "Q2 Discussion", טופל.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Q2 Discussion", טופל.',
         expect.stringContaining('{{ארכיון הדט}}'),
       ]);
 
@@ -414,19 +414,19 @@ Old content`;
       expect(wikiApi.edit).toHaveBeenCalledTimes(2); // once for archive, once for source
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'בוט ארכוב דיונים: ארכוב "Discussion to Archive", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion to Archive", הועבר.',
         expect.stringContaining('Old Discussion'),
         2,
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'בוט ארכוב דיונים: ארכוב "Discussion to Archive", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion to Archive", הועבר.',
         expect.stringContaining('Discussion to Archive'),
         2,
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage',
-        'בוט ארכוב דיונים: ארכוב "Discussion to Archive", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion to Archive", הועבר.',
         expect.any(String),
         1,
       );
@@ -501,7 +501,7 @@ Q4 discussion
       const createCalls = (jest.mocked(wikiApi.create)).mock.calls;
 
       expect(createCalls[0][0]).toBe('TestPage/ארכיון ינואר-מרץ 2025');
-      expect(createCalls[0][1]).toBe('בוט ארכוב דיונים: ארכוב "Q1 2025", הועבר.');
+      expect(createCalls[0][1]).toBe('[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Q1 2025", הועבר.');
       expect(createCalls[1][0]).toBe('TestPage/ארכיון אפריל-יוני 2025');
       expect(createCalls[3][0]).toBe('TestPage/ארכיון אוקטובר-דצמבר 2025');
     });
@@ -622,20 +622,20 @@ Third discussion
       expect(wikiApi.create).toHaveBeenCalledTimes(1);
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'בוט ארכוב דיונים: ארכוב "Discussion 1", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion 1", הועבר.',
         expect.stringContaining('Discussion 1'),
       );
 
       // Should edit archive page twice for paragraphs 2 and 3
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'בוט ארכוב דיונים: ארכוב "Discussion 2", טופל.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion 2", טופל.',
         expect.stringContaining('Discussion 2'),
         2,
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'בוט ארכוב דיונים: ארכוב "Discussion 3", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion 3", הועבר.',
         expect.stringContaining('Discussion 3'),
         3,
       );
@@ -719,14 +719,14 @@ Some content
       expect(wikiApi.edit).toHaveBeenCalledTimes(2); // archive + source
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון 2',
-        'בוט ארכוב דיונים: ארכוב "Discussion 1", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion 1", הועבר.',
         expect.stringContaining('Discussion 1'),
         3,
       );
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage',
-        'בוט ארכוב דיונים: ארכוב "Discussion 1", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion 1", הועבר.',
         expect.not.stringContaining('Discussion 1'),
         1,
       );
@@ -762,12 +762,12 @@ Discussion content
 
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TestPage/ארכיון 1',
-        'בוט ארכוב דיונים: ארכוב "Discussion 1", טופל.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion 1", טופל.',
         expect.stringContaining('{{ארכיון הדט}}'),
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage',
-        'בוט ארכוב דיונים: ארכוב "Discussion 1", טופל.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion 1", טופל.',
         expect.any(String),
         1,
       );
@@ -808,7 +808,7 @@ Discussion content
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון 2',
-        'בוט ארכוב דיונים: ארכוב "Discussion 1", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion 1", הועבר.',
         expect.stringContaining('Discussion 1'),
         3,
       );
@@ -880,12 +880,12 @@ Discussion content
 
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TestPage/ארכיון ינואר-מרץ 2025',
-        'בוט ארכוב דיונים: ארכוב "Discussion with Handler", טופל. מטפל: [[user:בוט|בוט]].',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion with Handler", טופל. מטפל: [[user:בוט|בוט]].',
         expect.stringContaining('Discussion with Handler'),
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage',
-        'בוט ארכוב דיונים: ארכוב "Discussion with Handler", טופל. מטפל: [[user:בוט|בוט]].',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב "Discussion with Handler", טופל. מטפל: [[user:בוט|בוט]].',
         expect.any(String),
         1,
       );
@@ -1293,7 +1293,7 @@ Another discussion
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage',
-        'בוט ארכוב דיונים: מחיקת "Discussion 1", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: מחיקת "Discussion 1", הועבר.',
         `==Discussion 2==
 {{מצב|טופל}}
 Another discussion
@@ -1328,7 +1328,7 @@ Another discussion
       });
       wikiApi.articleContent.mockResolvedValue({ content: pageContent, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
-      await model.archive('TestPage', ['==headline==\ntext not from page'], 'מחיקה', '');
+      await model.archive('TestPage', ['==headline==\n{{מצב|טופל}}text not from page'], 'מחיקה', '');
 
       expect(wikiApi.edit).not.toHaveBeenCalled();
       expect(wikiApi.create).not.toHaveBeenCalled();
@@ -1373,20 +1373,20 @@ Another discussion
       expect(wikiApi.edit).toHaveBeenNthCalledWith(
         1,
         'TestPage',
-        'בוט ארכוב דיונים: מחיקת "Discussion 1", הועבר.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: מחיקת "Discussion 1", הועבר.',
         expect.any(String),
         1,
       );
       expect(wikiApi.edit).toHaveBeenNthCalledWith(
         2,
         'TestPage',
-        'בוט ארכוב דיונים: מחיקת "Discussion 2", טופל.',
+        '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: מחיקת "Discussion 2", טופל.',
         '',
         1,
       );
     });
 
-    it('should use a generic delete summary when paragraph has no status template', async () => {
+    it('should not archive when paragraph has no status template', async () => {
       const pageContent = `
 ==Discussion 1==
 No status template here
@@ -1411,12 +1411,7 @@ Still here
 
       await model.archive('TestPage', ['==Discussion 1==\nNo status template here\n12:42, 1 בינואר 2025 (IDT)'], 'מחיקה', '');
 
-      expect(wikiApi.edit).toHaveBeenCalledWith(
-        'TestPage',
-        'בוט ארכוב דיונים: מחיקת "Discussion 1"',
-        '==Discussion 2==\nStill here',
-        1,
-      );
+      expect(wikiApi.edit).not.toHaveBeenCalled();
     });
   });
 });

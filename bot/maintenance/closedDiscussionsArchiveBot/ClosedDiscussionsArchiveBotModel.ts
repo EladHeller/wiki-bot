@@ -27,6 +27,8 @@ export type PageToArchive = {
   archiveNavigatePage: string | null;
 };
 
+const SUMMARY_PREFIX = `[[${CONFIG_PAGE_TITLE}|בוט ארכוב דיונים]]`;
+
 export interface IClosedDiscussionsArchiveBotModel {
   getPagesToArchive(): Promise<PageToArchive[]>;
   getArchivableParagraphs(pageTitle: string, validStatuses: string[], inactivityDays: number): Promise<string[]>;
@@ -98,7 +100,7 @@ function createArchiveSummary(
   archive = true,
 ): string {
   const handlerPart = handler ? ` מטפל: [[user:${handler}|${handler}]].` : '';
-  return `בוט ארכוב דיונים: ${archive ? 'ארכוב' : 'מחיקת'} "${paragraphName}", ${status}.${handlerPart}`;
+  return `${SUMMARY_PREFIX}: ${archive ? 'ארכוב' : 'מחיקת'} "${paragraphName}", ${status}.${handlerPart}`;
 }
 
 function getQuarterFromDate(date: Date): { firstMonth: string; lastMonth: string; year: number } {
@@ -364,18 +366,20 @@ export default function ClosedDiscussionsArchiveBotModel(
     for (const paragraph of archivableParagraphs) {
       const { name, content } = parseParagraph(paragraph);
       const templateData = getStatusTemplateData(content, pageTitle);
-      const archiveSummary = templateData ? createArchiveSummary(
-        name,
-        templateData.status,
-        templateData.handler,
-        false,
-      ) : `בוט ארכוב דיונים: מחיקת "${name}"`;
-      const newContent = removeParagraphsFromContent(pageContent, [paragraph]);
-      if (newContent !== pageContent) {
-        pageContent = newContent;
-        const { edit: { newrevid } } = await wikiApi.edit(pageTitle, archiveSummary, pageContent, lastRevid);
-        if (newrevid) {
-          lastRevid = newrevid;
+      if (templateData) {
+        const archiveSummary = createArchiveSummary(
+          name,
+          templateData.status,
+          templateData.handler,
+          false,
+        );
+        const newContent = removeParagraphsFromContent(pageContent, [paragraph]);
+        if (newContent !== pageContent) {
+          pageContent = newContent;
+          const { edit: { newrevid } } = await wikiApi.edit(pageTitle, archiveSummary, pageContent, lastRevid);
+          if (newrevid) {
+            lastRevid = newrevid;
+          }
         }
       }
     }
