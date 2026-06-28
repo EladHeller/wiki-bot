@@ -1,4 +1,4 @@
-import interwikiLinks from '.';
+import interwikiLinks from './index';
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import WikiApi from '../wiki/WikiApi';
 
