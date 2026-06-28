@@ -58,25 +58,25 @@ async function getIndexes(api: IWikiApi) {
   const data: IndexData[] = [];
   const indexes = await getIndicesList();
   await promiseSequence(1, indexes.map((index) => async (): Promise<void> => {
-    const indexName = index.IndexHebName;
+    const indexName = index.Name;
     if (!relevantIndexes.includes(indexName)) {
       return;
     }
-    const indexStocks = await getIndexStocks(index.IndexId ?? index.Id);
+    const indexStocks = await getIndexStocks(index.Id);
     const stocks = indexStocks.map(
       (stock) => getCompanyShowName(stock.CompanyId, companyIdArticleDict, companyIdNameDict)
         ?? stock.ShortName,
     );
     const uniqueStocks = [...new Set(stocks)];
     data.push({
-      indexName: index.IndexHebName,
+      indexName: index.Name,
       indexStocks: uniqueStocks,
     });
     indexStocks.forEach((stock) => {
       if (!companyIndexesDict[stock.CompanyId]) {
         companyIndexesDict[stock.CompanyId] = [];
       }
-      companyIndexesDict[stock.CompanyId].push(index.IndexHebName);
+      companyIndexesDict[stock.CompanyId].push(index.Name);
     });
   }));
 
