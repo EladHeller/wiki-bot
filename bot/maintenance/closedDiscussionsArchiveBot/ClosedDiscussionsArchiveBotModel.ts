@@ -95,9 +95,10 @@ function createArchiveSummary(
   paragraphName: string,
   status: string,
   handler?: string,
+  archive = true,
 ): string {
   const handlerPart = handler ? ` מטפל: [[user:${handler}|${handler}]].` : '';
-  return `ארכוב "${paragraphName}", ${status}.${handlerPart}`;
+  return `בוט ארכוב דיונים: ${archive ? 'ארכוב' : 'מחיקת'} "${paragraphName}", ${status}.${handlerPart}`;
 }
 
 function getQuarterFromDate(date: Date): { firstMonth: string; lastMonth: string; year: number } {
@@ -357,12 +358,27 @@ export default function ClosedDiscussionsArchiveBotModel(
   }
 
   async function deleteParagraphs(pageTitle: string, archivableParagraphs: string[]): Promise<void> {
-    const pageContent = await getContent(wikiApi, pageTitle);
-    const newContent = removeParagraphsFromContent(pageContent.content, archivableParagraphs);
-    if (newContent === pageContent.content) {
-      return;
+    const pageContentAndRevid = await getContent(wikiApi, pageTitle);
+    let pageContent = pageContentAndRevid.content;
+    let lastRevid = pageContentAndRevid.revid;
+    for (const paragraph of archivableParagraphs) {
+      const { name, content } = parseParagraph(paragraph);
+      const templateData = getStatusTemplateData(content, pageTitle);
+      const archiveSummary = templateData ? createArchiveSummary(
+        name,
+        templateData.status,
+        templateData.handler,
+        false,
+      ) : `בוט ארכוב דיונים: מחיקת "${name}"`;
+      const newContent = removeParagraphsFromContent(pageContent, [paragraph]);
+      if (newContent !== pageContent) {
+        pageContent = newContent;
+        const { edit: { newrevid } } = await wikiApi.edit(pageTitle, archiveSummary, pageContent, lastRevid);
+        if (newrevid) {
+          lastRevid = newrevid;
+        }
+      }
     }
-    await wikiApi.edit(pageTitle, 'בוט ארכוב דיונים: מחיקת דיונים שהסתיימו', newContent, pageContent.revid);
   }
 
   async function archiveSingleParagraphWithTargetedArchive(
