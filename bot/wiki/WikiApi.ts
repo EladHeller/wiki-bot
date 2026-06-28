@@ -104,7 +104,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     return request('?action=discussiontoolsedit&format=json', 'post', objectToFormData({
       token,
       paction: 'addcomment',
-      autosubscribe: 'no',
       page,
       summary,
       wikitext: content,
