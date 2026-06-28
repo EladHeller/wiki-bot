@@ -403,7 +403,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: interwiki-links-function
-      Handler: dist/interwikiLinks/index.main
+      Handler: dist/interwikiLinks/entry.main
       MemorySize: 2048
       Timeout: 900
       Events:

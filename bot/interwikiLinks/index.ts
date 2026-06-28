@@ -10,7 +10,6 @@ import {
 } from '../wiki/newTemplateParser';
 import { getRedirectTargetFromContent } from '../wiki/redirectParser';
 import { WikiPage } from '../types';
-import botLoggerDecorator from '../decorators/botLoggerDecorator';
 
 const CATEGORY_TITLE = 'קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה';
 const LOG_PAGE_TITLE = 'user:sapper-bot/קישורי שפה - הפניות - ריצה 5';
@@ -483,7 +482,7 @@ export async function runSinglePage(title: string, api: IWikiApi): Promise<void>
   await handlePage(api, page);
 }
 
-export default async function foreignWikipediaMissingLinksParsedContent(api: IWikiApi): Promise<void> {
+export default async function interwikiLinks(api: IWikiApi): Promise<void> {
   await asyncGeneratorMapWithSequence(
     50,
     api.categroyPages(normalizeCategoryName(CATEGORY_TITLE)),
@@ -492,5 +491,3 @@ export default async function foreignWikipediaMissingLinksParsedContent(api: IWi
 
   await writeLogs(api);
 }
-
-export const main = botLoggerDecorator(foreignWikipediaMissingLinksParsedContent, { botName: 'בוט קישורי שפה - הפניות' });
