@@ -3,7 +3,7 @@ import { WikiNotification } from '../types';
 import { getLocalTimeAndDate } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getAllParagraphs, getParagraphContent, parseParagraph } from '../wiki/paragraphParser';
-import { getInnerLink, getInnerLinks } from '../wiki/wikiLinkParser';
+import { getInnerLinks } from '../wiki/wikiLinkParser';
 import archiveParagraph, { moveTo } from './actions/archive';
 import askGPT from './gpt-bot/askGPT';
 import { logger } from '../utilities/logger';
@@ -194,12 +194,23 @@ async function checkAction(api: IWikiApi, notification: WikiNotification) {
 
   try {
     const page = notification['*'].body.split(':')[1].trim();
-    const link = getInnerLink(page);
-    if (!link) {
+    const checkTitle = page.trim();
+    if (!checkTitle) {
       await api.addComment(title, commentSummary, `${commentPrefix}לא נמצא קישור לדף`, commentId);
       return;
     }
-    const content = await api.articleContent(link.link);
+    let content: {
+      content: string;
+      revid: number;
+    } | null = null;
+    try {
+      content = await api.articleContent(checkTitle);
+    } catch (e) {
+      console.error(e);
+      await api.addComment(title, commentSummary, `${commentPrefix}אירעה שגיאה בהבאת תוכן הדף ${checkTitle}`, commentId);
+      return;
+    }
+
     const externalLinks = await checkExternalLinks(content.content);
 
     const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}\n${externalLinks}.`, commentId);
