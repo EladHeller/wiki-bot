@@ -8,7 +8,7 @@ import {
   getUndatedParagraphsToArchive,
   removeArchivedUndatedParagraphsFromTracker,
 } from '../../utilities/archiveUtils';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, escapeRegex } from '../../utilities';
 import { WikiPage } from '../../types';
 import { logger, stringify } from '../../utilities/logger';
 
@@ -31,6 +31,8 @@ export interface UserTalkArchiveConfig {
   archiveHeader: string;
   createNewArchive: boolean;
   archiveDeliveryOnlyMessages?: boolean;
+  archiveExpressions?: string;
+  deleteExpressions?: string;
   shouldArchive: boolean;
 }
 
@@ -83,6 +85,15 @@ function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: st
 
   const cleanedContent = newContent.replace(/\n\n\n+/g, '\n\n');
   return cleanedContent.trimEnd();
+}
+
+function matchesWildcardExpression(text: string, expression?: string): boolean {
+  if (!expression) {
+    return true;
+  }
+
+  const escapedExpression = escapeRegex(expression).replace(/\\\*/g, '[\\s\\S]*');
+  return new RegExp(escapedExpression, 'u').test(text);
 }
 
 function incrementArchivePageName(archiveName: string): string | null {
@@ -183,6 +194,8 @@ export default function UserTalkArchiveBotModel(
     const archiveDeliveryOnlyMessages = ['כן', 'yes', 'true', '1'].includes(
       params['ארכוב הודעות תפוצה']?.trim().toLowerCase() ?? '',
     );
+    const archiveExpressions = params['ביטויים לארכוב']?.trim();
+    const deleteExpressions = params['ביטויים למחיקה']?.trim();
 
     return {
       talkPage: pageTitle,
@@ -193,6 +206,8 @@ export default function UserTalkArchiveBotModel(
       archiveHeader,
       createNewArchive,
       archiveDeliveryOnlyMessages,
+      ...(archiveExpressions ? { archiveExpressions } : {}),
+      ...(deleteExpressions ? { deleteExpressions } : {}),
       shouldArchive: true,
     };
   }
@@ -240,27 +255,43 @@ export default function UserTalkArchiveBotModel(
     inactivityDays: number,
     archiveDeliveryOnlyMessages: boolean,
     shouldArchive: boolean,
+    archiveExpressions?: string,
+    deleteExpressions?: string,
   ): { archive: string[]; deleteOnly: string[]; undated: string[] } {
     const paragraphsToArchive: string[] = [];
     const deleteOnly: string[] = [];
     const undated: string[] = [];
+    const archiveEnabled = shouldArchive && (archiveExpressions != null || deleteExpressions == null);
+    const deleteEnabled = deleteExpressions != null || archiveExpressions == null;
 
     allParagraphs.forEach((paragraph) => {
       if (hasNoArchiveTemplate(paragraph)) {
         return;
       }
-      if (shouldDeleteOnlyParagraph(paragraph, archiveDeliveryOnlyMessages)) {
-        const lastSignatureDate = extractLastSignatureDate(paragraph) || extractYearAndWeekDate(paragraph);
-        if (lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays)) {
-          deleteOnly.push(paragraph);
-        }
-        return;
-      }
-      if (!shouldArchive) {
-        return;
-      }
+
       const lastSignatureDate = extractLastSignatureDate(paragraph) || extractYearAndWeekDate(paragraph);
-      if (lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays)) {
+      const isInactive = lastSignatureDate != null && isInactiveForDays(lastSignatureDate, inactivityDays);
+
+      if (deleteEnabled) {
+        const matchesDeleteExpressions = deleteExpressions
+          ? matchesWildcardExpression(paragraph, deleteExpressions)
+          : shouldDeleteOnlyParagraph(paragraph, archiveDeliveryOnlyMessages);
+
+        if (matchesDeleteExpressions && isInactive) {
+          deleteOnly.push(paragraph);
+          return;
+        }
+      }
+
+      if (!archiveEnabled) {
+        return;
+      }
+
+      if (!matchesWildcardExpression(paragraph, archiveExpressions)) {
+        return;
+      }
+
+      if (isInactive) {
         paragraphsToArchive.push(paragraph);
       } else if (lastSignatureDate == null) {
         undated.push(paragraph);
@@ -659,6 +690,8 @@ export default function UserTalkArchiveBotModel(
       config.inactivityDays,
       Boolean(config.archiveDeliveryOnlyMessages),
       config.shouldArchive,
+      config.archiveExpressions,
+      config.deleteExpressions,
     );
     const undatedParagraphsToArchive = await getUndatedParagraphsToArchive(
       wikiApi,
