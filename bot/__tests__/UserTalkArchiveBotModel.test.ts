@@ -136,6 +136,21 @@ describe('userTalkArchiveBotModel', () => {
       expect(config?.archiveDeliveryOnlyMessages).toBe(true);
     });
 
+    it('should parse archive and delete expressions', () => {
+      const pageContent = `{{בוט ארכוב אוטומטי|ביטויים לארכוב=ארכיון*|ביטויים למחיקה=מחיקה*}}
+==דיון==
+תוכן`;
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
+
+      expect(config).toMatchObject({
+        archiveExpressions: 'ארכיון*',
+        deleteExpressions: 'מחיקה*',
+      });
+    });
+
     it('should parse delete delivery template config', () => {
       const pageContent = `{{מחיקת הודעות תפוצה|ימים מתגובה אחרונה=21}}
 ==דיון==
@@ -2355,6 +2370,137 @@ Old discussion
       await model.run();
 
       expect(wikiApi.articleContent).not.toHaveBeenCalled();
+    });
+
+    it('should archive only paragraphs that match ביטויים לארכוב', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום תבנית תיבת ארכיון=[[שיחת משתמש:דוגמה/ארכיונים]]|ביטויים לארכוב=Archive*|ימים מתגובה אחרונה=14}}
+==Archive me==
+This should be archived
+12:00, 1 בינואר 2026 (IDT)
+
+==Keep me==
+This should stay
+12:00, 1 בינואר 2026 (IDT)`;
+      const archiveBoxContent = `{{תיבת ארכיון|
+* [[/ארכיון 1]]
+}}`;
+      const archivePageContent = `{{ארכיון}}
+
+==Existing==
+Content`;
+      async function* emptyGenerator() {
+        yield [];
+      }
+
+      async function* mockGenerator() {
+        yield [{
+          pageid: 1,
+          ns: 3,
+          title: 'שיחת משתמש:דוגמה',
+          extlinks: [],
+          revisions: [{
+            user: 'test',
+            size: 100,
+            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
+          }],
+        }];
+      }
+
+      wikiApi.getArticlesWithTemplate
+        .mockReturnValueOnce(mockGenerator())
+        .mockReturnValueOnce(emptyGenerator())
+        .mockReturnValueOnce(emptyGenerator());
+      wikiApi.info
+        .mockResolvedValueOnce([{}])
+        .mockResolvedValueOnce([{}])
+        .mockResolvedValueOnce([{ length: 100 }])
+        .mockResolvedValueOnce([{}])
+        .mockResolvedValueOnce([{}]);
+      wikiApi.articleContent
+        .mockResolvedValueOnce({ content: pageContent, revid: 1 })
+        .mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 })
+        .mockResolvedValueOnce({ content: archivePageContent, revid: 3 })
+        .mockResolvedValueOnce({ content: pageContent, revid: 1 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.stringContaining('Archive me'),
+        3,
+      );
+      expect(wikiApi.edit).not.toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
+        expect.any(String),
+        expect.any(Number),
+      );
+      expect(wikiApi.edit).not.toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        expect.any(String),
+        expect.stringContaining('Keep me'),
+        expect.any(Number),
+      );
+    });
+
+    it('should delete only paragraphs that match ביטויים למחיקה', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון 1]]|ביטויים למחיקה=Delete*|ימים מתגובה אחרונה=14}}
+==Delete me==
+This should be deleted
+12:00, 1 בינואר 2026 (IDT)
+
+==Keep me==
+This should stay
+12:00, 1 בינואר 2026 (IDT)`;
+      async function* emptyGenerator() {
+        yield [];
+      }
+
+      async function* mockGenerator() {
+        yield [{
+          pageid: 1,
+          ns: 3,
+          title: 'שיחת משתמש:דוגמה',
+          extlinks: [],
+          revisions: [{
+            user: 'test',
+            size: 100,
+            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
+          }],
+        }];
+      }
+
+      wikiApi.getArticlesWithTemplate
+        .mockReturnValueOnce(mockGenerator())
+        .mockReturnValueOnce(emptyGenerator())
+        .mockReturnValueOnce(emptyGenerator());
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 11 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
+        expect.not.stringContaining('Delete me'),
+        11,
+      );
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        expect.any(String),
+        expect.any(String),
+        expect.any(Number),
+      );
     });
 
     it('should archive a tracked undated paragraph during run', async () => {
