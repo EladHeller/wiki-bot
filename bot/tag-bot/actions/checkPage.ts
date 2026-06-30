@@ -2,7 +2,7 @@ import { handlePage } from '../../maintenance/copyrightViolationCore';
 import { getExternalLinks, WikiLink } from '../../wiki/wikiLinkParser';
 
 export async function checkExternalLinks(content: string) {
-  const brokenLinks: WikiLink[] = [];
+  const brokenLinks: (WikiLink & { error: string })[] = [];
   const links = getExternalLinks(content);
 
   for (const link of links) {
@@ -13,11 +13,17 @@ export async function checkExternalLinks(content: string) {
         },
       });
       if (res.status >= 400) {
-        brokenLinks.push(link);
+        brokenLinks.push({
+          ...link,
+          error: `לא ניתן להגיע לקישור - ${res.status} - ${res.statusText}`,
+        });
       }
     } catch (error) {
       console.log(error);
-      brokenLinks.push(link);
+      brokenLinks.push({
+        ...link,
+        error: error.message,
+      });
     }
   }
   if (!brokenLinks.length) {
