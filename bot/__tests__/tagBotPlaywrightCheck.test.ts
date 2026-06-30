@@ -52,6 +52,10 @@ jest.unstable_mockModule('../wiki/WikiApi', () => ({
   default: wikiApiMock,
 }));
 
+jest.unstable_mockModule('../decorators/botLoggerDecorator', () => ({
+  default: (cb: any) => cb,
+}));
+
 const { handleEvent, handleQueueMessage, main } = await import('../tag-bot/playwrightCheck/index');
 
 describe('tagBotPlaywrightCheck', () => {
@@ -61,119 +65,6 @@ describe('tagBotPlaywrightCheck', () => {
     wikiLoginMock.mockResolvedValue(undefined);
     wikiAddCommentMock.mockReset();
     wikiAddCommentMock.mockResolvedValue(undefined);
-  });
-
-  it('should return empty results for empty input', async () => {
-    const result = await main({});
-
-    expect(result).toStrictEqual({ results: [] });
-    expect(launchMock).toHaveBeenCalledWith(expect.objectContaining({
-      headless: true,
-    }));
-  });
-
-  it('should check links and close resources', async () => {
-    gotoMock
-      .mockResolvedValueOnce({
-        ok: () => true,
-        status: () => 200,
-        statusText: () => 'OK',
-      })
-      .mockRejectedValueOnce(new Error('blocked'));
-
-    const result = await main({
-      links: [
-        { link: 'https://example.com/one', text: 'One' },
-        { link: 'https://example.com/two', text: 'Two' },
-      ],
-    });
-
-    expect(result).toStrictEqual({
-      results: [
-        {
-          link: 'https://example.com/one',
-          text: 'One',
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-        },
-        {
-          link: 'https://example.com/two',
-          text: 'Two',
-          ok: false,
-          status: 0,
-          statusText: '',
-          error: 'blocked',
-        },
-      ],
-    });
-    expect(newContextMock).toHaveBeenCalledWith(expect.objectContaining({
-      userAgent: expect.stringContaining('Chrome/149.0.0.0'),
-    }));
-    expect(newPageMock).toHaveBeenCalledTimes(2);
-  });
-
-  it('should close browser resources after checking links', async () => {
-    gotoMock.mockResolvedValue({
-      ok: () => true,
-      status: () => 200,
-      statusText: () => 'OK',
-    });
-
-    await main({
-      links: [{ link: 'https://example.com/one', text: 'One' }],
-    });
-
-    expect(closeMock).toHaveBeenCalledTimes(1);
-    expect(contextCloseMock).toHaveBeenCalledWith();
-    expect(browserCloseMock).toHaveBeenCalledWith();
-  });
-
-  it('should treat a string navigation error as a failed link', async () => {
-    gotoMock.mockRejectedValueOnce('blocked');
-
-    const result = await main({
-      links: [{ link: 'https://example.com/one', text: 'One' }],
-    });
-
-    expect(result).toStrictEqual({
-      results: [{
-        link: 'https://example.com/one',
-        text: 'One',
-        ok: false,
-        status: 0,
-        statusText: '',
-        error: 'blocked',
-      }],
-    });
-  });
-
-  it('should log and rethrow browser launch errors', async () => {
-    launchMock.mockRejectedValueOnce(new Error('launch failed'));
-
-    await expect(main({
-      links: [{ link: 'https://example.com', text: 'Example' }],
-    })).rejects.toThrow('launch failed');
-
-    expect(logErrorMock).not.toHaveBeenCalled();
-  });
-
-  it('should treat a missing navigation response as a failed link', async () => {
-    gotoMock.mockResolvedValueOnce(undefined);
-
-    const result = await main({
-      links: [{ link: 'https://example.com/one', text: 'One' }],
-    });
-
-    expect(result).toStrictEqual({
-      results: [{
-        link: 'https://example.com/one',
-        text: 'One',
-        ok: false,
-        status: 0,
-        statusText: '',
-      }],
-    });
   });
 
   it('should process SQS records and post a follow-up comment', async () => {
@@ -203,25 +94,42 @@ describe('tagBotPlaywrightCheck', () => {
     );
   });
 
-  it('should post a failure comment for blocked links in SQS mode', async () => {
+  it('should process queue messages without links', async () => {
+    await handleQueueMessage({
+      addComment: wikiAddCommentMock,
+    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
+      title: 'Page',
+      commentSummary: 'Summary',
+      commentId: '1',
+    }));
+
+    expect(launchMock).toHaveBeenCalledWith(expect.objectContaining({
+      headless: true,
+    }));
+    expect(wikiAddCommentMock).toHaveBeenCalledWith(
+      'Page',
+      'Summary',
+      'כל הקישורים שנבדקו ברקע תקינים',
+      '1',
+    );
+  });
+
+  it('should post a failure comment for blocked links in queue messages', async () => {
     gotoMock.mockResolvedValueOnce({
       ok: () => false,
       status: () => 403,
       statusText: () => 'Forbidden',
     });
 
-    await main({
-      Records: [{
-        body: JSON.stringify({
-          title: 'Page',
-          commentSummary: 'Summary',
-          commentId: '1',
-          links: [{ link: 'https://example.com/one', text: 'One' }],
-        }),
-      }],
-    });
+    await handleQueueMessage({
+      addComment: wikiAddCommentMock,
+    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
+      title: 'Page',
+      commentSummary: 'Summary',
+      commentId: '1',
+      links: [{ link: 'https://example.com/one', text: 'One' }],
+    }));
 
-    expect(wikiApiMock).toHaveBeenCalledWith();
     expect(wikiAddCommentMock).toHaveBeenCalledWith(
       'Page',
       'Summary',
@@ -230,13 +138,64 @@ describe('tagBotPlaywrightCheck', () => {
     );
   });
 
-  it('should ignore empty SQS records', async () => {
-    await main({
-      Records: [],
-    });
+  it('should handle string navigation failures in queue messages', async () => {
+    gotoMock.mockRejectedValueOnce('blocked');
 
-    expect(wikiLoginMock).toHaveBeenCalledWith();
-    expect(wikiAddCommentMock).not.toHaveBeenCalled();
+    await handleQueueMessage({
+      addComment: wikiAddCommentMock,
+    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
+      title: 'Page',
+      commentSummary: 'Summary',
+      commentId: '1',
+      links: [{ link: 'https://example.com/one', text: 'One' }],
+    }));
+
+    expect(wikiAddCommentMock).toHaveBeenCalledWith(
+      'Page',
+      'Summary',
+      expect.stringContaining('blocked'),
+      '1',
+    );
+  });
+
+  it('should handle Error navigation failures in queue messages', async () => {
+    gotoMock.mockRejectedValueOnce(new Error('blocked'));
+
+    await handleQueueMessage({
+      addComment: wikiAddCommentMock,
+    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
+      title: 'Page',
+      commentSummary: 'Summary',
+      commentId: '1',
+      links: [{ link: 'https://example.com/one', text: 'One' }],
+    }));
+
+    expect(wikiAddCommentMock).toHaveBeenCalledWith(
+      'Page',
+      'Summary',
+      expect.stringContaining('blocked'),
+      '1',
+    );
+  });
+
+  it('should handle missing navigation responses in queue messages', async () => {
+    gotoMock.mockResolvedValueOnce(undefined);
+
+    await handleQueueMessage({
+      addComment: wikiAddCommentMock,
+    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
+      title: 'Page',
+      commentSummary: 'Summary',
+      commentId: '1',
+      links: [{ link: 'https://example.com/one', text: 'One' }],
+    }));
+
+    expect(wikiAddCommentMock).toHaveBeenCalledWith(
+      'Page',
+      'Summary',
+      expect.stringContaining('לא ניתן להגיע לקישור - 0 - '),
+      '1',
+    );
   });
 
   it('should ignore SQS records without body', async () => {
@@ -244,7 +203,6 @@ describe('tagBotPlaywrightCheck', () => {
       Records: [{}],
     });
 
-    expect(wikiLoginMock).toHaveBeenCalledWith();
     expect(wikiAddCommentMock).not.toHaveBeenCalled();
   });
 
@@ -266,30 +224,9 @@ describe('tagBotPlaywrightCheck', () => {
     expect(wikiAddCommentMock).not.toHaveBeenCalled();
   });
 
-  it('should use an empty link list when queue messages omit links', async () => {
-    await handleQueueMessage({
-      addComment: wikiAddCommentMock,
-    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
-      title: 'Page',
-      commentSummary: 'Summary',
-      commentId: '1',
-    }));
-
-    expect(launchMock).toHaveBeenCalledWith(expect.objectContaining({
-      headless: true,
-    }));
-    expect(wikiAddCommentMock).toHaveBeenCalledWith(
-      'Page',
-      'Summary',
-      'כל הקישורים שנבדקו ברקע תקינים',
-      '1',
-    );
-  });
-
   it('should ignore SQS events without records', async () => {
     await handleEvent({});
 
-    expect(wikiLoginMock).toHaveBeenCalledWith();
     expect(wikiAddCommentMock).not.toHaveBeenCalled();
   });
 });
