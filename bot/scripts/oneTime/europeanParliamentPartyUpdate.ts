@@ -1,4 +1,4 @@
-import WikiApi from '../../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import WikiDataAPI, { IWikiDataAPI } from '../../wiki/WikidataAPI';
 import { promiseSequence } from '../../utilities';
 import {
@@ -53,7 +53,7 @@ function updateTemplate(
 }
 
 async function getCountryFromWikidata(
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   wikiDataApi: IWikiDataAPI,
   title: string,
 ): Promise<string | null> {
@@ -75,7 +75,7 @@ async function getCountryFromWikidata(
 async function processTemplate(
   template: string,
   title: string,
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   wikiDataApi: IWikiDataAPI,
 ): Promise<string | null> {
   const keyValueData = getTemplateKeyValueData(template);
@@ -96,7 +96,7 @@ async function processTemplate(
 }
 
 async function processArticle(
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   wikiDataApi: IWikiDataAPI,
   title: string,
 ): Promise<void> {

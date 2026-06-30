@@ -25,6 +25,7 @@ const {
   getParamValidatorErrors,
   readRedirectTarget,
   replaceTemplateForeignTitle,
+  formatLog,
   addTemplateWithoutWikidataItem,
   fixTitleBracketsAndDots,
   handlePageSafely,
@@ -68,7 +69,7 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
     expect(api.create).toHaveBeenCalledWith(
       'user:sapper-bot/קישורי שפה - הפניות - ריצה 5',
       'תיקון קישורי שפה',
-      '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: no errors found',
+      '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: לא נמצאו שגיאות',
     );
   });
 
@@ -85,7 +86,27 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
     expect(api.edit).toHaveBeenCalledWith(
       'user:sapper-bot/קישורי שפה - הפניות - ריצה 5',
       'תיקון קישורי שפה',
-      '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: no errors found',
+      '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: לא נמצאו שגיאות',
+      1,
+    );
+  });
+
+  it('writes unknown failure reasons as-is in the log page', async () => {
+    api.categroyPages.mockImplementation(async function* generator() {
+      const x: WikiPage[] = [{
+        title: 'Page1', pageid: 1, ns: 0, extlinks: [], revisions: [],
+      }];
+      yield x;
+    });
+    api.getParsedContent.mockRejectedValueOnce(new Error('custom failure'));
+    api.articleContent.mockResolvedValueOnce({ revid: 1, content: '' });
+
+    await foreignWikipediaMissingLinksParsedContent(api);
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'user:sapper-bot/קישורי שפה - הפניות - ריצה 5',
+      'תיקון קישורי שפה',
+      expect.stringContaining('דולג: custom failure'),
       1,
     );
   });
@@ -145,31 +166,37 @@ describe('replaceTemplateForeignTitle', () => {
   it('replaces foreign title parameter', () => {
     const content = '{{אנג|Google}}';
 
-    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle')).toBe('{{אנג|NewGoogle}}');
+    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle', false)).toBe('{{אנג|NewGoogle}}');
   });
 
   it('replaces foreign title in multi-param template, preserving other params', () => {
     const content = '{{אנג|Google|ExtraParam}}';
 
-    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle')).toBe('{{אנג|NewGoogle|ExtraParam}}');
+    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle', false)).toBe('{{אנג|NewGoogle|ExtraParam}}');
+  });
+
+  it('adds original title as second parameter when requested', () => {
+    const content = '{{אנג|Google}}';
+
+    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle', true)).toBe('{{אנג|NewGoogle|Google}}');
   });
 
   it('returns same content if template has no params (no pipe separator)', () => {
     const content = '{{אנג}}';
 
-    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle')).toBe(content);
+    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'Google', 'NewGoogle', false)).toBe(content);
   });
 
   it('returns same content if template not found', () => {
     const content = '{{אנג|Google}}';
 
-    expect(replaceTemplateForeignTitle(content, 'Title', 'גרמ', 'Google', 'NewGoogle')).toBe(content);
+    expect(replaceTemplateForeignTitle(content, 'Title', 'גרמ', 'Google', 'NewGoogle', false)).toBe(content);
   });
 
   it('returns same content if parameter not found in arrayData', () => {
     const content = '{{אנג|Google}}';
 
-    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'NotInTemplate', 'NewGoogle')).toBe(content);
+    expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'NotInTemplate', 'NewGoogle', false)).toBe(content);
   });
 });
 
@@ -190,6 +217,27 @@ describe('addTemplateWithoutWikidataItem', () => {
     const content = '{{גרמ|Google}}';
 
     expect(addTemplateWithoutWikidataItem(content, 'Title', 'אנג', 'Google')).toBe(content);
+  });
+});
+
+describe('formatLog', () => {
+  it('translates known reasons to Hebrew and falls back when reason is missing', () => {
+    expect(formatLog({
+      pageTitle: 'Page',
+      templateName: 'אנג',
+      foreignTitle: 'Google',
+      languageCode: 'en',
+      success: false,
+      reason: 'matching template not found',
+    })).toContain('דולג: התבנית המתאימה לא נמצאה');
+
+    expect(formatLog({
+      pageTitle: 'Page',
+      templateName: 'אנג',
+      foreignTitle: 'Google',
+      languageCode: 'en',
+      success: false,
+    })).toContain('דולג: undefined');
   });
 });
 
@@ -619,8 +667,7 @@ describe('handlePageSafely and page processing logic', () => {
     expect(api.edit).not.toHaveBeenCalled();
   });
 
-  it('does not edit when there are brackets in the target', async () => {
-    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+  it('replaces target with brackets and preserves original source as second parameter', async () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'TestPage (test)' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
@@ -649,7 +696,41 @@ describe('handlePageSafely and page processing logic', () => {
     };
     await handlePageSafely(api, page);
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('target title has brackets but source does not'));
+    expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|TestPage (test)|Google}}', 123);
+  });
+
+  it('falls back to normal handling when target has brackets but source template is not matched', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'TestPage (test)' } });
+    mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      size: 100,
+      user: 'User',
+      slots: {
+        main: {
+          '*': '#REDIRECT [[TestPage (test)]]',
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+    }]);
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{גרמ|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('matching template not found'));
 
     consoleLogSpy.mockRestore();
 
@@ -1237,7 +1318,7 @@ describe('runSinglePage', () => {
     expect(logEditCall).toBeDefined();
     expect(logEditCall?.[0]).toBe('user:sapper-bot/קישורי שפה - הפניות - ריצה 5');
     expect(logEditCall?.[1]).toBe('תיקון קישורי שפה');
-    expect(logEditCall?.[2]).toStrictEqual(expect.stringContaining('* [[TestPage]]: <nowiki>{{אנג|Google}}</nowiki> - [[:en:Google]] ← [[:en:NewGoogle]] - דולג: matching template not found'));
+    expect(logEditCall?.[2]).toStrictEqual(expect.stringContaining('* [[TestPage]]: <nowiki>{{אנג|Google}}</nowiki> - [[:en:Google]] ← [[:en:NewGoogle]] - דולג: התבנית המתאימה לא נמצאה'));
     expect(logEditCall?.[3]).toBe(1);
   });
 });

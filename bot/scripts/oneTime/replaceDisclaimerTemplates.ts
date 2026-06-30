@@ -1,4 +1,4 @@
-import WikiApi from '../../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
 import { escapeRegex, promiseSequence } from '../../utilities';
 
@@ -56,7 +56,7 @@ async function collectPagesFromGenerator(generator: AsyncGenerator<WikiPage[], v
 }
 
 async function processPage(
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   page: WikiPage,
 ): Promise<ChangeStats> {
   const content = page.revisions?.[0]?.slots.main['*'];

@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import WikiApi from '../../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const WEB_ARCHIVE_PREFIX = 'https://web.archive.org/web/20240229113029/';
 
@@ -514,7 +514,7 @@ function replaceLinkOnlyInsideExternalLink(
 }
 
 async function updatePageLinks(
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   page: string,
   links: string[],
 ) {

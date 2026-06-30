@@ -2,7 +2,7 @@ import {
   Browser, BrowserContext, Page, chromium,
 } from 'playwright';
 import botLoggerDecorator from '../../decorators/botLoggerDecorator';
-import WikiApi from '../../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 export type PlaywrightLinkCheckRequestLink = {
   link: string;
@@ -95,7 +95,7 @@ export async function runLinkChecks(links: PlaywrightLinkCheckRequestLink[]): Pr
   }
 }
 
-export async function handleQueueMessage(api: ReturnType<typeof WikiApi>, body: string) {
+export async function handleQueueMessage(api: IWikiApi, body: string) {
   const message = JSON.parse(body) as PlaywrightLinkCheckRequest;
   const results = await runLinkChecks(message.links ?? []);
   const failed = results.results.filter((result) => !result.ok);
