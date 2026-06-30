@@ -2,7 +2,7 @@ import {
   findTemplate,
   findTemplates, getTemplateKeyValueData, templateFromKeyValueData,
 } from '../../wiki/newTemplateParser';
-import WikiApi from '../../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
 
 const TEMPLATE_NAME_LEADER = 'מנהיג';
@@ -14,7 +14,7 @@ const DETAILS_FIELD = 'פירוט';
 
 const RELEVANT_ROLE_NAMES = ['תפקידים בולטים', 'תפקידים נוספים', 'תפקידים בולטים נוספים', 'תפקידים בולטים אחרים'];
 let i = 0;
-export async function processPage(page: WikiPage, api: ReturnType<typeof WikiApi>) {
+export async function processPage(page: WikiPage, api: IWikiApi) {
   i += 1;
   const content = page.revisions?.[0].slots.main['*'];
   const revid = page.revisions?.[0].revid;

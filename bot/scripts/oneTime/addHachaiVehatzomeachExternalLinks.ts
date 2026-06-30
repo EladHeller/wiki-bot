@@ -172,7 +172,7 @@ async function resolveRedirectTarget(
 }
 
 async function updateArticleIfNeeded(
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   title: string,
   template: string,
 ): Promise<UpdateResult> {

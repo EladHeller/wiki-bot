@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import osimhistoriaLinks from './osimhistoria.json';
-import WikiApi from '../../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const SOURCE_FILE = 'bot/scripts/oneTime/osimHistoria.ts';
 const SUMMARY = 'הסבת קישורי עושים היסטוריה לתבנית {{עושים היסטוריה1}}';
@@ -120,7 +120,7 @@ function replaceStrictMatches(content: string, link: string, episodeId: string) 
 }
 
 async function processPage(
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   page: string,
   linksInPage: Set<string>,
   byNumber: Map<number, string>,

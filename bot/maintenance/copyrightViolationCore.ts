@@ -5,7 +5,7 @@ import type { ArticleLog } from '../admin/types';
 import { isAfterShabathOrHolliday } from '../decorators/shabathProtector';
 import type { LogEvent, RecentChange } from '../types';
 import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
-import WikiApi from '../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import { Paragraph } from '../wiki/paragraphParser';
 import { logger, stringify } from '../utilities/logger';
@@ -59,7 +59,7 @@ function textFromMatch(
 }
 
 async function getLastRun(
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   lastRunPage: string,
 ): Promise<{ revid: number, content: string }> {
   const lastRunResult = await api.articleContent(lastRunPage);

@@ -1,5 +1,5 @@
 import osimhistoriaLinks from './osimhistoria.json';
-import WikiApi from '../../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { asyncGeneratorMapWithSequence } from '../../utilities';
 import { findTemplates, getTemplateData, templateFromTemplateData } from '../../wiki/newTemplateParser';
 import { WikiPage } from '../../types';
@@ -141,7 +141,7 @@ function processTemplate(
 }
 
 function processPage(
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   byNumber: Map<number, string>,
   bySlug: Map<string, string>,
 ) {

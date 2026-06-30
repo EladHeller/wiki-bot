@@ -1,7 +1,7 @@
 import {
   findTemplates, getTemplateArrayData, getTemplateData, templateFromTemplateData,
 } from '../../wiki/newTemplateParser';
-import WikiApi from '../../wiki/WikiApi';
+import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
 
 const OLD_TEMPLATE_NAME = 'רמבם';
@@ -67,7 +67,7 @@ function buildEditSummary(content: string, title: string) {
   return parts.join('; ');
 }
 
-function processPage(api: ReturnType<typeof WikiApi>, processedPages: Set<number>) {
+function processPage(api: IWikiApi, processedPages: Set<number>) {
   return (page: WikiPage) => async () => {
     const content = page.revisions?.[0]?.slots.main['*'];
     const revid = page.revisions?.[0]?.revid;
@@ -114,7 +114,7 @@ async function collectPagesFromGenerator(generator: AsyncGenerator<WikiPage[], v
 }
 
 async function processPagesSequentially(
-  api: ReturnType<typeof WikiApi>,
+  api: IWikiApi,
   pages: WikiPage[],
   processedPages: Set<number>,
 ) {
