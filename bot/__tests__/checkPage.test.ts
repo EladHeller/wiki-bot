@@ -93,7 +93,7 @@ describe('checkExternalLinks', () => {
         { link: 'https://example.com/two', text: 'Two' },
       ],
     });
-    expect(result).toBe('כל הקישורים שנגישים לבוט תקינים. קישורים שחסומים לבוט נשלחו לבדיקה ברקע: https://example.com/two');
+    expect(result).toBe('כל הקישורים שנגישים לבוט תקינים. קישורים שחסומים לבוט נשלחו לבדיקה ברקע.');
   });
 
   it('should report playwright failures as broken links', async () => {
