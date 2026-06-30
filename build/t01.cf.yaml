@@ -333,6 +333,10 @@ Resources:
       MemorySize: 2048
       EphemeralStorage:
         Size: 2048
+      Environment:
+        Variables:
+          USER_NAME: !Ref WikiUserName
+          PASSWORD: !Ref WikiPassword
       ImageConfig:
         Command:
           - dist/tag-bot/playwrightCheck/index.main

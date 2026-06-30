@@ -1,6 +1,7 @@
 import {
   Browser, BrowserContext, Page, chromium,
 } from 'playwright';
+import botLoggerDecorator from '../../decorators/botLoggerDecorator';
 import WikiApi from '../../wiki/WikiApi';
 
 export type PlaywrightLinkCheckRequestLink = {
@@ -118,13 +119,8 @@ export async function handleEvent(event: SqsEvent): Promise<void> {
   }
 }
 
-export async function main(event: PlaywrightLinkCheckRequest | SqsEvent): Promise<PlaywrightLinkCheckResponse | void> {
-  if ('Records' in event) {
-    await handleEvent(event);
-    return undefined;
-  }
-  const request = event as PlaywrightLinkCheckRequest;
-  return runLinkChecks(request.links ?? []);
+export default async function playwrightCheck(event: SqsEvent): Promise<void> {
+  await handleEvent(event);
 }
 
-export default main;
+export const main = botLoggerDecorator(playwrightCheck, { botName: 'בוט בדיקת קישורים' });

@@ -217,7 +217,7 @@ async function checkAction(api: IWikiApi, notification: WikiNotification) {
       return;
     }
 
-    const externalLinks = await checkExternalLinks(content.content, undefined, {
+    const externalLinks = await checkExternalLinks(content.content, {
       title,
       commentSummary,
       commentId,
