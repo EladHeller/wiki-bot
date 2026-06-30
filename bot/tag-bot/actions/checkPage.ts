@@ -29,7 +29,7 @@ export async function checkExternalLinks(content: string) {
   if (!brokenLinks.length) {
     return 'כל הקישורים תקינים';
   }
-  return `קישורים שבורים:\n${brokenLinks.map((brokenLink) => `* [${brokenLink.link} ${brokenLink.text}]`).join('\n')}`;
+  return `קישורים שבורים:\n${brokenLinks.map((brokenLink) => `* [${brokenLink.link} ${brokenLink.text}], ${brokenLink.error}`).join('\n')}`;
 }
 
 export async function checkCopyright(title: string) {
