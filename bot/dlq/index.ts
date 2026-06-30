@@ -35,7 +35,7 @@ export default async function handleDlq(event: SqsEvent): Promise<void> {
     records.forEach((record, index) => {
       console.log(record);
       let resource;
-      const { body } = record;
+      const { body, attributes } = record;
       if (body && typeof body === 'string') {
         try {
           const parsedBody: ParsedBody = JSON.parse(body);
@@ -45,7 +45,7 @@ export default async function handleDlq(event: SqsEvent): Promise<void> {
         }
       }
       const errorMessage = record.messageAttributes?.ErrorMessage;
-
+      resource ??= attributes?.SenderIds?.split(':')[1]; // SQS dlq
       logger.logError({
         index,
         messageId: record.messageId,

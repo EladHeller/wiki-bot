@@ -62,7 +62,7 @@ export async function checkExternalLinks(
 
   if (!brokenLinks.length) {
     return blockedLinks.length > 0
-      ? `כל הקישורים שנגישים לבוט תקינים. קישורים שחסומים לבוט נשלחו לבדיקה ברקע: ${blockedLinks.map((link) => link.link).join(', ')}`
+      ? 'כל הקישורים שנגישים לבוט תקינים. קישורים שחסומים לבוט נשלחו לבדיקה ברקע.'
       : 'כל הקישורים תקינים';
   }
   const blockedMessage = blockedLinks.length > 0 ? 'חלק מהקישורים חסומים לבוט ונשלחו לבדיקה ברקע. ' : '';
