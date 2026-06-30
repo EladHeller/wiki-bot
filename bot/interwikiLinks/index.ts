@@ -115,6 +115,7 @@ function replaceTemplateParam(
   templateName: string,
   foreignTitle: string,
   redirectTarget: string,
+  addSecondParam: boolean,
 ): string | null {
   const templateData = getTemplateData(template, templateName, pageTitle);
   const arrayData = templateData.arrayData ?? getTemplateArrayData(template, templateName, pageTitle, true);
@@ -124,9 +125,14 @@ function replaceTemplateParam(
     return null;
   }
 
+  const newArrayData = arrayData.map((value, index) => (index === foreignTitleIndex ? redirectTarget : value));
+  if (addSecondParam && newArrayData[1] == null) {
+    newArrayData[1] = foreignTitle;
+  }
+
   return templateFromTemplateData({
     ...templateData,
-    arrayData: arrayData.map((value, index) => (index === foreignTitleIndex ? redirectTarget : value)),
+    arrayData: newArrayData,
   }, templateName);
 }
 
@@ -181,11 +187,19 @@ export function replaceTemplateForeignTitle(
   templateName: string,
   foreignTitle: string,
   redirectTarget: string,
+  addSecondParam: boolean,
 ): string {
   const replacement = findTemplates(content, templateName, pageTitle)
     .map((template) => ({
       template,
-      newTemplate: replaceTemplateParam(template, pageTitle, templateName, foreignTitle, redirectTarget),
+      newTemplate: replaceTemplateParam(
+        template,
+        pageTitle,
+        templateName,
+        foreignTitle,
+        redirectTarget,
+        addSecondParam,
+      ),
     }))
     .find(({ newTemplate }) => newTemplate != null);
 
@@ -360,14 +374,24 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
     const foreignHasBrackets = error.foreignTitle.includes('(') || error.foreignTitle.includes(')');
     const targetHasBrackets = redirectTarget.includes('(') || redirectTarget.includes(')');
     if (!foreignHasBrackets && targetHasBrackets) {
-      addLog({
-        ...error,
+      const newContent = replaceTemplateForeignTitle(
+        content,
         pageTitle,
+        error.templateName,
+        error.foreignTitle,
         redirectTarget,
-        success: false,
-        reason: 'target title has brackets but source does not',
-      });
-      return content;
+        true,
+      );
+
+      if (newContent !== content) {
+        addLog({
+          ...error,
+          pageTitle,
+          redirectTarget,
+          success: true,
+        });
+        return newContent;
+      }
     }
   }
 
@@ -377,6 +401,7 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
     error.templateName,
     error.foreignTitle,
     newTarget,
+    false,
   );
 
   addLog({
@@ -390,8 +415,19 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
   return newContent;
 }
 
-function formatLog(log: TemplateCheckLog): string {
-  const result = log.success ? 'תוקן' : `דולג: ${log.reason}`;
+export function formatLog(log: TemplateCheckLog): string {
+  const reasonTextMap: Record<string, string> = {
+    'redirect not found or invalid': 'ההפניה לא נמצאה או שאינה תקינה',
+    'redirect has section target': 'ההפניה מכילה הפניה לפסקה',
+    'redirect targets changed after the redirect was created': 'יעד ההפניה השתנה מאז שההפניה נוצרה',
+    'target title has brackets but source does not': 'ליעד יש סוגריים אבל במקור אין',
+    'probably interwiki': 'כנראה קישור בינוויקי',
+    'invalid title': 'כותרת לא תקינה',
+    'target not found': 'היעד לא נמצא',
+    'no errors found': 'לא נמצאו שגיאות',
+    'matching template not found': 'התבנית המתאימה לא נמצאה',
+  };
+  const result = log.success ? 'תוקן' : `דולג: ${reasonTextMap[log.reason ?? ''] ?? log.reason}`;
   const target = log.redirectTarget ? ` ← [[:${log.languageCode}:${log.redirectTarget}]]` : '';
   return `* [[${log.pageTitle}]]: <nowiki>{{${log.templateName}|${log.foreignTitle}}}</nowiki> - [[:${log.languageCode}:${log.foreignTitle}]]${target} - ${result}`;
 }
