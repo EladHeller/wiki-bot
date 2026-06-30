@@ -217,7 +217,11 @@ async function checkAction(api: IWikiApi, notification: WikiNotification) {
       return;
     }
 
-    const externalLinks = await checkExternalLinks(content.content);
+    const externalLinks = await checkExternalLinks(content.content, undefined, {
+      title,
+      commentSummary,
+      commentId,
+    });
 
     const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}\n${externalLinks}.`, commentId);
     console.log({ commentRes });
