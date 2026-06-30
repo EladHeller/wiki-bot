@@ -296,17 +296,84 @@ Resources:
       SourceArn: !GetAtt IronSwordsEventRule.Arn
       FunctionName: iron-swords-function-new
 
+  TagBotPlaywrightFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: tag-bot-playwright-queue-access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:ChangeMessageVisibility
+                Resource: !GetAtt TagBotPlaywrightQueue.Arn
+
+  TagBotPlaywrightFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: tag-bot-playwright-function
+      PackageType: Image
+      Role: !GetAtt TagBotPlaywrightFunctionRole.Arn
+      Code:
+        ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/wiki-bot-playwright:${ImageVersion}
+      Timeout: 900
+      MemorySize: 2048
+      EphemeralStorage:
+        Size: 2048
+      ImageConfig:
+        Command:
+          - dist/tag-bot/playwrightCheck/index.main
+
+  TagBotPlaywrightQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: tag-bot-playwright-queue
+      VisibilityTimeout: 900
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt GeneralDlqQueue.Arn
+        maxReceiveCount: 2
+
+  TagBotPlaywrightQueueEventSource:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      EventSourceArn: !GetAtt TagBotPlaywrightQueue.Arn
+      FunctionName: !Ref TagBotPlaywrightFunction
+
   TagBotFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: tag-bot-function
       Handler: dist/tag-bot/index.main
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt TagBotPlaywrightQueue.Arn
       Environment:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
           OPENAI_API_KEY: !Ref OpenAPIKey
           VECTOR_STORE_ID: !Ref VectorStoreID
+          PLAYWRIGHT_CHECK_QUEUE_URL: !Ref TagBotPlaywrightQueue
       Events:
         Schedule:
           Type: Schedule

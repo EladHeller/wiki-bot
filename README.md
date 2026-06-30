@@ -42,7 +42,9 @@ graph TD
         S3[email saved to S3]
         S3Lambda[S3 Trigger Lambda]
         SQS[SQS: tag-bot-queue]
+        PlaywrightQueue[SQS: tag-bot-playwright-queue]
         TagBotLambda[TagBotFunction]
+        TagBotPlaywrightLambda[TagBotPlaywrightFunction]
     end
 
     User --> WikiNotif
@@ -53,6 +55,9 @@ graph TD
     SQS --> TagBotLambda
     TagBotLambda -- "1. Fetch Notification Details" --> WikipediaAPI
     TagBotLambda -- "2. Perform Action" --> WikipediaAPI
+    TagBotLambda -- "3. Queue 403 fallback" --> PlaywrightQueue
+    PlaywrightQueue --> TagBotPlaywrightLambda
+    TagBotPlaywrightLambda --> WikipediaAPI
 ```
 
 ### CI - CD
