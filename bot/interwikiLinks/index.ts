@@ -484,7 +484,7 @@ export async function runSinglePage(title: string, api: IWikiApi): Promise<void>
 
 export default async function interwikiLinks(api: IWikiApi): Promise<void> {
   await asyncGeneratorMapWithSequence(
-    50,
+    10,
     api.categroyPages(normalizeCategoryName(CATEGORY_TITLE)),
     (page) => async () => handlePageSafely(api, page),
   );
