@@ -64,7 +64,7 @@ describe('userTalkArchiveBotModel', () => {
       expect(config).toStrictEqual({
         talkPage: 'שיחת משתמש:דוגמה',
         inactivityDays: 30,
-        archiveBoxPage: 'שיחת משתמש:דוגמה',
+        archiveBoxPage: null,
         directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
         maxArchiveSize: 150000,
         archiveHeader: '{{ארכיון הדט}}',
@@ -989,6 +989,8 @@ Old
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
         expect.not.stringContaining('Discussion 1'),
         1,
+        undefined,
+        true,
       );
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
@@ -1292,6 +1294,41 @@ Old discussion
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
         expect.stringContaining('{{ארכיון}}'),
       );
+    });
+
+    it('should not read archive box page when direct archive page is configured', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+
+      const talkPageContent = `
+==Discussion 1==
+Old discussion
+12:42, 1 בינואר 2025 (IDT)
+`;
+
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: null,
+        directArchivePage: 'שיחת משתמש:דוגמה/ארכיון 1',
+        maxArchiveSize: 150000,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: true,
+        shouldArchive: true,
+      };
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.archive(config, [`
+==Discussion 1==
+Old discussion
+12:42, 1 בינואר 2025 (IDT)
+`]);
+
+      expect(wikiApi.articleContent.mock.calls.flat()).not.toContain('שיחת משתמש:דוגמה/ארכיונים');
     });
 
     it('should notify user when direct archive name cannot be incremented', async () => {
@@ -2215,6 +2252,8 @@ Old discussion
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
         expect.any(String),
         12,
+        undefined,
+        true,
       );
       expect(wikiApi.create).not.toHaveBeenCalled();
     });
@@ -2253,6 +2292,8 @@ Old discussion
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
         expect.not.stringContaining('MediaWiki message delivery'),
         99,
+        undefined,
+        true,
       );
       expect(wikiApi.create).not.toHaveBeenCalled();
     });
@@ -2493,6 +2534,8 @@ This should stay
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
         expect.not.stringContaining('Delete me'),
         11,
+        undefined,
+        true,
       );
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalledWith(
