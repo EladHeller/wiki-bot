@@ -1,5 +1,7 @@
 /* eslint-disable jest/no-conditional-in-test */
-import { describe, expect, it } from '@jest/globals';
+import {
+  afterEach, beforeEach, describe, expect, it, jest,
+} from '@jest/globals';
 import {
   asyncGeneratorMapWithSequence, encodeWikiUrl, escapeRegex, fetchUrlLikeBrowser, getFullYear, getLocalDate,
   getLocalTimeAndDate, hebrewGimetriya, objectToFormData, objectToQueryString, parseLocalDate, prettyNumericValue,
@@ -382,10 +384,54 @@ describe('escapeRegex', () => {
 });
 
 describe('fetchUrlLikeBrowser', () => {
+  const fetchMock = jest.fn<typeof fetch>();
+
+  beforeEach(() => {
+    globalThis.fetch = fetchMock as typeof fetch;
+  });
+
+  afterEach(() => {
+    fetchMock.mockReset();
+  });
+
   it('should fetch url like browser', async () => {
+    fetchMock.mockResolvedValue({
+      status: 200,
+      statusText: 'OK',
+    } as Response);
     const url = 'https://www.google.com';
     const response = await fetchUrlLikeBrowser(url);
 
     expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      url,
+      {
+        headers: {
+          accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'accept-language': 'en-US,en;q=0.9,de;q=0.8,he;q=0.7,uk;q=0.6',
+          'cache-control': 'no-cache',
+          pragma: 'no-cache',
+          priority: 'u=0, i',
+          'sec-ch-ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"',
+          'sec-ch-ua-arch': '"arm"',
+          'sec-ch-ua-bitness': '"64"',
+          'sec-ch-ua-full-version': '"134.0.6998.89"',
+          'sec-ch-ua-full-version-list': '"Chromium";v="134.0.6998.89", "Not:A-Brand";v="24.0.0.0", "Google Chrome";v="134.0.6998.89"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-model': '""',
+          'sec-ch-ua-platform': '"macOS"',
+          'sec-ch-ua-platform-version': '"15.3.2"',
+          'sec-fetch-dest': 'document',
+          'sec-fetch-mode': 'navigate',
+          'sec-fetch-site': 'same-origin',
+          'sec-fetch-user': '?1',
+          'upgrade-insecure-requests': '1',
+          Referrer: 'https://www.google.com',
+        },
+        referrerPolicy: 'strict-origin-when-cross-origin',
+        body: null,
+        method: 'GET',
+      },
+    );
   });
 });
