@@ -68,12 +68,19 @@ function getLanguageApi(languageCode: string): IWikiApi {
 }
 
 function hasSectionTarget(title: string): boolean {
-  return title.includes('#');
+  return !!title.match(/[^&]#/);
 }
 
 export function readRedirectTarget(content: string): string | null {
   const target = getRedirectTargetFromContent(content, false);
   return target && !hasSectionTarget(target) ? target : null;
+}
+
+function decodeNumericEntities(str: string) {
+  return str.replace(
+    /&#(\d+);|&#x([0-9a-f]+);/gi,
+    (_, dec, hex) => String.fromCodePoint(dec ? Number(dec) : parseInt(hex, 16)),
+  );
 }
 
 async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string): Promise<{
@@ -102,7 +109,9 @@ async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string
   //   };
   // }
   const redirectTargetsFromContent = revisions.map((rev) => readRedirectTarget(rev.slots.main['*']));
-  const matchContent = redirectTargetsFromContent.every((target) => target === redirect.to);
+  const matchContent = redirectTargetsFromContent.every(
+    (target) => decodeNumericEntities(target?.toLowerCase().replaceAll('_', ' ') ?? '') === redirect.to.toLowerCase(),
+  );
   return {
     redirectTarget: matchContent ? redirect.to : undefined,
     failedReason: matchContent ? undefined : 'redirect targets changed after the redirect was created',

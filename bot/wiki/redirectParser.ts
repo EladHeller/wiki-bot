@@ -14,11 +14,11 @@ export function getRedirectTargetFromContent(content: string, redirectOnly = tru
     return null;
   }
   const regex = redirectOnly ? REDIRECT_ONLY_REGEX : REDIRECT_START_REGEX;
-  if (!firstNonEmptyLine.match(regex)) {
+  if (!normalized.match(regex)) {
     return null;
   }
 
-  const redirectLink = getInnerLink(firstNonEmptyLine);
+  const redirectLink = getInnerLink(normalized);
 
   if (!redirectLink?.link) {
     return null;
