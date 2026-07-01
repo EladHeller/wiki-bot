@@ -32,7 +32,7 @@
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.1070.0",
     "@hebcal/core": "^6.6.0",
-    "axios": "^1.15.0",
+    "axios": "^1.18.1",
     "axios-cookiejar-support": "^6.0.4",
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^26.1.0",
