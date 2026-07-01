@@ -989,6 +989,8 @@ Old
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
         expect.not.stringContaining('Discussion 1'),
         1,
+        undefined,
+        true,
       );
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
@@ -2250,6 +2252,8 @@ Old discussion
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
         expect.any(String),
         12,
+        undefined,
+        true,
       );
       expect(wikiApi.create).not.toHaveBeenCalled();
     });
@@ -2288,6 +2292,8 @@ Old discussion
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
         expect.not.stringContaining('MediaWiki message delivery'),
         99,
+        undefined,
+        true,
       );
       expect(wikiApi.create).not.toHaveBeenCalled();
     });
@@ -2528,6 +2534,8 @@ This should stay
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
         expect.not.stringContaining('Delete me'),
         11,
+        undefined,
+        true,
       );
       expect(wikiApi.create).not.toHaveBeenCalled();
       expect(wikiApi.edit).not.toHaveBeenCalledWith(

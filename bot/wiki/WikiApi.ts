@@ -20,7 +20,7 @@ export interface IWikiApi {
   recursiveSubCategories(category: string, limit?: number): AsyncGenerator<WikiPage, WikiPage, void>;
   backlinksTo(target: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   edit(
-    articleTitle: string, summary: string, content: string, baseRevId: number, newSectionTitle?: string
+    articleTitle: string, summary: string, content: string, baseRevId: number, newSectionTitle?: string, minor?: boolean
   ): Promise<EditResponse>;
   create(
     articleTitle: string, summary: string, content: string
@@ -163,6 +163,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     content: string,
     baseRevId: number,
     newSectionTitle?: string,
+    minor = false,
   ) {
     const data: Record<string, string> = {
       title: articleTitle, text: content, token, summary, baserevid: baseRevId.toString(),
@@ -172,7 +173,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
       data.section = 'new';
     }
 
-    return request('?action=edit&format=json&assert=bot&bot=true&nocreate=true', 'post', objectToFormData(data));
+    return request(`?action=edit&format=json&assert=bot&bot=true&nocreate=true${minor ? '&minor=true' : ''}`, 'post', objectToFormData(data));
   }
 
   async function create(

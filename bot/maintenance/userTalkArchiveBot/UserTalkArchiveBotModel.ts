@@ -324,7 +324,7 @@ export default function UserTalkArchiveBotModel(
 
     const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, talkPage);
     const updatedContent = removeParagraphsFromContent(sourceContent, paragraphs);
-    await wikiApi.edit(talkPage, archiveSummary, updatedContent, sourceRevid);
+    await wikiApi.edit(talkPage, archiveSummary, updatedContent, sourceRevid, undefined, true);
   }
 
   function detectLinkStyle(archiveBoxContent: string): { prefix: string; suffix: string } {
@@ -715,6 +715,8 @@ export default function UserTalkArchiveBotModel(
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
         updatedContent,
         revid,
+        undefined,
+        true,
       );
     }
 

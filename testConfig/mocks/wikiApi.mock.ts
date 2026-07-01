@@ -82,7 +82,8 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
         summary: string,
         content: string,
         baseRevId: number,
-        newSectionTitle?: string
+        newSectionTitle?: string,
+        edit?: boolean
       ) => Promise<any>>(),
     create:
       base.create
