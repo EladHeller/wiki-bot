@@ -415,6 +415,10 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
   return newContent;
 }
 
+export function normalizeTitleForLogs(title: string) {
+  return title.replace(/^קטגוריה:/, ':קטגוריה:');
+}
+
 export function formatLog(log: TemplateCheckLog): string {
   const reasonTextMap: Record<string, string> = {
     'redirect not found or invalid': 'ההפניה לא נמצאה או שאינה תקינה',
@@ -429,7 +433,7 @@ export function formatLog(log: TemplateCheckLog): string {
   };
   const result = log.success ? 'תוקן' : `דולג: ${reasonTextMap[log.reason ?? ''] ?? log.reason}`;
   const target = log.redirectTarget ? ` ← [[:${log.languageCode}:${log.redirectTarget}]]` : '';
-  return `* [[${log.pageTitle}]]: <nowiki>{{${log.templateName}|${log.foreignTitle}}}</nowiki> - [[:${log.languageCode}:${log.foreignTitle}]]${target} - ${result}`;
+  return `* [[${normalizeTitleForLogs(log.pageTitle)}]]: <nowiki>{{${log.templateName}|${log.foreignTitle}}}</nowiki> - [[:${log.languageCode}:${log.foreignTitle}]]${target} - ${result}`;
 }
 
 async function writeLogs(api: IWikiApi): Promise<void> {
