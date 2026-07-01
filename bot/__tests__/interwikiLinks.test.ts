@@ -629,6 +629,72 @@ describe('handlePageSafely and page processing logic', () => {
     expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|NewGoogle}}', 123);
   });
 
+  it('handles redirect target with hex numeric entity in revision content', async () => {
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'Hex Target' } });
+    mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      size: 100,
+      user: 'User',
+      slots: {
+        main: {
+          '*': '#REDIRECT [[Hex&#x20;Target]]',
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+    }]);
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+
+    await handlePageSafely(api, page);
+
+    expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|Hex Target}}', 123);
+  });
+
+  it('handles redirect target with decimal numeric entity in revision content', async () => {
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'Decimal Target' } });
+    mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      size: 100,
+      user: 'User',
+      slots: {
+        main: {
+          '*': '#REDIRECT [[Decimal&#32;Target]]',
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+    }]);
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+
+    await handlePageSafely(api, page);
+
+    expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|Decimal Target}}', 123);
+  });
+
   it('skips edit when redirect content changed after creation', async () => {
     const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
@@ -640,6 +706,44 @@ describe('handlePageSafely and page processing logic', () => {
       slots: {
         main: {
           '*': '#REDIRECT [[OtherGoogle]]',
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+    }]);
+    const page = {
+      title: 'TestPage',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 123,
+        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+        user: 'User',
+        size: 100,
+      }],
+    };
+
+    await handlePageSafely(api, page);
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('redirect targets changed after the redirect was created'));
+
+    consoleLogSpy.mockRestore();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('handles redirect content with a section target as changed redirect content', async () => {
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'Section Target' } });
+    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
+    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
+      size: 100,
+      user: 'User',
+      slots: {
+        main: {
+          '*': '#REDIRECT [[Section Target#Part]]',
           contentmodel: 'wikitext',
           contentformat: 'text/x-wiki',
         },
