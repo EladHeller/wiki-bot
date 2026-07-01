@@ -173,15 +173,18 @@ export default function UserTalkArchiveBotModel(
       };
     }
 
-    const archiveBoxPageStr = params['מיקום תבנית תיבת ארכיון']?.trim();
-    const archiveBoxPage = archiveBoxPageStr
-      ? (getInnerLink(archiveBoxPageStr)?.link ?? archiveBoxPageStr)
-      : pageTitle;
-
     const directArchivePageStr = params['מיקום דף ארכיון אחרון']?.trim();
     const directArchivePage = directArchivePageStr
       ? (getInnerLink(directArchivePageStr)?.link ?? directArchivePageStr)
       : null;
+
+    const archiveBoxPageStr = params['מיקום תבנית תיבת ארכיון']?.trim();
+    let archiveBoxPage: string | null = pageTitle;
+    if (directArchivePage) {
+      archiveBoxPage = null;
+    } else if (archiveBoxPageStr) {
+      archiveBoxPage = getInnerLink(archiveBoxPageStr)?.link ?? archiveBoxPageStr;
+    }
 
     const maxArchiveSizeStr = params['גודל דף ארכיון']?.trim().replace(/,/g, '');
     const maxArchiveSize = maxArchiveSizeStr ? parseInt(maxArchiveSizeStr, 10) : DEFAULT_ARCHIVE_SIZE;
