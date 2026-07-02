@@ -76,21 +76,11 @@ export function readRedirectTarget(content: string): string | null {
   return target && !hasSectionTarget(target) ? target : null;
 }
 
-function decodeNumericEntities(str: string) {
-  return str.replace(
-    /&#(\d+);|&#x([0-9a-f]+);/gi,
-    (_, dec, hex) => String.fromCodePoint(dec ? Number(dec) : parseInt(hex, 16)),
-  );
-}
-
 async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string): Promise<{
   redirectTarget?: string;
   failedReason?: string;
 }> {
-  const [{ redirect }, revisions] = await Promise.all([
-    languageApi.getRedirecTarget(foreignTitle),
-    languageApi.getArticleRevisions(foreignTitle, 1, 'content|ids'),
-  ]);
+  const { redirect } = await languageApi.getRedirecTarget(foreignTitle);
 
   if (!redirect?.to) {
     return {
@@ -102,19 +92,8 @@ async function getEasyRedirectTarget(languageApi: IWikiApi, foreignTitle: string
       failedReason: 'redirect has section target',
     };
   }
-  // Not relevant since we get only 1 version
-  // if (revisions.length > 20) {
-  //   return {
-  //     failedReason: 'more than 20 revisions',
-  //   };
-  // }
-  const redirectTargetsFromContent = revisions.map((rev) => readRedirectTarget(rev.slots.main['*']));
-  const matchContent = redirectTargetsFromContent.every(
-    (target) => decodeNumericEntities(target?.toLowerCase().replaceAll('_', ' ') ?? '') === redirect.to.toLowerCase(),
-  );
   return {
-    redirectTarget: matchContent ? redirect.to : undefined,
-    failedReason: matchContent ? undefined : 'redirect targets changed after the redirect was created',
+    redirectTarget: redirect.to,
   };
 }
 
@@ -533,7 +512,7 @@ export async function runSinglePage(title: string, api: IWikiApi): Promise<void>
 
 export default async function interwikiLinks(api: IWikiApi): Promise<void> {
   await asyncGeneratorMapWithSequence(
-    10,
+    5,
     api.categroyPages(normalizeCategoryName(CATEGORY_TITLE)),
     (page) => async () => handlePageSafely(api, page),
   );
