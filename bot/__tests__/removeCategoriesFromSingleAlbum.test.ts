@@ -13,6 +13,7 @@ import removeCategoriesFromSingleAlbum, {
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 import WikiDataApiMock from '../../testConfig/mocks/wikiDataApi.mock';
 import { WikiPage } from '../types';
+import { convertContentToWikiPage } from '../utilities';
 
 describe('extractYearFromDate', () => {
   it('should extract year from simple year string', () => {
@@ -131,7 +132,7 @@ describe('processAlbumTemplate', () => {
   let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
 
   beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -383,7 +384,7 @@ describe('getReleaseYearFromWikidata', () => {
   });
 
   it('should return null and log on error', async () => {
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
     const mockWikiDataApi = WikiDataApiMock({
       getClaim: jest.fn<(entity: string, property: string) => Promise<any>>()
         .mockRejectedValue(new Error('API Error')) as any,
@@ -401,7 +402,7 @@ describe('processArticle', () => {
   let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
 
   beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -416,26 +417,7 @@ describe('processArticle', () => {
     });
     const mockWikiDataApi = WikiDataApiMock();
 
-    const page: WikiPage = {
-      pageid: 1,
-      ns: 0,
-      title: 'Test Song',
-      extlinks: [],
-      revisions: [
-        {
-          user: 'test',
-          size: 100,
-          revid: 100,
-          slots: {
-            main: {
-              contentmodel: 'wikitext',
-              contentformat: 'text/x-wiki',
-              '*': '{{סינגל|יצא לאור=2024}}\n[[קטגוריה:שירי 2024]]\n[[קטגוריה:סינגלים מ-2024]]',
-            },
-          },
-        },
-      ],
-    };
+    const page = convertContentToWikiPage('{{סינגל|יצא לאור=2024}}\n[[קטגוריה:שירי 2024]]\n[[קטגוריה:סינגלים מ-2024]]', 100, 'Test Song');
 
     const result = await processArticle(mockApi, mockWikiDataApi, page);
 
@@ -593,7 +575,7 @@ describe('processArticle', () => {
   });
 
   it('should return null if no release year found', async () => {
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
     const mockApi = WikiApiMock({
       getWikiDataItem: jest.fn<(title: string) => Promise<string | undefined>>()
         .mockResolvedValue(undefined) as any,
@@ -632,7 +614,7 @@ describe('processArticle', () => {
   });
 
   it('should return null if no release year found for album', async () => {
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
     const mockApi = WikiApiMock({
       getWikiDataItem: jest.fn<(title: string) => Promise<string | undefined>>()
         .mockResolvedValue(undefined) as any,
@@ -775,26 +757,7 @@ describe('processArticle', () => {
     });
     const mockWikiDataApi = WikiDataApiMock();
 
-    const page: WikiPage = {
-      pageid: 1,
-      ns: 0,
-      title: 'Test Song',
-      extlinks: [],
-      revisions: [
-        {
-          user: 'test',
-          size: 100,
-          revid: 100,
-          slots: {
-            main: {
-              contentmodel: 'wikitext',
-              contentformat: 'text/x-wiki',
-              '*': '{{סינגל|יצא לאור=2024}}\n[[קטגוריה:שירי 2024]]\n[[קטגוריה:סינגלים מ-2024]]',
-            },
-          },
-        },
-      ],
-    };
+    const page = convertContentToWikiPage('{{סינגל|יצא לאור=2024}}\n[[קטגוריה:שירי 2024]]\n[[קטגוריה:סינגלים מ-2024]]', 100, 'Test Song');
 
     const result = await processArticle(mockApi, mockWikiDataApi, page);
 
@@ -847,7 +810,7 @@ describe('processArticle', () => {
 
 describe('removeCategoriesFromSingleAlbum', () => {
   it('should process all singles and albums', async () => {
-    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => { });
 
     async function* mockSinglesGenerator(): AsyncGenerator<WikiPage[], void, void> {
       yield [{
@@ -917,7 +880,7 @@ describe('removeCategoriesFromSingleAlbum', () => {
   });
 
   it('should handle articles with no changes', async () => {
-    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => { });
 
     async function* mockSinglesGenerator(): AsyncGenerator<WikiPage[], void, void> {
       yield [{

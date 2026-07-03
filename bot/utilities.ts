@@ -1,3 +1,5 @@
+import { type WikiPage } from './types';
+
 const thousandStr = '1000 (מספר)|אלף';
 const millionStr = 'מיליון';
 const milliardStr = 'מיליארד';
@@ -217,4 +219,25 @@ export function fetchUrlLikeBrowser(url: string): Promise<Response> {
     body: null,
     method: 'GET',
   });
+}
+
+export function convertContentToWikiPage(content: string, revid: number, title: string): WikiPage {
+  return {
+    title,
+    pageid: 1,
+    ns: 0,
+    extlinks: [],
+    revisions: [{
+      revid,
+      slots: {
+        main: {
+          '*': content,
+          contentmodel: 'wikitext',
+          contentformat: 'text/x-wiki',
+        },
+      },
+      user: 'Sapper-bot',
+      size: content.length,
+    }],
+  };
 }

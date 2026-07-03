@@ -1,11 +1,12 @@
 import {
   afterEach, beforeEach, describe, expect, it, jest,
 } from '@jest/globals';
-import UserTalkArchiveBotModel, { IUserTalkArchiveBotModel } from '../maintenance/userTalkArchiveBot/UserTalkArchiveBotModel';
+import UserTalkArchiveBotModel, { IUserTalkArchiveBotModel, splitExpressions } from '../maintenance/userTalkArchiveBot/UserTalkArchiveBotModel';
 import { IWikiApi } from '../wiki/WikiApi';
 import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 import { logger } from '../utilities/logger';
+import { convertContentToWikiPage } from '../utilities';
 
 describe('userTalkArchiveBotModel', () => {
   let model: IUserTalkArchiveBotModel;
@@ -148,6 +149,21 @@ describe('userTalkArchiveBotModel', () => {
       expect(config).toMatchObject({
         archiveExpressions: 'ארכיון*',
         deleteExpressions: 'מחיקה*',
+      });
+    });
+
+    it('should parse semicolon-delimited archive and delete expressions', () => {
+      const pageContent = `{{בוט ארכוב אוטומטי|ביטויים לארכוב=Archive*; Keep* ;  Other* |ביטויים למחיקה=Delete*; Remove*}}
+==דיון==
+תוכן`;
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const config = model.getConfigFromPageContent('שיחת משתמש:דוגמה', pageContent);
+
+      expect(config).toMatchObject({
+        archiveExpressions: 'Archive*; Keep* ;  Other*',
+        deleteExpressions: 'Delete*; Remove*',
       });
     });
 
@@ -2029,6 +2045,16 @@ Old discussion
     });
   });
 
+  describe('splitExpressions', () => {
+    it('should return an empty list for empty input', () => {
+      expect(splitExpressions()).toStrictEqual([]);
+    });
+
+    it('should split and trim semicolon-delimited expressions', () => {
+      expect(splitExpressions('Alpha*; Beta* ; ;Gamma*')).toStrictEqual(['Alpha*', 'Beta*', 'Gamma*']);
+    });
+  });
+
   describe('run', () => {
     it('should process pages from generator and archive old discussions', async () => {
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
@@ -2042,17 +2068,7 @@ Old discussion
       const archiveBoxContent = '{{תיבת ארכיון|[[שיחת משתמש:דוגמה/ארכיון 1]]}}';
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2101,17 +2117,7 @@ Old discussion
 תוכן ללא תבנית`;
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2128,17 +2134,7 @@ Old discussion
 תוכן`;
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2161,17 +2157,7 @@ Old discussion
 12:42, 30 בינואר 2025 (IDT)`;
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2196,17 +2182,7 @@ Old discussion
 12:00, 1 בינואר 2026 (IDT)`;
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2227,17 +2203,7 @@ Old discussion
 תוכן`;
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2267,17 +2233,7 @@ Old discussion
 12:00, 1 בינואר 2026 (IDT)`;
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2307,17 +2263,7 @@ Old discussion
 12:00, 1 בינואר 2026 (IDT)`;
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2349,17 +2295,7 @@ Old discussion
 }}`;
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2392,17 +2328,7 @@ Old discussion
 
     it('should skip processPage when title is תבנית:תיבת ארכיון אוטומטי', async () => {
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 10,
-          title: 'תבנית:תיבת ארכיון אוטומטי',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': 'some content' } },
-          }],
-        }];
+        yield [convertContentToWikiPage('some content', 123, 'תבנית:תיבת ארכיון אוטומטי')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
@@ -2436,17 +2362,7 @@ Content`;
       }
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate
@@ -2489,6 +2405,115 @@ Content`;
       );
     });
 
+    it('should archive paragraphs that match any semicolon-delimited archive expression', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום תבנית תיבת ארכיון=[[שיחת משתמש:דוגמה/ארכיונים]]|ביטויים לארכוב=Archive*; Keep*;Other*|ימים מתגובה אחרונה=14}}
+==Archive me==
+This should be archived
+12:00, 1 בינואר 2026 (IDT)
+
+==Keep me==
+This should also be archived
+12:00, 1 בינואר 2026 (IDT)
+
+==Leave me==
+This should stay
+12:00, 1 בינואר 2026 (IDT)`;
+      const archiveBoxContent = `{{תיבת ארכיון|
+* [[/ארכיון 1]]
+}}`;
+      const archivePageContent = `{{ארכיון}}
+
+==Existing==
+Content`;
+      async function* emptyGenerator() {
+        yield [];
+      }
+
+      async function* mockGenerator() {
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
+      }
+
+      wikiApi.getArticlesWithTemplate
+        .mockReturnValueOnce(mockGenerator())
+        .mockReturnValueOnce(emptyGenerator())
+        .mockReturnValueOnce(emptyGenerator());
+      wikiApi.info
+        .mockResolvedValueOnce([{}])
+        .mockResolvedValueOnce([{}])
+        .mockResolvedValueOnce([{ length: 100 }])
+        .mockResolvedValueOnce([{}])
+        .mockResolvedValueOnce([{}]);
+      wikiApi.articleContent
+        .mockResolvedValueOnce({ content: pageContent, revid: 1 })
+        .mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 })
+        .mockResolvedValueOnce({ content: archivePageContent, revid: 3 })
+        .mockResolvedValueOnce({ content: pageContent, revid: 1 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.stringContaining('Archive me'),
+        3,
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.stringContaining('Keep me'),
+        3,
+      );
+      expect(wikiApi.edit).not.toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 1',
+        expect.any(String),
+        expect.stringContaining('Leave me'),
+        expect.any(Number),
+      );
+    });
+
+    it('should ignore an archive expression list that only contains semicolons', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+
+      const pageContent = `{{בוט ארכוב אוטומטי|מיקום תבנית תיבת ארכיון=[[שיחת משתמש:דוגמה/ארכיונים]]|ביטויים לארכוב= ; |ימים מתגובה אחרונה=14}}
+==Archive me==
+This should stay archived only if the filter is valid
+12:00, 1 בינואר 2026 (IDT)`;
+      const archiveBoxContent = `{{תיבת ארכיון|
+* [[/ארכיון 1]]
+}}`;
+      async function* emptyGenerator() {
+        yield [];
+      }
+
+      async function* mockGenerator() {
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
+      }
+
+      wikiApi.getArticlesWithTemplate
+        .mockReturnValueOnce(mockGenerator())
+        .mockReturnValueOnce(emptyGenerator())
+        .mockReturnValueOnce(emptyGenerator());
+      wikiApi.info
+        .mockResolvedValueOnce([{}])
+        .mockResolvedValueOnce([{}])
+        .mockResolvedValueOnce([{ length: 100 }])
+        .mockResolvedValueOnce([{}]);
+      wikiApi.articleContent
+        .mockResolvedValueOnce({ content: pageContent, revid: 1 })
+        .mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 })
+        .mockResolvedValueOnce({ content: pageContent, revid: 1 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
     it('should delete only paragraphs that match ביטויים למחיקה', async () => {
       fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
 
@@ -2505,17 +2530,7 @@ This should stay
       }
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate
@@ -2562,17 +2577,7 @@ No signature here`;
 |}`;
 
       async function* mockGenerator() {
-        yield [{
-          pageid: 1,
-          ns: 3,
-          title: 'שיחת משתמש:דוגמה',
-          extlinks: [],
-          revisions: [{
-            user: 'test',
-            size: 100,
-            slots: { main: { contentmodel: 'wikitext', contentformat: 'text/x-wiki', '*': pageContent } },
-          }],
-        }];
+        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());

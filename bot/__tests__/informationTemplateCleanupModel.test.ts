@@ -10,28 +10,10 @@ import { WikiPage } from '../types';
 import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 import { logger } from '../utilities/logger';
+import { convertContentToWikiPage } from '../utilities';
 
 function buildFilePage(title: string, content?: string, revid = 123): WikiPage {
-  return {
-    title,
-    pageid: 1,
-    ns: 6,
-    extlinks: [],
-    revisions: content == null ? [] : [
-      {
-        user: 'TestUser',
-        size: content.length,
-        revid,
-        slots: {
-          main: {
-            contentmodel: 'wikitext',
-            contentformat: 'text/x-wiki',
-            '*': content,
-          },
-        },
-      },
-    ],
-  };
+  return convertContentToWikiPage(content ?? '', revid, title);
 }
 
 describe('processTemplate', () => {

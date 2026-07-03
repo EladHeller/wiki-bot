@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, convertContentToWikiPage } from '../utilities';
 import BaseWikiApi, { defaultConfig } from '../wiki/BaseWikiApi';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import {
@@ -488,24 +488,7 @@ export async function handlePageSafely(api: IWikiApi, page: WikiPage): Promise<v
 export async function runSinglePage(title: string, api: IWikiApi): Promise<void> {
   const { content, revid } = await api.articleContent(title);
 
-  const page: WikiPage = {
-    title,
-    pageid: 1,
-    ns: 0,
-    extlinks: [],
-    revisions: [{
-      revid,
-      slots: {
-        main: {
-          '*': content,
-          contentmodel: 'wikitext',
-          contentformat: 'text/x-wiki',
-        },
-      },
-      user: 'Sapper-bot',
-      size: content.length,
-    }],
-  };
+  const page = convertContentToWikiPage(content, revid, title);
 
   await handlePage(api, page);
 }
