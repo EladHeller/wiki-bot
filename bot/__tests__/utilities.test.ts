@@ -3,10 +3,11 @@ import {
   afterEach, beforeEach, describe, expect, it, jest,
 } from '@jest/globals';
 import {
-  asyncGeneratorMapWithSequence, encodeWikiUrl, escapeRegex, fetchUrlLikeBrowser, getFullYear, getLocalDate,
-  getLocalTimeAndDate, hebrewGimetriya, objectToFormData, objectToQueryString, parseLocalDate, prettyNumericValue,
-  promiseSequence,
+  asyncGeneratorMapWithSequence, convertContentToWikiPage, encodeWikiUrl, escapeRegex, fetchUrlLikeBrowser, getFullYear,
+  getLocalDate, getLocalTimeAndDate, hebrewGimetriya, objectToFormData, objectToQueryString, parseLocalDate,
+  prettyNumericValue, promiseSequence,
 } from '../utilities';
+import { WikiPage } from '../types';
 
 describe('prettyNumericValue', () => {
   it('should return 0 for zero', () => {
@@ -433,5 +434,35 @@ describe('fetchUrlLikeBrowser', () => {
         method: 'GET',
       },
     );
+  });
+});
+
+describe('convertContentToWikiPage', () => {
+  it('should convert the content to wiki page', () => {
+    const content = `
+    == ==
+    == ==
+    == `;
+    const expected: WikiPage = {
+      title: 'example',
+      pageid: 1,
+      ns: 0,
+      extlinks: [],
+      revisions: [{
+        revid: 1,
+        slots: {
+          main: {
+            '*': content,
+            contentmodel: 'wikitext',
+            contentformat: 'text/x-wiki',
+          },
+        },
+        user: 'Sapper-bot',
+        size: content.length,
+      }],
+    };
+    const wikiPage = convertContentToWikiPage(content, 1, 'example');
+
+    expect(wikiPage).toStrictEqual(expected);
   });
 });

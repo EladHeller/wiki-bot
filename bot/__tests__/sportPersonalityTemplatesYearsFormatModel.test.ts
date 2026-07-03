@@ -12,6 +12,7 @@ import { WikiPage } from '../types';
 import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 import { logger } from '../utilities/logger';
+import { convertContentToWikiPage } from '../utilities';
 
 describe('fixYearRange', () => {
   it('should remove year links', () => {
@@ -242,26 +243,7 @@ describe('processArticle', () => {
       },
     });
 
-    const result = await processArticle(api, {
-      title,
-      pageid: 1,
-      ns: 0,
-      extlinks: [],
-      revisions: [
-        {
-          user: 'TestUser',
-          size: content.length,
-          revid: 123,
-          slots: {
-            main: {
-              contentmodel: 'wikitext',
-              contentformat: 'text/x-wiki',
-              '*': content,
-            },
-          },
-        },
-      ],
-    });
+    const result = await processArticle(api, convertContentToWikiPage(content, 123, title));
 
     expect(api.edit).toHaveBeenCalledWith(
       title,
@@ -276,26 +258,7 @@ describe('processArticle', () => {
     const title = 'Some Article';
     const content = 'Some text without template';
 
-    const result = await processArticle(api, {
-      title,
-      pageid: 1,
-      ns: 0,
-      extlinks: [],
-      revisions: [
-        {
-          user: 'TestUser',
-          size: content.length,
-          revid: 123,
-          slots: {
-            main: {
-              contentmodel: 'wikitext',
-              contentformat: 'text/x-wiki',
-              '*': content,
-            },
-          },
-        },
-      ],
-    });
+    const result = await processArticle(api, convertContentToWikiPage(content, 123, title));
 
     expect(api.edit).not.toHaveBeenCalled();
     expect(result).toBeNull();
@@ -305,26 +268,7 @@ describe('processArticle', () => {
     const title = 'Some Article';
     const content = 'Some text {{אישיות כדורגל|שנות נוער=1990–1991}} more text';
 
-    const result = await processArticle(api, {
-      title,
-      pageid: 1,
-      ns: 0,
-      extlinks: [],
-      revisions: [
-        {
-          user: 'TestUser',
-          size: content.length,
-          revid: 123,
-          slots: {
-            main: {
-              contentmodel: 'wikitext',
-              contentformat: 'text/x-wiki',
-              '*': content,
-            },
-          },
-        },
-      ],
-    });
+    const result = await processArticle(api, convertContentToWikiPage(content, 123, title));
 
     expect(api.edit).not.toHaveBeenCalled();
     expect(result).toBeNull();
@@ -340,26 +284,7 @@ describe('processArticle', () => {
       },
     });
 
-    const result = await processArticle(api, {
-      title,
-      pageid: 1,
-      ns: 0,
-      extlinks: [],
-      revisions: [
-        {
-          user: 'TestUser',
-          size: content.length,
-          revid: 123,
-          slots: {
-            main: {
-              contentmodel: 'wikitext',
-              contentformat: 'text/x-wiki',
-              '*': content,
-            },
-          },
-        },
-      ],
-    });
+    const result = await processArticle(api, convertContentToWikiPage(content, 123, title));
 
     expect(api.edit).toHaveBeenCalledWith(
       title,
@@ -395,26 +320,7 @@ describe('processArticle', () => {
       },
     });
 
-    const result = await processArticle(api, {
-      title,
-      pageid: 1,
-      ns: 0,
-      extlinks: [],
-      revisions: [
-        {
-          user: 'TestUser',
-          size: content.length,
-          revid: 123,
-          slots: {
-            main: {
-              contentmodel: 'wikitext',
-              contentformat: 'text/x-wiki',
-              '*': content,
-            },
-          },
-        },
-      ],
-    });
+    const result = await processArticle(api, convertContentToWikiPage(content, 123, title));
 
     expect(api.edit).toHaveBeenCalledWith(
       title,
@@ -435,26 +341,7 @@ describe('processArticle', () => {
       },
     });
 
-    await processArticle(api, {
-      title,
-      pageid: 1,
-      ns: 0,
-      extlinks: [],
-      revisions: [
-        {
-          user: 'TestUser',
-          size: content.length,
-          revid: 123,
-          slots: {
-            main: {
-              contentmodel: 'wikitext',
-              contentformat: 'text/x-wiki',
-              '*': content,
-            },
-          },
-        },
-      ],
-    });
+    await processArticle(api, convertContentToWikiPage(content, 123, title));
 
     expect(api.edit).toHaveBeenCalledWith(
       title,
@@ -679,28 +566,7 @@ describe('sportPersonalityTemplatesYearsFormatModel', () => {
 
   it('should log errors when there are failed articles', async () => {
     const title = 'Error Article';
-    const pages: WikiPage[] = [
-      {
-        title,
-        pageid: 1,
-        ns: 0,
-        extlinks: [],
-        revisions: [
-          {
-            user: 'TestUser',
-            size: 100,
-            revid: 123,
-            slots: {
-              main: {
-                contentmodel: 'wikitext',
-                contentformat: 'text/x-wiki',
-                '*': '{{אישיות כדורגל|שנות נוער=[[1990]] - [[1991]]}}',
-              },
-            },
-          },
-        ],
-      },
-    ];
+    const pages: WikiPage[] = [convertContentToWikiPage('{{אישיות כדורגל|שנות נוער=[[1990]] - [[1991]]}}', 123, title)];
 
     mockApi.login.mockResolvedValue(undefined);
     mockApi.edit.mockRejectedValue(new Error('API Error'));

@@ -1,5 +1,6 @@
+import { title } from 'node:process';
 import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, convertContentToWikiPage } from '../../utilities';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const webArchivePrefix = 'https://web.archive.org/web/20230403233921/';
@@ -44,26 +45,7 @@ export async function fixEmagoContribs() {
   await asyncGeneratorMapWithSequence(1, generator, (contrib) => async () => {
     const { content, revid } = await api.articleContent(contrib.title);
 
-    const page: WikiPage = {
-      pageid: 1,
-      ns: 0,
-      title: contrib.title,
-      extlinks: [],
-      revisions: [
-        {
-          user: 'test',
-          size: 100,
-          revid,
-          slots: {
-            main: {
-              contentmodel: 'wikitext',
-              contentformat: 'text/x-wiki',
-              '*': content,
-            },
-          },
-        },
-      ],
-    };
+    const page = convertContentToWikiPage(content, revid, title);
     await fixPage(api, page);
   });
 }
