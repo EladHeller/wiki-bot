@@ -87,13 +87,24 @@ function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: st
   return cleanedContent.trimEnd();
 }
 
+export function splitExpressions(expression?: string): string[] {
+  return expression
+    ? expression.split(';').map((ex) => ex.trim()).filter((ex) => ex.length > 0)
+    : [];
+}
+
 function matchesWildcardExpression(text: string, expression?: string): boolean {
   if (!expression) {
     return true;
   }
-
-  const escapedExpression = escapeRegex(expression).replace(/\\\*/g, '[\\s\\S]*');
-  return new RegExp(escapedExpression, 'u').test(text);
+  const expressions = splitExpressions(expression);
+  if (expressions.length === 0) {
+    return false;
+  }
+  return expressions.some((singleExpression) => {
+    const escapedExpression = escapeRegex(singleExpression).replace(/\\\*/g, '[\\s\\S]*');
+    return new RegExp(escapedExpression, 'u').test(text);
+  });
 }
 
 function incrementArchivePageName(archiveName: string): string | null {
