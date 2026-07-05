@@ -35,7 +35,7 @@ export function getExternalLinks(text: string): WikiLink[] {
     const linkText = text.substring(structure.start + 1, structure.end - 1).trim();
     const [link, ...description] = linkText.split(' ');
     return { link, text: description.join(' ') };
-  });
+  }).filter((wikiLink) => wikiLink.link.match(/^[a-zA-Z]+:\/\/\w+/));
 }
 
 export function getExternalLink(text: string): WikiLink | undefined {
