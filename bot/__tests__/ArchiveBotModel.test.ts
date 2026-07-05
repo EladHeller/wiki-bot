@@ -185,7 +185,7 @@ ad
 adasd
 ==לוג ריצה 4 במרץ 2020==
 ששדגשגשדג
-שגשדג`, 1);
+שגשדג`, 1, undefined, true);
       expect(wikiApi.create).toHaveBeenCalledWith('logPage/ארכיון פברואר 2020', 'ארכוב פברואר 2020', `{{ארכיון}}\n==לוג ריצה 1 בפברואר 2020==
 שדגשדגעלךלףצףם
 םןכחפן חשפכדגכפםדגלכ
@@ -196,7 +196,7 @@ adasd
 ==לוג ריצה 28 בפברואר 2020==
 שדגשדלח שדג
 שגשגשדגשדג
-שדג\n`);
+שדג\n`, true);
     });
 
     it('should not archive if no content to archive', async () => {
@@ -269,6 +269,7 @@ adasd
 23:59, 28 בפברואר 2020
 טקסט סיום
 `,
+        true,
       );
       expect(wikiApi.edit).toHaveBeenCalledTimes(1);
       expect(wikiApi.edit).toHaveBeenCalledWith(
@@ -287,6 +288,8 @@ adasd
 08:00, 1 במרץ 2020 (IDT)
 `,
         10,
+        undefined,
+        true,
       );
     });
 
@@ -346,6 +349,7 @@ adasd
 05:55, 30 ביולי 2025 (IDT)
 סוף
 `,
+        true,
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'logPage',
@@ -356,6 +360,8 @@ adasd
 01:00, 1 באוגוסט 2025 (IDT)
 `,
         12,
+        undefined,
+        true,
       );
     });
 
@@ -399,8 +405,9 @@ adasd
         'logPage/ארכיון פברואר 2020',
         'ארכוב פברואר 2020',
         '{{ארכיון}}\n==No date paragraph==\nאין חתימה\n',
+        true,
       );
-      expect(wikiApi.edit).toHaveBeenCalledWith('logPage', 'ארכוב פברואר 2020', '\n', 10);
+      expect(wikiApi.edit).toHaveBeenCalledWith('logPage', 'ארכוב פברואר 2020', '\n', 10, undefined, true);
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'ויקיפדיה:בוט/ארכוב פסקאות ללא תאריך',
         'בוט ארכוב: עדכון טבלת פסקאות ללא תאריך',

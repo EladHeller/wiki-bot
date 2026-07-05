@@ -87,7 +87,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
       ) => Promise<any>>(),
     create:
       base.create
-      ?? jest.fn<(articleTitle: string, summary: string, content: string) => Promise<any>>(),
+      ?? jest.fn<(articleTitle: string, summary: string, content: string, minor?: boolean) => Promise<any>>(),
     categroyTitles:
       base.categroyTitles
       ?? jest.fn<(category: string, limit?: number, namespace?: string) => AsyncGenerator<WikiPage[], void, void>>(),

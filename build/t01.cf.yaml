@@ -440,7 +440,7 @@ Resources:
         Schedule:
           Type: Schedule
           Properties:
-            Schedule: cron(0 10 ? * 1#1 *)
+            Schedule: cron(0 10 ? 1/3 1#1 *)
             Name: information-template-cleanup-scheduler
 
   ExchangeRatesFunction:

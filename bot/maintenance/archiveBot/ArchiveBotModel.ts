@@ -171,8 +171,8 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
       return;
     }
 
-    await wikiApi.create(archivePageTitle, `ארכוב ${month} ${year}`, `{{${config.archiveTemplate}}}\n${text}`);
-    await wikiApi.edit(logPage, `ארכוב ${month} ${year}`, newContent, revid);
+    await wikiApi.create(archivePageTitle, `ארכוב ${month} ${year}`, `{{${config.archiveTemplate}}}\n${text}`, true);
+    await wikiApi.edit(logPage, `ארכוב ${month} ${year}`, newContent, revid, undefined, true);
     if (archiveMode === 'signatureDate') {
       await removeArchivedUndatedParagraphsFromTracker(wikiApi, logPage, archivedParagraphs);
     }
