@@ -4,7 +4,6 @@ import {
 
 const getExternalLinksMock = jest.fn<() => Array<{ link: string; text: string }>>();
 const handlePageMock = jest.fn() as any;
-const logErrorMock: any = jest.fn();
 const queuePlaywrightLinkCheckMock: any = jest.fn();
 const fetchMock = jest.fn<typeof fetch>();
 
@@ -16,12 +15,6 @@ jest.unstable_mockModule('../maintenance/copyrightViolationCore', () => ({
   handlePage: handlePageMock,
 }));
 
-jest.unstable_mockModule('../utilities/logger', () => ({
-  logger: {
-    logError: logErrorMock,
-  },
-}));
-
 jest.unstable_mockModule('../tag-bot/actions/playwrightLinkQueue', () => ({
   queuePlaywrightLinkCheck: queuePlaywrightLinkCheckMock,
 }));
@@ -29,8 +22,11 @@ jest.unstable_mockModule('../tag-bot/actions/playwrightLinkQueue', () => ({
 const { checkCopyright, checkExternalLinks } = await import('../tag-bot/actions/checkPage');
 
 describe('checkExternalLinks', () => {
+  let consoleErrorSpy: any;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
     getExternalLinksMock.mockReturnValue([
       { link: 'https://example.com/one', text: 'One' },
       { link: 'https://example.com/two', text: 'Two' },
@@ -126,7 +122,7 @@ describe('checkExternalLinks', () => {
 
     const result = await checkExternalLinks('content');
 
-    expect(logErrorMock).toHaveBeenCalledWith({ reason: 'queue failed' });
+    expect(consoleErrorSpy).toHaveBeenCalledWith({ reason: 'queue failed' });
     expect(result).toBe('חלק מהקישורים חסומים לבוט ונשלחו לבדיקה ברקע. קישורים שבורים:\n* [https://example.com/one One], לא ניתן להעביר לבדיקה ברקע - [object Object]');
   });
 
@@ -153,7 +149,7 @@ describe('checkExternalLinks', () => {
 
     const result = await checkExternalLinks('content');
 
-    expect(logErrorMock).toHaveBeenCalledWith('boom');
+    expect(consoleErrorSpy).toHaveBeenCalledWith('boom');
     expect(result).toBe('קישורים שבורים:\n* [https://example.com/one One], boom');
   });
 
@@ -165,7 +161,7 @@ describe('checkExternalLinks', () => {
 
     const result = await checkExternalLinks('content');
 
-    expect(logErrorMock).toHaveBeenCalledWith(new Error('kaboom'));
+    expect(consoleErrorSpy).toHaveBeenCalledWith(new Error('kaboom'));
     expect(result).toBe('קישורים שבורים:\n* [https://example.com/one One], kaboom');
   });
 });
