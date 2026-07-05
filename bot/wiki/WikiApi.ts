@@ -23,7 +23,7 @@ export interface IWikiApi {
     articleTitle: string, summary: string, content: string, baseRevId: number, newSectionTitle?: string, minor?: boolean
   ): Promise<EditResponse>;
   create(
-    articleTitle: string, summary: string, content: string
+    articleTitle: string, summary: string, content: string, minor?: boolean
   ): Promise<any>;
   articleContent(title: string): Promise<{ content: string, revid: number }>;
   externalUrl(link: string, protocol?: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
@@ -180,12 +180,13 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     articleTitle: string,
     summary: string,
     content: string,
+    minor = false,
   ) {
     const data: Record<string, string> = {
       title: articleTitle, text: content, token, summary, createonly: 'true',
     };
 
-    return request('?action=edit&format=json&assert=bot&bot=true', 'post', objectToFormData(data));
+    return request(`?action=edit&format=json&assert=bot&bot=true${minor ? '&minor=true' : ''}`, 'post', objectToFormData(data));
   }
 
   async function articleContent(
