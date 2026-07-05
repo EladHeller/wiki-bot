@@ -1,5 +1,4 @@
 import { handlePage } from '../../maintenance/copyrightViolationCore';
-import { logger } from '../../utilities/logger';
 import { getExternalLinks, WikiLink } from '../../wiki/wikiLinkParser';
 import { queuePlaywrightLinkCheck } from './playwrightLinkQueue';
 
@@ -33,7 +32,7 @@ export async function checkExternalLinks(
         });
       }
     } catch (error) {
-      logger.logError(error);
+      console.error(error);
       brokenLinks.push({
         ...link,
         error: error instanceof Error ? error.message : String(error),
@@ -50,7 +49,7 @@ export async function checkExternalLinks(
         links: blockedLinks,
       });
     } catch (error) {
-      logger.logError(error);
+      console.error(error);
       blockedLinks.forEach((link) => {
         brokenLinks.push({
           ...link,
