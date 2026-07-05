@@ -305,9 +305,6 @@ export async function runCopyrightViolationBot(basePage: string, runMode: 'new' 
     name: WEBSITE_FOR_VISIT,
     content: websiteText,
   }, {
-    name: 'שגיאות זמניות (יטופלו בריצה חוזרת)',
-    content: searchErrorText,
-  }, {
     name: 'דפים שנמחקו לפני ריצת הבוט',
     content: notFoundText,
   }].filter((p) => p.content) satisfies Paragraph[];
