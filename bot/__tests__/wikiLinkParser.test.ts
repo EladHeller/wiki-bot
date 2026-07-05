@@ -157,6 +157,14 @@ describe('getExternalLinks', () => {
 
     expect(result).toStrictEqual([]);
   });
+
+  it('should not return links for word wraped with brackets', () => {
+    const mockText = 'This is no [link]';
+
+    const result = getExternalLinks(mockText);
+
+    expect(result).toStrictEqual([]);
+  });
 });
 
 describe('getExternalLink', () => {
