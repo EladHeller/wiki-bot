@@ -18,6 +18,7 @@ import {
 import { logger } from '../../utilities/logger';
 
 export type ArchiveType = 'רבעון' | 'תבנית ארכיון' | 'תבנית ארכיון עם יעד' | 'מחיקה';
+export type TargetedArchiveRegularArchiveMode = 'תבנית הועבר' | 'ארכוב כפול';
 const CONFIG_PAGE_TITLE = 'ויקיפדיה:בוט/ארכוב דיונים';
 export type PageToArchive = {
   page: string;
@@ -25,6 +26,7 @@ export type PageToArchive = {
   daysAfterLastActivity: number;
   archiveType: ArchiveType;
   archiveNavigatePage: string | null;
+  targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode;
 };
 
 const SUMMARY_PREFIX = `[[${CONFIG_PAGE_TITLE}|בוט ארכוב דיונים]]`;
@@ -37,6 +39,7 @@ export interface IClosedDiscussionsArchiveBotModel {
     archivableParagraphs: string[],
     archiveType: ArchiveType,
     archiveNavigatePage: string,
+    targetedArchiveRegularArchiveMode?: TargetedArchiveRegularArchiveMode,
   ): Promise<void>;
 }
 
@@ -137,6 +140,22 @@ function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: st
   return cleanedContent.trim();
 }
 
+function createTransferredTemplate(target: string): string {
+  return `{{הועבר|ל=${target}}}`;
+}
+
+function createTargetedArchiveRegularContent(
+  regularArchiveParagraph: string,
+  paragraphName: string,
+  archiveTitle: string,
+): string {
+  return `${regularArchiveParagraph}\n==${paragraphName}==\n${createTransferredTemplate(archiveTitle)}\n~~~~`;
+}
+
+function validateTargetedArchiveRegularArchiveMode(mode: string): mode is TargetedArchiveRegularArchiveMode {
+  return mode === 'תבנית הועבר' || mode === 'ארכוב כפול';
+}
+
 export default function ClosedDiscussionsArchiveBotModel(
   wikiApi: IWikiApi,
 ): IClosedDiscussionsArchiveBotModel {
@@ -144,19 +163,23 @@ export default function ClosedDiscussionsArchiveBotModel(
     const { content } = await getContent(wikiApi, CONFIG_PAGE_TITLE);
     const parsedTable = parseTableText(content)[0];
     return parsedTable
-      .rows.filter((row) => row.fields.length === 5 && !row.isHeader)
+      .rows.filter((row) => row.fields.length === 6 && !row.isHeader)
       .map((row) => {
         const page = getInnerLink(row.fields[0] as string)?.link;
         if (!page) {
           throw new Error(`Invalid page: ${row.fields[0]}`);
         }
         const archiveNavigatePage = getInnerLink(row.fields[4] as string)?.link ?? null;
+        const archiveModeText = row.fields[5]?.toString().trim() || '';
+        const isValidArchiveMode = validateTargetedArchiveRegularArchiveMode(archiveModeText);
+        const targetedArchiveRegularArchiveMode = isValidArchiveMode ? archiveModeText : 'תבנית הועבר';
         return {
           page,
           statuses: (row.fields[1] as string).split(',').map((status) => status.trim()) as string[],
           daysAfterLastActivity: parseInt(row.fields[2] as string, 10),
           archiveType: (row.fields[3] as ArchiveType),
           archiveNavigatePage,
+          targetedArchiveRegularArchiveMode,
         };
       });
   }
@@ -208,6 +231,7 @@ export default function ClosedDiscussionsArchiveBotModel(
     archiveTitle: string,
     isTargeted: boolean,
     regularArchivePage = '',
+    targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode = 'תבנית הועבר',
   ): Promise<void> {
     const { name: paragraphName } = parseParagraph(paragraph);
     const templateData = getStatusTemplateData(paragraph, pageTitle);
@@ -232,7 +256,7 @@ export default function ClosedDiscussionsArchiveBotModel(
 
     const parsedParagraph = parseParagraph(paragraph);
     const paragraphToArchive = isTargeted
-      ? `==${parsedParagraph.name}==\n{{הועבר|מ=${pageTitle}}}\n${parsedParagraph.content.replace(statusTemplate, newTemplate)}\n{{סוף העברה}}`
+      ? `==${parsedParagraph.name}==\n${createTransferredTemplate(pageTitle)}\n${parsedParagraph.content.replace(statusTemplate, newTemplate)}\n{{סוף העברה}}`
       : paragraph;
 
     if (existingArchiveContent) {
@@ -253,9 +277,11 @@ export default function ClosedDiscussionsArchiveBotModel(
     const updatedContent = removeParagraphsFromContent(sourceContent, [paragraph]);
     await wikiApi.edit(pageTitle, archiveSummary, updatedContent, sourceRevid);
 
-    if (isTargeted) {
+    if (isTargeted && regularArchivePage) {
       const { content, revid } = await getContent(wikiApi, regularArchivePage);
-      const newContent = `${content}\n==${paragraphName}==\n${newTemplate}\n{{הועבר|ל=${archiveTitle}}}\n~~~~`;
+      const newContent = targetedArchiveRegularArchiveMode === 'ארכוב כפול'
+        ? `${content}\n${paragraph}`
+        : createTargetedArchiveRegularContent(content, paragraphName, archiveTitle);
       await wikiApi.edit(regularArchivePage, archiveSummary, newContent, revid);
     }
   }
@@ -327,6 +353,7 @@ export default function ClosedDiscussionsArchiveBotModel(
     pageTitle: string,
     archivableParagraphs: string[],
     archiveNavigatePage: string,
+    targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode,
   ): Promise<void> {
     const navigateContent = await getContent(wikiApi, archiveNavigatePage);
 
@@ -348,7 +375,14 @@ export default function ClosedDiscussionsArchiveBotModel(
       for (const paragraph of archivableParagraphs) {
         const templateData = getStatusTemplateData(paragraph, pageTitle);
         if (templateData?.archive && templateData.archive !== 'ארכיון') {
-          await archiveSingleParagraphTemplate(pageTitle, paragraph, templateData.archive, true, archiveTitle);
+          await archiveSingleParagraphTemplate(
+            pageTitle,
+            paragraph,
+            templateData.archive,
+            true,
+            archiveTitle,
+            targetedArchiveRegularArchiveMode,
+          );
         } else {
           await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle, false);
         }
@@ -388,7 +422,9 @@ export default function ClosedDiscussionsArchiveBotModel(
   async function archiveSingleParagraphWithTargetedArchive(
     pageTitle: string,
     paragraph: string,
-    getDefaultArchiveTitle: () => Promise<string>,
+    getDefaultArchiveTitle: (() => Promise<string>) | null,
+    targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode,
+    regularArchivePage: string,
   ): Promise<boolean> {
     const templateData = getStatusTemplateData(paragraph, pageTitle);
     if (!templateData?.archive) {
@@ -396,12 +432,22 @@ export default function ClosedDiscussionsArchiveBotModel(
     }
 
     const isDefaultArchive = templateData.archive === 'ארכיון';
-    const defaultArchiveTitle = await getDefaultArchiveTitle();
     const archiveTitle = isDefaultArchive
-      ? defaultArchiveTitle
+      ? await getDefaultArchiveTitle?.()
       : templateData.archive;
 
-    await archiveSingleParagraphTemplate(pageTitle, paragraph, archiveTitle, !isDefaultArchive, defaultArchiveTitle);
+    if (!archiveTitle) {
+      return false;
+    }
+
+    await archiveSingleParagraphTemplate(
+      pageTitle,
+      paragraph,
+      archiveTitle,
+      !isDefaultArchive,
+      regularArchivePage,
+      targetedArchiveRegularArchiveMode,
+    );
     return true;
   }
 
@@ -409,6 +455,7 @@ export default function ClosedDiscussionsArchiveBotModel(
     pageTitle: string,
     archivableParagraphs: string[],
     archiveNavigatePage: string,
+    targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode,
   ): Promise<void> {
     const archivedParagraphs: string[] = [];
     let defaultArchiveTitle: string | null = null;
@@ -433,10 +480,13 @@ export default function ClosedDiscussionsArchiveBotModel(
 
     try {
       for (const paragraph of archivableParagraphs) {
+        const regularArchivePage = await getDefaultArchiveTitle();
         const archived = await archiveSingleParagraphWithTargetedArchive(
           pageTitle,
           paragraph,
           getDefaultArchiveTitle,
+          targetedArchiveRegularArchiveMode,
+          regularArchivePage,
         );
         if (archived) {
           archivedParagraphs.push(paragraph);
@@ -447,11 +497,84 @@ export default function ClosedDiscussionsArchiveBotModel(
     }
   }
 
+  async function archiveTargetedParagraphsInDeleteMode(
+    pageTitle: string,
+    archivableParagraphs: string[],
+    targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode,
+    regularArchivePage: string,
+  ): Promise<string[]> {
+    const archivedParagraphs: string[] = [];
+
+    for (const paragraph of archivableParagraphs) {
+      const archived = await archiveSingleParagraphWithTargetedArchive(
+        pageTitle,
+        paragraph,
+        null,
+        targetedArchiveRegularArchiveMode,
+        regularArchivePage,
+      );
+      if (archived) {
+        archivedParagraphs.push(paragraph);
+      }
+    }
+
+    return archivedParagraphs;
+  }
+
+  async function getRegularArchivePageTitle(
+    pageTitle: string,
+    archiveNavigatePage: string,
+  ): Promise<string> {
+    const navigateContent = await getContent(wikiApi, archiveNavigatePage);
+    const archiveTitleResult = await getArchiveTitle(
+      wikiApi,
+      navigateContent.content,
+      pageTitle,
+      true,
+    );
+    if ('error' in archiveTitleResult) {
+      throw new Error(`Failed to get archive title: ${archiveTitleResult.error}`);
+    }
+    return archiveTitleResult.archiveTitle;
+  }
+
+  async function archiveWithDeleteAlgorithm(
+    pageTitle: string,
+    archivableParagraphs: string[],
+    archiveNavigatePage: string,
+    targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode,
+  ): Promise<void> {
+    const targetedParagraphs = archivableParagraphs.filter(
+      (paragraph) => getStatusTemplateData(paragraph, pageTitle)?.archive != null,
+    );
+    const paragraphsToDelete = archivableParagraphs.filter(
+      (paragraph) => getStatusTemplateData(paragraph, pageTitle)?.archive == null,
+    );
+
+    const regularArchivePage = archiveNavigatePage
+      ? await getRegularArchivePageTitle(pageTitle, archiveNavigatePage)
+      : '';
+
+    const archivedParagraphs = await archiveTargetedParagraphsInDeleteMode(
+      pageTitle,
+      targetedParagraphs,
+      targetedArchiveRegularArchiveMode,
+      regularArchivePage,
+    );
+
+    if (paragraphsToDelete.length > 0) {
+      await deleteParagraphs(pageTitle, paragraphsToDelete);
+    }
+
+    await removeArchivedUndatedParagraphsFromTracker(wikiApi, pageTitle, archivedParagraphs);
+  }
+
   async function archive(
     pageTitle: string,
     archivableParagraphs: string[],
     archiveType: ArchiveType,
     archiveNavigatePage: string,
+    targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode = 'תבנית הועבר',
   ): Promise<void> {
     if (archivableParagraphs.length === 0) {
       return;
@@ -460,11 +583,26 @@ export default function ClosedDiscussionsArchiveBotModel(
     if (archiveType === 'רבעון') {
       await archiveWithQuarterlyAlgorithm(pageTitle, archivableParagraphs);
     } else if (archiveType === 'תבנית ארכיון') {
-      await archiveWithTemplateAlgorithm(pageTitle, archivableParagraphs, archiveNavigatePage);
+      await archiveWithTemplateAlgorithm(
+        pageTitle,
+        archivableParagraphs,
+        archiveNavigatePage,
+        targetedArchiveRegularArchiveMode,
+      );
     } else if (archiveType === 'תבנית ארכיון עם יעד') {
-      await archiveWithTargetTemplateAlgorithm(pageTitle, archivableParagraphs, archiveNavigatePage);
+      await archiveWithTargetTemplateAlgorithm(
+        pageTitle,
+        archivableParagraphs,
+        archiveNavigatePage,
+        targetedArchiveRegularArchiveMode,
+      );
     } else if (archiveType === 'מחיקה') {
-      await deleteParagraphs(pageTitle, archivableParagraphs);
+      await archiveWithDeleteAlgorithm(
+        pageTitle,
+        archivableParagraphs,
+        archiveNavigatePage,
+        targetedArchiveRegularArchiveMode,
+      );
     } else {
       throw new Error(`Unknown archive type: ${archiveType}`);
     }
