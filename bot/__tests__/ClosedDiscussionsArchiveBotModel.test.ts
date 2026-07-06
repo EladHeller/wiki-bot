@@ -35,11 +35,11 @@ describe('closedDiscussionsArchiveBotModel', () => {
     it('should parse pages to archive from wiki table', async () => {
       const tableContent = `{| class="wikitable"
 |-
-! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
+! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד !! הוספת מצב חדש !! עדכון מצב בדיון
 |-
-| [[ויקיפדיה:מזנון]] || טופל,הועבר || 14 || רבעון || [[ויקיפדיה:מזנון]] ||
+| [[ויקיפדיה:מזנון]] || טופל,הועבר || 14 || רבעון || [[ויקיפדיה:מזנון]] || || כן || לא
 |-
-| [[ויקיפדיה:בקשות]] || נפתר || 7 || תבנית ארכיון || [[ויקיפדיה:בקשות/ניווט]] || ארכוב כפול
+| [[ויקיפדיה:בקשות]] || נפתר || 7 || תבנית ארכיון || [[ויקיפדיה:בקשות/ניווט]] || ארכוב כפול || לא || כן
 |}`;
 
       wikiApi.articleContent.mockResolvedValue({ content: tableContent, revid: 1 });
@@ -55,6 +55,8 @@ describe('closedDiscussionsArchiveBotModel', () => {
         archiveType: 'רבעון',
         archiveNavigatePage: 'ויקיפדיה:מזנון',
         targetedArchiveRegularArchiveMode: 'תבנית הועבר',
+        addNewState: true,
+        updateInDiscussionState: false,
       });
       expect(pages[1]).toStrictEqual({
         page: 'ויקיפדיה:בקשות',
@@ -63,7 +65,26 @@ describe('closedDiscussionsArchiveBotModel', () => {
         archiveType: 'תבנית ארכיון',
         archiveNavigatePage: 'ויקיפדיה:בקשות/ניווט',
         targetedArchiveRegularArchiveMode: 'ארכוב כפול',
+        addNewState: false,
+        updateInDiscussionState: true,
       });
+    });
+
+    it('should default new state flags to false when columns are missing', async () => {
+      const tableContent = `{| class="wikitable"
+|-
+! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
+|-
+| [[ויקיפדיה:מזנון]] || טופל || 14 || רבעון || [[ויקיפדיה:מזנון]] ||
+|}`;
+
+      wikiApi.articleContent.mockResolvedValue({ content: tableContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const pages = await model.getPagesToArchive();
+
+      expect(pages[0].addNewState).toBe(false);
+      expect(pages[0].updateInDiscussionState).toBe(false);
     });
 
     it('should throw error for invalid page link', async () => {
@@ -341,6 +362,103 @@ Invalid month: 12:00, 5 בטעות 2025 (IDT)
 
       // Should use the valid signature and archive
       expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('state updates', () => {
+    it('should add new state to a paragraph without מצב before archiving', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion 1==
+No status template yet
+10:00, 1 בפברואר 2025 (IDT)
+
+==Discussion 2==
+{{מצב|הועבר}}
+Archive me
+10:00, 1 בינואר 2025 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+
+      await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage', 'תבנית הועבר', true, false);
+
+      const sourceEdits = (jest.mocked(wikiApi.edit)).mock.calls.filter((call) => call[0] === 'TestPage');
+
+      expect(sourceEdits[0][2]).toContain('{{מצב|חדש}}\nNo status template yet');
+    });
+
+    it('should update חדש to בדיון when at least two distinct users commented', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion 1==
+{{מצב|חדש}}
+[[משתמש:Alice]]
+תגובה של אליס
+[[user:Bob|Bob]]
+תגובה של בוב
+
+==Discussion 2==
+{{מצב|הועבר}}
+Archive me
+10:00, 1 בינואר 2025 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+
+      await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage', 'תבנית הועבר', false, true);
+
+      const sourceEdits = (jest.mocked(wikiApi.edit)).mock.calls.filter((call) => call[0] === 'TestPage');
+
+      expect(sourceEdits[0][2]).toContain('{{מצב|בדיון}}');
+    });
+
+    it('should keep חדש unchanged when only one user commented', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion 1==
+{{מצב|חדש}}
+[[משתמש:Alice]]
+תגובה של אליס
+
+==Discussion 2==
+{{מצב|הועבר}}
+Archive me
+10:00, 1 בינואר 2025 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+
+      await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage', 'תבנית הועבר', false, true);
+
+      const sourceEdits = (jest.mocked(wikiApi.edit)).mock.calls.filter((call) => call[0] === 'TestPage');
+
+      expect(sourceEdits).toHaveLength(1);
+      expect(sourceEdits[0][2]).not.toContain('{{מצב|בדיון}}');
     });
   });
 

@@ -27,6 +27,8 @@ export type PageToArchive = {
   archiveType: ArchiveType;
   archiveNavigatePage: string | null;
   targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode;
+  addNewState: boolean;
+  updateInDiscussionState: boolean;
 };
 
 const SUMMARY_PREFIX = `[[${CONFIG_PAGE_TITLE}|בוט ארכוב דיונים]]`;
@@ -40,10 +42,14 @@ export interface IClosedDiscussionsArchiveBotModel {
     archiveType: ArchiveType,
     archiveNavigatePage: string,
     targetedArchiveRegularArchiveMode?: TargetedArchiveRegularArchiveMode,
+    addNewState?: boolean,
+    updateInDiscussionState?: boolean,
   ): Promise<void>;
 }
 
 const TEMPLATE_NAME = 'מצב';
+const NEW_STATE = 'חדש';
+const IN_DISCUSSION_STATE = 'בדיון';
 
 const ARCHIVE_TEMPLATE = 'ארכיון הדט';
 
@@ -156,6 +162,79 @@ function validateTargetedArchiveRegularArchiveMode(mode: string): mode is Target
   return mode === 'תבנית הועבר' || mode === 'ארכוב כפול';
 }
 
+function isYes(value: string | undefined): boolean {
+  return value?.trim() === 'כן';
+}
+
+function getUniqueCommentersCount(paragraphContent: string): number {
+  const commenterMatches = Array.from(paragraphContent.matchAll(
+    /\[\[(?:משתמש(?:ת)?|user):([^\]|#]+)(?:\|[^\]]*)?\]\]|\{\{א\|([^}|]+)(?:\|[^}]*)?\}\}/giu,
+  ));
+  return new Set(
+    commenterMatches
+      .flatMap((match) => [match[1], match[2]])
+      .filter((commenter): commenter is string => commenter != null)
+      .map((commenter) => commenter.trim())
+      .filter((commenter) => commenter !== ''),
+  ).size;
+}
+
+function updateParagraphState(paragraph: string, addNewState: boolean, updateInDiscussionState: boolean): string {
+  const parsedParagraph = parseParagraph(paragraph);
+  const statusTemplate = findTemplate(parsedParagraph.content, TEMPLATE_NAME, parsedParagraph.name);
+  const templateData = statusTemplate ? getTemplateData(statusTemplate, TEMPLATE_NAME, parsedParagraph.name) : null;
+  const hasStatusTemplate = templateData?.arrayData != null && templateData.arrayData.length > 0;
+  const commenterCount = getUniqueCommentersCount(parsedParagraph.content);
+
+  if (!hasStatusTemplate && addNewState) {
+    const updatedContent = `{{${TEMPLATE_NAME}|${NEW_STATE}}}\n${parsedParagraph.content}`;
+    return `==${parsedParagraph.name}==\n${updatedContent}`;
+  }
+
+  if (
+    updateInDiscussionState
+    && templateData?.arrayData?.[0]?.trim() === NEW_STATE
+    && commenterCount > 1
+  ) {
+    const updatedTemplate = statusTemplate.replace(`${TEMPLATE_NAME}|${NEW_STATE}`, `${TEMPLATE_NAME}|${IN_DISCUSSION_STATE}`);
+    const updatedContent = parsedParagraph.content.replace(statusTemplate, updatedTemplate);
+    return `==${parsedParagraph.name}==\n${updatedContent}`;
+  }
+
+  return paragraph;
+}
+
+function updatePageStates(pageContent: string, addNewState: boolean, updateInDiscussionState: boolean): string {
+  return getAllParagraphs(pageContent, '').reduce((content, paragraph) => {
+    const updatedParagraph = updateParagraphState(paragraph, addNewState, updateInDiscussionState);
+    return updatedParagraph === paragraph ? content : content.split(paragraph).join(updatedParagraph);
+  }, pageContent);
+}
+
+async function updateSourcePageStates(
+  wikiApi: IWikiApi,
+  pageTitle: string,
+  addNewState: boolean,
+  updateInDiscussionState: boolean,
+): Promise<void> {
+  if (!addNewState && !updateInDiscussionState) {
+    return;
+  }
+
+  const sourcePage = await getContent(wikiApi, pageTitle);
+  const updatedContent = updatePageStates(sourcePage.content, addNewState, updateInDiscussionState);
+  if (updatedContent === sourcePage.content) {
+    return;
+  }
+
+  await wikiApi.edit(
+    pageTitle,
+    `${SUMMARY_PREFIX}: עדכון מצבי דיון`,
+    updatedContent,
+    sourcePage.revid,
+  );
+}
+
 export default function ClosedDiscussionsArchiveBotModel(
   wikiApi: IWikiApi,
 ): IClosedDiscussionsArchiveBotModel {
@@ -163,7 +242,7 @@ export default function ClosedDiscussionsArchiveBotModel(
     const { content } = await getContent(wikiApi, CONFIG_PAGE_TITLE);
     const parsedTable = parseTableText(content)[0];
     return parsedTable
-      .rows.filter((row) => row.fields.length === 6 && !row.isHeader)
+      .rows.filter((row) => row.fields.length >= 6 && !row.isHeader)
       .map((row) => {
         const page = getInnerLink(row.fields[0] as string)?.link;
         if (!page) {
@@ -173,6 +252,8 @@ export default function ClosedDiscussionsArchiveBotModel(
         const archiveModeText = row.fields[5]?.toString().trim() || '';
         const isValidArchiveMode = validateTargetedArchiveRegularArchiveMode(archiveModeText);
         const targetedArchiveRegularArchiveMode = isValidArchiveMode ? archiveModeText : 'תבנית הועבר';
+        const addNewState = isYes(row.fields[6]?.toString());
+        const updateInDiscussionState = isYes(row.fields[7]?.toString());
         return {
           page,
           statuses: (row.fields[1] as string).split(',').map((status) => status.trim()) as string[],
@@ -180,6 +261,8 @@ export default function ClosedDiscussionsArchiveBotModel(
           archiveType: (row.fields[3] as ArchiveType),
           archiveNavigatePage,
           targetedArchiveRegularArchiveMode,
+          addNewState,
+          updateInDiscussionState,
         };
       });
   }
@@ -575,10 +658,14 @@ export default function ClosedDiscussionsArchiveBotModel(
     archiveType: ArchiveType,
     archiveNavigatePage: string,
     targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode = 'תבנית הועבר',
+    addNewState = false,
+    updateInDiscussionState = false,
   ): Promise<void> {
     if (archivableParagraphs.length === 0) {
       return;
     }
+
+    await updateSourcePageStates(wikiApi, pageTitle, addNewState, updateInDiscussionState);
 
     if (archiveType === 'רבעון') {
       await archiveWithQuarterlyAlgorithm(pageTitle, archivableParagraphs);
