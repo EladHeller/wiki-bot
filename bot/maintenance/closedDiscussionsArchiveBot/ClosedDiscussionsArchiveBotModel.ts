@@ -188,7 +188,7 @@ function updateParagraphState(paragraph: string, addNewState: boolean, updateInD
 
   if (!hasStatusTemplate && addNewState) {
     const updatedContent = `{{${TEMPLATE_NAME}|${NEW_STATE}}}\n${parsedParagraph.content}`;
-    return `==${parsedParagraph.name}==\n${updatedContent}`;
+    return paragraph.replace(parsedParagraph.content, updatedContent);
   }
 
   if (
@@ -198,7 +198,7 @@ function updateParagraphState(paragraph: string, addNewState: boolean, updateInD
   ) {
     const updatedTemplate = statusTemplate.replace(`${TEMPLATE_NAME}|${NEW_STATE}`, `${TEMPLATE_NAME}|${IN_DISCUSSION_STATE}`);
     const updatedContent = parsedParagraph.content.replace(statusTemplate, updatedTemplate);
-    return `==${parsedParagraph.name}==\n${updatedContent}`;
+    return paragraph.replace(parsedParagraph.content, updatedContent);
   }
 
   return paragraph;
@@ -667,11 +667,11 @@ export default function ClosedDiscussionsArchiveBotModel(
     addNewState = false,
     updateInDiscussionState = false,
   ): Promise<void> {
+    await updateSourcePageStates(wikiApi, pageTitle, addNewState, updateInDiscussionState);
+
     if (archivableParagraphs.length === 0) {
       return;
     }
-
-    await updateSourcePageStates(wikiApi, pageTitle, addNewState, updateInDiscussionState);
 
     if (archiveType === 'רבעון') {
       await archiveWithQuarterlyAlgorithm(pageTitle, archivableParagraphs);
