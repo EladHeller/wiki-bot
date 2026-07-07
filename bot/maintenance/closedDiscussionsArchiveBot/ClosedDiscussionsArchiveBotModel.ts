@@ -40,7 +40,7 @@ export interface IClosedDiscussionsArchiveBotModel {
     pageTitle: string,
     archivableParagraphs: string[],
     archiveType: ArchiveType,
-    archiveNavigatePage: string,
+    archiveNavigatePage: string | null,
     targetedArchiveRegularArchiveMode?: TargetedArchiveRegularArchiveMode,
     addNewState?: boolean,
     updateInDiscussionState?: boolean,
@@ -435,9 +435,12 @@ export default function ClosedDiscussionsArchiveBotModel(
   async function archiveWithTemplateAlgorithm(
     pageTitle: string,
     archivableParagraphs: string[],
-    archiveNavigatePage: string,
+    archiveNavigatePage: string | null,
     targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode,
   ): Promise<void> {
+    if (!archiveNavigatePage) {
+      throw new Error('archiveNavigatePage is required for template archive with target');
+    }
     const navigateContent = await getContent(wikiApi, archiveNavigatePage);
 
     const archiveTitleResult = await getArchiveTitle(
@@ -537,9 +540,12 @@ export default function ClosedDiscussionsArchiveBotModel(
   async function archiveWithTargetTemplateAlgorithm(
     pageTitle: string,
     archivableParagraphs: string[],
-    archiveNavigatePage: string,
+    archiveNavigatePage: string | null,
     targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode,
   ): Promise<void> {
+    if (!archiveNavigatePage) {
+      throw new Error('archiveNavigatePage is required for template archive with target');
+    }
     const archivedParagraphs: string[] = [];
     let defaultArchiveTitle: string | null = null;
 
@@ -624,7 +630,7 @@ export default function ClosedDiscussionsArchiveBotModel(
   async function archiveWithDeleteAlgorithm(
     pageTitle: string,
     archivableParagraphs: string[],
-    archiveNavigatePage: string,
+    archiveNavigatePage: string | null,
     targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode,
   ): Promise<void> {
     const targetedParagraphs = archivableParagraphs.filter(
@@ -656,7 +662,7 @@ export default function ClosedDiscussionsArchiveBotModel(
     pageTitle: string,
     archivableParagraphs: string[],
     archiveType: ArchiveType,
-    archiveNavigatePage: string,
+    archiveNavigatePage: string | null,
     targetedArchiveRegularArchiveMode: TargetedArchiveRegularArchiveMode = 'תבנית הועבר',
     addNewState = false,
     updateInDiscussionState = false,

@@ -1,4 +1,5 @@
 import botLoggerDecorator from '../../decorators/botLoggerDecorator';
+import { logger } from '../../utilities/logger';
 import WikiApi from '../../wiki/WikiApi';
 import ClosedDiscussionsArchiveBotModel from './ClosedDiscussionsArchiveBotModel';
 
@@ -14,16 +15,20 @@ export default async function closedDiscussionsArchiveBot() {
       pageConfig.daysAfterLastActivity,
     );
     console.log(`Found ${archivableParagraphs.length} archivable paragraphs`);
-    await model.archive(
-      pageConfig.page,
-      archivableParagraphs,
-      pageConfig.archiveType,
-      pageConfig.archiveNavigatePage ?? pageConfig.page,
-      pageConfig.targetedArchiveRegularArchiveMode,
-      pageConfig.addNewState,
-      pageConfig.updateInDiscussionState,
-    );
-    console.log(`Archived ${archivableParagraphs.length} paragraphs`);
+    try {
+      await model.archive(
+        pageConfig.page,
+        archivableParagraphs,
+        pageConfig.archiveType,
+        pageConfig.archiveNavigatePage,
+        pageConfig.targetedArchiveRegularArchiveMode,
+        pageConfig.addNewState,
+        pageConfig.updateInDiscussionState,
+      );
+      console.log(`Archived ${archivableParagraphs.length} paragraphs`);
+    } catch (error) {
+      logger.logError(`Failed to archive page ${pageConfig.page}: ${error?.toString()}`);
+    }
   }
 }
 
