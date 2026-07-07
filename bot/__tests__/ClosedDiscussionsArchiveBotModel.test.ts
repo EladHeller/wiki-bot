@@ -463,6 +463,46 @@ Archive me
   });
 
   describe('archive', () => {
+    it('should reject template archive without a navigation page', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion 1==
+{{מצב|הועבר}}
+Archive me
+10:00, 1 בינואר 2025 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
+
+      await expect(
+        model.archive('TestPage', archivableParagraphs, 'תבנית ארכיון', null),
+      ).rejects.toThrow('archiveNavigatePage is required for template archive with target');
+    });
+
+    it('should reject targeted template archive without a navigation page', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion 1==
+{{מצב|הועבר}}
+Archive me
+10:00, 1 בינואר 2025 (IDT)
+`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר'], 14);
+
+      await expect(
+        model.archive('TestPage', archivableParagraphs, 'תבנית ארכיון עם יעד', null),
+      ).rejects.toThrow('archiveNavigatePage is required for template archive with target');
+    });
+
     it('should archive paragraphs to correct quarterly archive pages with custom summaries', async () => {
       fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
 
