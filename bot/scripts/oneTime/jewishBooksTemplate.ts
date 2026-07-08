@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 
 const TEMPLATE_NAME = 'אוצר הספרים היהודי';
@@ -8,8 +8,7 @@ export default async function jewishBooks() {
   const generator = api.getArticlesWithTemplate(`תבנית:${TEMPLATE_NAME}`);
 
   await asyncGeneratorMapWithSequence(10, generator, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       console.log('no content or revid', page.title);
       return;

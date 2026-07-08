@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../../utilities';
 import WikiApi, { IWikiApi } from '../../../wiki/WikiApi';
 
 const oldLink = 'lib.cet.ac.il/Pages/';
@@ -13,12 +13,11 @@ const errorPages: string[] = [];
 async function updateLinks(api: IWikiApi, protocol: 'http' | 'https') {
   await asyncGeneratorMapWithSequence(10, api.externalUrl(oldLink, protocol, '*'), (page) => async () => {
     pages.push(page.title);
-    const content = page.revisions?.[0].slots.main['*'];
+    const { content, revid } = contentFromPage(page);
     if (!content) {
       console.log('No content for', page.title);
       return;
     }
-    const revid = page.revisions?.[0].revid;
     if (!revid) {
       console.log('No revid for', page.title);
       return;

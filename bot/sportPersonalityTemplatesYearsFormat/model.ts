@@ -1,7 +1,7 @@
 /* eslint-disable no-loop-func */
 import { ArticleLog } from '../admin/types';
 import { WikiPage } from '../types';
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import {
   findTemplates,
@@ -91,8 +91,7 @@ export async function processArticle(
   page: WikiPage,
 ): Promise<ArticleLog | null> {
   try {
-    const originalContent = page.revisions?.[0]?.slots.main['*'];
-    const revid = page.revisions?.[0]?.revid;
+    const { content: originalContent, revid } = contentFromPage(page);
     if (!originalContent || !revid) {
       logger.logWarning(`No content or revid for ${page.title}`);
       return null;

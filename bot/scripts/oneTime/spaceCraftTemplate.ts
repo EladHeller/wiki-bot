@@ -1,5 +1,5 @@
 /* eslint-disable no-loop-func */
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../../wiki/newTemplateParser';
 import WikiApi from '../../wiki/WikiApi';
 
@@ -11,9 +11,8 @@ export default async function spaceCraftTemplate() {
 
   const generator = api.getArticlesWithTemplate(TEMPLATE_NAME);
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
-    const content = page.revisions?.[0]?.slots.main['*'];
-    const revId = page.revisions?.[0]?.revid;
-    if (!content || !revId) {
+    const { content, revid } = contentFromPage(page);
+    if (!content || !revid) {
       return;
     }
     let newContent = content;
@@ -36,7 +35,7 @@ export default async function spaceCraftTemplate() {
       newContent = newContent.replace(template, newTemplate);
     }
     if (newContent !== content && hasChanges) {
-      await api.edit(page.title, 'בוט - תיקון תבנית רכב חלל ([[מיוחד:הבדל/43281029|דיון על התבנית]], [[מיוחד:הבדל/43281192|בקשה בוק:בב]])', newContent, revId);
+      await api.edit(page.title, 'בוט - תיקון תבנית רכב חלל ([[מיוחד:הבדל/43281029|דיון על התבנית]], [[מיוחד:הבדל/43281192|בקשה בוק:בב]])', newContent, revid);
     }
   });
 }

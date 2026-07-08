@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
 
@@ -49,8 +49,7 @@ export default async function simaniaTemplate() {
   const generator = api.getArticlesWithTemplate(TEMPLATE_NAME);
 
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
-    const revid = page.revisions?.[0].revid;
-    const content = page.revisions?.[0].slots?.main['*'];
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       console.error(`No content or revid for ${page.title}`);
       return;

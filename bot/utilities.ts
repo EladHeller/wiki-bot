@@ -241,3 +241,12 @@ export function convertContentToWikiPage(content: string, revid: number, title: 
     }],
   };
 }
+
+export function contentFromPage(page: WikiPage) {
+  const content = page.revisions?.[0].slots.main['*'];
+  const revid = page.revisions?.[0].revid;
+  return {
+    content,
+    revid,
+  };
+}

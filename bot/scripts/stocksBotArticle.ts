@@ -1,5 +1,5 @@
 import { getMarketValueById } from '../API/mayaAPI';
-import { promiseSequence } from '../utilities';
+import { contentFromPage, promiseSequence } from '../utilities';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi from '../wiki/WikiApi';
@@ -11,7 +11,7 @@ async function main() {
   console.log('Login success');
 
   const results = await getMayaLinks(api, true);
-  const marketValues:{
+  const marketValues: {
     page: WikiPage,
     id: number,
   }[] = [];
@@ -35,8 +35,7 @@ async function main() {
 
   await promiseSequence(10, marketValues.map(({ page, id }) => async () => {
     try {
-      const content = page.revisions?.[0].slots.main['*'];
-      const revid = page.revisions?.[0].revid;
+      const { content, revid } = contentFromPage(page);
       if (!content || !revid) {
         throw new Error(`No content or no revid for page ${page.title}`);
       }

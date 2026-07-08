@@ -9,7 +9,7 @@ import {
   EditResponse,
   PageInfo,
 } from '../types';
-import { objectToFormData } from '../utilities';
+import { contentFromPage, objectToFormData } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
 
 export interface IWikiApi {
@@ -195,16 +195,16 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const props = encodeURIComponent('content|ids');
     const path = `?action=query&format=json&rvprop=${props}&rvslots=*&prop=revisions&titles=${encodeURIComponent(title)}`;
     const result = await request(path);
-    const wikiPages: Record<string, Partial<WikiPage>> = result.query.pages;
+    const wikiPages: Record<string, WikiPage> = result.query.pages;
 
-    const revision = Object.values(wikiPages)[0]?.revisions?.[0];
-    if (!revision?.revid) {
+    const { content, revid } = contentFromPage(Object.values(wikiPages)[0]);
+    if (!revid) {
       throw new Error(`No revid for ${title}`);
     }
 
     return {
-      content: revision.slots.main['*'],
-      revid: revision.revid,
+      content: content ?? '',
+      revid,
     };
   }
 

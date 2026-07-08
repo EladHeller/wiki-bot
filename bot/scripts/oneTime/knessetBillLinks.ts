@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
 
@@ -25,8 +25,7 @@ export function fixKnessetBillLinksInContent(content: string): string {
 }
 
 export async function processKnessetBillLinksPage(api: IWikiApi, page: WikiPage): Promise<boolean> {
-  const content = page.revisions?.[0].slots.main['*'];
-  const revid = page.revisions?.[0].revid;
+  const { content, revid } = contentFromPage(page);
 
   if (!content || !revid) {
     console.log('No content or revid for', page.title);

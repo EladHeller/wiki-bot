@@ -1,6 +1,6 @@
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
-import { escapeRegex, promiseSequence } from '../../utilities';
+import { contentFromPage, escapeRegex, promiseSequence } from '../../utilities';
 
 const TEMPLATE_REPLACEMENTS = [
   { from: 'הבהרה משפטית', to: '{{הסתייגות|משפטית}}' },
@@ -59,8 +59,7 @@ async function processPage(
   api: IWikiApi,
   page: WikiPage,
 ): Promise<ChangeStats> {
-  const content = page.revisions?.[0]?.slots.main['*'];
-  const revid = page.revisions?.[0]?.revid;
+  const { content, revid } = contentFromPage(page);
   const pageId = page.pageid;
 
   if (!revid || !content || !pageId) {

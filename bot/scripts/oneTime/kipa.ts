@@ -1,4 +1,4 @@
-import { promiseSequence } from '../../utilities';
+import { contentFromPage, promiseSequence } from '../../utilities';
 import { findTemplates } from '../../wiki/newTemplateParser';
 import { WikiPage } from '../../types';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
@@ -11,11 +11,11 @@ async function getArticleWithKipaTemplate(api: IWikiApi): Promise<WikiPage[]> {
   const props = encodeURIComponent('revisions');
   const rvprops = encodeURIComponent('content');
   const path = '?action=query&format=json'
-  // Pages with כיפה'
-  + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
-  + `&prop=${props}`
-  // Get content of page
-  + `&rvprop=${rvprops}&rvslots=*`;
+    // Pages with כיפה'
+    + `&generator=embeddedin&geinamespace=0&geilimit=5000&geititle=${template}`
+    + `&prop=${props}`
+    // Get content of page
+    + `&rvprop=${rvprops}&rvslots=*`;
   let pages: WikiPage[] = [];
   let result = await api.request(path);
   const firstResult = Object.values(result.data.query.pages) satisfies WikiPage[];
@@ -24,7 +24,7 @@ async function getArticleWithKipaTemplate(api: IWikiApi): Promise<WikiPage[]> {
     result = await api.request(`${path}&elcontinue=${result.data.continue.elcontinue}&rvcontinue=${result.data.continue.rvcontinue}&continue=${result.data.continue.continue}`);
     pages = pages.concat(Object.values(result.data.query.pages));
   }
-  const finalResults = pages.filter((page) => page.revisions?.[0]?.slots.main['*'].includes('{{כיפה'));
+  const finalResults = pages.filter((page) => contentFromPage(page).content?.includes('{{כיפה'));
   firstResult.forEach((page) => {
     if (!finalResults.find((p) => p.pageid === page.pageid)) {
       console.log(page.title);
@@ -63,8 +63,7 @@ async function main() {
 
   await promiseSequence(10, results.map((result) => async () => {
     try {
-      const content = result.revisions?.[0].slots.main['*'];
-      const revid = result.revisions?.[0].revid;
+      const { content, revid } = contentFromPage(result);
       if (!content || !result.title || !revid) {
         console.log('no content or revid', result.title, { revid });
         return;

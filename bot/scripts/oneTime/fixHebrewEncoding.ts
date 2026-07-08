@@ -1,5 +1,5 @@
 import WikiApi from '../../wiki/WikiApi';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 
 const encodingLinkText = '%d7%';
 // const encodingLinkText = '%D7%';
@@ -72,8 +72,7 @@ export default async function fixHebrewEncoding() {
   const generartor = api.search(encodingLinkText);
 
   await asyncGeneratorMapWithSequence(25, generartor, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       console.log(page.title, !content ? 'Missing content ' : '', !revid ? 'Missing revid' : '');
       throw new Error('Missing content or revid');

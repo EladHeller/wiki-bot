@@ -1,6 +1,6 @@
 /* eslint-disable no-loop-func */
 import { WikiPage } from '../../types';
-import { promiseSequence } from '../../utilities';
+import { contentFromPage, promiseSequence } from '../../utilities';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
@@ -60,8 +60,7 @@ async function processArticle(
   api: IWikiApi,
   page: WikiPage,
 ): Promise<void> {
-  const content = page.revisions?.[0]?.slots.main['*'];
-  const revid = page.revisions?.[0]?.revid;
+  const { content, revid } = contentFromPage(page);
 
   if (!revid || !content) {
     console.log(`Missing revid or content for ${page.title}`);

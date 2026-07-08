@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
+import { contentFromPage } from '../../utilities';
 
 async function handleCategory(api: IWikiApi, category: string) {
   const name = category.replace('קטגוריה:', '');
@@ -8,7 +9,7 @@ async function handleCategory(api: IWikiApi, category: string) {
   for await (const pages of generator) {
     for (const page of pages) {
       if (page.title.startsWith('ויקיפדיה:')) {
-        const content = page.revisions?.[0]?.slots.main['*'];
+        const { content } = contentFromPage(page);
         if (!content) {
           console.error('No content', page.title);
         } else {

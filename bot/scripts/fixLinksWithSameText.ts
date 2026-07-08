@@ -1,9 +1,9 @@
 import { WikiPage } from '../types';
+import { contentFromPage } from '../utilities';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 
 export default function fixLinksWithSameText(page: WikiPage): string | null {
-  const content = page.revisions?.[0].slots.main['*'];
-  const revid = page.revisions?.[0].revid;
+  const { content, revid } = contentFromPage(page);
   if (!content || !revid) {
     return null;
   }

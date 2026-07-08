@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
 
@@ -11,8 +11,7 @@ export default async function ynetTemplateFix() {
   const generator = api.getArticlesWithTemplate(TEMPLATE_NAME);
 
   await asyncGeneratorMapWithSequence(25, generator, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       throw new Error(`Missing content or revid ${page.title}`);
     }

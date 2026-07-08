@@ -2,6 +2,7 @@ import {
   WikiApiConfig, WikiDataClaim, WikiDataEntity, WikiDataSetClaimResponse, WikiDataSetReferenceResponse, WikiDataSnack,
   WikiPage,
 } from '../types';
+import { contentFromPage } from '../utilities';
 import BaseWikiApi from './BaseWikiApi';
 
 const defaultWikiDataConfig: Partial<WikiApiConfig> = {
@@ -14,14 +15,14 @@ const defaultWikiDataConfig: Partial<WikiApiConfig> = {
 export interface IWikiDataAPI {
   login: () => Promise<void>;
   setClaimValue: (claim: string, value: any, summary: string, baserevid: number) =>
-     Promise<WikiDataSetClaimResponse>;
+    Promise<WikiDataSetClaimResponse>;
   setClaim: (claim: WikiDataClaim, summary: string, baserevid: number) => Promise<WikiDataSetClaimResponse>;
-  getClaim: (entity: string, property:string) => Promise<WikiDataClaim[]>;
+  getClaim: (entity: string, property: string) => Promise<WikiDataClaim[]>;
   readEntity: (qid: string, props: string, languages?: string) => Promise<WikiDataEntity>;
   getRevId: (title: string) => Promise<number>;
   updateReference: (claim: string, referenceHash: string,
     snaks: Record<string, WikiDataSnack[]>, summary: string, baserevid: number) =>
-      Promise<WikiDataSetReferenceResponse>;
+    Promise<WikiDataSetReferenceResponse>;
 }
 
 export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultWikiDataConfig): IWikiDataAPI {
@@ -97,11 +98,11 @@ export default function WikiDataAPI(apiConfig: Partial<WikiApiConfig> = defaultW
     });
     const res = await baseApi.request(`?${params.toString()}`);
     const page = Object.values(res.query.pages)[0] as WikiPage;
-    const revId = page?.revisions?.[0].revid;
-    if (!revId) {
+    const { revid } = contentFromPage(page);
+    if (!revid) {
       throw new Error(`Failed to get revid for ${title}`);
     }
-    return revId;
+    return revid;
   }
 
   async function readEntity(qid: string, props: string, languages?: string) {

@@ -1,6 +1,6 @@
 import { findTemplates, getTemplateArrayData } from '../../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../../wiki/WikiApi';
-import { asyncGeneratorMapWithSequence, promiseSequence } from '../../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, promiseSequence } from '../../../utilities';
 
 interface BrokenLink {
   article: string;
@@ -313,9 +313,8 @@ const mergeResults = (acc: ProcessingResults, result: ArticleProcessResult): Pro
 
 // Process single page
 async function processPage(api: IWikiApi, page: any): Promise<ArticleProcessResult> {
-  const content = page.revisions?.[0].slots.main['*'];
-  const revid = page.revisions?.[0].revid;
-  if (!content) {
+  const { content, revid } = contentFromPage(page);
+  if (!content || !revid) {
     console.log('No content for', page.title);
     return {
       updated: false, brokenLinks: [], errors: [], edgeCases: [],

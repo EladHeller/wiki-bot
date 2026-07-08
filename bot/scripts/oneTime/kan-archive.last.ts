@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
 
@@ -18,9 +18,8 @@ const urlRegex = 'https?:\\/\\/archive\\.kan\\.org\\.il\\/(?:[-a-zA-Z/]*(\\d+)|m
 
 async function convert(page: WikiPage, api: IWikiApi) {
   all.push(page.title);
-  const content = page.revisions?.[0].slots.main['*'];
-  const revId = page.revisions?.[0]?.revid;
-  if (!content || !revId) {
+  const { content, revid } = contentFromPage(page);
+  if (!content || !revid) {
     console.log(`No content for page ${page.title}`);
     return;
   }
@@ -55,7 +54,7 @@ async function convert(page: WikiPage, api: IWikiApi) {
       return;
     }
     try {
-      await api.edit(page.title, 'המרת קישור לתבנית:כאן ארכיון', newContent, revId);
+      await api.edit(page.title, 'המרת קישור לתבנית:כאן ארכיון', newContent, revid);
       converted.push(page.title);
     } catch (error) {
       console.log(error?.data || error?.message || error?.toString());

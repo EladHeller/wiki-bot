@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import { getLogTitleData } from '../admin/log';
-import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, promiseSequence } from '../utilities';
 import BaseWikiApi, { defaultConfig } from '../wiki/BaseWikiApi';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import WikiDataAPI, { IWikiDataAPI } from '../wiki/WikidataAPI';
@@ -231,8 +231,7 @@ export default async function languageLinks(byCategory = true) {
 
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
     await fs.appendFile(fileName, `Checking ${page.title}\n`);
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (!content) {
       await fs.appendFile(fileName, `No content for ${page.title}\n`);
       return;

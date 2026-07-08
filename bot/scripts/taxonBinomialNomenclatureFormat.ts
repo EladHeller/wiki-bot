@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import WikiDataAPI, { IWikiDataAPI } from '../wiki/WikidataAPI';
 
@@ -55,7 +55,7 @@ const TAXON_ABOVE_GENUS = {
 
 export async function handlePage(
   title: string,
-  content:string,
+  content: string,
   revid: number,
   api: IWikiApi,
   wikiDataApi: IWikiDataAPI,
@@ -152,8 +152,7 @@ export default async function taxonBinomialNomenclatureFormat() {
   try {
     await asyncGeneratorMapWithSequence(50, taxonBinomialNomenclature, (page) => async () => {
       pagesCount += 1;
-      const revid = page.revisions?.[0].revid;
-      const content = page.revisions?.[0].slots.main['*'];
+      const { content, revid } = contentFromPage(page);
       if (!revid || !content) {
         console.log(`No revid or content for ${page.title}`, { revid: !!revid, content: !!content });
         logs.push(`* [[${page.title}]]: No revid or content`);

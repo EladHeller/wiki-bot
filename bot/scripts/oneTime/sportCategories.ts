@@ -1,4 +1,4 @@
-import { promiseSequence } from '../../utilities';
+import { contentFromPage, promiseSequence } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 /**
  * [[קטגוריה:ספורטאים זרים בישראל לפי ארץ מוצא|איווארים]]
@@ -53,7 +53,7 @@ async function main() {
         throw new Error('no pages');
       }
       await Promise.all(sportPages.map(async (p) => {
-        const content = p.revisions?.[0].slots.main['*'];
+        const { content } = contentFromPage(p);
         if (!content) {
           return;
         }

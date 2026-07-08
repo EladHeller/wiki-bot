@@ -1,5 +1,5 @@
 import { WikiPage } from '../types';
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../utilities';
 import { findTemplates, getTemplateArrayData, templateFromArrayData } from '../wiki/newTemplateParser';
 import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
@@ -27,8 +27,7 @@ export default async function changeLinksTo(
       console.log(`Not updated ${page.title}`);
       return;
     }
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       console.error('Missing content or revid', page.title);
       return;

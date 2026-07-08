@@ -2,7 +2,7 @@
 import fs from 'fs/promises';
 import BaseWikiApi, { defaultConfig } from '../../../wiki/BaseWikiApi';
 import WikiApi from '../../../wiki/WikiApi';
-import { asyncGeneratorMapWithSequence } from '../../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../../utilities';
 /**
  *  <nowiki>===צירופים===</nowiki>
  <nowiki>* [[צירוף מילים]]</nowiki>
@@ -87,8 +87,7 @@ export default async function wikitionaryArticleTemplateCleanup() {
   try {
     for await (const pages of generator) {
       for (const page of pages) {
-        const content = page.revisions?.[0].slots.main['*'];
-        const { revid } = page.revisions?.[0] ?? { revid: 0 };
+        const { content, revid } = contentFromPage(page);
         if (content == null || !revid) {
           throw new Error('Failed to get content or revid');
         }
@@ -164,7 +163,7 @@ export async function cleanupArticlesBySearch(serachText: string) {
   await api.login();
   const generator = api.search(serachText);
   const results = await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
+    const { content } = contentFromPage(page);
     if (content?.includes(serachText)) {
       return page.title;
     }

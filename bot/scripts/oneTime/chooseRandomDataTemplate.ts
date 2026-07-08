@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import {
   findTemplates, getTemplateArrayData, templateFromArrayData,
 } from '../../wiki/newTemplateParser';
@@ -15,8 +15,7 @@ export default async function chooseRandomDataTemplate() {
   let editsCount = 0;
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     pagesCount += 1;
-    const revid = page.revisions?.[0].revid;
-    const content = page.revisions?.[0].slots.main['*'];
+    const { content, revid } = contentFromPage(page);
     if (!revid || !content) {
       console.log(`No revid or content for ${page.title}`, { revid: !!revid, content: !!content });
       return;

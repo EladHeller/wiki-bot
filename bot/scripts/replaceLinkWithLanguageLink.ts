@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../utilities';
 import WikiApi from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 
@@ -20,12 +20,11 @@ export default async function replaceLinkWithLanguageLink(
 
   await asyncGeneratorMapWithSequence(1, generartor, (page) => async () => {
     statistics.totalPages += 1;
-    const content = page.revisions?.[0].slots.main['*'];
+    const { content, revid } = contentFromPage(page);
     if (!content) {
       console.log('No content for', page.title);
       return;
     }
-    const revid = page.revisions?.[0].revid;
     if (!revid) {
       console.log('No revid for', page.title);
       return;

@@ -1,6 +1,6 @@
 import { ArticleLog } from '../admin/types';
 import { WikiPage } from '../types';
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../utilities';
 import { logger, stringify } from '../utilities/logger';
 import {
   findTemplates,
@@ -45,8 +45,7 @@ export function processTemplate(template: string): string | null {
 
 export async function processArticle(api: IWikiApi, page: WikiPage): Promise<ArticleLog | null> {
   try {
-    const originalContent = page.revisions?.[0]?.slots.main['*'];
-    const revid = page.revisions?.[0]?.revid;
+    const { revid, content: originalContent } = contentFromPage(page);
     if (!originalContent || !revid) {
       logger.logWarning(`No content or revid for ${page.title}`);
       return null;

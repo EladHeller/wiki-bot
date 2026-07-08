@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../../wiki/newTemplateParser';
 import WikiApi from '../../wiki/WikiApi';
 
@@ -9,8 +9,7 @@ export default async function replaceRocketTemplateParameter() {
 
   const generator = api.categroyPages('שגיאות פרמטריות בתבנית טיל');
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
-    const content = page.revisions?.[0]?.slots.main['*'];
-    const revid = page.revisions?.[0]?.revid;
+    const { content, revid } = contentFromPage(page);
     if (!revid) {
       console.log(`No revid for ${page.title}`);
       return;

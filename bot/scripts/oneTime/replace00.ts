@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 
 const link = 'no666.wordpress.com';
@@ -10,8 +10,7 @@ async function main() {
 
   const generator = api.externalUrl(link);
   await asyncGeneratorMapWithSequence(10, generator, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (content && revid && page.title) {
       const newContent = content.replace(/no666\.wordpress\.com/g, link2);
       try {

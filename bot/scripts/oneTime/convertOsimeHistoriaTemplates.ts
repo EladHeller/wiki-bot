@@ -1,6 +1,6 @@
 import osimhistoriaLinks from './osimhistoria.json';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { findTemplates, getTemplateData, templateFromTemplateData } from '../../wiki/newTemplateParser';
 import { WikiPage } from '../../types';
 
@@ -146,8 +146,7 @@ function processPage(
   bySlug: Map<string, string>,
 ) {
   return (page: WikiPage) => async () => {
-    const content = page.revisions?.[0]?.slots?.main['*'];
-    const revid = page.revisions?.[0]?.revid;
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       console.log(`No content/revid for ${page.title}`);
       return;

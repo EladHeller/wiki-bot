@@ -1,7 +1,7 @@
 import WikiApi from '../../wiki/WikiApi';
 import WikidataAPI from '../../wiki/WikidataAPI';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 
 const THEATER_GUIDE_TEMPLATE = 'מדריך לתיאטרון';
 const FILMMAKER_PROFILES_TEMPLATE = 'פרופילי קולנוענים-מוזיקאים';
@@ -18,8 +18,7 @@ export default async function removeTheaterGuide() {
   let count = 0;
 
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     const filmmakerTemplates = content ? findTemplates(content, FILMMAKER_PROFILES_TEMPLATE, page.title) : [];
 
     if (!content || !revid || filmmakerTemplates.length === 0) {

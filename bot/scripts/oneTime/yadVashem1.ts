@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 
 const oldLink = 'db.yadvashem.org/righteous/';
@@ -10,8 +10,7 @@ async function main() {
   await api.login();
   const generartor = api.externalUrl(oldLink, 'http');
   await asyncGeneratorMapWithSequence(10, generartor, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (content && page.title && revid) {
       const newContent = content.replace(regex, `${newLink}$1`);
       if (newContent === content) {

@@ -3,6 +3,7 @@ import {
 } from '../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
+import { contentFromPage } from '../../utilities';
 
 const OLD_TEMPLATE_NAME = 'רמבם';
 const NEW_TEMPLATE_NAME = 'רמב"ם';
@@ -69,8 +70,7 @@ function buildEditSummary(content: string, title: string) {
 
 function processPage(api: IWikiApi, processedPages: Set<number>) {
   return (page: WikiPage) => async () => {
-    const content = page.revisions?.[0]?.slots.main['*'];
-    const revid = page.revisions?.[0]?.revid;
+    const { content, revid } = contentFromPage(page);
     const pageId = page.pageid;
 
     if (!revid || !content || !pageId) {

@@ -1,12 +1,11 @@
 import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { findTemplate } from '../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 async function handlePage(page: WikiPage, api: IWikiApi) {
-  const content = page.revisions?.[0].slots.main['*'];
-  const revision = page.revisions?.[0].revid;
-  if (!content || !revision) {
+  const { content, revid } = contentFromPage(page);
+  if (!content || !revid) {
     console.error(page.title, 'missing content or revision');
     return;
   }
@@ -18,7 +17,7 @@ async function handlePage(page: WikiPage, api: IWikiApi) {
   const newTemplate = template.replace('[[מדינות גרמניה|מדינה פדרלית]]', '[[מדינות גרמניה|מדינה בגרמניה]]');
   const newContent = content.replace(template, newTemplate);
   if (newContent !== content) {
-    await api.edit(page.title, 'מדינה בפדרציה איננה מדינה פדרלית ([[מיוחד:הבדל/43528301|בקשה בוק:בב]])', newContent, revision);
+    await api.edit(page.title, 'מדינה בפדרציה איננה מדינה פדרלית ([[מיוחד:הבדל/43528301|בקשה בוק:בב]])', newContent, revid);
   }
 }
 

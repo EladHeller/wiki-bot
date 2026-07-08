@@ -1,4 +1,5 @@
 import { WikiPage } from '../../types';
+import { contentFromPage } from '../../utilities';
 import type { IWikiApi } from '../../wiki/WikiApi';
 
 const changes: string[][] = [];
@@ -30,17 +31,17 @@ export default async function renameParlementMembersCategories(api: IWikiApi) {
     }
   }
   for (const [, page] of pagesToChange) {
-    const revision = page.revisions?.[0];
-    if (revision?.revid) {
-      let newContent = revision.slots.main['*'];
+    const { content, revid } = contentFromPage(page);
+    if (revid && content) {
+      let newContent = content;
       const isMale = !(newContent.includes('קטגוריה:חברות כנסת מטעם') || newContent.includes('קטגוריה:חברות הכנסת מטעם'));
       for (const [oldCategory, newCategory] of changes) {
         const old = oldCategory.replace('חברי הכנסת מטעם', 'חברי כנסת מטעם').replace('חברות הכנסת מטעם', 'חברות כנסת מטעם');
         newContent = newContent.replaceAll(old, newCategory);
       }
       try {
-        if (newContent !== revision.slots.main['*']) {
-          await api.edit(page.title, isMale ? 'שינוי שם: חברי כנסת לחברי הכנסת' : 'שינוי שם: חברות כנסת לחברות הכנסת', newContent, revision.revid);
+        if (newContent !== content) {
+          await api.edit(page.title, isMale ? 'שינוי שם: חברי כנסת לחברי הכנסת' : 'שינוי שם: חברות כנסת לחברות הכנסת', newContent, revid);
         } else {
           console.error('No change in page', page.title);
         }

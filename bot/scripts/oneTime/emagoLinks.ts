@@ -1,14 +1,13 @@
 import { title } from 'node:process';
 import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence, convertContentToWikiPage } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, convertContentToWikiPage } from '../../utilities';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
 const webArchivePrefix = 'https://web.archive.org/web/20230403233921/';
 const doubleWebArchiveRegex = /(https:\/\/web\.archive\.org\/web\/\d+\/)(https:\/\/web\.archive\.org\/web\/\d+\/)/g;
 const regex = /(http:\/\/www\.e-mago\.co\.il\/\w+)/g;
 async function fixPage(api: IWikiApi, page: WikiPage) {
-  const content = page.revisions?.[0].slots.main['*'];
-  const revid = page.revisions?.[0].revid;
+  const { content, revid } = contentFromPage(page);
   if (!content || !revid) {
     console.error(`Missing content or revid for ${page.title}`);
     return;

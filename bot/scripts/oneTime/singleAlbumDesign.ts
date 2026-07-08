@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 import {
   findTemplates, getTemplateArrayData, getTemplateKeyValueData, templateFromKeyValueData,
@@ -55,8 +55,7 @@ export async function first(templateName = 'סינגלי אלבום') {
   const titles = new Set<string>();
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     try {
-      const content = page.revisions?.[0].slots.main['*'];
-      const revid = page.revisions?.[0].revid;
+      const { content, revid } = contentFromPage(page);
       if (!content || !revid) {
         return;
       }
@@ -122,8 +121,7 @@ export async function second(templateName = 'אלבום') {
   const titles = new Set<string>();
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     try {
-      const content = page.revisions?.[0].slots.main['*'];
-      const revid = page.revisions?.[0].revid;
+      const { content, revid } = contentFromPage(page);
       if (!content || !revid) {
         return;
       }
@@ -190,8 +188,7 @@ export async function third(templateName = 'סינגל') {
   const titles = new Set<string>();
   await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     try {
-      const content = page.revisions?.[0].slots.main['*'];
-      const revid = page.revisions?.[0].revid;
+      const { content, revid } = contentFromPage(page);
       if (!content || !revid) {
         return;
       }
