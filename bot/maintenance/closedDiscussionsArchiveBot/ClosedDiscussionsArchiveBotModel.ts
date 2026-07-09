@@ -51,8 +51,6 @@ const TEMPLATE_NAME = 'מצב';
 const NEW_STATE = 'חדש';
 const IN_DISCUSSION_STATE = 'בדיון';
 
-const ARCHIVE_TEMPLATE = 'ארכיון הדט';
-
 async function getContentOrNull(wikiApi: IWikiApi, title: string) {
   const result = await wikiApi.articleContent(title).catch(() => null);
   if (!result?.content) {
@@ -66,6 +64,13 @@ async function getContent(wikiApi: IWikiApi, title: string) {
     throw new Error(`Missing content for ${title}`);
   }
   return result;
+}
+
+function archiveHeaderPerPage(title: string) {
+  if (title === 'ויקיפדיה:העברת דפי טיוטה') {
+    return '{{ארכיון הדט}}\n\n';
+  }
+  return '';
 }
 
 function getStatusTemplateData(
@@ -146,8 +151,8 @@ function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: st
   return cleanedContent.trim();
 }
 
-function createTransferredTemplate(target: string): string {
-  return `{{הועבר|ל=${target}}}`;
+function createTransferredTemplate(target: string, direction: 'מ' | 'ל'): string {
+  return `{{הועבר|${direction}=${target}}}`;
 }
 
 function createTargetedArchiveRegularContent(
@@ -155,7 +160,7 @@ function createTargetedArchiveRegularContent(
   paragraphName: string,
   archiveTitle: string,
 ): string {
-  return `${regularArchiveParagraph}\n==${paragraphName}==\n${createTransferredTemplate(archiveTitle)}\n~~~~`;
+  return `${regularArchiveParagraph}\n==${paragraphName}==\n${createTransferredTemplate(archiveTitle, 'ל')}\n~~~~`;
 }
 
 function validateTargetedArchiveRegularArchiveMode(mode: string): mode is TargetedArchiveRegularArchiveMode {
@@ -339,7 +344,7 @@ export default function ClosedDiscussionsArchiveBotModel(
 
     const parsedParagraph = parseParagraph(paragraph);
     const paragraphToArchive = isTargeted
-      ? `==${parsedParagraph.name}==\n${createTransferredTemplate(pageTitle)}\n${parsedParagraph.content.replace(statusTemplate, newTemplate)}\n{{סוף העברה}}`
+      ? `==${parsedParagraph.name}==\n${createTransferredTemplate(pageTitle, 'מ')}\n${parsedParagraph.content.replace(statusTemplate, newTemplate)}\n{{סוף העברה}}`
       : paragraph;
 
     if (existingArchiveContent) {
@@ -351,8 +356,7 @@ export default function ClosedDiscussionsArchiveBotModel(
         existingArchiveContent.revid,
       );
     } else {
-      const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${paragraphToArchive}`;
-      await wikiApi.create(archiveTitle, archiveSummary, newContent);
+      await wikiApi.create(archiveTitle, archiveSummary, archiveHeaderPerPage(pageTitle) + paragraphToArchive);
     }
 
     const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, pageTitle);
@@ -406,8 +410,7 @@ export default function ClosedDiscussionsArchiveBotModel(
         existingContent.revid,
       );
     } else {
-      const newContent = `{{${ARCHIVE_TEMPLATE}}}\n\n${paragraph}`;
-      await wikiApi.create(archivePageName, archiveSummary, newContent);
+      await wikiApi.create(archivePageName, archiveSummary, archiveHeaderPerPage(pageTitle) + paragraph);
     }
 
     // Remove the paragraph from the source page
