@@ -36,12 +36,11 @@ type Page = {
         sha1?: string[];
     }[];
 };
-console.debug = () => { }
 export default async function helpCatalogCategoriesWith() {
     const api = WikiApi();
     await api.login()
-    // const emptryReqested: string[] = [];
-    // const portalWithRequested: string[] = []
+    const emptryReqested: string[] = [];
+    const portalWithRequested: string[] = []
     const [emptyrequestedInfo, portalWithRequestedInfo, categoriesWithMissingInfo] = await api.info([
         'user:sapper-bot/קטגוריות עם פסקת מבוקשים ריקה',
         'user:sapper-bot/קטגוריות עם מבוקשים שמפנה לפורטל',
@@ -56,29 +55,34 @@ export default async function helpCatalogCategoriesWith() {
             return;
         }
         if (text.includes('חסר') || text.includes('מבוקש')) {
-            const content = `* [[:${title}]]\n`;
-            writeStream.write(content)
+            writeStream.write(`${title}\n`)
         }
         const links = getInnerLinks(text).filter(x => x.link.startsWith('פורטל:') && x.link.includes('ערכים מבוקשים'))
         if (links.length) {
-            // portalWithRequested.push(title)
+            portalWithRequested.push(title)
         }
         const paragraphs = getAllParagraphs(text, title).map(parseParagraph);
-        const requested = paragraphs.find(x => x.name === 'ערכים מבוקשים');
-        if (!requested) {
+        const requested = paragraphs.filter(x => x.name === 'ערכים מבוקשים' || x.name === 'ערכים חסרים');
+        if (!requested.length) {
             return;
         }
-        const { content } = requested;
-        const template = findTemplate(content, 'מיזמים', title)
-        let netContent = content.replace(template || '', '');
-        netContent = netContent.replace(/\[\[קטגוריה:[^\]]+\]\]/g, '').trim();
-        if (netContent === '') {
-            // emptryReqested.push(title)
+        let isEmpty = requested.some(p => {
+            const { content } = p;
+            const template = findTemplate(content, 'מיזמים', title)
+            let netContent = content.replace(template || '', '');
+            netContent = netContent.replace(/\[\[קטגוריה:[^\]]+\]\]/g, '').trim();
+            return netContent.length === 0;
+        });
+        if (isEmpty) {
+            emptryReqested.push(title)
         }
     })
     writeStream.end();
-    // await api.create('user:sapper-bot/קטגוריות עם חסר או מבוקש בתוכן', 'בוט', categoriesWithMissing.map(x => `* [[:${x}]]`).join('\n'))
-    // await api.edit('user:sapper-bot/קטגוריות עם פסקת מבוקשים ריקה', 'בוט', emptryReqested.map(x => `* [[:${x}]]`).join('\n'), emptyrequestedInfo.lastrevid || 0)
-    // await api.edit('user:sapper-bot/קטגוריות עם מבוקשים שמפנה לפורטל', 'בוט', portalWithRequested.map(x => `* [[:${x}]]`).join('\n'), portalWithRequestedInfo.lastrevid || 0)
+
+    await api.edit('user:sapper-bot/קטגוריות עם פסקת מבוקשים ריקה', 'בוט', emptryReqested.map(x => `* [[:${x}]]`).join('\n'), emptyrequestedInfo.lastrevid || 0)
+    await api.edit('user:sapper-bot/קטגוריות עם מבוקשים שמפנה לפורטל', 'בוט', portalWithRequested.map(x => `* [[:${x}]]`).join('\n'), portalWithRequestedInfo.lastrevid || 0)
+    const categoriesWithMissing = fs.readFileSync('./result.txt', 'utf-8').split('\n').map(x => x.trim()).filter(x => x).sort((a, b) => a.localeCompare(b));
+    await api.edit('user:sapper-bot/קטגוריות עם חסר או מבוקש בתוכן', 'בוט', categoriesWithMissing.map(x => `* ${x}`).join('\n'), categoriesWithMissingInfo.lastrevid || 0)
+
 }
 

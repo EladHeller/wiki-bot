@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "start": "tsx --max-old-space-size=8192 --trace-gc index.ts ",
+    "start": "tsx --env-file=.env --max-old-space-size=8192 index.ts ",
     "read": "tsx readLargeFile.ts",
     "templates": "tsx templates.ts",
     "soldierAndPolice": "tsx soldierAndPolice.ts",
