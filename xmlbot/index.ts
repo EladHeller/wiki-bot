@@ -1,9 +1,10 @@
-import helpCatalogCategoriesWith from './helpCatalogCategoriesWith';
+import WikiApi from '../bot/wiki/WikiApi';
 
 console.debug = () => { }
 
 async function main() {
-  await helpCatalogCategoriesWith()
+  const api = WikiApi();
+  await api.login()
 }
 
 main();
