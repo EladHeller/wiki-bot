@@ -4,7 +4,7 @@ import runOnAllEntries from './utilities';
 import { getAllParagraphs, parseParagraph } from '../bot/wiki/paragraphParser';
 import { findTemplate } from '../bot/wiki/newTemplateParser';
 import { getInnerLinks } from '../bot/wiki/wikiLinkParser';
-import WikiApi from '../bot/wiki/WikiApi';
+import { IWikiApi } from '../bot/wiki/WikiApi';
 
 
 
@@ -36,9 +36,7 @@ type Page = {
         sha1?: string[];
     }[];
 };
-export default async function helpCatalogCategoriesWith() {
-    const api = WikiApi();
-    await api.login()
+export default async function helpCatalogCategoriesWith(api: IWikiApi) {
     const emptryReqested: string[] = [];
     const portalWithRequested: string[] = []
     const [emptyrequestedInfo, portalWithRequestedInfo, categoriesWithMissingInfo] = await api.info([
@@ -54,7 +52,7 @@ export default async function helpCatalogCategoriesWith() {
         if (ns !== '14') {
             return;
         }
-        if (text.includes('חסר') || text.includes('מבוקש')) {
+        if ((text.includes('חסר') || text.includes('מבוקש')) && !text.includes('קטגוריה:קטגוריות עם רשימת ערכים חסרים/מבוקשים')) {
             writeStream.write(`${title}\n`)
         }
         const links = getInnerLinks(text).filter(x => x.link.startsWith('פורטל:') && x.link.includes('ערכים מבוקשים'))
@@ -81,8 +79,8 @@ export default async function helpCatalogCategoriesWith() {
 
     await api.edit('user:sapper-bot/קטגוריות עם פסקת מבוקשים ריקה', 'בוט', emptryReqested.map(x => `* [[:${x}]]`).join('\n'), emptyrequestedInfo.lastrevid || 0)
     await api.edit('user:sapper-bot/קטגוריות עם מבוקשים שמפנה לפורטל', 'בוט', portalWithRequested.map(x => `* [[:${x}]]`).join('\n'), portalWithRequestedInfo.lastrevid || 0)
-    const categoriesWithMissing = fs.readFileSync('./result.txt', 'utf-8').split('\n').map(x => x.trim()).filter(x => x).sort((a, b) => a.localeCompare(b));
-    await api.edit('user:sapper-bot/קטגוריות עם חסר או מבוקש בתוכן', 'בוט', categoriesWithMissing.map(x => `* ${x}`).join('\n'), categoriesWithMissingInfo.lastrevid || 0)
+    // const categoriesWithMissing = fs.readFileSync('./result.txt', 'utf-8').split('\n').map(x => x.trim()).filter(x => x).sort((a, b) => a.localeCompare(b));
+    // await api.edit('user:sapper-bot/קטגוריות עם חסר או מבוקש בתוכן', 'בוט', categoriesWithMissing.map(x => `* [[:${x}]]`).join('\n'), categoriesWithMissingInfo.lastrevid || 0)
 
 }
 
