@@ -2,7 +2,8 @@ import { WikiPage } from '../../types';
 import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
 
-const SEARCH_PATTERN = '\\[\\[([^]]+)\\]\\]\\s*\\<small\\>\\s*\\(\\[\\[:([a-zA-Z-]+):([^]|]+)\\|[א-ת-\' ]+\'\\]\\]\\)\\s*\\<\\/small\\>';
+const BASE_SEARCH_PATTERN = '\\[\\[([^]]+)\\]\\]\\s*\\<small\\>\\s*\\(\\[\\[:([a-zA-Z-]+):';
+const SEARCH_PATTERN = `${BASE_SEARCH_PATTERN}([^]|]+)\\|[א-ת-' ]+'\\]\\]\\)\\s*\\<\\/small\\>`;
 const regex = new RegExp(SEARCH_PATTERN.replaceAll('^]', '^\\]'), 'gi');
 
 const SUMMARY = 'הסבת קישורי בינוויקי לתבנית קישור שפה';
@@ -249,7 +250,7 @@ async function handlePage(api: IWikiApi, page: WikiPage) {
 }
 
 export default async function interwikiConverter(api: IWikiApi) {
-  const generator = api.search(`insource:/${SEARCH_PATTERN}/`, false);
+  const generator = api.search(`insource:/${SEARCH_PATTERN}/`, false, '0|14|100');
 
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
     await handlePage(api, page);
