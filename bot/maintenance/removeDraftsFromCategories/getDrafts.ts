@@ -207,7 +207,7 @@ const setPush = <T>(m: Map<T, T[]>, k: T, v: T): Map<T, T[]> => {
   return m;
 };
 
-const bfs = (root: LtId, children: ChildrenMap): Set<LtId> => {
+export const bfs = (root: LtId, children: ChildrenMap): Set<LtId> => {
   const seen = new Set<LtId>([root]);
   const q: LtId[] = [root];
   while (q.length) {
@@ -230,7 +230,7 @@ const formatTitle = (ns: NS, title: Title): string => {
   return title;
 };
 
-async function downloadAndParseLinktarget(): Promise<{
+export async function downloadAndParseLinktarget(): Promise<{
   titleToLt: TitleToLt;
   rootLt: LtId;
 }> {
@@ -265,7 +265,7 @@ async function downloadAndParseLinktarget(): Promise<{
   return { titleToLt, rootLt };
 }
 
-async function downloadAndParsePage(): Promise<{
+export async function downloadAndParsePage(): Promise<{
   pageNS: PageNSMap;
   userDraftTitles: PageTitleMap;
   catTitles: PageTitleMap;
@@ -333,7 +333,7 @@ const processCategorylinkRow = (
   setPush(children, clTargetId, childLt);
 };
 
-async function downloadAndParseCategorylinks(
+export async function downloadAndParseCategorylinks(
   pageNS: PageNSMap,
   catTitles: PageTitleMap,
   titleToLt: TitleToLt,
