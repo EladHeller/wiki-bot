@@ -243,7 +243,7 @@ export function convertContentToWikiPage(content: string, revid: number, title: 
 }
 
 export function contentFromPage(page: WikiPage) {
-  const content = page.revisions?.[0].slots.main['*'];
+  const content = page.revisions?.[0].slots?.main['*'];
   const revid = page.revisions?.[0].revid;
   return {
     content,
@@ -251,7 +251,7 @@ export function contentFromPage(page: WikiPage) {
   };
 }
 
-export async function firstPageOf(generator: AsyncGenerator) {
+export async function firstPageOf<T>(generator: AsyncGenerator<T, any, any>): Promise<T> {
   const { value } = await generator.next();
   return value;
 }
