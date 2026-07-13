@@ -6,6 +6,7 @@ import {
   asyncGeneratorMapWithSequence, contentFromPage, convertContentToWikiPage, encodeWikiUrl, escapeRegex,
   fetchUrlLikeBrowser, getFullYear, prettyNumericValue, promiseSequence,
   getLocalDate, getLocalTimeAndDate, hebrewGimetriya, objectToFormData, objectToQueryString, parseLocalDate,
+  firstPageOf,
 } from '../utilities';
 import { WikiPage } from '../types';
 
@@ -494,6 +495,19 @@ describe('contentFromPage', () => {
     expect(res).toStrictEqual({
       content,
       revid: 1,
+    });
+  });
+
+  describe('firstPageOf', () => {
+    it('should fetch first page', async () => {
+      async function* foo() {
+        yield 1;
+        yield 2;
+        yield 3;
+      }
+
+      await expect(firstPageOf(foo())).resolves.toBe(1);
+      await expect(firstPageOf(foo())).resolves.toBe(1);
     });
   });
 });

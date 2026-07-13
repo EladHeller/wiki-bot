@@ -250,3 +250,8 @@ export function contentFromPage(page: WikiPage) {
     revid,
   };
 }
+
+export async function firstPageOf(generator: AsyncGenerator) {
+  const { value } = await generator.next();
+  return value;
+}

@@ -1,10 +1,11 @@
 import Company from './company';
 import { getAllDetails, getFinanceReport } from '../API/mayaAPI';
-import { WikiPage } from '../types';
+import { WikiPage, Revision } from '../types';
 import { buildTable } from '../wiki/wikiTableParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { companiesWithMayaId, CompaniesWithMayaIdResult } from '../wiki/WikidataSparql';
 import { logger } from '../utilities/logger';
+import { firstPageOf } from '../utilities';
 // https://market.tase.co.il/he/market_data/company/1691/financial_reports
 // https://market.tase.co.il/he/market_data/company/1480/financial_reports
 
@@ -15,7 +16,7 @@ async function saveTable(api: IWikiApi, companies: Company[]) {
 
   for (const company of companies) {
     console.log(company.name);
-    const revisions = await api.getArticleRevisions(company.name, 1, 'user|size');
+    const revisions: Revision[] = await firstPageOf(api.getArticleRevisions(company.name, 1, 'user|size'));
     const firstRevision = revisions?.[0];
     if (!firstRevision) {
       throw new Error(`No revision for ${company.name}`);
@@ -31,7 +32,10 @@ async function saveTable(api: IWikiApi, companies: Company[]) {
 
   const headers = ['קישור', 'שם החברה', 'הכנסות', 'רווח תפעולי', 'רווח', 'הון עצמי', 'סך המאזן', 'מטבע', 'תאריך הנתונים', 'מכיל [[תבנית:חברה מסחרית]]', 'עריכה אחרונה', 'גודל ביצירה', 'גודל נוכחי'];
   const tableText = buildTable(headers, tableRows);
-  const tableRevision = await api.getArticleRevisions(TABLE_PAGE, 1, 'ids');
+  const tableRevision: Revision[] = [];
+  for await (const batch of api.getArticleRevisions(TABLE_PAGE, 1, 'ids')) {
+    tableRevision.push(...batch);
+  }
   const revid = tableRevision[0]?.revid;
   if (!revid) {
     throw new Error('No revid for table');

@@ -68,7 +68,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
       ?? jest.fn<(title: string) => Promise<string | undefined>>(),
     getArticleRevisions:
       base.getArticleRevisions
-      ?? jest.fn<(title: string, limit: number) => Promise<Revision[]>>(),
+      ?? jest.fn<(title: string, limit: number, props?: string) => AsyncGenerator<Revision[], void, void>>(),
     logs:
       base.logs
       ?? jest.fn<(type: string, namespaces: number[], endTimestamp: string, limit?: number) =>

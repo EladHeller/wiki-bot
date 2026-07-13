@@ -1,5 +1,7 @@
 import { JSDOM } from 'jsdom';
-import { asyncGeneratorMapWithSequence, contentFromPage, convertContentToWikiPage } from '../utilities';
+import {
+  asyncGeneratorMapWithSequence, contentFromPage, convertContentToWikiPage, firstPageOf,
+} from '../utilities';
 import BaseWikiApi, { defaultConfig } from '../wiki/BaseWikiApi';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import {
@@ -247,17 +249,16 @@ async function checkMissingRedirect(api: IWikiApi, title: string) {
       isMissing: false,
     };
   }
-  const generator = api.search(title, true);
-  const res = await generator.next();
-  if (!res.value) {
+  const searchValue = await firstPageOf(api.search(title, true));
+  if (!searchValue) {
     return {
       isMissing: true,
     };
   }
 
-  const newTitle = res.value[0]?.title;
+  const newTitle = searchValue[0]?.title;
 
-  if (res.value.length === 1 && latinComparer.compare(newTitle, title) === 0) {
+  if (searchValue.length === 1 && latinComparer.compare(newTitle, title) === 0) {
     return {
       isMissing: false,
       newTitle,

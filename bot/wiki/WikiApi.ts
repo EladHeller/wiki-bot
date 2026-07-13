@@ -55,7 +55,7 @@ export interface IWikiApi {
   recentChanges(
     namespaces: number[], endTimestamp: string, limit?: number, type?: string, props?: string
   ): AsyncGenerator<RecentChange[], void, void>;
-  getArticleRevisions(title: string, limit: number, props?: string): Promise<Revision[]>;
+  getArticleRevisions(title: string, limit: number, props?: string): AsyncGenerator<Revision[], void, void>;
   logs(
     type: string, namespaces: number[], endTimestamp: string, limit?: number
   ): AsyncGenerator<LogEvent[], void, void>;
@@ -208,15 +208,26 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     };
   }
 
-  async function getArticleRevisions(title: string, limit: number, props = 'content|user|size|comment') {
+  async function* getArticleRevisions(
+    title: string,
+    limit: number,
+    props = 'content|user|size|comment',
+  ): AsyncGenerator<Revision[], void, void> {
     const encodedProps = encodeURIComponent(props);
-    const path = `?action=query&format=json&rvprop=${encodedProps}&rvslots=*&prop=revisions&titles=${encodeURIComponent(title)}&rvlimit=${limit}`;
-    const result = await request(path);
-    const wikiPages: Record<string, Partial<WikiPage>> = result.query.pages;
-    if (result.query.interwiki) {
-      console.log(`${title} interwiki`, result.query.interwiki);
-    }
-    return Object.values(wikiPages ?? {})[0]?.revisions ?? [];
+    const batchLimit = Math.min(500, limit);
+    const path = `?action=query&format=json&rvslots=*&prop=revisions&titles=${encodeURIComponent(title)}&rvlimit=${batchLimit}&rvprop=${encodedProps}`;
+
+    yield* baseWikiApi.continueQuery(
+      path,
+      (result) => {
+        const pages = result.query?.pages;
+        if (result.query?.interwiki) {
+          console.log(`${title} interwiki`, result.query.interwiki);
+        }
+        const page = Object.values(pages ?? {})[0] as any;
+        return page?.revisions ?? [];
+      },
+    );
   }
 
   async function* externalUrl(link: string, protocol: string = 'https', namespace = '0') {
