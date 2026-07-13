@@ -1,5 +1,5 @@
 import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import WikiDataAPI, { IWikiDataAPI } from '../../wiki/WikidataAPI';
 
@@ -266,8 +266,7 @@ export function applyCategoryChanges(
 }
 
 async function fetchPageState(api: IWikiApi, title: string, pageFromCategory?: WikiPage): Promise<PageState> {
-  const fromGenerator = pageFromCategory?.revisions?.[0]?.slots?.main?.['*'];
-  const fromGeneratorRev = pageFromCategory?.revisions?.[0]?.revid;
+  const { content: fromGenerator, revid: fromGeneratorRev } = pageFromCategory ? contentFromPage(pageFromCategory) : {};
   if (fromGenerator && fromGeneratorRev) {
     return { title, content: fromGenerator, revid: fromGeneratorRev };
   }

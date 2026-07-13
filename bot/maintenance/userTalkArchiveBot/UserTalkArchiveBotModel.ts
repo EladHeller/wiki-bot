@@ -8,7 +8,7 @@ import {
   getUndatedParagraphsToArchive,
   removeArchivedUndatedParagraphsFromTracker,
 } from '../../utilities/archiveUtils';
-import { asyncGeneratorMapWithSequence, escapeRegex } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, escapeRegex } from '../../utilities';
 import { WikiPage } from '../../types';
 import { logger, stringify } from '../../utilities/logger';
 
@@ -34,11 +34,6 @@ export interface UserTalkArchiveConfig {
   archiveExpressions?: string;
   deleteExpressions?: string;
   shouldArchive: boolean;
-}
-
-function getPageContent(page: WikiPage): string | null {
-  const revision = page.revisions?.[0];
-  return revision?.slots?.main?.['*'] ?? null;
 }
 
 export interface IUserTalkArchiveBotModel {
@@ -681,7 +676,7 @@ export default function UserTalkArchiveBotModel(
     if (page.title === `תבנית:${AUTO_ARCHIVE_BOX_TEMPLATE}`) {
       return;
     }
-    const content = getPageContent(page);
+    const { content } = contentFromPage(page);
     if (!content) {
       logger.logWarning(`No content found for ${page.title}`);
       return;

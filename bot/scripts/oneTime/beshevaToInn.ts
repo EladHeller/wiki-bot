@@ -1,5 +1,5 @@
 import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence, promiseSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, promiseSequence } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
 
@@ -11,9 +11,8 @@ export default async function beshevaToInn() {
 
   const number = 0;
   await asyncGeneratorMapWithSequence<WikiPage>(5, generator, (page) => async () => {
-    const content = page.revisions?.[0]?.slots.main['*'];
-    const revId = page.revisions?.[0]?.revid;
-    if (!content || !revId) {
+    const { content, revid } = contentFromPage(page);
+    if (!content || !revid) {
       console.log(`No content for page ${page.title}`);
       return;
     }
@@ -59,7 +58,7 @@ export default async function beshevaToInn() {
       newContent = newContent.replace(template, newTemplate);
     }));
     if (newContent !== content) {
-      await api.edit(page.title, 'החלפת תבנית בשבע בתבנית ערוץ 7', newContent, revId);
+      await api.edit(page.title, 'החלפת תבנית בשבע בתבנית ערוץ 7', newContent, revid);
       console.log('success', page.title);
     }
   });

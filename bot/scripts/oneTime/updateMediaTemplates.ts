@@ -1,5 +1,5 @@
 import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
@@ -72,8 +72,7 @@ async function processArticle(
   templateName: string,
   config: typeof TEMPLATE_CONFIGS[keyof typeof TEMPLATE_CONFIGS],
 ): Promise<void> {
-  const content = page.revisions?.[0]?.slots.main['*'];
-  const revid = page.revisions?.[0]?.revid;
+  const { content, revid } = contentFromPage(page);
 
   if (!revid || !content) {
     console.log(`Missing revid or content for ${page.title}`);

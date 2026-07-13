@@ -547,12 +547,12 @@ Too recent
       expect(createCalls[0]).toStrictEqual([
         'TestPage/ארכיון ינואר-מרץ 2025',
         '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב הדיון "Q1 Discussion", הועבר.',
-        expect.stringContaining('{{ארכיון הדט}}'),
+        expect.stringContaining('First quarter discussion'),
       ]);
       expect(createCalls[1]).toStrictEqual([
         'TestPage/ארכיון אפריל-יוני 2025',
         '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב הדיון "Q2 Discussion", טופל.',
-        expect.stringContaining('{{ארכיון הדט}}'),
+        expect.stringContaining('Second quarter discussion'),
       ]);
 
       // Should edit the source page twice to remove each archived paragraph
@@ -939,7 +939,7 @@ Discussion content
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TestPage/ארכיון 1',
         '[[ויקיפדיה:בוט/ארכוב דיונים|בוט ארכוב דיונים]]: ארכוב הדיון "Discussion 1", טופל.',
-        expect.stringContaining('{{ארכיון הדט}}'),
+        expect.stringContaining('==Discussion 1==\n{{מצב|טופל}}\nDiscussion content'),
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage',
@@ -1165,7 +1165,7 @@ Discussion content
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TargetPage',
         expect.stringContaining('Discussion 1'),
-        expect.stringContaining('{{ארכיון הדט}}\n\n==Discussion 1==\n{{הועבר|ל=TestPage}}\n{{מצב|טופל}}'),
+        expect.stringContaining('==Discussion 1==\n{{הועבר|מ=TestPage}}\n{{מצב|טופל}}\nDiscussion content'),
       );
 
       // Verify Discussion 2 was archived to TestPage/ארכיון 1 WITHOUT wrapping (via EDIT since page exists)
@@ -1355,7 +1355,7 @@ Discussion content
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TargetPage',
         expect.stringContaining('Discussion 1'),
-        expect.stringContaining('{{ארכיון הדט}}\n\n==Discussion 1==\n{{הועבר|ל=TestPage}}\n{{מצב|טופל}}'),
+        expect.stringContaining('==Discussion 1==\n{{הועבר|מ=TestPage}}\n{{מצב|טופל}}\nDiscussion content'),
       );
 
       // Verify Discussion 2 was archived to quarterly archive WITHOUT wrapping (via EDIT since page exists)
@@ -1416,7 +1416,7 @@ Discussion content
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TargetPage',
         expect.stringContaining('Discussion 1'),
-        expect.stringContaining('{{ארכיון הדט}}\n\n==Discussion 1==\n{{הועבר|ל=TestPage}}\n{{מצב|טופל}}'),
+        expect.stringContaining('==Discussion 1==\n{{הועבר|מ=TestPage}}\n{{מצב|טופל}}\nDiscussion content'),
       );
 
       // Verify Discussion 2 was archived to default archive WITHOUT wrapping
@@ -1432,6 +1432,33 @@ Discussion content
         expect.stringContaining('Discussion 1'),
         expect.stringMatching(/\{\{הועבר\|ל=TargetPage\}\}[\s\S]*~~~~$/),
         expect.any(Number),
+      );
+    });
+
+    it('should prepend the draft transfer archive header on the special page', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const pageContent = `
+==Discussion 1==
+{{מצב|טופל}}
+Discussion content
+10:00, 1 בפברואר 2025 (IDT)
+`;
+
+      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+        'ויקיפדיה:העברת דפי טיוטה': { content: pageContent, revid: 1 },
+      }, title, { content: '', revid: 0 }));
+
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const archivableParagraphs = await model.getArchivableParagraphs('ויקיפדיה:העברת דפי טיוטה', ['טופל'], 14);
+
+      await model.archive('ויקיפדיה:העברת דפי טיוטה', archivableParagraphs, 'רבעון', '');
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'ויקיפדיה:העברת דפי טיוטה/ארכיון ינואר-מרץ 2025',
+        expect.any(String),
+        expect.stringContaining('{{ארכיון הדט}}\n\n==Discussion 1=='),
       );
     });
   });
@@ -1631,7 +1658,7 @@ Discussion content
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TargetPage',
         expect.stringContaining('Discussion 1'),
-        expect.stringContaining('{{ארכיון הדט}}\n\n==Discussion 1==\n{{הועבר|ל=TestPage}}\n{{מצב|טופל}}'),
+        expect.stringContaining('==Discussion 1==\n{{הועבר|מ=TestPage}}\n{{מצב|טופל}}\nDiscussion content'),
       );
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
@@ -1768,7 +1795,7 @@ Discussion content
       expect(wikiApi.create).toHaveBeenCalledWith(
         'TargetPage',
         expect.stringContaining('Discussion 1'),
-        expect.stringContaining('{{ארכיון הדט}}\n\n==Discussion 1==\n{{הועבר|ל=TestPage}}'),
+        expect.stringContaining('==Discussion 1==\n{{הועבר|מ=TestPage}}\n{{מצב|טופל}}\nDiscussion content'),
       );
     });
 

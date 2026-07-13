@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import { hebrewGimetriya, promiseSequence } from '../../../utilities';
+import { contentFromPage, hebrewGimetriya, promiseSequence } from '../../../utilities';
 import BaseWikiApi, { defaultConfig } from '../../../wiki/BaseWikiApi';
 import { findTemplates, getTemplateArrayData, templateFromArrayData } from '../../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../../wiki/WikiApi';
@@ -96,7 +96,7 @@ export async function listAllErrors() {
     throw new Error('Failed to get last revision id');
   }
   const generator = api.categroyTitles('שגיאות קריאה לתבניות ספרי קודש');
-  const errors: {error: string, title: string}[] = [];
+  const errors: { error: string, title: string }[] = [];
   for await (const pages of generator) {
     for (const page of pages) {
       const parsedContent = await api.getParsedContent(page.title);
@@ -313,8 +313,7 @@ export default async function fixCiteTemplateErrors() {
   const generator = api.categroyPages('שגיאות קריאה לתבניות ספרי קודש', 10);
   for await (const pages of generator) {
     for (const page of pages) {
-      const content = page.revisions?.[0].slots.main['*'];
-      const revid = page.revisions?.[0].revid;
+      const { content, revid } = contentFromPage(page);
       if (!content || !revid) {
         throw new Error(`Missing content or revid ${page.title}`);
       }

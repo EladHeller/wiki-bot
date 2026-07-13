@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 
 const link = 'israelphilately.org.il/he/catalog/articles';
@@ -9,8 +9,7 @@ async function main() {
 
   const generator = api.externalUrl(link, 'http');
   await asyncGeneratorMapWithSequence(10, generator, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (content && page.title && revid) {
       let newContent = content;
       const refMatches = content.matchAll(

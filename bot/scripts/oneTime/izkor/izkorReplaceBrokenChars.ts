@@ -1,6 +1,6 @@
 import { findTemplates, getTemplateArrayData } from '../../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../../wiki/WikiApi';
-import { asyncGeneratorMapWithSequence } from '../../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../../utilities';
 import { WikiPage } from '../../../types';
 
 const TEMPLATE_NAME = 'יזכור';
@@ -15,8 +15,7 @@ const replaceQuotesInTemplate = (template: string, pageTitle: string): string =>
 };
 
 const processPage = async (api: IWikiApi, page: WikiPage): Promise<boolean> => {
-  const content = page.revisions?.[0].slots.main['*'];
-  const revid = page.revisions?.[0].revid;
+  const { content, revid } = contentFromPage(page);
   if (!revid) {
     console.log('No revid for', page.title);
     return false;

@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 
 export default async function checkHedyataPages() {
@@ -23,7 +23,7 @@ export default async function checkHedyataPages() {
       }
       checkedPages.add(page.title);
 
-      const content = page.revisions?.[0]?.slots.main['*'];
+      const { content } = contentFromPage(page);
       if (!content) {
         console.log(`${page.title}: content not found`);
         return;

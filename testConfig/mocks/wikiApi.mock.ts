@@ -50,7 +50,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
       ) => AsyncGenerator<WikiPage[], void, void>>(),
     search:
       base.search
-      ?? jest.fn<(text: string) => AsyncGenerator<WikiPage[], void, void>>(),
+      ?? jest.fn<(text: string, exact?: boolean, namespace?: string) => AsyncGenerator<WikiPage[], void, void>>(),
     userContributes:
       base.userContributes
       ?? jest.fn<(user: string, startTime: Date, endTime: Date, limit?: number

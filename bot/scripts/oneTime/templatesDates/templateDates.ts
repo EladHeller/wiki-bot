@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import { WikiPage } from '../../../types';
 import {
-  asyncGeneratorMapWithSequence, promiseSequence,
+  asyncGeneratorMapWithSequence, contentFromPage, promiseSequence,
 } from '../../../utilities';
 import formalizedDateFormat from '../../../utilities/formalizedDateFormat';
 import WikiApi from '../../../wiki/WikiApi';
@@ -37,8 +37,7 @@ export default async function templateDates(
   await api.login();
   const generator = api.categroyPages(`שגיאות פרמטריות בתבנית ${templateName}`);
   await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       console.log('Missing content or revid', page.title);
       return;

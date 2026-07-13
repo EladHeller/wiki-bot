@@ -1,6 +1,6 @@
 import { writeFile } from 'fs/promises';
 import findHebrewFullNames from 'find-hebrew-names';
-import { asyncGeneratorMapWithSequence, promiseSequence } from '../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, promiseSequence } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { WikiPage } from '../types';
 import { findTemplates, getTemplateArrayData, getTemplateKeyValueData } from '../wiki/newTemplateParser';
@@ -166,14 +166,13 @@ const referenceFixes: Array<TemplateFixData> = [];
 export async function pageConvertLinksToTemplate(page: WikiPage, api: IWikiApi, config: ConvertionConfig) {
   if (all.length % 100 === 0) console.log(all.length);
   let isLinkFound = false;
-  const content = page.revisions?.[0].slots.main['*'];
+  const { content, revid } = contentFromPage(page);
   if (!content) {
     console.log('Missing content', page.title);
     notFoundLinks.push(page.title);
     return;
   }
-  const revId = page.revisions?.[0].revid;
-  if (!revId) {
+  if (!revid) {
     console.log('Missing revid', page.title);
     notFoundLinks.push(page.title);
     return;
@@ -330,7 +329,7 @@ export async function pageConvertLinksToTemplate(page: WikiPage, api: IWikiApi, 
   }
 
   if (newContent !== content) {
-    await api.edit(page.title, config.description || 'הסבה לתבנית', newContent, revId);
+    await api.edit(page.title, config.description || 'הסבה לתבנית', newContent, revid);
     updated.push(page.title);
     console.log('success update', page.title);
   }

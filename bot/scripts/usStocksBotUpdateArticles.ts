@@ -1,7 +1,7 @@
 /* eslint-disable no-loop-func */
 import fs from 'fs/promises';
 import { getCompanyData, googleFinanceRegex } from '../API/googleFinanceApi';
-import { promiseSequence } from '../utilities';
+import { contentFromPage, promiseSequence } from '../utilities';
 import { WikiPage } from '../types';
 import { findTemplate, getTemplateKeyValueData, templateFromKeyValueData } from '../wiki/newTemplateParser';
 import WikiApi from '../wiki/WikiApi';
@@ -42,8 +42,7 @@ async function main() {
       console.log(page.title, { extLink, tiker });
       return;
     }
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       throw new Error(`No content or revid for page ${page.title}`);
     }

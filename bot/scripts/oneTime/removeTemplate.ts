@@ -1,6 +1,7 @@
 import readline from 'readline';
 import { findTemplates } from '../../wiki/newTemplateParser';
 import WikiApi from '../../wiki/WikiApi';
+import { contentFromPage } from '../../utilities';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -23,8 +24,7 @@ export default async function removeTemplate(templateName: string, summary = `ה
   const generator = api.getArticlesWithTemplate(templateName, undefined, 'תבנית', '*');
   for await (const pages of generator) {
     for (const page of pages) {
-      const content = page.revisions?.[0].slots.main['*'];
-      const revid = page.revisions?.[0].revid;
+      const { content, revid } = contentFromPage(page);
       if (!revid || !content) {
         console.error(`missing revid or content for page ${page.title}`, { revid, content });
         throw new Error('Missing revid or content');

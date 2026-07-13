@@ -303,7 +303,6 @@ describe('processArticle', () => {
       pageid: 1,
       ns: 0,
       extlinks: [],
-      revisions: [],
     });
 
     expect(api.edit).not.toHaveBeenCalled();

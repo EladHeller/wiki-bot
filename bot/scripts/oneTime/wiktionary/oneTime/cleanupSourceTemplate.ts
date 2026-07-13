@@ -2,7 +2,7 @@
  * יש 180 מופעים של הביטוי הרגולרי /\{\{שרש3\|ש\|ר\|ש\}\}/, כולם שגויים (להבדיל מכמה מופעים לא שגויים של /\{\{שרש3\|שׁ\|ר\|שׁ\}\}/ – ה־ש עם ניקוד). תוכל בבקשה להסיר מופעים אלה בעזרת הבוט?
  */
 
-import { asyncGeneratorMapWithSequence } from '../../../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../../../utilities';
 import BaseWikiApi, { defaultConfig } from '../../../../wiki/BaseWikiApi';
 import WikiApi from '../../../../wiki/WikiApi';
 
@@ -20,8 +20,7 @@ export default async function cleanupSourceTemplate() {
   let editedCount = 0;
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
     pagesCount += 1;
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       throw new Error('Failed to get content or revid');
     }

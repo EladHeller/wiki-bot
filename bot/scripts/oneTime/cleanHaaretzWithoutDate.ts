@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
 import WikiApi from '../../wiki/WikiApi';
 import { getParagraphContent } from '../../wiki/paragraphParser';
@@ -8,12 +8,11 @@ export default async function cleanHaaretzWithoutDate() {
   await api.login();
 
   await asyncGeneratorMapWithSequence(10, api.categroyPages('שגיאות פרמטריות בתבנית הארץ - ללא תאריך'), (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
+    const { content, revid } = contentFromPage(page);
     if (!content) {
       console.log('No content for', page.title);
       return;
     }
-    const revid = page.revisions?.[0].revid;
     if (!revid) {
       console.log('No revid for', page.title);
       return;

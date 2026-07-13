@@ -4,6 +4,7 @@ import {
 } from '../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
+import { contentFromPage } from '../../utilities';
 
 const TEMPLATE_NAME_LEADER = 'מנהיג';
 const TEMPLATE_NAME_OFFICE_HOLDER = 'נושא משרה';
@@ -16,8 +17,7 @@ const RELEVANT_ROLE_NAMES = ['תפקידים בולטים', 'תפקידים נו
 let i = 0;
 export async function processPage(page: WikiPage, api: IWikiApi) {
   i += 1;
-  const content = page.revisions?.[0].slots.main['*'];
-  const revid = page.revisions?.[0].revid;
+  const { content, revid } = contentFromPage(page);
   if (!revid || !content) {
     console.error(`missing revid or content for page ${page.title}`, { revid, content });
     return;

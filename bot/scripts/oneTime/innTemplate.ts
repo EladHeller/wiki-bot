@@ -1,5 +1,5 @@
 import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence, promiseSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, promiseSequence } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 import { findTemplates, getTemplateArrayData } from '../../wiki/newTemplateParser';
 
@@ -15,7 +15,7 @@ export default async function innTemplate() {
     if (number % 100 === 0) {
       console.log(number);
     }
-    const content = page.revisions?.[0].slots.main['*'];
+    const { content } = contentFromPage(page);
     if (!content) {
       console.log(`No content for page ${page.title}`);
       return;
@@ -23,7 +23,7 @@ export default async function innTemplate() {
     const templates = findTemplates(content, TEMPLATE_NAME, page.title);
     let newContent = content;
     await promiseSequence(5, templates.map((template) => async () => {
-      const [author, title, id,, section] = getTemplateArrayData(
+      const [author, title, id, , section] = getTemplateArrayData(
         template,
         TEMPLATE_NAME,
         page.title,

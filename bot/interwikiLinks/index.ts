@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import { asyncGeneratorMapWithSequence, convertContentToWikiPage } from '../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, convertContentToWikiPage } from '../utilities';
 import BaseWikiApi, { defaultConfig } from '../wiki/BaseWikiApi';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import {
@@ -452,8 +452,7 @@ async function handlePage(api: IWikiApi, page: WikiPage): Promise<void> {
     });
     return;
   }
-  const content = page.revisions?.[0].slots.main['*'];
-  const revid = page.revisions?.[0].revid;
+  const { content, revid } = contentFromPage(page);
   if (!content || !revid) {
     console.log('No content or revid for', page.title);
     return;

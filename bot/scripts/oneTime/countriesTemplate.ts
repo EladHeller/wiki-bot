@@ -1,3 +1,4 @@
+import { contentFromPage } from '../../utilities';
 import { findTemplates } from '../../wiki/newTemplateParser';
 import WikiApi from '../../wiki/WikiApi';
 
@@ -80,12 +81,11 @@ export default async function countriesTemplate() {
       const generator = api.getArticlesWithTemplate(template);
       for await (const pages of generator) {
         for (const page of pages) {
-          const revision = page.revisions?.[0];
-          if (revision?.revid) {
-            const content = revision.slots.main['*'];
+          const { revid, content } = contentFromPage(page);
+          if (revid && content) {
             const newContent = removeOldTemplatesFromPage(page.title, content);
             if (newContent !== content) {
-              await api.edit(page.title, `שינוי תבנית ${key}`, newContent, revision.revid);
+              await api.edit(page.title, `שינוי תבנית ${key}`, newContent, revid);
             }
           }
         }
@@ -104,9 +104,8 @@ export async function removeDuplicates() {
     const generator = api.getArticlesWithTemplate(newTemplate);
     for await (const pages of generator) {
       for (const page of pages) {
-        const revision = page.revisions?.[0];
-        if (revision?.revid) {
-          const content = revision.slots.main['*'];
+        const { content, revid } = contentFromPage(page);
+        if (revid && content) {
           let newContent = content;
           const templates = findTemplates(content, newTemplate, page.title);
           if (templates.length > 1) {
@@ -117,7 +116,7 @@ export async function removeDuplicates() {
             }
           }
           if (newContent !== content) {
-            await api.edit(page.title, 'הסרת תבנית כפולה', newContent, revision.revid);
+            await api.edit(page.title, 'הסרת תבנית כפולה', newContent, revid);
           }
         }
       }

@@ -1,3 +1,4 @@
+import { contentFromPage } from '../../utilities';
 import { findTemplate, getTemplateKeyValueData } from '../../wiki/newTemplateParser';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 
@@ -131,10 +132,9 @@ export async function fixTemplateOrder() {
   const api = WikiApi();
   const generator = api.getArticlesWithTemplate(baseTemplateName);
   for await (const batch of generator) {
-    for (const { title, revisions } of batch) {
-      const revid = revisions?.[0].revid;
-      const content = revisions?.[0].slots.main['*'];
-      await fixPage(api, title, revid, content);
+    for (const page of batch) {
+      const { content, revid } = contentFromPage(page);
+      await fixPage(api, page.title, revid, content);
     }
   }
 }

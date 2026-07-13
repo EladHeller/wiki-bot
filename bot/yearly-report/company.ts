@@ -1,6 +1,6 @@
 import { MayaCompany } from '../API/mayaAPI';
 import { WikiPage } from '../types';
-import { CurrencyCode, prettyNumericValue } from '../utilities';
+import { contentFromPage, CurrencyCode, prettyNumericValue } from '../utilities';
 import {
   getTemplateKeyValueData, findTemplates, findTemplate, templateFromKeyValueData,
 } from '../wiki/newTemplateParser';
@@ -177,19 +177,16 @@ export default class Company {
   }
 
   appendWikiData(wikiData: WikiPage) {
-    const revision = wikiData.revisions?.[0];
-    if (!revision) {
+    const { content, revid } = contentFromPage(wikiData);
+    if (!revid || !content) {
       throw new Error(`Missing revision for ${this.name}`);
     }
-    this.articleText = revision.slots.main['*'];
+    this.articleText = content;
     this.reference = `https://market.tase.co.il/he/market_data/company/${this.companyId}/financial_reports`;
     this.templateText = findTemplate(this.articleText, TEMPLATE_NAME, this.name);
     this.isContainsTemplate = !!this.templateText;
     this.templateData = getTemplateKeyValueData(this.templateText);
-    if (!revision.revid) {
-      throw new Error(`Missing revid for ${this.name}`);
-    }
-    this.revisionId = revision.revid;
+    this.revisionId = revid;
   }
 
   appendMayaData(mayaData: Map<string, any>, year: number) {

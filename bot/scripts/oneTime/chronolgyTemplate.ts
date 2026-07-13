@@ -1,4 +1,4 @@
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 import { findTemplates, getTemplateKeyValueData, templateFromKeyValueData } from '../../wiki/newTemplateParser';
 import { replaceValueWithDesignTemplate } from '../utils';
@@ -20,9 +20,8 @@ export default async function chronologyTemplate() {
   const titles = new Set<string>();
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
     try {
-      const content = page.revisions?.[0].slots.main['*'];
-      const revId = page.revisions?.[0]?.revid;
-      if (!content || !revId) {
+      const { content, revid } = contentFromPage(page);
+      if (!content || !revid) {
         return;
       }
       if (titles.has(page.title)) {
@@ -58,7 +57,7 @@ export default async function chronologyTemplate() {
         });
       });
       if (newContent !== content && changed) {
-        await api.edit(page.title, 'הסרת טקסט נטוי מתבנית כרונולוגיה', newContent, revId);
+        await api.edit(page.title, 'הסרת טקסט נטוי מתבנית כרונולוגיה', newContent, revid);
         number += 1;
       }
     } catch (error) {

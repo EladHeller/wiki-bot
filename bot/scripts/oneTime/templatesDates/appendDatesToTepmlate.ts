@@ -1,5 +1,5 @@
 import { WikiPage } from '../../../types';
-import { asyncGeneratorMapWithSequence, promiseSequence } from '../../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, promiseSequence } from '../../../utilities';
 import WikiApi from '../../../wiki/WikiApi';
 import { findTemplates, getTemplateData, templateFromTemplateData } from '../../../wiki/newTemplateParser';
 
@@ -40,8 +40,7 @@ export default async function appendDatesToTepmlate(
 
   await asyncGeneratorMapWithSequence<WikiPage>(10, generator, (page) => async () => {
     allCount += 1;
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (!content || !revid) {
       console.log('Missing content or revid', page.title);
       return;

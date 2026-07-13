@@ -1,4 +1,4 @@
-import { promiseSequence } from '../../utilities';
+import { contentFromPage, promiseSequence } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
 
@@ -11,8 +11,8 @@ async function ynetEncyclopedia() {
   // const pages = [...httpPages, ...httpsPages];
   const pages: WikiPage[] = [];
   await promiseSequence(1, pages.map((page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    if (content && page.title) {
+    const { content, revid } = contentFromPage(page);
+    if (content && page.title && revid) {
       let newContent = content;
       const refMatches = content.matchAll(
         /{{הערה\|\s*\[https?:\/\/www\.ynet\.co\.il\/yaan\/(?:[^ ]*) ([^\]]*)\][^}]+}}/g,
@@ -49,7 +49,6 @@ async function ynetEncyclopedia() {
         return;
       }
       try {
-        const { revid } = await api.articleContent(page.title);
         await api.edit(page.title, 'הסרת קישור לאנציקלופדיית ynet', newContent, revid);
       } catch (error) {
         console.log(error?.data || error?.message || error?.toString());

@@ -9,7 +9,7 @@ import {
   EditResponse,
   PageInfo,
 } from '../types';
-import { objectToFormData } from '../utilities';
+import { contentFromPage, objectToFormData } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
 
 export interface IWikiApi {
@@ -38,7 +38,7 @@ export interface IWikiApi {
   getArticlesWithTemplate(
     templateName: string, continueObject?: Record<string, string>, prefix?: string, namespace?: string
   ): AsyncGenerator<WikiPage[], void, void>;
-  search(text: string, exact?: boolean): AsyncGenerator<WikiPage[], void, void>;
+  search(text: string, exact?: boolean, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   searchPages(searchText: string, namespaces?: number[], limit?: number): AsyncGenerator<WikiPage[], void, void>;
   getRedirectsFrom(namespace: number, toNamespace: number, limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
@@ -195,16 +195,16 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const props = encodeURIComponent('content|ids');
     const path = `?action=query&format=json&rvprop=${props}&rvslots=*&prop=revisions&titles=${encodeURIComponent(title)}`;
     const result = await request(path);
-    const wikiPages: Record<string, Partial<WikiPage>> = result.query.pages;
+    const wikiPages: Record<string, WikiPage> = result.query.pages;
 
-    const revision = Object.values(wikiPages)[0]?.revisions?.[0];
-    if (!revision?.revid) {
+    const { content, revid } = contentFromPage(Object.values(wikiPages)[0]);
+    if (!revid) {
       throw new Error(`No revid for ${title}`);
     }
 
     return {
-      content: revision.slots.main['*'],
-      revid: revision.revid,
+      content: content ?? '',
+      revid,
     };
   }
 
@@ -247,11 +247,11 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
   }
 
-  async function* search(text: string, exact = false) {
+  async function* search(text: string, exact = false, namespace = '0') {
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content|ids');
 
-    const path = `?action=query&generator=search&format=json&gsrnamespace=0&gsrsearch=${encodeURIComponent(text)}&gsrlimit=50&${exact ? 'gsrwhat=nearmatch' : ''}`
+    const path = `?action=query&generator=search&format=json&gsrnamespace=${namespace}&gsrsearch=${encodeURIComponent(text)}&gsrlimit=50&${exact ? 'gsrwhat=nearmatch' : ''}`
       + `&prop=${props}`
       + `&rvprop=${rvprops}&rvslots=*`;
 

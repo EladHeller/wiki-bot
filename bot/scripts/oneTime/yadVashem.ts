@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import WikiApi from '../../wiki/WikiApi';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 
 const oldLink = 'righteous.yadvashem.org/?searchType=righteous_only&language=en';
 async function main() {
@@ -8,8 +8,7 @@ async function main() {
   await api.login();
   const generartor = api.externalUrl(oldLink);
   await asyncGeneratorMapWithSequence(10, generartor, (page) => async () => {
-    const content = page.revisions?.[0].slots.main['*'];
-    const revid = page.revisions?.[0].revid;
+    const { content, revid } = contentFromPage(page);
     if (content && page.title && revid) {
       let newContent = content;
       const refMatches = content.matchAll(

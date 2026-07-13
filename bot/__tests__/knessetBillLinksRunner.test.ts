@@ -1,6 +1,7 @@
 import {
   beforeEach, describe, expect, it, jest,
 } from '@jest/globals';
+import { contentFromPage } from '../utilities';
 
 const mockLogin = jest.fn<() => Promise<void>>();
 const mockExternalUrl = jest.fn();
@@ -13,6 +14,7 @@ jest.unstable_mockModule('../wiki/WikiApi', () => ({
 
 jest.unstable_mockModule('../utilities', () => ({
   asyncGeneratorMapWithSequence: mockAsyncGeneratorMapWithSequence,
+  contentFromPage,
 }));
 
 const { default: fixKnessetBillLinks } = await import('../scripts/oneTime/knessetBillLinks');
