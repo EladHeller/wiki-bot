@@ -47,7 +47,6 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
     api.articleContent.mockResolvedValue({ content: '', revid: 1 });
     api.create.mockResolvedValue({ revid: 1 });
     mockLanguageApi.getRedirecTarget.mockResolvedValue({});
-    mockLanguageApi.getArticleRevisions.mockResolvedValue([]);
     mockLanguageApi.info.mockResolvedValue([]);
     mockLanguageApi.search.mockImplementation(async function* generator() {
       yield [];
@@ -288,7 +287,6 @@ describe('handlePageSafely and page processing logic', () => {
     api.articleContent.mockResolvedValue({ content: '', revid: 1 });
     api.create.mockResolvedValue({});
     mockLanguageApi.getRedirecTarget.mockResolvedValue({});
-    mockLanguageApi.getArticleRevisions.mockResolvedValue([]);
     mockLanguageApi.info.mockResolvedValue([]);
     mockLanguageApi.search.mockImplementation(async function* generator() {
       yield [];
@@ -601,17 +599,6 @@ describe('handlePageSafely and page processing logic', () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
-      size: 100,
-      user: 'User',
-      slots: {
-        main: {
-          '*': '#REDIRECT [[NewGoogle]]',
-          contentmodel: 'wikitext',
-          contentformat: 'text/x-wiki',
-        },
-      },
-    }]);
     const page = {
       title: 'TestPage',
       pageid: 1,
@@ -633,17 +620,6 @@ describe('handlePageSafely and page processing logic', () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'Hex Target' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
-      size: 100,
-      user: 'User',
-      slots: {
-        main: {
-          '*': '#REDIRECT [[Hex&#x20;Target]]',
-          contentmodel: 'wikitext',
-          contentformat: 'text/x-wiki',
-        },
-      },
-    }]);
     const page = {
       title: 'TestPage',
       pageid: 1,
@@ -666,17 +642,6 @@ describe('handlePageSafely and page processing logic', () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'Decimal Target' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
-      size: 100,
-      user: 'User',
-      slots: {
-        main: {
-          '*': '#REDIRECT [[Decimal&#32;Target]]',
-          contentmodel: 'wikitext',
-          contentformat: 'text/x-wiki',
-        },
-      },
-    }]);
     const page = {
       title: 'TestPage',
       pageid: 1,
@@ -699,17 +664,6 @@ describe('handlePageSafely and page processing logic', () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'TestPage (test)' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
-      size: 100,
-      user: 'User',
-      slots: {
-        main: {
-          '*': '#REDIRECT [[TestPage (test)]]',
-          contentmodel: 'wikitext',
-          contentformat: 'text/x-wiki',
-        },
-      },
-    }]);
     const page = {
       title: 'TestPage',
       pageid: 1,
@@ -732,17 +686,6 @@ describe('handlePageSafely and page processing logic', () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'TestPage (test)' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
-      size: 100,
-      user: 'User',
-      slots: {
-        main: {
-          '*': '#REDIRECT [[TestPage (test)]]',
-          contentmodel: 'wikitext',
-          contentformat: 'text/x-wiki',
-        },
-      },
-    }]);
     const page = {
       title: 'TestPage',
       pageid: 1,
@@ -774,19 +717,6 @@ describe('handlePageSafely and page processing logic', () => {
         to: '',
       },
     });
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([
-      {
-        size: 100,
-        user: 'User',
-        slots: {
-          main: {
-            '*': '#REDIRECT [[Google]]',
-            contentmodel: 'wikitext',
-            contentformat: 'text/x-wiki',
-          },
-        },
-      },
-    ]);
     mockLanguageApi.info.mockResolvedValue([]);
 
     const page = {
@@ -1156,17 +1086,6 @@ describe('handlePageSafely and page processing logic', () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle', tosection: 'section' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
-      size: 100,
-      user: 'User',
-      slots: {
-        main: {
-          '*': '#REDIRECT [[NewGoogle#section]]',
-          contentmodel: 'wikitext',
-          contentformat: 'text/x-wiki',
-        },
-      },
-    }]);
     const page = {
       title: 'TestPage',
       pageid: 1,
@@ -1193,17 +1112,6 @@ describe('handlePageSafely and page processing logic', () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle', tofragment: 'fragment' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
-      size: 100,
-      user: 'User',
-      slots: {
-        main: {
-          '*': '#REDIRECT [[NewGoogle#section]]',
-          contentmodel: 'wikitext',
-          contentformat: 'text/x-wiki',
-        },
-      },
-    }]);
     const page = {
       title: 'TestPage',
       pageid: 1,
@@ -1289,7 +1197,6 @@ describe('runSinglePage', () => {
     api.articleContent.mockResolvedValue({ content: '', revid: 1 });
     api.create.mockResolvedValue({ revid: 1 });
     mockLanguageApi.getRedirecTarget.mockResolvedValue({});
-    mockLanguageApi.getArticleRevisions.mockResolvedValue([]);
     mockLanguageApi.info.mockResolvedValue([]);
     mockLanguageApi.search.mockImplementation(async function* generator() {
       yield [];
@@ -1301,18 +1208,6 @@ describe('runSinglePage', () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
-      user: 'User',
-      size: 100,
-      slots: {
-        main: {
-          '*': '#REDIRECT [[NewGoogle]]',
-          contentformat: 'text/x-wiki',
-          contentmodel: 'wikitext',
-        },
-      },
-    }]);
-
     await runSinglePage('TestPage', api);
 
     expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|NewGoogle}}', 123);
@@ -1326,17 +1221,6 @@ describe('runSinglePage', () => {
     });
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
-    mockLanguageApi.getArticleRevisions.mockResolvedValueOnce([{
-      user: 'User',
-      size: 100,
-      slots: {
-        main: {
-          '*': '#REDIRECT [[NewGoogle]]',
-          contentformat: 'text/x-wiki',
-          contentmodel: 'wikitext',
-        },
-      },
-    }]);
 
     await runSinglePage('TestPage', api);
     await foreignWikipediaMissingLinksParsedContent(api);
