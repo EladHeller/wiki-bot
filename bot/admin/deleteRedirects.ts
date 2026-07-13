@@ -1,6 +1,6 @@
 /* eslint-disable import/prefer-default-export */
-import { WikiPage } from '../types';
-import { asyncGeneratorMapWithSequence } from '../utilities';
+import { WikiPage, Revision } from '../types';
+import { asyncGeneratorMapWithSequence, firstPageOf } from '../utilities';
 import writeAdminBotLogs from './log';
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { ArticleLog } from './types';
@@ -38,7 +38,7 @@ async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons:
           return;
         }
         all.push(p);
-        const revisions = await api.getArticleRevisions(p.title, 2, 'user');
+        const revisions: Revision[] = await firstPageOf(api.getArticleRevisions(p.title, 2, 'user'));
         const revisionsLength = revisions?.length;
         const isRevisionsLengthValid = revisionsLength === 1
           || (revisionsLength === 2 && revisions?.[0].user
@@ -62,7 +62,7 @@ async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons:
   const logs: ArticleLog[] = unique.map((x) => {
     const error = errors.includes(x.title);
     const skipped = x.links?.length !== 1 || x.templates != null || x.categories != null
-     || mutlyRevisions.includes(x);
+      || mutlyRevisions.includes(x);
     return {
       title: x.title,
       text: `[[${x.title}]] ${x.links?.length === 1 ? ` {{כ}}← [[${x.links?.[0].title}]]` : 'לא ברור'}${error ? ' - שגיאה' : ''}`,

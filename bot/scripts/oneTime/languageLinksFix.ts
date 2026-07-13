@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
-import { asyncGeneratorMapWithSequence } from '../../utilities';
+import { asyncGeneratorMapWithSequence, firstPageOf } from '../../utilities';
 import WikiApi from '../../wiki/WikiApi';
+import { Revision } from '../../types';
 // import { getInnerLinks } from '../../wiki/wikiLinkParser';
 import { parseContent } from '../../maintenance/languageLinks';
 import WikiDataAPI from '../../wiki/WikidataAPI';
@@ -15,7 +16,7 @@ export async function fixMissingQuotation() {
   const pages = ['בילבורד הוט 100 (2023)', 'בילבורד הוט 100 (2020 ואילך)', 'Face Yourself'];
 
   for (const title of pages) {
-    const revisions = await api.getArticleRevisions(title, 2);
+    const revisions: Revision[] = await firstPageOf(api.getArticleRevisions(title, 2));
     if (revisions[0].user !== BOT_NAME || revisions[0].comment !== RELEVANT_COMMENT) {
       console.log(`Bot revision is not the first for ${title}`);
       return;
@@ -41,7 +42,10 @@ export default async function fixLanguageLinks() {
   const titles = await asyncGeneratorMapWithSequence(1, generator, (contribution) => async () => {
     console.log(`Checking ${contribution.title}`);
     if (contribution.comment === RELEVANT_COMMENT) {
-      const revisions = await api.getArticleRevisions(contribution.title, 10);
+      const revisions: Revision[] = [];
+      for await (const batch of api.getArticleRevisions(contribution.title, 10)) {
+        revisions.push(...batch);
+      }
       const botRevisionIndex = revisions.findIndex((rev) => rev.user === BOT_NAME && rev.comment === RELEVANT_COMMENT);
       if (botRevisionIndex === -1 || botRevisionIndex > 8) {
         console.log(`Bot revision is ${botRevisionIndex} for ${contribution.title}`);

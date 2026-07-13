@@ -2,10 +2,9 @@ import { WikiPage } from '../../types';
 import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
 
-const BASE_SEARCH_PATTERN = '\\[\\[([^]]+)\\]\\]\\s*\\<small\\>\\s*\\(\\[\\[:([a-zA-Z-]+):';
+const BASE_SEARCH_PATTERN = '"?\\[\\[([^]]+)\\]\\]"?\\s*\\<small\\>\\s*\\(\\[\\[:([a-zA-Z-]+):';
 const SEARCH_PATTERN = `${BASE_SEARCH_PATTERN}([^]|]+)\\|[א-ת-' ]+'\\]\\]\\)\\s*\\<\\/small\\>`;
 const regex = new RegExp(SEARCH_PATTERN.replaceAll('^]', '^\\]'), 'gi');
-
 const SUMMARY = 'הסבת קישורי בינוויקי לתבנית קישור שפה';
 
 const langugageCodeToLanguageName = {
@@ -240,7 +239,8 @@ async function handlePage(api: IWikiApi, page: WikiPage) {
       const languageName = langugageCodeToLanguageName[languageCode.toLocaleLowerCase()];
       const normalizedForeignTitle = decodeURIComponent(foreignTitle.replace(/_/g, ' '));
       if (languageName) {
-        newContent = newContent.replace(text, `{{קישור שפה|${languageName}|${normalizedForeignTitle}|${hebrewTitle}}}`);
+        const containsQuotationMarks = !!text.match(/"\[\[([^\]]+)\]\]"/);
+        newContent = newContent.replace(text, `{{קישור שפה|${languageName}|${normalizedForeignTitle}|${hebrewTitle}${containsQuotationMarks ? '|מירכאות=כן' : ''}}}`);
       }
     }
   }
@@ -250,7 +250,7 @@ async function handlePage(api: IWikiApi, page: WikiPage) {
 }
 
 export default async function interwikiConverter(api: IWikiApi) {
-  const generator = api.search(`insource:/${SEARCH_PATTERN}/`, false, '0|14|100');
+  const generator = api.search(`insource:/${BASE_SEARCH_PATTERN}/`, false, '0|14|100');
 
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
     await handlePage(api, page);
