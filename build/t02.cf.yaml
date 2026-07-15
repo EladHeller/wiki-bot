@@ -24,6 +24,9 @@ Globals:
       Bucket: !Ref BucketCodeName
       Key: dist.zip
       Version: !Ref DistCodeVersionId
+    DeadLetterQueue:
+      Type: SQS
+      TargetArn: !GetAtt GeneralDlqQueue.Arn
     Environment:
       Variables:
         USER_NAME: !Ref WikiUserName
@@ -43,3 +46,26 @@ Resources:
           Properties:
             Schedule: cron(0 5,10,15,20 ? * * *)
             Name: Kineret-level-scheduler
+
+  GeneralDlqQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: wiki-bot-dlq
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 1209600
+
+  GeneralDlqProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: wiki-bot-dlq-logger
+      Handler: dist/dlq/index.main
+      Timeout: 60
+      MemorySize: 512
+      Events:
+        DLQEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt GeneralDlqQueue.Arn
+            BatchSize: 1
