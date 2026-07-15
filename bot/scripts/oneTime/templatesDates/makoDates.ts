@@ -22,7 +22,7 @@ async function getDateFromPage(id: string, title: string, section?: string) {
 }
 
 const TEMPLATE_NAME = 'Mako';
-const dataToDate = (data) => {
+const dataToDate = (data: string[]) => {
   const [,, id, section, date] = data;
   return {
     id,

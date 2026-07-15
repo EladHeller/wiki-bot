@@ -22,7 +22,7 @@ async function getDateFromPage(id: string, title: string, section?: string) {
 }
 
 const TEMPLATE_NAME = 'Nrg';
-const dataToDate = (data) => {
+const dataToDate = (data: string[]) => {
   const [,, id, date, section, art] = data;
   return {
     id: `${art ?? ''}/${id}`,

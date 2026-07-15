@@ -119,7 +119,7 @@ async function generalLinkConverter(generalLink: CiteNewsTemplate | GeneralLinkT
     return '';
   }
   const date = generalLinkData?.['תאריך'] ?? citeNews?.['access-date'] ?? '';
-  const otherData = generalLink['מידע נוסף'] ?? '';
+  const otherData = 'מידע נוסף' in generalLink ? generalLink['מידע נוסף'] ?? '' : '';
   const otherWords = (otherData || date) ? `${date}${(date && otherData) ? ', ' : ''}${otherData}` : '';
 
   const title = generalLinkData?.['כותרת'] || citeNews?.title || '';

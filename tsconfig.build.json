@@ -7,8 +7,10 @@
         "esModuleInterop": true,
         "strictNullChecks": true,
         "resolveJsonModule": true,
+        "rootDir": "bot",
         "outDir": "dist",
-        "strict": false
+        "strict": true,
+        "useUnknownInCatchVariables": false
     },
     "include": ["bot"],
     "exclude": ["bot/__tests__"]

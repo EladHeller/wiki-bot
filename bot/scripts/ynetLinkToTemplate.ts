@@ -1,6 +1,6 @@
 import { JSDOM } from 'jsdom';
 import { WikiLink } from '../wiki/wikiLinkParser';
-import { GeneralLinkTemplateData } from './types';
+import { CiteNewsTemplate, GeneralLinkTemplateData } from './types';
 import { linksToTemplates } from './utils';
 import { getAttr, getMetaValue, getSchemaData } from '../scraping';
 import { getLocalDate } from '../utilities';
@@ -62,7 +62,10 @@ async function getArticleData(url: string, linkText: string): Promise<PageData |
   }
 }
 
-async function generalLinkConverter(generalLink: GeneralLinkTemplateData) {
+async function generalLinkConverter(generalLink: GeneralLinkTemplateData | CiteNewsTemplate) {
+  if (!('כתובת' in generalLink)) {
+    return null;
+  }
   const url = generalLink['כתובת'];
   const match = url?.match(articleRegex);
   const articleId = match?.[1] ?? url?.match(generalRegex)?.[1] ?? '';

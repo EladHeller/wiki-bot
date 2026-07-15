@@ -17,7 +17,7 @@ export interface IWikiApi {
   request(path: string, method?: string, data?: Record<string, any>): Promise<any>;
   continueQuery(path: string, resultSelector?: (result: any) => any[], continueObject?: Record<string, string>):
     AsyncGenerator<any, void, void>;
-  recursiveSubCategories(category: string, limit?: number): AsyncGenerator<WikiPage, WikiPage, void>;
+  recursiveSubCategories(category: string, limit?: number): AsyncGenerator<WikiPage, void, void>;
   backlinksTo(target: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   edit(
     articleTitle: string, summary: string, content: string, baseRevId: number, newSectionTitle?: string, minor?: boolean
@@ -356,7 +356,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     category: string,
     limit = 500,
     seen = new Set<string>(),
-  ) {
+  ): AsyncGenerator<WikiPage, void, void> {
     const generator = listCategory(category, limit, 'subcat');
 
     for await (const subCategory of generator) {

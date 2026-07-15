@@ -27,7 +27,7 @@ describe('fixKnessetBillLinks', () => {
       yield* [];
     });
     mockAsyncGeneratorMapWithSequence.mockImplementation(
-      async (_sequenceSize: number, _generator: unknown, callback) => {
+      async (_sequenceSize: number, _generator: unknown, callback: (page: unknown) => () => Promise<unknown>) => {
         await callback({
           pageid: 1, ns: 0, title: 'ערך', extlinks: [],
         })();

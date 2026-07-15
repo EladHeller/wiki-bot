@@ -36,6 +36,7 @@ export type PageInfo = {
   pageid?: number;
   title?: string;
   invalidreason?: string;
+  protection?: { type: string, level: string, expiry: string }[];
 }
 
 export type WikiPage = {

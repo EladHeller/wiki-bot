@@ -8,7 +8,7 @@ import { logger } from '../utilities/logger';
 const baseTemplatePageName = 'תבנית:אבדות במלחמת חרבות ברזל';
 const templatePageName = `${baseTemplatePageName}/נתונים`;
 
-const keysMapping = {
+const keysMapping: Record<string, string> = {
   חיילים: 'soldiersKilled',
   'חיילים בעזה': 'soldiersKilledManeuver',
   'חיילים פצועים': 'soldiersWounded',
@@ -25,7 +25,7 @@ const keysMapping = {
   // 'חטופים ששוחררו': 'שוחררו או חולצו',
 };
 
-function replaceData(content: string, rows: string[], fieldName: string, newData?: number): string {
+function replaceData(content: string, rows: string[], fieldName: string, newData?: number | null): string {
   const templateRow = rows.find((row) => row.startsWith(`|${fieldName}=`) || row.startsWith(`| ${fieldName}=`));
   if (!templateRow || !newData) {
     return content;
@@ -61,7 +61,7 @@ export default async function ironSwordsBot() {
     const rows = content.split('\n').filter((row) => row.trim().startsWith('|'));
     let newContent = content;
     Object.entries(keysMapping).forEach(([key, value]) => {
-      newContent = replaceData(newContent, rows, key, allData[value]);
+      newContent = replaceData(newContent, rows, key, allData[value as keyof typeof allData]);
     });
     if (newContent === content) {
       console.log('No changes');

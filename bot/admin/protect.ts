@@ -39,7 +39,7 @@ const MODULE_NAMESPACE = 828;
 const TEMPLATE_CSS_SEARCH = 'contentmodel:sanitized-css';
 
 async function needProtectFromTitles(api: IWikiApi, titles: string[]): Promise<string[]> {
-  const promises: any[] = [];
+  const promises: Array<Promise<import('../types').PageInfo[]>> = [];
   for (let i = 0; i < titles.length; i += 50) {
     promises.push(api.info(titles.slice(i, i + 50)));
   }
