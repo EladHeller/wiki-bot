@@ -57,8 +57,8 @@ describe('ai generated images bot', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
-    mockWikiApi.mockImplementation(() => mockHeWikiApi);
-    mockBaseWikiApi.mockImplementation(() => ({ login: mockLogin }));
+    mockWikiApi.mockReturnValue(mockHeWikiApi);
+    mockBaseWikiApi.mockReturnValue({ login: mockLogin });
   });
 
   afterEach(() => {
