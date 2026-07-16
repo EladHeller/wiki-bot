@@ -118,8 +118,8 @@ export default async function deleteBot() {
   logs.push(...(await deleteRedirects(api, 3, 1, ['הפניה ממרחב שיחת משתמש למרחב שיחה'], 30)));
   logs.push(...(await deleteRedirects(api, 0, 2, ['הפניה ממרחב ראשי למרחב משתמש'])));
   logs.push(...(await deleteRedirects(api, 0, 118, ['הפניה ממרחב ראשי למרחב טיוטה'])));
-  await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם');
-  await writeAdminBotLogs(api, convertLogs, 'משתמש:Sapper-bot/מחיקת דפי פלט של בוט ההסבה');
+  await writeAdminBotLogs(api, logs, `משתמש:${process.env.BOT_NAME}/מחיקת הפניות חוצות מרחבי שם`);
+  await writeAdminBotLogs(api, convertLogs, `משתמש:${process.env.BOT_NAME}/מחיקת דפי פלט של בוט ההסבה`);
 }
 
 export const main = botLoggerDecorator(deleteBot, { botName: 'בוט מחיקת הפניות' });

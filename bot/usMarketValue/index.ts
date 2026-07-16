@@ -97,11 +97,12 @@ export async function checkWikidata() {
     ],
   );
   const tableText = buildTable(['קישור לערך', 'מזהה מניה בוויקיפדיה', 'מזהה ויקינתונים', 'מזהה מניה בוויקינתונים'], table);
-  const info = await api.info(['user:Sapper-bot/מניות ארצות הברית']);
+  const botPage = `user:${process.env.BOT_NAME}/מניות ארצות הברית`;
+  const info = await api.info([botPage]);
   if (!info[0].lastrevid) {
     throw new Error('Failed to get revid');
   }
-  await api.edit('user:Sapper-bot/מניות ארצות הברית', 'עדכון', tableText, info[0].lastrevid);
+  await api.edit(botPage, 'עדכון', tableText, info[0].lastrevid);
 }
 
 export default async function usMarketValueBot() {

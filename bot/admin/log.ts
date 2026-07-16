@@ -5,7 +5,7 @@ import { getParagraphContent, getUsersFromTagParagraph, Paragraph } from '../wik
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import { ArticleLog } from './types';
 
-const tagsPage = 'משתמש:Sapper-bot/תיוג משתמשים';
+const tagsPage = `משתמש:${process.env.BOT_NAME}/תיוג משתמשים`;
 
 function isParagraphArray(logs: ArticleLog[] | Paragraph[]): logs is Paragraph[] {
   const firstElement = logs[0];

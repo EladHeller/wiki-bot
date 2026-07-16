@@ -2,10 +2,14 @@ import { findTemplate } from '../../wiki/newTemplateParser';
 import { IWikiApi } from '../../wiki/WikiApi';
 import { getInnerLink } from '../../wiki/wikiLinkParser';
 import { getArchiveTitle } from '../../utilities/archiveUtils';
+import { escapeRegex } from '../../utilities';
 
-const archiveCommandRegex = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב(\s+ל)?:.*/im;
-const archiveCommandRegexGlobal = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +ארכב(\s+ל)?:.*/gim;
-const moveCommandRegexGlobal = /^ *(:)*@\[\[(?:(?:משתמש|user):)?Sapper-bot(?:\|Sapper-bot)?\]\] +העבר:.*/gim;
+const botName = process.env.BOT_NAME as string;
+const escapedBotName = escapeRegex(botName);
+const botMentionPattern = `@\\[\\[(?:(?:משתמש|user):)?${escapedBotName}(?:\\|${escapedBotName})?\\]\\]`;
+const archiveCommandRegex = new RegExp(`^ *(:)*${botMentionPattern} +ארכב(\\s+ל)?:.*`, 'im');
+const archiveCommandRegexGlobal = new RegExp(`^ *(:)*${botMentionPattern} +ארכב(\\s+ל)?:.*`, 'gim');
+const moveCommandRegexGlobal = new RegExp(`^ *(:)*${botMentionPattern} +העבר:.*`, 'gim');
 
 async function innerMove(
   api: IWikiApi,

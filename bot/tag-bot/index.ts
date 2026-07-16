@@ -1,6 +1,6 @@
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { WikiNotification } from '../types';
-import { getLocalTimeAndDate } from '../utilities';
+import { escapeRegex, getLocalTimeAndDate } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getAllParagraphs, getParagraphContent, parseParagraph } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
@@ -10,7 +10,13 @@ import { logger } from '../utilities/logger';
 import { checkExternalLinks } from './actions/checkPage';
 import { getRedirectTargetFromContent } from '../wiki/redirectParser';
 
-const TAG_PAGE_NAME = 'משתמש:Sapper-bot/בוט התיוג';
+const botName = process.env.BOT_NAME as string;
+const escapedBotName = escapeRegex(botName);
+const botMentionRegex = new RegExp(`@\\[\\[(?:(?:משתמש|user):)?${escapedBotName}(?:\\|${escapedBotName})?\\]\\]`, 'i');
+const directBotMentionRegex = new RegExp(`^@(?:(?:משתמש|user):)?${escapedBotName}`, 'i');
+const botNameRegex = new RegExp(`@?${escapedBotName}`, 'i');
+const TAG_PAGE_NAME = `משתמש:${botName}/בוט התיוג`;
+const EMAILS_PAGE_NAME = `user:${botName}/אימיילים`;
 const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
 
 const failedMessage = 'שגיאה לא ידועה: [[משתמש:החבלן]], שים לב ותקן.';
@@ -90,7 +96,7 @@ async function performAction(
   try {
     const pageContent = await api.articleContent(title);
     const paragraphs = getAllParagraphs(pageContent.content, title);
-    const paragraphContent = paragraphs.find((paragraph) => paragraph.match(/@\[\[(?:(?:משתמש|user):)?Sapper-bot/i)
+    const paragraphContent = paragraphs.find((paragraph) => paragraph.match(botMentionRegex)
       && paragraph.match(actionRegex)
       && paragraph.includes(user)
       && getTimeStampOptions(timestamp).some((time) => paragraph.includes(time)));
@@ -258,14 +264,14 @@ async function handleNotification(
   console.log({ title });
   const { body } = notification['*'];
   console.log({ body });
-  if (!body.trim().match(/^@(?:(?:משתמש|user):)?Sapper-bot/i)) {
+  if (!body.trim().match(directBotMentionRegex)) {
     console.log('Not for bot');
     return;
   }
   const user = notification.agent.name;
   const commentSummary = getCommentSummary(user);
   const commentPrefix = getCommentPrefix(user);
-  const withoutTag = body.replace(/@?Sapper-bot/i, '').trim();
+  const withoutTag = body.replace(botNameRegex, '').trim();
   console.log({ withoutTag });
   if (!withoutTag.includes(':')) {
     console.log('Probably it is just mention?');
@@ -301,12 +307,12 @@ async function saveNotification(api: IWikiApi, notification: WikiNotification) {
   try {
     const content = `@[[משתמש:החבלן]], שים לב: [${notification['*'].links.primary.url} ${notification['*'].links.primary.label}]. ~~~~`;
     const title = notification['*'].header;
-    const [info] = await api.info(['user:Sapper-bot/אימיילים']);
+    const [info] = await api.info([EMAILS_PAGE_NAME]);
     const revid = info?.lastrevid;
     if (!revid) {
-      throw new Error('No revid for user:Sapper-bot/אימיילים');
+      throw new Error(`No revid for ${EMAILS_PAGE_NAME}`);
     }
-    await api.edit('user:Sapper-bot/אימיילים', title, content, revid, title);
+    await api.edit(EMAILS_PAGE_NAME, title, content, revid, title);
   } catch (e) {
     logger.logError(`Failed to save notification: ${e.message || e.data || e.toString()}`);
   }

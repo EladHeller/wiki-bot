@@ -458,7 +458,7 @@ describe('convertContentToWikiPage', () => {
             contentformat: 'text/x-wiki',
           },
         },
-        user: 'Sapper-bot',
+        user: process.env.BOT_NAME as string,
         size: content.length,
       }],
     };
