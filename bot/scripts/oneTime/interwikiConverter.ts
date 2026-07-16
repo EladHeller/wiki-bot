@@ -1,9 +1,9 @@
 import { WikiPage } from '../../types';
-import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage, convertContentToWikiPage } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
 
-const BASE_SEARCH_PATTERN = '"?\\[\\[([^]]+)\\]\\]"?\\s*\\<small\\>\\s*\\(\\[\\[:([a-zA-Z-]+):';
-const SEARCH_PATTERN = `${BASE_SEARCH_PATTERN}([^]|]+)\\|[א-ת-' ]+'\\]\\]\\)\\s*\\<\\/small\\>`;
+const BASE_SEARCH_PATTERN = '\\"?\\[\\[([^]]+)\\]\\]\\"?\\s*\'*\\<small\\>\\s*\\(\'*?\\[\\[:([a-zA-Z-]+):';
+const SEARCH_PATTERN = `${BASE_SEARCH_PATTERN}([^]|]+)\\|[א-ת-' ]+['׳]?\\]\\]'*\\)?\\s*(\\((?:</small><small>)?\\d+(?:-\\d+)?(?:</small><small>)?\\d*(?:-\\d+)?\\))?\\s*([.,;:])?\\s*\\<\\/small\\>'*`;
 const regex = new RegExp(SEARCH_PATTERN.replaceAll('^]', '^\\]'), 'gi');
 const SUMMARY = 'הסבת קישורי בינוויקי לתבנית קישור שפה';
 
@@ -227,26 +227,33 @@ async function handlePage(api: IWikiApi, page: WikiPage) {
     console.error('no content or revid', page.title);
     return;
   }
-  const matches = content?.matchAll(regex);
-  if (!matches) {
+  const matches = content.matchAll(regex);
+  const matchesArray = Array.from(matches);
+  if (!matchesArray.length) {
     console.error(page.title, 'no matches');
     return;
   }
   let newContent = content;
-  for (const match of matches) {
-    const [text, hebrewTitle, languageCode, foreignTitle] = match;
+  for (const match of matchesArray) {
+    const [text, hebrewTitle, languageCode, foreignTitle, year, comma] = match;
     if (hebrewTitle && foreignTitle && languageCode) {
       const languageName = langugageCodeToLanguageName[languageCode.toLocaleLowerCase()];
       const normalizedForeignTitle = decodeURIComponent(foreignTitle.replace(/_/g, ' '));
       if (languageName) {
         const containsQuotationMarks = !!text.match(/"\[\[([^\]]+)\]\]"/);
-        newContent = newContent.replace(text, `{{קישור שפה|${languageName}|${normalizedForeignTitle}|${hebrewTitle}${containsQuotationMarks ? '|מירכאות=כן' : ''}}}`);
+        newContent = newContent.replace(text, `{{קישור שפה|${languageName}|${normalizedForeignTitle}|${hebrewTitle}${containsQuotationMarks ? '|מירכאות=כן' : ''}}}${year ? ` <small>${year.replace('</small><small>', '')}</small>` : ''}${comma || ''}`);
       }
     }
   }
   if (newContent !== content) {
     await api.edit(page.title, SUMMARY, newContent, revid);
   }
+}
+
+export async function checkPage(api: IWikiApi, title: string) {
+  const { content, revid } = await api.articleContent(title);
+  const page = convertContentToWikiPage(content, revid, title);
+  await handlePage(api, page);
 }
 
 export default async function interwikiConverter(api: IWikiApi) {
