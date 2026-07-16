@@ -1,7 +1,10 @@
+const wikiBaseUrl = process.env.BASE_URL;
+const botName = process.env.BOT_NAME;
+
 export async function querySparql(query: string): Promise<Record<string, string>[]> {
   const res = await fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}&format=json`, {
     headers: {
-      'User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
+      'User-Agent': `${botName}/1.0 (${wikiBaseUrl}/wiki/User:${botName})`,
     },
   });
   if (!res.ok) {

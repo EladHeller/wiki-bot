@@ -12,6 +12,12 @@ Parameters:
   WikiPassword:
     Description: The password of wiki user.
     Type: String
+  WikiBaseUrl:
+    Description: The base URL of the wiki.
+    Type: String
+  WikiBotName:
+    Description: The name of the wiki bot.
+    Type: String
   WikiProtectUserName:
     Description: The name of wiki protect user.
     Type: String
@@ -50,6 +56,8 @@ Globals:
       Variables:
         USER_NAME: !Ref WikiUserName
         PASSWORD: !Ref WikiPassword
+        BASE_URL: !Ref WikiBaseUrl
+        BOT_NAME: !Ref WikiBotName
 
 Resources:
   MarketValueFunction:
@@ -253,6 +261,8 @@ Resources:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
+          BASE_URL: !Ref WikiBaseUrl
+          BOT_NAME: !Ref WikiBotName
       EphemeralStorage:
         Size: 2048
 
@@ -337,6 +347,8 @@ Resources:
         Variables:
           USER_NAME: !Ref WikiUserName
           PASSWORD: !Ref WikiPassword
+          BASE_URL: !Ref WikiBaseUrl
+          BOT_NAME: !Ref WikiBotName
       ImageConfig:
         Command:
           - dist/tag-bot/playwrightCheck/index.main

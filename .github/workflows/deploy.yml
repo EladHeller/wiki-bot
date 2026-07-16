@@ -45,6 +45,8 @@ jobs:
           CODE_BUCKET: ${{ secrets.CODE_BUCKET_NAME }}
           USER_NAME: ${{ secrets.WIKI_USER_NAME }}
           PASSWORD: ${{ secrets.WIKI_USER_PASSWORD }}
+          BASE_URL: ${{ vars.WIKI_BASE_URL || 'https://he.wikipedia.org' }}
+          BOT_NAME: ${{ vars.WIKI_BOT_NAME || 'Sapper-bot' }}
           PROTECT_USER_NAME: ${{ secrets.WIKI_PROTECT_USER_NAME }}
           PROTECT_PASSWORD: ${{ secrets.WIKI_PROTECT_USER_PASSWORD }}
           DELETE_USER_NAME: ${{ secrets.WIKI_DELETE_USER_NAME }}

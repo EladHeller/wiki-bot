@@ -6,8 +6,10 @@ import { baseLogin, getToken as getWikiToken } from './wikiLogin';
 import { IBaseWikiApi, WikiApiConfig } from '../types';
 import { logger } from '../utilities/logger';
 
+const wikiBaseUrl = process.env.BASE_URL;
+
 export const defaultConfig: Partial<WikiApiConfig> = {
-  baseUrl: 'https://he.wikipedia.org/w/api.php',
+  baseUrl: wikiBaseUrl && `${wikiBaseUrl}/w/api.php`,
   userName: process.env.USER_NAME,
   password: process.env.PASSWORD,
 };
@@ -20,17 +22,18 @@ function validateConfig(config: Partial<WikiApiConfig> = defaultConfig): config 
 }
 
 export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWikiApi {
+  const botName = process.env.BOT_NAME;
   const jar = new CookieJar();
   const client = wrapper(axios.create({
     jar,
     headers: {
-      'User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
+      'User-Agent': `${botName}/1.0 (${wikiBaseUrl}/wiki/User:${botName})`,
     },
   }));
 
   const actualConfig = { ...defaultConfig, ...apiConfig };
   let token: string;
-  if (!validateConfig(actualConfig)) {
+  if (!validateConfig(actualConfig) || !botName || !wikiBaseUrl) {
     throw new Error('Missing username or password');
   }
   const config = actualConfig; // Just for typescript

@@ -10,6 +10,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      BASE_URL: ${{ vars.WIKI_BASE_URL || 'https://he.wikipedia.org' }}
+      BOT_NAME: ${{ vars.WIKI_BOT_NAME || 'Sapper-bot' }}
     steps:
       - uses: actions/checkout@v7
         with:

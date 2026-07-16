@@ -11,6 +11,8 @@ jest.unstable_mockModule('../wiki/WikiApi', () => ({
   default: () => moduleMockApi,
 }));
 
+process.env.BOT_NAME = 'Logger-bot';
+
 const { default: botLoggerDecorator } = await import('../decorators/botLoggerDecorator');
 
 describe('botLoggerDecorator', () => {
@@ -220,11 +222,11 @@ describe('botLoggerDecorator', () => {
 
     await decorated();
 
-    expect(mockApi.articleContent).toHaveBeenCalledWith('משתמש:Sapper-bot/לוג ריצות');
+    expect(mockApi.articleContent).toHaveBeenCalledWith('משתמש:Logger-bot/לוג ריצות');
 
     const editCall = mockApi.edit.mock.calls[0];
 
-    expect(editCall[0]).toBe('משתמש:Sapper-bot/לוג ריצות');
+    expect(editCall[0]).toBe('משתמש:Logger-bot/לוג ריצות');
   });
 
   it('should add signature at the end of logs', async () => {
@@ -300,7 +302,7 @@ describe('botLoggerDecorator', () => {
     await decorated();
 
     expect(moduleMockApi.login).toHaveBeenCalledWith();
-    expect(moduleMockApi.articleContent).toHaveBeenCalledWith('משתמש:Sapper-bot/לוג ריצות');
+    expect(moduleMockApi.articleContent).toHaveBeenCalledWith('משתמש:Logger-bot/לוג ריצות');
   });
 
   it('should log to console when NODE_ENV is development', () => {
