@@ -14,7 +14,7 @@
     "docker-run": "sh ./build/wiki-bot-playwright/run.sh",
     "docker-test": "curl \"http://localhost:9000/2015-03-31/functions/function/invocations\" -d '{}'",
     "validate-cf": "tsx ./build/validate-cloudformation.ts",
-    "smoke-test": "tsx ./scripts/smoke-test.mjs",
+    "smoke-test": "NODE_OPTIONS='--no-experimental-require-module --no-experimental-detect-module' node --import tsx ./scripts/smoke-test.mjs",
     "test:ci": "npm run type-check && npm test && npm run lint:test && npm run smoke-test && npm run validate-cf",
     "rollback": "tsx --env-file=.env bot/scripts/rollback.ts",
     "experiments": "tsx --env-file=.env bot/experiments/index.ts"
@@ -33,12 +33,17 @@
     "@aws-sdk/client-sqs": "^3.1070.0",
     "@hebcal/core": "^6.6.0",
     "axios": "^1.18.1",
-    "axios-cookiejar-support": "^7.0.0",
+    "axios-cookiejar-support": "6.0.4",
     "find-hebrew-names": "^0.0.2",
     "jsdom": "^26.1.0",
     "openai": "^6.33.0",
     "playwright": "^1.61.0",
     "tough-cookie": "^6.0.1"
+  },
+  "overrides": {
+    "axios-cookiejar-support": {
+      "http-cookie-agent": "7.0.3"
+    }
   },
   "devDependencies": {
     "@aws-sdk/client-cloudformation": "^3.988.0",
