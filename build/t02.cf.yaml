@@ -14,6 +14,12 @@ Parameters:
   WikiPassword:
     Description: The password of wiki user.
     Type: String
+  WikiBaseUrl:
+    Description: The base URL of the wiki.
+    Type: String
+  WikiBotName:
+    Description: The name of the wiki bot.
+    Type: String
 
 Globals:
   Function:
@@ -31,6 +37,8 @@ Globals:
       Variables:
         USER_NAME: !Ref WikiUserName
         PASSWORD: !Ref WikiPassword
+        BASE_URL: !Ref WikiBaseUrl
+        BOT_NAME: !Ref WikiBotName
 
 Resources:
   KineretLevelFunction:

@@ -109,6 +109,12 @@ async function main() {
       ParameterKey: 'WikiPassword',
       ParameterValue: process.env.PASSWORD,
     }, {
+      ParameterKey: 'WikiBaseUrl',
+      ParameterValue: process.env.BASE_URL,
+    }, {
+      ParameterKey: 'WikiBotName',
+      ParameterValue: process.env.BOT_NAME,
+    }, {
       ParameterKey: 'WikiProtectUserName',
       ParameterValue: process.env.PROTECT_USER_NAME,
     }, {
@@ -153,6 +159,12 @@ async function main() {
     }, {
       ParameterKey: 'WikiPassword',
       ParameterValue: process.env.PASSWORD,
+    }, {
+      ParameterKey: 'WikiBaseUrl',
+      ParameterValue: process.env.BASE_URL,
+    }, {
+      ParameterKey: 'WikiBotName',
+      ParameterValue: process.env.BOT_NAME,
     }],
     ['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'],
   );

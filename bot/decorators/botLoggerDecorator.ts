@@ -3,7 +3,7 @@ import { getLocalTimeAndDate } from '../utilities';
 import shabathProtectorDecorator from './shabathProtector';
 import { BotLoggerContext, loggerAsyncLocalStorage } from '../utilities/logger';
 
-const BOT_LOG_PAGE = 'משתמש:Sapper-bot/לוג ריצות';
+const BOT_LOG_PAGE = `משתמש:${process.env.BOT_NAME}/לוג ריצות`;
 
 const findNextHeadingNumber = (content: string, baseHeading: string): number => {
   const escapedHeading = baseHeading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
