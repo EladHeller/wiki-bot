@@ -384,7 +384,7 @@ const pages = [
   'אמברוז ברנסייד',
   'ניקולאי האראלמביה',
 ];
-const typeMapping = {
+const typeMapping: Record<string, string> = {
   חייל: 'צבאי',
   חיילת: 'צבאי',
   שוטר: 'משטרתי',

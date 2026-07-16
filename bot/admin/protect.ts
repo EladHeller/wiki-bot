@@ -7,6 +7,7 @@ import pagesWithoutProtectInMainPage from './pagesWithoutProtectInMainPage';
 import pagesWithCopyrightIssuesInMainPage from './pagesWithCopyrightIssuesInMainPage';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { logger } from '../utilities/logger';
+import { type PageInfo } from '../types';
 
 function getMonthTemplates(month: number, year: number, startWithDay = 1) {
   const dates: string[] = [];
@@ -39,7 +40,7 @@ const MODULE_NAMESPACE = 828;
 const TEMPLATE_CSS_SEARCH = 'contentmodel:sanitized-css';
 
 async function needProtectFromTitles(api: IWikiApi, titles: string[]): Promise<string[]> {
-  const promises: any[] = [];
+  const promises: Array<Promise<PageInfo[]>> = [];
   for (let i = 0; i < titles.length; i += 50) {
     promises.push(api.info(titles.slice(i, i + 50)));
   }

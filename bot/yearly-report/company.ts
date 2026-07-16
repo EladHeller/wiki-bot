@@ -56,25 +56,25 @@ const currencyDict: Record<string, CurrencyCode> = {
 export default class Company {
   name: string;
 
-  mayaId: string;
+  mayaId = '';
 
-  mayaDataForWiki: Record<string, any>;
+  mayaDataForWiki: Record<string, any> = {};
 
-  wikiTemplateData: Record<string, any>;
+  wikiTemplateData: Record<string, any> = {};
 
-  isContainsTemplate: boolean;
+  isContainsTemplate = false;
 
-  articleText: string;
+  articleText = '';
 
-  reference: string;
+  reference = '';
 
-  templateText: string;
+  templateText = '';
 
-  templateData: Record<string, any>;
+  templateData: Record<string, any> = {};
 
-  newArticleText: string;
+  newArticleText = '';
 
-  hasData: boolean;
+  hasData = false;
 
   companyId: string;
 
@@ -82,7 +82,7 @@ export default class Company {
 
   revisionSize: number;
 
-  revisionId: number;
+  revisionId = 0;
 
   api: IWikiApi;
 
@@ -124,9 +124,10 @@ export default class Company {
       rowsField = 'CurrPeriodValue';
     }
     mayaData.AllRows.forEach((row) => {
-      mayaDetails.set(row.Name, row[rowsField]);
+      mayaDetails.set(row.Name, row[rowsField as keyof typeof row]);
     });
-    const mayaYear = mayaData[periodField].Year;
+    const mayaPeriod = periodField === 'CurrentPeriod' ? mayaData.CurrentPeriod : mayaData.PreviousYear;
+    const mayaYear = mayaPeriod.Year;
 
     this.appendMayaData(mayaDetails, mayaYear);
     this.appendWikiData(wikiData);

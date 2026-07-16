@@ -55,7 +55,7 @@ export function parseParamValidatorError(text: string): ParamValidatorError | nu
 
 export function getParamValidatorErrors(parsedContent: string): ParamValidatorError[] {
   return Array.from(new JSDOM(parsedContent).window.document.querySelectorAll(VALIDATOR_ERROR_SELECTOR))
-    .map((errorElement: HTMLElement) => parseParamValidatorError(errorElement.textContent))
+    .map((errorElement) => parseParamValidatorError(errorElement.textContent))
     .filter((error): error is ParamValidatorError => error != null);
 }
 

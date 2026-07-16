@@ -3,7 +3,7 @@ import { getLocalDate } from '../../../utilities';
 import { getAttr, getMetaValue, getSchemaData } from '../../../scraping';
 import templateDates from './templateDates';
 
-const sectionDict = {
+const sectionDict: Record<string, string> = {
   podcast: 'Podcast/item.aspx?pid=',
   program: 'Program/?catId=',
   radio: 'Radio/item.aspx?pid=',

@@ -7,7 +7,7 @@ const SEARCH_PATTERN = `${BASE_SEARCH_PATTERN}([^]|]+)\\|[א-ת-' ]+'\\]\\]\\)\\
 const regex = new RegExp(SEARCH_PATTERN.replaceAll('^]', '^\\]'), 'gi');
 const SUMMARY = 'הסבת קישורי בינוויקי לתבנית קישור שפה';
 
-const langugageCodeToLanguageName = {
+const langugageCodeToLanguageName: Record<string, string> = {
   ab: 'אבחזית',
   ady: 'אדיגית',
   udm: 'אודמורטית',

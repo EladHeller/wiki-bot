@@ -21,6 +21,11 @@ type IndexData = {
   indexStocks: string[];
 };
 
+type SupportedIndex = {
+  template?: string;
+  category: string;
+};
+
 async function getCompanysData(api: IWikiApi, templateName: string) {
   const { content } = await api.articleContent(templateName);
   const templateData = findTemplate(content, '#switch: {{{ID}}}', templateName);
@@ -87,13 +92,13 @@ async function getIndexes(api: IWikiApi) {
   };
 }
 
-async function getSupportedIndexes(api: IWikiApi): Promise<Record<string, { template: string, category: string }>> {
+async function getSupportedIndexes(api: IWikiApi): Promise<Record<string, SupportedIndex>> {
   const { content } = await api.articleContent(companyIndexesTemplatesBase);
   const tables = parseTableText(content);
   const { rows } = tables[0];
   return rows
     .filter((row) => row.fields.length === 2)
-    .reduce((acc, row) => {
+    .reduce<Record<string, SupportedIndex>>((acc, row) => {
       const templateName = row.fields[1].toString().match(/\{\{תב\|(.*)\}\}/)?.[1];
       const category = row.fields[1].toString().match(/\[\[:קטגוריה:(.*)\]\]/)?.[1];
       acc[row.fields[0].toString()] = {
@@ -114,7 +119,7 @@ async function updateCompanyIndexes(api: IWikiApi, companyIndexesDict: Record<st
   const newData = Object.entries(companyIndexesDict).map(([companyId, indexes]) => {
     const companyIndexesTemplates = indexes
       .map((index) => suppurtedIndexes[index])
-      .filter((index) => index && index.template)
+      .filter((index): index is SupportedIndex & { template: string } => Boolean(index?.template))
       .map(({ category, template }) => `{{${template}}} ${category ? `[[קטגוריה:${category}]]` : ''}`);
     return [companyId, companyIndexesTemplates.join(' ')];
   });

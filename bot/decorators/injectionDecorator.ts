@@ -8,31 +8,33 @@ const injetionDictionary = {
   wikiApi: () => WikiApi(),
 } satisfies Record<keyof CallbackArgs, (...args: any[]) => any>;
 
-const implemtationDictionary: Partial<Record<keyof CallbackArgs, any>> = {};
+const implemtationDictionary: Partial<CallbackArgs> = {};
 
 export default function injectionDecorator<R>(
-  cb: (args?: CallbackArgs) => R,
+  cb: (args: CallbackArgs) => R,
   overrideInjetionDictionary?: typeof injetionDictionary, // For testing
   overrideImplemtationDictionary?: typeof implemtationDictionary, // For testing
 ) {
   const currentImplemtationDictionary = overrideImplemtationDictionary ?? implemtationDictionary;
   const currentInjetionDictionary = overrideInjetionDictionary ?? injetionDictionary;
-  return async function injection(): Promise<R> {
+  return async function injection(): Promise<R | undefined> {
     let actualArgs: CallbackArgs | null = null;
     if (cb.length > 0) {
       const [callbackArgs] = getArguments(cb);
       if (callbackArgs instanceof Array) {
-        const argsDictoary = {} satisfies CallbackArgs;
+        const argsDictoary: CallbackArgs = {};
         callbackArgs.forEach((arg) => {
           if (arg in currentInjetionDictionary) {
-            argsDictoary[arg] = currentImplemtationDictionary[arg] ?? currentInjetionDictionary[arg]();
-            currentImplemtationDictionary[arg] = argsDictoary[arg];
+            const injectionKey = arg as keyof CallbackArgs;
+            argsDictoary[injectionKey] = currentImplemtationDictionary[injectionKey]
+              ?? currentInjetionDictionary[injectionKey]();
+            currentImplemtationDictionary[injectionKey] = argsDictoary[injectionKey];
           }
         });
         actualArgs = argsDictoary;
       }
     }
 
-    return cb(actualArgs ?? undefined);
+    return actualArgs ? cb(actualArgs) : (cb as () => R)();
   };
 }

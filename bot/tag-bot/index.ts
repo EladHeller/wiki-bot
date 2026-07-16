@@ -293,7 +293,7 @@ async function handleNotification(
     console.log({ commentRes });
     return;
   }
-  const action = actions[command];
+  const action = actions[command as keyof typeof actions];
   await action(api, notification);
 }
 

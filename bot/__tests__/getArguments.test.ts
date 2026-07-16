@@ -4,7 +4,7 @@ import { getArguments } from '../decorators/getArguments';
 describe('getArguments', () => {
   it('should parse args from function', () => {
     // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars
-    function a({ wikiApi, asdasd }, b: string,     c: number) {
+    function a({ wikiApi, asdasd }: { wikiApi: unknown, asdasd: unknown }, b: string,     c: number) {
     }
 
     expect(getArguments(a)).toStrictEqual([['wikiApi', 'asdasd'], 'b', 'c']);
@@ -12,7 +12,7 @@ describe('getArguments', () => {
 
   it('should parse args from arrow function', () => {
     // eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars
-    const a = ({ wikiApi, asdasd }, b: string, c: number) => {
+    const a = ({ wikiApi, asdasd }: { wikiApi: unknown, asdasd: unknown }, b: string, c: number) => {
     };
 
     expect(getArguments(a)).toStrictEqual([['wikiApi', 'asdasd'], 'b', 'c']);
@@ -24,7 +24,7 @@ describe('getArguments', () => {
       // eslint-disable-next-line indent
 // /* comment */
 /* eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars */ // eslint-disable-line indent
-      { wikiApi,  /* comment //  */  asdasd }, /* comment */
+      { wikiApi,  /* comment //  */  asdasd }: { wikiApi: unknown, asdasd: unknown }, /* comment */
       /*
     eslint-disable-next-line no-multi-spaces, @typescript-eslint/no-unused-vars, no-unused-vars
     */

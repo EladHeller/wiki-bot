@@ -20,7 +20,7 @@ async function main() {
   const allcategories: Category[] = [];
   do {
     res = await generator.next();
-    res?.value.query.allcategories.forEach((page) => {
+    res?.value.query.allcategories.forEach((page: { '*': string, size: number }) => {
       const name: string = page['*'];
       allcategories.push({
         name,

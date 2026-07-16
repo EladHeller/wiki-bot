@@ -9,7 +9,8 @@
         "resolveJsonModule": true,
         "outDir": "dist",
         "sourceMap": true,
-        "strict": false
+        "strict": true,
+        "useUnknownInCatchVariables": false
     },
     "include": ["bot", "testConfig", "xmlbot"]
 }

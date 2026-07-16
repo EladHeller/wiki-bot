@@ -15,7 +15,7 @@ const TOSEFTA_CITE_TEMPLATE = 'צט/תוספתא';
 const MIDRASH_CITE_TEMPLATE = 'צט/מדרש';
 const YONATAN_CITE_TEMPLATE = 'צט/יהונתן';
 const TARGUM_CITE_TEMPLATE = 'צט/תרגום';
-const replaces = {
+const replaces: Record<string, string> = {
   ביכורים: 'בכורים',
   ידיים: 'ידים',
   מקוואות: 'מקואות',

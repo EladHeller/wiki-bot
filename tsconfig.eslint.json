@@ -6,7 +6,9 @@
         "esModuleInterop": true,
         "strictNullChecks": true,
         "resolveJsonModule": true,
-        "outDir": "dist"
+        "outDir": "dist",
+        "strict": true,
+        "useUnknownInCatchVariables": false
     },
     "include": [
         "bot",
