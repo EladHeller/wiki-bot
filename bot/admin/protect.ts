@@ -258,3 +258,37 @@ async function writeMainPageProtectionLogs(
   const logs = articleLogsFromTitles(needToProtect, errors);
   await writeAdminBotLogs(api, [...logs, ...needProtectLogs], 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
 }
+
+async function writeCopyrightLogsIfNeeded(api: IWikiApi) {
+  if (!runChecks) {
+    return;
+  }
+  const pagesWithCopyrightIssues = await pagesWithCopyrightIssuesInMainPage();
+  if (pagesWithCopyrightIssues.length) {
+    await writeAdminBotLogs(api, pagesWithCopyrightIssues, 'משתמש:Sapper-bot/זכויות יוצרים');
+  }
+}
+
+export async function protectBot() {
+  const api = WikiApi();
+  await api.login();
+
+  const unitPages = await getUnitPagesToProtect(api);
+  const templateCssPages = await getTemplateCssPagesToProtect(api);
+  const needToProtect = await collectMainPagePagesToProtect(api);
+  const allConvertPages = await getConvertBotPagesToProtect(api);
+  const convertPages = filterConvertBotPages(allConvertPages);
+
+  const errors = await protectPages(api, needToProtect, MAIN_PAGE_PROTECT, 'מופיע בעמוד הראשי');
+  const convertErrors = await protectPages(api, convertPages, MAIN_PAGE_PROTECT, 'דפי מפרט של בוט ההסבה');
+  const unitErrors = await protectPages(api, unitPages, UNIT_NAMESPACE_PROTECT, 'הגנה על מרחב יחידה');
+  const templateCssErrors = await protectPages(api, templateCssPages, UNIT_NAMESPACE_PROTECT, 'הגנה על דפי CSS במרחב תבנית');
+
+  await writeConvertPageLogs(api, allConvertPages, convertPages, convertErrors);
+  await writeUnitPageLogs(api, unitPages, unitErrors);
+  await writeTemplateCssPageLogs(api, templateCssPages, templateCssErrors);
+  await writeMainPageProtectionLogs(api, needToProtect, errors);
+  await writeCopyrightLogsIfNeeded(api);
+}
+
+export const main = botLoggerDecorator(protectBot, { botName: 'בוט הגנת דפים שמופיעים בעמוד הראשי' });
