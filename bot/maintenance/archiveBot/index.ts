@@ -3,8 +3,8 @@ import WikiApi from '../../wiki/WikiApi';
 import ArchiveBotModel from './ArchiveBotModel';
 
 const pages = [
-  'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי',
-  'משתמש:Sapper-bot/מחיקת הפניות חוצות מרחבי שם',
+  `משתמש:${process.env.BOT_NAME}/הגנת דפים שמופיעים בעמוד הראשי`,
+  `משתמש:${process.env.BOT_NAME}/מחיקת הפניות חוצות מרחבי שם`,
   'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים',
   'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים/לוג',
   'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים/עריכות',
@@ -12,8 +12,8 @@ const pages = [
 ];
 
 const archiveBySignatureDatePages = [
-  'משתמש:Sapper-bot/אימיילים',
-  'משתמש:Sapper-bot/לוג ריצות',
+  `משתמש:${process.env.BOT_NAME}/אימיילים`,
+  `משתמש:${process.env.BOT_NAME}/לוג ריצות`,
 ];
 
 export default async function archiveBot() {

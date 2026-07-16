@@ -6,6 +6,8 @@ import { IWikiApi } from '../wiki/WikiApi';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 import { Mocked } from '../../testConfig/mocks/types';
 
+const botName = process.env.BOT_NAME;
+
 describe('archiveParagraph', () => {
   let api: Mocked<IWikiApi>;
 
@@ -121,7 +123,7 @@ describe('archiveParagraph', () => {
     });
 
     const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
-    const paragraphContent = `paragraphContent\n:@[[משתמש:Sapper-bot]] ארכב: ${userSign}`;
+    const paragraphContent = `paragraphContent\n:@[[משתמש:${botName}]] ארכב: ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson');
 
@@ -161,7 +163,7 @@ describe('archiveParagraph', () => {
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב ל: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+:@[[משתמש:${botName}]] ארכב ל: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['ל', '[[שיחת תבנית:ספרינגפילד]]']);
 
@@ -209,7 +211,7 @@ ${statusTemplate}
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב ל: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+:@[[משתמש:${botName}]] ארכב ל: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['ל', '[[שיחת תבנית:ספרינגפילד]]']);
 
@@ -255,7 +257,7 @@ ${statusTemplate}
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב ל: שיחת תבנית:ספרינגפילד ${userSign}`;
+:@[[משתמש:${botName}]] ארכב ל: שיחת תבנית:ספרינגפילד ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['ל', 'שיחת תבנית:ספרינגפילד']);
 
@@ -302,7 +304,7 @@ ${statusTemplate}
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב: שיחת תבנית:ספרינגפילד ${userSign}`;
+:@[[משתמש:${botName}]] ארכב: שיחת תבנית:ספרינגפילד ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['wrong', 'שיחת תבנית:ספרינגפילד']);
 
@@ -327,7 +329,7 @@ paragraphContent
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] ארכב: יעד: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+:@[[משתמש:${botName}]] ארכב: יעד: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson', ['ל', '[[שיחת תבנית:ספרינגפילד]]']);
 

@@ -227,7 +227,7 @@ async function writeConvertPageLogs(
     convertErrors,
     (title) => !convertPages.includes(title),
   );
-  await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/הגנת דפי מפרט של בוט ההסבה');
+  await writeAdminBotLogs(api, logs, `משתמש:${process.env.BOT_NAME}/הגנת דפי מפרט של בוט ההסבה`);
 }
 
 async function writeUnitPageLogs(api: IWikiApi, unitPages: string[], unitErrors: string[]) {
@@ -235,7 +235,7 @@ async function writeUnitPageLogs(api: IWikiApi, unitPages: string[], unitErrors:
     return;
   }
   const logs = articleLogsFromTitles(unitPages, unitErrors);
-  await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/הגנת דפי מרחב יחידה');
+  await writeAdminBotLogs(api, logs, `משתמש:${process.env.BOT_NAME}/הגנת דפי מרחב יחידה`);
 }
 
 async function writeTemplateCssPageLogs(api: IWikiApi, templateCssPages: string[], templateCssErrors: string[]) {
@@ -243,7 +243,7 @@ async function writeTemplateCssPageLogs(api: IWikiApi, templateCssPages: string[
     return;
   }
   const logs = articleLogsFromTitles(templateCssPages, templateCssErrors);
-  await writeAdminBotLogs(api, logs, 'משתמש:Sapper-bot/הגנת דפי CSS במרחב תבנית');
+  await writeAdminBotLogs(api, logs, `משתמש:${process.env.BOT_NAME}/הגנת דפי CSS במרחב תבנית`);
 }
 
 async function writeMainPageProtectionLogs(
@@ -256,7 +256,7 @@ async function writeMainPageProtectionLogs(
     return;
   }
   const logs = articleLogsFromTitles(needToProtect, errors);
-  await writeAdminBotLogs(api, [...logs, ...needProtectLogs], 'משתמש:Sapper-bot/הגנת דפים שמופיעים בעמוד הראשי');
+  await writeAdminBotLogs(api, [...logs, ...needProtectLogs], `משתמש:${process.env.BOT_NAME}/הגנת דפים שמופיעים בעמוד הראשי`);
 }
 
 async function writeCopyrightLogsIfNeeded(api: IWikiApi) {
@@ -265,7 +265,7 @@ async function writeCopyrightLogsIfNeeded(api: IWikiApi) {
   }
   const pagesWithCopyrightIssues = await pagesWithCopyrightIssuesInMainPage();
   if (pagesWithCopyrightIssues.length) {
-    await writeAdminBotLogs(api, pagesWithCopyrightIssues, 'משתמש:Sapper-bot/זכויות יוצרים');
+    await writeAdminBotLogs(api, pagesWithCopyrightIssues, `משתמש:${process.env.BOT_NAME}/זכויות יוצרים`);
   }
 }
 

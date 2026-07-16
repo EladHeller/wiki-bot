@@ -6,6 +6,8 @@ import { IWikiApi } from '../wiki/WikiApi';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 import { Mocked } from '../../testConfig/mocks/types';
 
+const botName = process.env.BOT_NAME;
+
 describe('moveTo', () => {
   let api: Mocked<IWikiApi>;
 
@@ -32,7 +34,7 @@ describe('moveTo', () => {
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:Sapper-bot]] העבר: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+:@[[משתמש:${botName}]] העבר: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `some content before\n${paragraphContent}\nsome content after`;
 
     const result = await moveTo(
@@ -78,7 +80,7 @@ paragraphContent
 
     const paragraphContent = `==paragraph headline==
 paragraphContent
-:@[[משתמש:Sapper-bot]] העבר: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+:@[[משתמש:${botName}]] העבר: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `${paragraphContent}`;
 
     const result = await moveTo(
