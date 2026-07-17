@@ -1,3 +1,4 @@
+import { runSinglePage } from '../../interwikiLinks';
 import { WikiPage } from '../../types';
 import { asyncGeneratorMapWithSequence, contentFromPage, convertContentToWikiPage } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
@@ -225,13 +226,13 @@ async function handlePage(api: IWikiApi, page: WikiPage) {
   const { content, revid } = contentFromPage(page);
   if (!content || !revid) {
     console.error('no content or revid', page.title);
-    return;
+    return null;
   }
   const matches = content.matchAll(regex);
   const matchesArray = Array.from(matches);
   if (!matchesArray.length) {
     console.error(page.title, 'no matches');
-    return;
+    return null;
   }
   let newContent = content;
   for (const match of matchesArray) {
@@ -247,7 +248,10 @@ async function handlePage(api: IWikiApi, page: WikiPage) {
   }
   if (newContent !== content) {
     await api.edit(page.title, SUMMARY, newContent, revid);
+    return page.title;
   }
+
+  return null;
 }
 
 export async function checkPage(api: IWikiApi, title: string) {
@@ -258,8 +262,14 @@ export async function checkPage(api: IWikiApi, title: string) {
 
 export default async function interwikiConverter(api: IWikiApi) {
   const generator = api.search(`insource:/${BASE_SEARCH_PATTERN}/`, false, '0|14|100');
-
+  const converted: string[] = [];
   await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
-    await handlePage(api, page);
+    const result = await handlePage(api, page);
+    if (result) {
+      converted.push(result);
+    }
   });
+  for (const title of converted) {
+    await runSinglePage(title, api);
+  }
 }
