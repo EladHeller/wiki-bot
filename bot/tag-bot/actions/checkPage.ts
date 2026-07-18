@@ -58,6 +58,7 @@ export async function checkExternalLinks(
       });
     }
   }
+  console.log({ blockedLinks });
 
   if (!brokenLinks.length) {
     return blockedLinks.length > 0
