@@ -1,8 +1,21 @@
 import { handlePage } from '../../maintenance/copyrightViolationCore';
+import { logger } from '../../utilities/logger';
 import { getExternalLinks, WikiLink } from '../../wiki/wikiLinkParser';
+import { checkLinksWithHttp, LinkCheckResult, LinkCheckState } from './externalLinkChecker';
+import { lookupIABotLinks } from './internetArchiveBot';
 import { queuePlaywrightLinkCheck } from './playwrightLinkQueue';
 
 type CheckedLink = WikiLink & { error: string };
+
+function formatCheckError(result: LinkCheckResult): string {
+  if (result.error) {
+    return result.error;
+  }
+  if (result.status) {
+    return `לא ניתן להגיע לקישור - ${result.status} - ${result.statusText ?? ''}`;
+  }
+  return 'לא ניתן לקבוע אם הקישור תקין';
+}
 
 export async function checkExternalLinks(
   content: string,
@@ -12,61 +25,73 @@ export async function checkExternalLinks(
     commentId: string;
   },
 ) {
-  const brokenLinks: CheckedLink[] = [];
-  const blockedLinks: WikiLink[] = [];
   const links = getExternalLinks(content);
-
-  for (const link of links) {
+  const httpResults = await checkLinksWithHttp(links, queueContext?.title);
+  const unresolvedLinks = links.filter((link) => httpResults.get(link.link)?.state !== 'alive');
+  let iabotResults = new Map<string, LinkCheckState>();
+  if (unresolvedLinks.length > 0) {
     try {
-      const res = await fetch(link.link, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
-        },
-      });
-      if (res.status === 403) {
-        blockedLinks.push(link);
-      } else if (res.status >= 400) {
-        brokenLinks.push({
-          ...link,
-          error: `לא ניתן להגיע לקישור - ${res.status} - ${res.statusText}`,
-        });
-      }
+      iabotResults = await lookupIABotLinks(unresolvedLinks.map((link) => link.link));
     } catch (error) {
-      console.error(error);
-      brokenLinks.push({
-        ...link,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.logWarning(error);
     }
   }
-
-  if (blockedLinks.length > 0) {
+  const finalResults = links.map((link) => {
+    const httpResult = httpResults.get(link.link) ?? { state: 'unknown' } satisfies LinkCheckResult;
+    const iabotState = iabotResults.get(link.link);
+    const state = iabotState === 'alive' || iabotState === 'dead' ? iabotState : httpResult.state;
+    return { link, result: { ...httpResult, state } };
+  });
+  const brokenLinks: CheckedLink[] = finalResults
+    .filter(({ result }) => result.state === 'dead')
+    .map(({ link, result }) => ({ ...link, error: formatCheckError(result) }));
+  const linksForBackgroundCheck = finalResults
+    .filter(({ result }) => !['alive', 'dead'].includes(result.state))
+    .map(({ link }) => link);
+  const unverifiedLinks: CheckedLink[] = [];
+  let queuedLinksCount = 0;
+  if (linksForBackgroundCheck.length > 0) {
     try {
       await queuePlaywrightLinkCheck({
         title: queueContext?.title ?? '',
         commentSummary: queueContext?.commentSummary ?? '',
         commentId: queueContext?.commentId ?? '',
-        links: blockedLinks,
+        links: linksForBackgroundCheck,
       });
+      queuedLinksCount = linksForBackgroundCheck.length;
     } catch (error) {
-      console.error(error);
-      blockedLinks.forEach((link) => {
-        brokenLinks.push({
+      logger.logError(error);
+      linksForBackgroundCheck.forEach((link) => {
+        unverifiedLinks.push({
           ...link,
           error: `לא ניתן להעביר לבדיקה ברקע - ${error instanceof Error ? error.message : String(error)}`,
         });
       });
     }
   }
-  console.log({ blockedLinks });
-
-  if (!brokenLinks.length) {
-    return blockedLinks.length > 0
-      ? 'כל הקישורים שנגישים לבוט תקינים. קישורים שחסומים לבוט נשלחו לבדיקה ברקע.'
-      : 'כל הקישורים תקינים';
+  console.log({
+    externalLinkCheck: {
+      total: links.length,
+      broken: brokenLinks.length,
+      queued: queuedLinksCount,
+      unverified: unverifiedLinks.length,
+    },
+  });
+  const messages: string[] = [];
+  if (brokenLinks.length === 0 && unverifiedLinks.length === 0) {
+    messages.push(queuedLinksCount > 0
+      ? 'כל הקישורים שניתן היה לאמת תקינים. קישורים שלא ניתן היה לאמת נשלחו לבדיקה ברקע.'
+      : 'כל הקישורים תקינים');
+  } else if (queuedLinksCount > 0) {
+    messages.push('קישורים שלא ניתן היה לאמת נשלחו לבדיקה ברקע.');
   }
-  const blockedMessage = blockedLinks.length > 0 ? 'חלק מהקישורים חסומים לבוט ונשלחו לבדיקה ברקע. ' : '';
-  return `${blockedMessage}קישורים שבורים:\n${brokenLinks.map((brokenLink) => `* [${brokenLink.link} ${brokenLink.text}], ${brokenLink.error}`).join('\n')}`;
+  if (brokenLinks.length > 0) {
+    messages.push(`קישורים שבורים:\n${brokenLinks.map((link) => `* [${link.link} ${link.text}], ${link.error}`).join('\n')}`);
+  }
+  if (unverifiedLinks.length > 0) {
+    messages.push(`קישורים שלא ניתן היה לאמת:\n${unverifiedLinks.map((link) => `* [${link.link} ${link.text}], ${link.error}`).join('\n')}`);
+  }
+  return messages.join('\n');
 }
 
 export async function checkCopyright(title: string) {

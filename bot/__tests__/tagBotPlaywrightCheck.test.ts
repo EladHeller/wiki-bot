@@ -3,34 +3,27 @@ import {
 } from '@jest/globals';
 
 const closeMock: any = jest.fn();
-closeMock.mockResolvedValue(undefined);
 const gotoMock: any = jest.fn();
+const reloadMock: any = jest.fn();
+const waitForTimeoutMock: any = jest.fn();
 const titleMock: any = jest.fn();
-titleMock.mockResolvedValue('Example');
+const contentMock: any = jest.fn();
 const pageMock = {
   goto: gotoMock,
+  reload: reloadMock,
+  waitForTimeout: waitForTimeoutMock,
   close: closeMock,
   title: titleMock,
+  content: contentMock,
 };
 const newPageMock: any = jest.fn();
-newPageMock.mockResolvedValue(pageMock);
 const browserCloseMock: any = jest.fn();
-browserCloseMock.mockResolvedValue(undefined);
 const contextCloseMock: any = jest.fn();
-contextCloseMock.mockResolvedValue(undefined);
 const newContextMock: any = jest.fn();
-newContextMock.mockResolvedValue({
-  newPage: newPageMock,
-  close: contextCloseMock,
-});
 const launchMock: any = jest.fn();
-launchMock.mockResolvedValue({
-  newContext: newContextMock,
-  close: browserCloseMock,
-});
 const logErrorMock: any = jest.fn();
-const wikiLoginMock: any = jest.fn(() => Promise.resolve(undefined));
-const wikiAddCommentMock: any = jest.fn(() => Promise.resolve(undefined));
+const wikiLoginMock: any = jest.fn();
+const wikiAddCommentMock: any = jest.fn();
 const wikiApiMock: any = jest.fn(() => ({
   login: wikiLoginMock,
   addComment: wikiAddCommentMock,
@@ -56,36 +49,63 @@ jest.unstable_mockModule('../decorators/botLoggerDecorator', () => ({
   default: (cb: any) => cb,
 }));
 
-const { handleEvent, handleQueueMessage, main } = await import('../tag-bot/playwrightCheck/index');
+const {
+  handleEvent, handleQueueMessage, main, runLinkChecks,
+} = await import('../tag-bot/playwrightCheck/index');
+
+function response(status: number, statusText = '') {
+  return {
+    status: () => status,
+    statusText: () => statusText,
+  };
+}
+
+function queueBody(links: { link: string; text: string }[]) {
+  return JSON.stringify({
+    title: 'Page',
+    commentSummary: 'Summary',
+    commentId: '1',
+    links,
+  });
+}
 
 describe('tagBotPlaywrightCheck', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    wikiLoginMock.mockReset();
+    closeMock.mockResolvedValue(undefined);
+    reloadMock.mockResolvedValue(response(200, 'OK'));
+    waitForTimeoutMock.mockResolvedValue(undefined);
+    titleMock.mockResolvedValue('Example');
+    contentMock.mockResolvedValue('<html></html>');
+    newPageMock.mockResolvedValue(pageMock);
+    browserCloseMock.mockResolvedValue(undefined);
+    contextCloseMock.mockResolvedValue(undefined);
+    newContextMock.mockResolvedValue({
+      newPage: newPageMock,
+      close: contextCloseMock,
+    });
+    launchMock.mockResolvedValue({
+      newContext: newContextMock,
+      close: browserCloseMock,
+    });
     wikiLoginMock.mockResolvedValue(undefined);
-    wikiAddCommentMock.mockReset();
     wikiAddCommentMock.mockResolvedValue(undefined);
   });
 
-  it('should process SQS records and post a follow-up comment', async () => {
-    gotoMock.mockResolvedValueOnce({
-      ok: () => true,
-      status: () => 200,
-      statusText: () => 'OK',
-    });
+  it('should process SQS records and post a success comment', async () => {
+    gotoMock.mockResolvedValueOnce(response(200, 'OK'));
 
-    await main({
-      Records: [{
-        body: JSON.stringify({
-          title: 'Page',
-          commentSummary: 'Summary',
-          commentId: '1',
-          links: [{ link: 'https://example.com/one', text: 'One' }],
-        }),
-      }],
-    });
+    await main({ Records: [{ body: queueBody([{ link: 'https://example.com/one', text: 'One' }]) }] });
 
     expect(wikiApiMock).toHaveBeenCalledWith();
+    expect(newContextMock).toHaveBeenCalledWith(expect.objectContaining({
+      locale: 'he-IL',
+      timezoneId: 'Asia/Jerusalem',
+      extraHTTPHeaders: expect.objectContaining({
+        'Accept-Language': expect.any(String),
+      }),
+    }));
+    expect(newContextMock.mock.calls[0][0]).not.toHaveProperty('userAgent');
     expect(wikiAddCommentMock).toHaveBeenCalledWith(
       'Page',
       'Summary',
@@ -94,7 +114,7 @@ describe('tagBotPlaywrightCheck', () => {
     );
   });
 
-  it('should process queue messages without links', async () => {
+  it('should return immediately without launching a browser when there are no links', async () => {
     await handleQueueMessage({
       addComment: wikiAddCommentMock,
     } as ReturnType<typeof wikiApiMock>, JSON.stringify({
@@ -103,9 +123,7 @@ describe('tagBotPlaywrightCheck', () => {
       commentId: '1',
     }));
 
-    expect(launchMock).toHaveBeenCalledWith(expect.objectContaining({
-      headless: true,
-    }));
+    expect(launchMock).not.toHaveBeenCalled();
     expect(wikiAddCommentMock).toHaveBeenCalledWith(
       'Page',
       'Summary',
@@ -114,41 +132,77 @@ describe('tagBotPlaywrightCheck', () => {
     );
   });
 
-  it('should post a failure comment for blocked links in queue messages', async () => {
-    gotoMock.mockResolvedValueOnce({
-      ok: () => false,
-      status: () => 403,
-      statusText: () => 'Forbidden',
-    });
+  it('should accept a link when a challenge retry succeeds', async () => {
+    gotoMock.mockResolvedValueOnce(response(403, 'Forbidden'));
+    reloadMock.mockResolvedValueOnce(response(200, 'OK'));
 
-    await handleQueueMessage({
-      addComment: wikiAddCommentMock,
-    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
-      title: 'Page',
-      commentSummary: 'Summary',
-      commentId: '1',
-      links: [{ link: 'https://example.com/one', text: 'One' }],
-    }));
+    const result = await runLinkChecks([{ link: 'https://example.com/one', text: 'One' }]);
 
-    expect(wikiAddCommentMock).toHaveBeenCalledWith(
-      'Page',
-      'Summary',
-      expect.stringContaining('קישורים שנכשלו בבדיקה ברקע'),
-      '1',
-    );
+    expect(waitForTimeoutMock).toHaveBeenCalledWith(5000);
+    expect(reloadMock).toHaveBeenCalledWith(expect.objectContaining({ waitUntil: 'domcontentloaded' }));
+    expect(result.results[0]).toStrictEqual(expect.objectContaining({ state: 'alive', ok: true, status: 200 }));
   });
 
-  it('should handle string navigation failures in queue messages', async () => {
-    gotoMock.mockRejectedValueOnce('blocked');
+  it('should report blocked and dead links in separate sections', async () => {
+    gotoMock
+      .mockResolvedValueOnce(response(403, 'Forbidden'))
+      .mockResolvedValueOnce(response(404, 'Not Found'));
+    reloadMock.mockResolvedValueOnce(response(403, 'Forbidden'));
 
     await handleQueueMessage({
       addComment: wikiAddCommentMock,
-    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
-      title: 'Page',
-      commentSummary: 'Summary',
-      commentId: '1',
-      links: [{ link: 'https://example.com/one', text: 'One' }],
-    }));
+    } as ReturnType<typeof wikiApiMock>, queueBody([
+      { link: 'https://example.com/blocked', text: 'Blocked' },
+      { link: 'https://example.com/dead', text: 'Dead' },
+    ]));
+
+    const comment = wikiAddCommentMock.mock.calls[0][2];
+
+    expect(comment).toContain('קישורים שבורים בבדיקה ברקע');
+    expect(comment).toContain('קישורים שלא ניתן היה לאמת בבדיקה ברקע');
+    expect(comment).toContain('לא ניתן לאמת את הקישור - 403 - Forbidden');
+    expect(comment).toContain('לא ניתן להגיע לקישור - 404 - Not Found');
+  });
+
+  it('should classify a challenge page behind a 503 response as blocked', async () => {
+    gotoMock.mockResolvedValueOnce(response(503, 'Unavailable'));
+    reloadMock.mockResolvedValueOnce(response(503, 'Unavailable'));
+    titleMock.mockResolvedValueOnce('Just a moment');
+
+    const result = await runLinkChecks([{ link: 'https://example.com/one', text: 'One' }]);
+
+    expect(result.results[0]).toStrictEqual(expect.objectContaining({ state: 'blocked', ok: false }));
+  });
+
+  it('should retain the initial response when challenge reload fails', async () => {
+    gotoMock.mockResolvedValueOnce(response(503, 'Unavailable'));
+    reloadMock.mockRejectedValueOnce(new Error('reload failed'));
+
+    const result = await runLinkChecks([{ link: 'https://example.com/one', text: 'One' }]);
+
+    expect(result.results[0]).toStrictEqual(expect.objectContaining({ state: 'transient', status: 503 }));
+  });
+
+  it('should retain the initial response when challenge reload has no response', async () => {
+    gotoMock.mockResolvedValueOnce(response(429, 'Too Many Requests'));
+    reloadMock.mockResolvedValueOnce(undefined);
+    titleMock.mockRejectedValueOnce(new Error('missing title'));
+    contentMock.mockRejectedValueOnce(new Error('missing content'));
+
+    const result = await runLinkChecks([{ link: 'https://example.com/one', text: 'One' }]);
+
+    expect(result.results[0]).toStrictEqual(expect.objectContaining({ state: 'blocked', status: 429 }));
+  });
+
+  it.each([
+    ['string', 'blocked'],
+    ['Error', new Error('blocked')],
+  ])('should report %s navigation failures as unresolved', async (_label, failure) => {
+    gotoMock.mockRejectedValueOnce(failure);
+
+    await handleQueueMessage({
+      addComment: wikiAddCommentMock,
+    } as ReturnType<typeof wikiApiMock>, queueBody([{ link: 'https://example.com/one', text: 'One' }]));
 
     expect(wikiAddCommentMock).toHaveBeenCalledWith(
       'Page',
@@ -158,68 +212,26 @@ describe('tagBotPlaywrightCheck', () => {
     );
   });
 
-  it('should handle Error navigation failures in queue messages', async () => {
-    gotoMock.mockRejectedValueOnce(new Error('blocked'));
-
-    await handleQueueMessage({
-      addComment: wikiAddCommentMock,
-    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
-      title: 'Page',
-      commentSummary: 'Summary',
-      commentId: '1',
-      links: [{ link: 'https://example.com/one', text: 'One' }],
-    }));
-
-    expect(wikiAddCommentMock).toHaveBeenCalledWith(
-      'Page',
-      'Summary',
-      expect.stringContaining('blocked'),
-      '1',
-    );
-  });
-
-  it('should handle missing navigation responses in queue messages', async () => {
+  it('should classify missing navigation responses as unknown', async () => {
     gotoMock.mockResolvedValueOnce(undefined);
 
-    await handleQueueMessage({
-      addComment: wikiAddCommentMock,
-    } as ReturnType<typeof wikiApiMock>, JSON.stringify({
-      title: 'Page',
-      commentSummary: 'Summary',
-      commentId: '1',
-      links: [{ link: 'https://example.com/one', text: 'One' }],
-    }));
+    const result = await runLinkChecks([{ link: 'https://example.com/one', text: 'One' }]);
 
-    expect(wikiAddCommentMock).toHaveBeenCalledWith(
-      'Page',
-      'Summary',
-      expect.stringContaining('לא ניתן להגיע לקישור - 0 - '),
-      '1',
-    );
+    expect(result.results[0]).toStrictEqual(expect.objectContaining({
+      state: 'unknown', ok: false, status: 0, statusText: '',
+    }));
   });
 
   it('should ignore SQS records without body', async () => {
-    await main({
-      Records: [{}],
-    });
+    await main({ Records: [{}] });
 
     expect(wikiAddCommentMock).not.toHaveBeenCalled();
   });
 
   it('should skip posting when comment metadata is missing', async () => {
-    gotoMock.mockResolvedValueOnce({
-      ok: () => true,
-      status: () => 200,
-      statusText: () => 'OK',
-    });
+    gotoMock.mockResolvedValueOnce(response(200, 'OK'));
 
-    await main({
-      Records: [{
-        body: JSON.stringify({
-          links: [{ link: 'https://example.com/one', text: 'One' }],
-        }),
-      }],
-    });
+    await main({ Records: [{ body: JSON.stringify({ links: [{ link: 'https://example.com', text: 'One' }] }) }] });
 
     expect(wikiAddCommentMock).not.toHaveBeenCalled();
   });
