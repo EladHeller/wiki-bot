@@ -200,7 +200,8 @@ describe('externalLinkChecker', () => {
     await expect(checkLinksWithHttp([])).resolves.toStrictEqual(new Map());
   });
 
-  it('should use the default Wikipedia base URL for referrers', async () => {
+  it('should use the default bot name and Wikipedia base URL', async () => {
+    delete process.env.BOT_NAME;
     delete process.env.BASE_URL;
     fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
 
@@ -209,7 +210,10 @@ describe('externalLinkChecker', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
-      headers: expect.objectContaining({ Referer: 'https://he.wikipedia.org/wiki/Page' }),
+      headers: expect.objectContaining({
+        'User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
+        Referer: 'https://he.wikipedia.org/wiki/Page',
+      }),
     }));
   });
 
