@@ -66,7 +66,7 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
     await foreignWikipediaMissingLinksParsedContent(api);
 
     expect(api.create).toHaveBeenCalledWith(
-      `user:${process.env.BOT_NAME}/קישורי שפה - הפניות - ריצה 5`,
+      `user:${process.env.BOT_NAME}/קישורי שפה - הפניות5`,
       'תיקון קישורי שפה',
       '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: לא נמצאו שגיאות',
     );
@@ -83,7 +83,7 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
     await foreignWikipediaMissingLinksParsedContent(api);
 
     expect(api.edit).toHaveBeenCalledWith(
-      `user:${process.env.BOT_NAME}/קישורי שפה - הפניות - ריצה 5`,
+      `user:${process.env.BOT_NAME}/קישורי שפה - הפניות5`,
       'תיקון קישורי שפה',
       '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: לא נמצאו שגיאות',
       1,
@@ -103,7 +103,7 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
     await foreignWikipediaMissingLinksParsedContent(api);
 
     expect(api.edit).toHaveBeenCalledWith(
-      `user:${process.env.BOT_NAME}/קישורי שפה - הפניות - ריצה 5`,
+      `user:${process.env.BOT_NAME}/קישורי שפה - הפניות5`,
       'תיקון קישורי שפה',
       expect.stringContaining('דולג: custom failure'),
       1,
@@ -1228,7 +1228,7 @@ describe('runSinglePage', () => {
     const logEditCall = api.edit.mock.calls.at(-1);
 
     expect(logEditCall).toBeDefined();
-    expect(logEditCall?.[0]).toBe(`user:${process.env.BOT_NAME}/קישורי שפה - הפניות - ריצה 5`);
+    expect(logEditCall?.[0]).toBe(`user:${process.env.BOT_NAME}/קישורי שפה - הפניות5`);
     expect(logEditCall?.[1]).toBe('תיקון קישורי שפה');
     expect(logEditCall?.[2]).toStrictEqual(expect.stringContaining('* [[TestPage]]: <nowiki>{{אנג|Google}}</nowiki> - [[:en:Google]] ← [[:en:NewGoogle]] - דולג: התבנית המתאימה לא נמצאה'));
     expect(logEditCall?.[3]).toBe(1);
