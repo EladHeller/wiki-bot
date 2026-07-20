@@ -55,6 +55,10 @@ const statistics = {
 };
 
 export async function wrightLogs(api: IWikiApi, allLogs = logs) {
+  if (allLogs.length === 0) {
+    console.log('No edits');
+    return;
+  }
   const { content, revid } = await api.articleContent(LOG_PAGE_NAME);
   const { title, titleAndSummary } = getLogTitleData(content);
 
@@ -250,5 +254,5 @@ export default async function languageLinks(byCategory = true) {
     }
   });
   await fs.appendFile(fileName, `${JSON.stringify(statistics)}\n`);
-  await wrightLogs(api);
+  // await wrightLogs(api);
 }
