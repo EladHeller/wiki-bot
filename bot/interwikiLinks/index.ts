@@ -14,7 +14,7 @@ import { getRedirectTargetFromContent } from '../wiki/redirectParser';
 import { WikiPage } from '../types';
 
 const CATEGORY_TITLE = 'קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה';
-const LOG_PAGE_TITLE = `user:${process.env.BOT_NAME}/קישורי שפה - הפניות - ריצה 5`;
+const LOG_PAGE_TITLE = `user:${process.env.BOT_NAME}/קישורי שפה - הפניות5`;
 const EDIT_SUMMARY = 'תיקון קישורי שפה';
 const VALIDATOR_ERROR_SELECTOR = '.paramvalidator-error';
 const VALIDATOR_ERROR_REGEX = /שימוש בתבנית\s+(.+?)\s+עבור\s+"(.+?)"\s+בשפה\s+([a-z-]+)\s+אך ערך זה לא קיים בשפה זו/i;

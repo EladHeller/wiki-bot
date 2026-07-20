@@ -12,6 +12,10 @@
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
+    "setupFiles": [
+      "<rootDir>/testConfig/setup.ts"
+    ],
+    "watchman": false,
     "coveragePathIgnorePatterns": [
       "BaseWikiApi.ts",
       "WikiApi.ts",

@@ -3,8 +3,9 @@ import { WikiPage } from '../../types';
 import { asyncGeneratorMapWithSequence, contentFromPage, convertContentToWikiPage } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
 
+const NON_WIKIPEDIA_PROJECT_PREFIXES = 'b|c|commons|d|dictionary|m|meta|mw|n|q|quote|s|source|species|v|voyage|wikibooks|wikidata|wikifunctions|wikimedia|wikinews|wikiquote|wikisource|wikiversity|wikivoyage|wiktionary';
 const BASE_SEARCH_PATTERN = '\\"?\\[\\[([^]]+)\\]\\]\\"?\\s*\'*\\<small\\>\\s*\\(\'*?\\[\\[:([a-zA-Z-]+):';
-const SEARCH_PATTERN = `${BASE_SEARCH_PATTERN}([^]|]+)\\|[א-ת-' ]+['׳]?\\]\\]'*\\)?\\s*(\\((?:</small><small>)?\\d+(?:-\\d+)?(?:</small><small>)?\\d*(?:-\\d+)?\\))?\\s*([.,;:])?\\s*\\<\\/small\\>'*`;
+const SEARCH_PATTERN = `${BASE_SEARCH_PATTERN}(?!(?:${NON_WIKIPEDIA_PROJECT_PREFIXES}):)([^]|]+)\\|[א-ת-' ]+['׳]?\\)?\\]\\]'*\\)?\\s*(\\((?:</small><small>)?\\d+(?:-\\d+)?(?:</small><small>)?\\d*(?:\\s*[,-–]\\s*\\d+)*\\))?\\s*([.,;:)]|(?:{{ש}}))*\\s*\\<\\/small\\>'*`;
 const regex = new RegExp(SEARCH_PATTERN.replaceAll('^]', '^\\]'), 'gi');
 const SUMMARY = 'הסבת קישורי בינוויקי לתבנית קישור שפה';
 
@@ -237,13 +238,11 @@ async function handlePage(api: IWikiApi, page: WikiPage) {
   let newContent = content;
   for (const match of matchesArray) {
     const [text, hebrewTitle, languageCode, foreignTitle, year, comma] = match;
-    if (hebrewTitle && foreignTitle && languageCode) {
-      const languageName = langugageCodeToLanguageName[languageCode.toLocaleLowerCase()];
-      const normalizedForeignTitle = decodeURIComponent(foreignTitle.replace(/_/g, ' '));
-      if (languageName) {
-        const containsQuotationMarks = !!text.match(/"\[\[([^\]]+)\]\]"/);
-        newContent = newContent.replace(text, `{{קישור שפה|${languageName}|${normalizedForeignTitle}|${hebrewTitle}${containsQuotationMarks ? '|מירכאות=כן' : ''}}}${year ? ` <small>${year.replace('</small><small>', '')}</small>` : ''}${comma || ''}`);
-      }
+    const languageName = langugageCodeToLanguageName[languageCode.toLocaleLowerCase()];
+    const normalizedForeignTitle = decodeURIComponent(foreignTitle.replace(/_/g, ' '));
+    if (languageName) {
+      const containsQuotationMarks = !!text.match(/"\[\[([^\]]+)\]\]"/);
+      newContent = newContent.replace(text, `{{קישור שפה|${languageName}|${normalizedForeignTitle}|${hebrewTitle}${containsQuotationMarks ? '|מירכאות=כן' : ''}}}${year ? ` <small>${year.replace('</small><small>', '')}</small>` : ''}${comma || ''}`);
     }
   }
   if (newContent !== content) {
@@ -263,7 +262,7 @@ export async function checkPage(api: IWikiApi, title: string) {
 export default async function interwikiConverter(api: IWikiApi) {
   const generator = api.search(`insource:/${BASE_SEARCH_PATTERN}/`, false, '0|14|100');
   const converted: string[] = [];
-  await asyncGeneratorMapWithSequence(50, generator, (page) => async () => {
+  await asyncGeneratorMapWithSequence(1, generator, (page) => async () => {
     const result = await handlePage(api, page);
     if (result) {
       converted.push(result);
