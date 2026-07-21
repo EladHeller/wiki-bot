@@ -493,5 +493,5 @@ Resources:
         Schedule:
           Type: Schedule
           Properties:
-            Schedule: cron(0 5,17 ? * * *)
+            Schedule: rate(10 minutes)
             Name: interwiki-links-scheduler
