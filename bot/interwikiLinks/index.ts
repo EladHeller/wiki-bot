@@ -440,7 +440,7 @@ export function formatRemainingPageTitles(titles: string[]): string {
     .map((title) => `* [[${normalizeTitleForLogs(title)}]]`)
     .join('\n');
 
-  return `הדפים הבאים עדיין נמצאים ב[[${CATEGORY_TITLE}]]:${pageList ? `\n\n${pageList}` : ' אין דפים.'}`;
+  return `הדפים הבאים עדיין נמצאים ב[[:${CATEGORY_TITLE}]]:${pageList ? `\n\n${pageList}` : ' אין דפים.'}`;
 }
 
 async function getCategoryTitles(api: IWikiApi): Promise<string[]> {
