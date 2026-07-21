@@ -26,6 +26,8 @@ const {
   readRedirectTarget,
   replaceTemplateForeignTitle,
   formatLog,
+  parseRemainingPageTitles,
+  formatRemainingPageTitles,
   addTemplateWithoutWikidataItem,
   fixTitleBracketsAndDots,
   handlePageSafely,
@@ -46,6 +48,9 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
     api.getParsedContent.mockResolvedValue('<div>No errors</div>');
     api.articleContent.mockResolvedValue({ content: '', revid: 1 });
     api.create.mockResolvedValue({ revid: 1 });
+    api.categroyTitles.mockImplementation(async function* generator() {
+      yield [{ title: 'Page1' } as WikiPage];
+    });
     mockLanguageApi.getRedirecTarget.mockResolvedValue({});
     mockLanguageApi.info.mockResolvedValue([]);
     mockLanguageApi.search.mockImplementation(async function* generator() {
@@ -60,13 +65,15 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
       }];
       yield x;
     });
-    api.articleContent.mockRejectedValueOnce(new Error('does not exist'));
+    api.articleContent
+      .mockResolvedValueOnce({ content: '', revid: 2 })
+      .mockRejectedValueOnce(new Error('does not exist'));
     api.create.mockResolvedValueOnce(undefined);
 
     await foreignWikipediaMissingLinksParsedContent(api);
 
     expect(api.create).toHaveBeenCalledWith(
-      `user:${process.env.BOT_NAME}/קישורי שפה - הפניות`,
+      'ויקיפדיה:בוט/קישורי שפה',
       'תיקון קישורי שפה',
       '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: לא נמצאו שגיאות',
     );
@@ -79,11 +86,13 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
       }];
       yield x;
     });
-    api.articleContent.mockResolvedValueOnce({ revid: 1, content: '' });
+    api.articleContent
+      .mockResolvedValueOnce({ revid: 2, content: '' })
+      .mockResolvedValueOnce({ revid: 1, content: '' });
     await foreignWikipediaMissingLinksParsedContent(api);
 
     expect(api.edit).toHaveBeenCalledWith(
-      `user:${process.env.BOT_NAME}/קישורי שפה - הפניות`,
+      'ויקיפדיה:בוט/קישורי שפה',
       'תיקון קישורי שפה',
       '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: לא נמצאו שגיאות',
       1,
@@ -98,15 +107,80 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
       yield x;
     });
     api.getParsedContent.mockRejectedValueOnce(new Error('custom failure'));
-    api.articleContent.mockResolvedValueOnce({ revid: 1, content: '' });
+    api.articleContent
+      .mockResolvedValueOnce({ revid: 2, content: '' })
+      .mockResolvedValueOnce({ revid: 1, content: '' });
 
     await foreignWikipediaMissingLinksParsedContent(api);
 
     expect(api.edit).toHaveBeenCalledWith(
-      `user:${process.env.BOT_NAME}/קישורי שפה - הפניות`,
+      'ויקיפדיה:בוט/קישורי שפה',
       'תיקון קישורי שפה',
       expect.stringContaining('דולג: custom failure'),
       1,
+    );
+  });
+
+  it('stops before loading page content when the category has no new pages', async () => {
+    api.articleContent.mockResolvedValueOnce({
+      content: '* [[Page1]]',
+      revid: 2,
+    });
+
+    await foreignWikipediaMissingLinksParsedContent(api);
+
+    expect(api.categroyTitles).toHaveBeenCalledTimes(1);
+    expect(api.categroyPages).not.toHaveBeenCalled();
+    expect(api.edit).not.toHaveBeenCalled();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('creates the remaining-pages subpage after the first full run', async () => {
+    api.articleContent
+      .mockRejectedValueOnce(new Error('No revid for ויקיפדיה:בוט/קישורי שפה/דפים שלא תוקנו'))
+      .mockResolvedValueOnce({ revid: 1, content: '' });
+    api.categroyPages.mockImplementation(async function* generator() {
+      yield [];
+    });
+
+    await foreignWikipediaMissingLinksParsedContent(api);
+
+    expect(api.create).toHaveBeenCalledWith(
+      'ויקיפדיה:בוט/קישורי שפה/דפים שלא תוקנו',
+      'תיקון קישורי שפה',
+      expect.stringContaining('* [[Page1]]'),
+    );
+  });
+
+  it('does not load page content when reading the tracking page fails', async () => {
+    api.articleContent.mockRejectedValueOnce(new Error('temporary failure'));
+
+    await expect(foreignWikipediaMissingLinksParsedContent(api)).rejects.toThrow('temporary failure');
+
+    expect(api.categroyPages).not.toHaveBeenCalled();
+  });
+});
+
+describe('remaining category pages', () => {
+  it('parses only list entries and normalizes category links', () => {
+    expect(parseRemainingPageTitles(`
+intro
+* [[Page1|display text]]
+* [[:קטגוריה:Page2]]
+not a list entry [[Ignored]]
+`)).toStrictEqual(['Page1', 'קטגוריה:Page2']);
+  });
+
+  it('formats a sorted page list without categorizing the tracking page', () => {
+    expect(formatRemainingPageTitles(['Page2', 'Page1', 'קטגוריה:Page3'])).toBe(
+      'הדפים הבאים עדיין נמצאים ב[[קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה]]:\n\n'
+      + '* [[:קטגוריה:Page3]]\n* [[Page1]]\n* [[Page2]]',
+    );
+  });
+
+  it('formats an empty page list', () => {
+    expect(formatRemainingPageTitles([])).toBe(
+      'הדפים הבאים עדיין נמצאים ב[[קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה]]: אין דפים.',
     );
   });
 });
@@ -1219,16 +1293,19 @@ describe('runSinglePage', () => {
     api.categroyPages.mockImplementation(async function* generator() {
       yield [];
     });
+    api.categroyTitles.mockImplementation(async function* generator() {
+      yield [{ title: 'TestPage' } as WikiPage];
+    });
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
 
     await runSinglePage('TestPage', api);
     await foreignWikipediaMissingLinksParsedContent(api);
 
-    const logEditCall = api.edit.mock.calls.at(-1);
+    const logEditCall = api.edit.mock.calls.find(([title]) => title === 'ויקיפדיה:בוט/קישורי שפה');
 
     expect(logEditCall).toBeDefined();
-    expect(logEditCall?.[0]).toBe(`user:${process.env.BOT_NAME}/קישורי שפה - הפניות`);
+    expect(logEditCall?.[0]).toBe('ויקיפדיה:בוט/קישורי שפה');
     expect(logEditCall?.[1]).toBe('תיקון קישורי שפה');
     expect(logEditCall?.[2]).toStrictEqual(expect.stringContaining('* [[TestPage]]: <nowiki>{{אנג|Google}}</nowiki> - [[:en:Google]] ← [[:en:NewGoogle]] - דולג: התבנית המתאימה לא נמצאה'));
     expect(logEditCall?.[3]).toBe(1);

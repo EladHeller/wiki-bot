@@ -11,10 +11,12 @@ import {
   templateFromTemplateData,
 } from '../wiki/newTemplateParser';
 import { getRedirectTargetFromContent } from '../wiki/redirectParser';
+import { getInnerLinks } from '../wiki/wikiLinkParser';
 import { WikiPage } from '../types';
 
 const CATEGORY_TITLE = 'קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה';
-const LOG_PAGE_TITLE = `user:${process.env.BOT_NAME}/קישורי שפה - הפניות`;
+const LOG_PAGE_TITLE = 'ויקיפדיה:בוט/קישורי שפה';
+const REMAINING_PAGES_TITLE = `${LOG_PAGE_TITLE}/דפים שלא תוקנו`;
 const EDIT_SUMMARY = 'תיקון קישורי שפה';
 const VALIDATOR_ERROR_SELECTOR = '.paramvalidator-error';
 const VALIDATOR_ERROR_REGEX = /שימוש בתבנית\s+(.+?)\s+עבור\s+"(.+?)"\s+בשפה\s+([a-z-]+)\s+אך ערך זה לא קיים בשפה זו/i;
@@ -425,6 +427,58 @@ export function formatLog(log: TemplateCheckLog): string {
   return `* [[${normalizeTitleForLogs(log.pageTitle)}]]: <nowiki>{{${log.templateName}|${log.foreignTitle}}}</nowiki> - [[:${log.languageCode}:${log.foreignTitle}]]${target} - ${result}`;
 }
 
+export function parseRemainingPageTitles(content: string): string[] {
+  return content
+    .split('\n')
+    .filter((line) => line.startsWith('* '))
+    .flatMap((line) => getInnerLinks(line).map(({ link }) => link));
+}
+
+export function formatRemainingPageTitles(titles: string[]): string {
+  const pageList = [...titles]
+    .sort((a, b) => a.localeCompare(b, 'he'))
+    .map((title) => `* [[${normalizeTitleForLogs(title)}]]`)
+    .join('\n');
+
+  return `הדפים הבאים עדיין נמצאים ב[[${CATEGORY_TITLE}]]:${pageList ? `\n\n${pageList}` : ' אין דפים.'}`;
+}
+
+async function getCategoryTitles(api: IWikiApi): Promise<string[]> {
+  const titles: string[] = [];
+
+  for await (const pages of api.categroyTitles(normalizeCategoryName(CATEGORY_TITLE))) {
+    titles.push(...pages.map((page) => page.title));
+  }
+
+  return titles;
+}
+
+async function readPreviousRemainingPages(api: IWikiApi): Promise<{
+  titles: string[];
+  revid?: number;
+}> {
+  try {
+    const { content, revid } = await api.articleContent(REMAINING_PAGES_TITLE);
+    return { titles: parseRemainingPageTitles(content), revid };
+  } catch (error) {
+    if (String(error) !== `Error: No revid for ${REMAINING_PAGES_TITLE}`) {
+      throw error;
+    }
+    return { titles: [] };
+  }
+}
+
+async function writeRemainingPages(api: IWikiApi, titles: string[], revid?: number): Promise<void> {
+  const content = formatRemainingPageTitles(titles);
+
+  if (revid == null) {
+    await api.create(REMAINING_PAGES_TITLE, EDIT_SUMMARY, content);
+    return;
+  }
+
+  await api.edit(REMAINING_PAGES_TITLE, EDIT_SUMMARY, content, revid);
+}
+
 async function writeLogs(api: IWikiApi): Promise<void> {
   const successLogs = logs.filter((log) => log.success);
   const logContent = successLogs.map(formatLog).join('\n');
@@ -494,6 +548,16 @@ export async function runSinglePage(title: string, api: IWikiApi): Promise<void>
 }
 
 export default async function interwikiLinks(api: IWikiApi): Promise<void> {
+  const categoryTitles = await getCategoryTitles(api);
+  const previousRemainingPages = await readPreviousRemainingPages(api);
+  const previousTitles = new Set(previousRemainingPages.titles);
+
+  const hasNewPage = categoryTitles.some((title) => !previousTitles.has(title));
+  if (previousRemainingPages.revid != null && !hasNewPage) {
+    console.log('No new pages in the category');
+    return;
+  }
+
   await asyncGeneratorMapWithSequence(
     5,
     api.categroyPages(normalizeCategoryName(CATEGORY_TITLE)),
@@ -501,4 +565,5 @@ export default async function interwikiLinks(api: IWikiApi): Promise<void> {
   );
 
   await writeLogs(api);
+  await writeRemainingPages(api, await getCategoryTitles(api), previousRemainingPages.revid);
 }
