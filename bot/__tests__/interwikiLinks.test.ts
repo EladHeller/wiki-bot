@@ -173,14 +173,14 @@ not a list entry [[Ignored]]
 
   it('formats a sorted page list without categorizing the tracking page', () => {
     expect(formatRemainingPageTitles(['Page2', 'Page1', 'קטגוריה:Page3'])).toBe(
-      'הדפים הבאים עדיין נמצאים ב[[קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה]]:\n\n'
+      'הדפים הבאים עדיין נמצאים ב[[:קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה]]:\n\n'
       + '* [[:קטגוריה:Page3]]\n* [[Page1]]\n* [[Page2]]',
     );
   });
 
   it('formats an empty page list', () => {
     expect(formatRemainingPageTitles([])).toBe(
-      'הדפים הבאים עדיין נמצאים ב[[קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה]]: אין דפים.',
+      'הדפים הבאים עדיין נמצאים ב[[:קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה]]: אין דפים.',
     );
   });
 });
