@@ -411,20 +411,25 @@ export function normalizeTitleForLogs(title: string) {
 }
 
 export function formatLog(log: TemplateCheckLog): string {
-  const reasonTextMap: Record<string, string> = {
-    'redirect not found or invalid': 'ההפניה לא נמצאה או שאינה תקינה',
-    'redirect has section target': 'ההפניה מכילה הפניה לפסקה',
-    'redirect targets changed after the redirect was created': 'יעד ההפניה השתנה מאז שההפניה נוצרה',
-    'target title has brackets but source does not': 'ליעד יש סוגריים אבל במקור אין',
-    'probably interwiki': 'כנראה קישור בינוויקי',
-    'invalid title': 'כותרת לא תקינה',
-    'target not found': 'היעד לא נמצא',
-    'no errors found': 'לא נמצאו שגיאות',
-    'matching template not found': 'התבנית המתאימה לא נמצאה',
-  };
-  const result = log.success ? 'תוקן' : `דולג: ${reasonTextMap[log.reason ?? ''] ?? log.reason}`;
   const target = log.redirectTarget ? ` ← [[:${log.languageCode}:${log.redirectTarget}]]` : '';
-  return `* [[${normalizeTitleForLogs(log.pageTitle)}]]: <nowiki>{{${log.templateName}|${log.foreignTitle}}}</nowiki> - [[:${log.languageCode}:${log.foreignTitle}]]${target} - ${result}`;
+  return `* [[${normalizeTitleForLogs(log.pageTitle)}]]: <nowiki>{{${log.templateName}|${log.foreignTitle}}}</nowiki> - [[:${log.languageCode}:${log.foreignTitle}]]${target} - תוקן`;
+}
+
+function formatLogSectionTitle(date: Date): string {
+  const options: Intl.DateTimeFormatOptions = { timeZone: 'Asia/Jerusalem' };
+  const formattedDate = date.toLocaleDateString('he-IL', {
+    ...options,
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const formattedTime = date.toLocaleTimeString('he-IL', {
+    ...options,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  return `${formattedDate}, ${formattedTime}`;
 }
 
 export function parseRemainingPageTitles(content: string): string[] {
@@ -481,15 +486,19 @@ async function writeRemainingPages(api: IWikiApi, titles: string[], revid?: numb
 
 async function writeLogs(api: IWikiApi): Promise<void> {
   const successLogs = logs.filter((log) => log.success);
-  const logContent = successLogs.map(formatLog).join('\n');
-  const failedLogs = logs.filter((log) => !log.success);
-  const failedLogContent = failedLogs.map(formatLog).join('\n');
+  if (successLogs.length === 0) {
+    logs.splice(0, logs.length);
+    return;
+  }
 
-  try {
-    const { revid } = await api.articleContent(LOG_PAGE_TITLE);
-    await api.edit(LOG_PAGE_TITLE, EDIT_SUMMARY, `${logContent}\n\n${failedLogContent}`, revid);
-  } catch {
-    await api.create(LOG_PAGE_TITLE, EDIT_SUMMARY, `${logContent}\n\n${failedLogContent}`);
+  const sectionTitle = formatLogSectionTitle(new Date());
+  const logContent = `== ${sectionTitle} ==\n${successLogs.map(formatLog).join('\n')}`;
+
+  const [info] = await api.info([LOG_PAGE_TITLE]);
+  if (info.lastrevid) {
+    await api.edit(LOG_PAGE_TITLE, EDIT_SUMMARY, successLogs.map(formatLog).join('\n'), info.lastrevid, sectionTitle);
+  } else {
+    await api.create(LOG_PAGE_TITLE, EDIT_SUMMARY, logContent);
   }
   logs.splice(0, logs.length);
 }

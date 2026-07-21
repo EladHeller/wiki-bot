@@ -45,6 +45,7 @@ const supportedLanguageTemplates = [
   ['ko', 'קו', ['קו']],
   ['ru', 'רו', ['רו']],
   ['ro', 'רומ', ['רומ']],
+  ['sv', 'שוו', ['שוו']],
 ] as const;
 
 describe('interwikiTemplateConverter', () => {
