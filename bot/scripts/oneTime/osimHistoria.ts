@@ -495,15 +495,11 @@ export function getAllShowLinks(showName: string) {
   allLinks.filter((l) => l.link.startsWith(start) && l.link.replace(start, '').length > 1);
 }
 
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function replaceLinkOnlyInsideExternalLink(
   content: string,
   link: string,
 ): { newContent: string; replacements: number } {
-  const escapedLink = escapeRegex(link);
+  const escapedLink = RegExp.escape(link);
   const regex = new RegExp(`\\[${escapedLink}(?=\\s|\\])`, 'g');
   let replacements = 0;
   const newContent = content.replace(regex, () => {

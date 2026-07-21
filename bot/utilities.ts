@@ -187,10 +187,6 @@ export function hebrewGimetriya(number: number): string {
   return `${hundredsHebrew}${tensHebrew}${unityHebrew}`;
 }
 
-export function escapeRegex(text: string) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 export function fetchUrlLikeBrowser(url: string): Promise<Response> {
   return fetch(url, {
     headers: {

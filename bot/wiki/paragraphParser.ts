@@ -1,4 +1,3 @@
-import { escapeRegex } from '../utilities';
 import { nextWikiText } from './WikiParser';
 import { findTemplates } from './newTemplateParser';
 import { getInnerLinks } from './wikiLinkParser';
@@ -29,7 +28,7 @@ export function getParagraphContent(
   title?: string,
   withTitle = false,
 ): string | null {
-  const headingRegex = new RegExp(`^[ \\t]*==[ \\t]*${escapeRegex(paragraphName)}[ \\t]*==[ \\t]*$`, 'm');
+  const headingRegex = new RegExp(`^[ \\t]*==[ \\t]*${RegExp.escape(paragraphName)}[ \\t]*==[ \\t]*$`, 'm');
   const match = articleText.match(headingRegex);
   if (!match || match.index == null) return null;
 

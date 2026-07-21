@@ -12,10 +12,6 @@ type PageLink = {
   link: string;
 };
 
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function normalizeText(value: string): string {
   return value.trim()
     .replace(/^https?:\/\/(www\.)?osimhistoria\.com\//, '')
@@ -92,7 +88,7 @@ function extractEntries(sourceText: string): PageLink[] {
 }
 
 function replaceStrictMatches(content: string, link: string, episodeId: string) {
-  const escapedLink = escapeRegex(link);
+  const escapedLink = RegExp.escape(link);
   const toTemplate = (title: string) => `{{עושים היסטוריה1|${HOST_NAME}|${title.trim()}|${episodeId}}}`;
 
   let replaced = 0;

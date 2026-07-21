@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
-        "target": "ES2022",
-        "module": "ES2022",
+        "target": "esnext",
+        "module": "esnext",
         "moduleResolution": "bundler",
         "skipLibCheck": true,
         "esModuleInterop": true,
@@ -12,5 +12,9 @@
         "strict": true,
         "useUnknownInCatchVariables": false
     },
-    "include": ["bot", "testConfig", "xmlbot"]
+    "include": [
+        "bot",
+        "testConfig",
+        "xmlbot"
+    ]
 }

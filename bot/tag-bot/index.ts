@@ -1,6 +1,6 @@
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { WikiNotification } from '../types';
-import { escapeRegex, getLocalTimeAndDate } from '../utilities';
+import { getLocalTimeAndDate } from '../utilities';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getAllParagraphs, getParagraphContent, parseParagraph } from '../wiki/paragraphParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
@@ -11,7 +11,7 @@ import { checkExternalLinks } from './actions/checkPage';
 import { getRedirectTargetFromContent } from '../wiki/redirectParser';
 
 const botName = process.env.BOT_NAME as string;
-const escapedBotName = escapeRegex(botName);
+const escapedBotName = RegExp.escape(botName);
 const botMentionRegex = new RegExp(`@\\[\\[(?:(?:משתמש|user):)?${escapedBotName}(?:\\|${escapedBotName})?\\]\\]`, 'i');
 const directBotMentionRegex = new RegExp(`^@(?:(?:משתמש|user):)?${escapedBotName}`, 'i');
 const botNameRegex = new RegExp(`@?${escapedBotName}`, 'i');
