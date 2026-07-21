@@ -58,66 +58,90 @@ describe('foreignWikipediaMissingLinksParsedContent', () => {
     });
   });
 
-  it('handles log creation when log page fetch fails', async () => {
+  it('updates the remaining-pages tracker without writing a log for skipped entries', async () => {
     api.categroyPages.mockImplementation(async function* generator() {
       const x: WikiPage[] = [{
         title: 'Page1', pageid: 1, ns: 0, extlinks: [], revisions: [],
       }];
       yield x;
     });
-    api.articleContent
-      .mockResolvedValueOnce({ content: '', revid: 2 })
-      .mockRejectedValueOnce(new Error('does not exist'));
-    api.create.mockResolvedValueOnce(undefined);
 
     await foreignWikipediaMissingLinksParsedContent(api);
+
+    expect(api.articleContent).toHaveBeenCalledWith('ויקיפדיה:בוט/קישורי שפה/דפים שלא תוקנו');
+    expect(api.create).not.toHaveBeenCalled();
+    expect(api.edit).toHaveBeenCalledWith(
+      'ויקיפדיה:בוט/קישורי שפה/דפים שלא תוקנו',
+      'תיקון קישורי שפה',
+      'הדפים הבאים עדיין נמצאים ב[[:קטגוריה:קישור לערך לא קיים בוויקיפדיה זרה]]:\n\n* [[Page1]]',
+      1,
+    );
+  });
+
+  it('appends successful entries in a human-readable Hebrew section', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-21T12:34:56.000Z'));
+    api.categroyPages.mockImplementation(async function* generator() {
+      const x: WikiPage[] = [{
+        title: 'Page1',
+        pageid: 1,
+        ns: 0,
+        extlinks: [],
+        revisions: [{
+          revid: 2,
+          slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+          user: 'User',
+          size: 1,
+        }],
+      }];
+      yield x;
+    });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'Google', to: 'Google Redirect' } });
+    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
+    api.info.mockResolvedValueOnce([{ lastrevid: 1 }]);
+    await foreignWikipediaMissingLinksParsedContent(api);
+
+    jest.useRealTimers();
+
+    expect(api.edit).toHaveBeenCalledWith(
+      'ויקיפדיה:בוט/קישורי שפה',
+      'תיקון קישורי שפה',
+      '* [[Page1]]: <nowiki>{{אנג|Google}}</nowiki> - [[:en:Google]] ← [[:en:Google Redirect]] - תוקן',
+      1,
+      '21 ביולי 2026, 15:34',
+    );
+  });
+
+  it('creates a human-readable Hebrew log section when the log page does not exist', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-21T12:34:56.000Z'));
+    api.categroyPages.mockImplementation(async function* generator() {
+      const x: WikiPage[] = [{
+        title: 'Page1',
+        pageid: 1,
+        ns: 0,
+        extlinks: [],
+        revisions: [{
+          revid: 2,
+          slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+          user: 'User',
+          size: 1,
+        }],
+      }];
+      yield x;
+    });
+    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
+    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'Google', to: 'Google Redirect' } });
+    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
+    api.info.mockResolvedValueOnce([{ missing: '' }]);
+
+    await foreignWikipediaMissingLinksParsedContent(api);
+
+    jest.useRealTimers();
 
     expect(api.create).toHaveBeenCalledWith(
       'ויקיפדיה:בוט/קישורי שפה',
       'תיקון קישורי שפה',
-      '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: לא נמצאו שגיאות',
-    );
-  });
-
-  it('handles log edit when log page fetch fails', async () => {
-    api.categroyPages.mockImplementation(async function* generator() {
-      const x: WikiPage[] = [{
-        title: 'Page1', pageid: 1, ns: 0, extlinks: [], revisions: [],
-      }];
-      yield x;
-    });
-    api.articleContent
-      .mockResolvedValueOnce({ revid: 2, content: '' })
-      .mockResolvedValueOnce({ revid: 1, content: '' });
-    await foreignWikipediaMissingLinksParsedContent(api);
-
-    expect(api.edit).toHaveBeenCalledWith(
-      'ויקיפדיה:בוט/קישורי שפה',
-      'תיקון קישורי שפה',
-      '\n\n* [[Page1]]: <nowiki>{{|}}</nowiki> - [[::]] - דולג: לא נמצאו שגיאות',
-      1,
-    );
-  });
-
-  it('writes unknown failure reasons as-is in the log page', async () => {
-    api.categroyPages.mockImplementation(async function* generator() {
-      const x: WikiPage[] = [{
-        title: 'Page1', pageid: 1, ns: 0, extlinks: [], revisions: [],
-      }];
-      yield x;
-    });
-    api.getParsedContent.mockRejectedValueOnce(new Error('custom failure'));
-    api.articleContent
-      .mockResolvedValueOnce({ revid: 2, content: '' })
-      .mockResolvedValueOnce({ revid: 1, content: '' });
-
-    await foreignWikipediaMissingLinksParsedContent(api);
-
-    expect(api.edit).toHaveBeenCalledWith(
-      'ויקיפדיה:בוט/קישורי שפה',
-      'תיקון קישורי שפה',
-      expect.stringContaining('דולג: custom failure'),
-      1,
+      '== 21 ביולי 2026, 15:34 ==\n* [[Page1]]: <nowiki>{{אנג|Google}}</nowiki> - [[:en:Google]] ← [[:en:Google Redirect]] - תוקן',
     );
   });
 
@@ -294,23 +318,14 @@ describe('addTemplateWithoutWikidataItem', () => {
 });
 
 describe('formatLog', () => {
-  it('translates known reasons to Hebrew and falls back when reason is missing', () => {
+  it('formats successful log entries', () => {
     expect(formatLog({
       pageTitle: 'Page',
       templateName: 'אנג',
       foreignTitle: 'Google',
       languageCode: 'en',
-      success: false,
-      reason: 'matching template not found',
-    })).toContain('דולג: התבנית המתאימה לא נמצאה');
-
-    expect(formatLog({
-      pageTitle: 'Page',
-      templateName: 'אנג',
-      foreignTitle: 'Google',
-      languageCode: 'en',
-      success: false,
-    })).toContain('דולג: undefined');
+      success: true,
+    })).toContain('- תוקן');
   });
 });
 
@@ -1287,27 +1302,14 @@ describe('runSinglePage', () => {
     expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|NewGoogle}}', 123);
   });
 
-  it('writes skipped log with target when replacement template is not found', async () => {
+  it('does not edit a page when the matching template is not found', async () => {
     api.articleContent.mockResolvedValueOnce({ content: '{{גרמ|Google}}', revid: 123 });
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
-    api.categroyPages.mockImplementation(async function* generator() {
-      yield [];
-    });
-    api.categroyTitles.mockImplementation(async function* generator() {
-      yield [{ title: 'TestPage' } as WikiPage];
-    });
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({ redirect: { from: 'TestPage', to: 'NewGoogle' } });
     mockLanguageApi.info.mockResolvedValueOnce([{ missing: '' }]);
 
     await runSinglePage('TestPage', api);
-    await foreignWikipediaMissingLinksParsedContent(api);
 
-    const logEditCall = api.edit.mock.calls.find(([title]) => title === 'ויקיפדיה:בוט/קישורי שפה');
-
-    expect(logEditCall).toBeDefined();
-    expect(logEditCall?.[0]).toBe('ויקיפדיה:בוט/קישורי שפה');
-    expect(logEditCall?.[1]).toBe('תיקון קישורי שפה');
-    expect(logEditCall?.[2]).toStrictEqual(expect.stringContaining('* [[TestPage]]: <nowiki>{{אנג|Google}}</nowiki> - [[:en:Google]] ← [[:en:NewGoogle]] - דולג: התבנית המתאימה לא נמצאה'));
-    expect(logEditCall?.[3]).toBe(1);
+    expect(api.edit).not.toHaveBeenCalled();
   });
 });
