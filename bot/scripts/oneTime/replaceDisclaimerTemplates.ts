@@ -1,6 +1,6 @@
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { WikiPage } from '../../types';
-import { contentFromPage, escapeRegex, promiseSequence } from '../../utilities';
+import { contentFromPage, promiseSequence } from '../../utilities';
 
 const TEMPLATE_REPLACEMENTS = [
   { from: 'הבהרה משפטית', to: '{{הסתייגות|משפטית}}' },
@@ -13,7 +13,7 @@ const TEMPLATE_REPLACEMENTS = [
 type ChangeStats = Record<string, number>;
 
 function createTemplateRegex(templateName: string): RegExp {
-  return new RegExp(`\\{\\{\\s*${escapeRegex(templateName)}\\|?\\s*\\}\\}`, 'g');
+  return new RegExp(`\\{\\{\\s*${RegExp.escape(templateName)}\\|?\\s*\\}\\}`, 'g');
 }
 
 function countMatches(content: string, templateName: string): number {

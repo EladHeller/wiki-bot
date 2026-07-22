@@ -8,7 +8,7 @@ import {
   getUndatedParagraphsToArchive,
   removeArchivedUndatedParagraphsFromTracker,
 } from '../../utilities/archiveUtils';
-import { asyncGeneratorMapWithSequence, contentFromPage, escapeRegex } from '../../utilities';
+import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { WikiPage } from '../../types';
 import { logger, stringify } from '../../utilities/logger';
 
@@ -97,7 +97,7 @@ function matchesWildcardExpression(text: string, expression?: string): boolean {
     return false;
   }
   return expressions.some((singleExpression) => {
-    const escapedExpression = escapeRegex(singleExpression).replace(/\\\*/g, '[\\s\\S]*');
+    const escapedExpression = RegExp.escape(singleExpression).replace(/\\\*/g, '[\\s\\S]*');
     return new RegExp(escapedExpression, 'u').test(text);
   });
 }

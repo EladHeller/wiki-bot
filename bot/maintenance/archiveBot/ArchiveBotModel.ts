@@ -1,4 +1,3 @@
-import { escapeRegex } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
 import { getAllParagraphs, getParagraphContent } from '../../wiki/paragraphParser';
@@ -78,7 +77,7 @@ function getArchiveContentBySignatureDate(
   const targetYear = archiveMonthDate.getFullYear();
 
   const signatureRegex = new RegExp(
-    String.raw`\b\d{1,2}:\d{2},\s+\d{1,2}\s+ב${escapeRegex(targetMonthName)}\s+${targetYear}\b`,
+    String.raw`\b\d{1,2}:\d{2},\s+\d{1,2}\s+ב${RegExp.escape(targetMonthName)}\s+${targetYear}\b`,
     'u',
   );
 

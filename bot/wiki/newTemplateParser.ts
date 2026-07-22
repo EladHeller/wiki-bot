@@ -1,4 +1,3 @@
-import { escapeRegex } from '../utilities';
 import { parseWikiStructures, nextWikiText } from './WikiParser';
 
 type TemplateData = {
@@ -13,8 +12,8 @@ const isStructureInsideAnother = (
 
 export function findTemplates(text: string, templateName: string, title: string): string[] {
   const structures = parseWikiStructures(text, 0, title);
-  const templateStartRegex = new RegExp(`^{{\\s*${escapeRegex(templateName)}`);
-  const templateRegex = new RegExp(`^{{\\s*${escapeRegex(templateName)}\\s*[|}]`);
+  const templateStartRegex = new RegExp(`^{{\\s*${RegExp.escape(templateName)}`);
+  const templateRegex = new RegExp(`^{{\\s*${RegExp.escape(templateName)}\\s*[|}]`);
 
   const templateStructures = structures.filter((s) => s.type === 'template' || s.type === 'parameter');
   const skipRanges: Array<{ start: number; end: number }> = [];
@@ -148,7 +147,7 @@ export function getTemplateData(
   templateName: string,
   title: string,
 ): TemplateData {
-  const templateStartRegex = new RegExp(`^{{\\s*${escapeRegex(templateName)}`);
+  const templateStartRegex = new RegExp(`^{{\\s*${RegExp.escape(templateName)}`);
   const templateContent = templateText.replace(templateStartRegex, '').replace(/}}$/, '');
   if (!templateContent.match(/^\s*\|/)) {
     return {};

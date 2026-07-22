@@ -2,10 +2,9 @@ import { findTemplate } from '../../wiki/newTemplateParser';
 import { IWikiApi } from '../../wiki/WikiApi';
 import { getInnerLink } from '../../wiki/wikiLinkParser';
 import { getArchiveTitle } from '../../utilities/archiveUtils';
-import { escapeRegex } from '../../utilities';
 
 const botName = process.env.BOT_NAME as string;
-const escapedBotName = escapeRegex(botName);
+const escapedBotName = RegExp.escape(botName);
 const botMentionPattern = `@\\[\\[(?:(?:משתמש|user):)?${escapedBotName}(?:\\|${escapedBotName})?\\]\\]`;
 const archiveCommandRegex = new RegExp(`^ *(:)*${botMentionPattern} +ארכב(\\s+ל)?:.*`, 'im');
 const archiveCommandRegexGlobal = new RegExp(`^ *(:)*${botMentionPattern} +ארכב(\\s+ל)?:.*`, 'gim');
