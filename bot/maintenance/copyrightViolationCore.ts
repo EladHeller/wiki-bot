@@ -128,99 +128,104 @@ export async function checkHamichlol(title: string, wikipediaTitle: string) {
 }
 
 export async function handlePage(title: string, isMainNameSpace: boolean) {
-  const logs: ArticleLog[] = [];
-  const otherLogs: ArticleLog[] = [];
-  if (title.includes(`(${DISAMBIGUATION})`)) {
-    otherLogs.push({
-      text: DISAMBIGUATION,
-      title,
-      error: true,
-    });
-    return { logs, otherLogs };
-  }
-  if (title.includes(`/${SELECTED_QOUTE}/`)) {
-    otherLogs.push({
-      text: SELECTED_QOUTE,
-      title,
-      error: false,
-    });
-  }
-
-  if (title.includes(`/${WEBSITE_FOR_VISIT}/`)) {
-    otherLogs.push({
-      text: WEBSITE_FOR_VISIT,
-      title,
-      error: false,
-    });
-  }
-
-  const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
-  let titleForHamichlol = title;
-  if (!isMainNameSpace) {
-    titleForHamichlol = title.split(/[:/]/).at(-1) ?? '';
-  }
-  if (titleForHamichlol && ![SAND_BOX, DRAFT].includes(titleForHamichlol)) {
-    results.push(await checkHamichlol(titleForHamichlol, title));
-    results.push(await checkHamichlol(`רבי ${titleForHamichlol}`, title));
-    results.push(await checkHamichlol(`הרב ${titleForHamichlol}`, title));
-  }
-  results.forEach((res) => {
-    if (res == null) {
-      return;
-    }
-    if (res.status === 'error') {
-      if (res.error?.code === 'no_data') { // Url not found
-        return;
-      }
-
-      if (res.error?.code === 'bad_title') {
-        otherLogs.push({
-          text: NOT_FOUND,
-          title,
-          error: true,
-        });
-        return;
-      }
-
-      if (res.error?.code && TEMP_ERRORS.includes(res.error.code)) {
-        otherLogs.push({
-          text: SEARCH_ERROR,
-          title,
-          error: true,
-        });
-        return;
-      }
-      console.log(res.error);
-      logs.push({
+  try {
+    const logs: ArticleLog[] = [];
+    const otherLogs: ArticleLog[] = [];
+    if (title.includes(`(${DISAMBIGUATION})`)) {
+      otherLogs.push({
+        text: DISAMBIGUATION,
         title,
-        text: `[[${escapeTitle(title)}]] - ${res.error?.info}`,
         error: true,
       });
-
-      return;
+      return { logs, otherLogs };
+    }
+    if (title.includes(`/${SELECTED_QOUTE}/`)) {
+      otherLogs.push({
+        text: SELECTED_QOUTE,
+        title,
+        error: false,
+      });
     }
 
-    const { url, confidence, violation } = res.best ?? { violation: 'none', confidence: 0 };
-    if (violation === 'none') {
+    if (title.includes(`/${WEBSITE_FOR_VISIT}/`)) {
       otherLogs.push({
+        text: WEBSITE_FOR_VISIT,
         title,
-        text: `[[${escapeTitle(title)}]] ${confidence.toFixed(2)}`,
+        error: false,
+      });
+    }
+
+    const results: Array<CopyViolationResponse | null> = [await checkCopyViolations(title, 'he')];
+    let titleForHamichlol = title;
+    if (!isMainNameSpace) {
+      titleForHamichlol = title.split(/[:/]/).at(-1) ?? '';
+    }
+    if (titleForHamichlol && ![SAND_BOX, DRAFT].includes(titleForHamichlol)) {
+      results.push(await checkHamichlol(titleForHamichlol, title));
+      results.push(await checkHamichlol(`רבי ${titleForHamichlol}`, title));
+      results.push(await checkHamichlol(`הרב ${titleForHamichlol}`, title));
+    }
+    results.forEach((res) => {
+      if (res == null) {
+        return;
+      }
+      if (res.status === 'error') {
+        if (res.error?.code === 'no_data') { // Url not found
+          return;
+        }
+
+        if (res.error?.code === 'bad_title') {
+          otherLogs.push({
+            text: NOT_FOUND,
+            title,
+            error: true,
+          });
+          return;
+        }
+
+        if (res.error?.code && TEMP_ERRORS.includes(res.error.code)) {
+          otherLogs.push({
+            text: SEARCH_ERROR,
+            title,
+            error: true,
+          });
+          return;
+        }
+        console.log(res.error);
+        logs.push({
+          title,
+          text: `[[${escapeTitle(title)}]] - ${res.error?.info}`,
+          error: true,
+        });
+
+        return;
+      }
+
+      const { url, confidence, violation } = res.best ?? { violation: 'none', confidence: 0 };
+      if (violation === 'none') {
+        otherLogs.push({
+          title,
+          text: `[[${escapeTitle(title)}]] ${confidence.toFixed(2)}`,
+          rank: confidence,
+        });
+        return;
+      }
+      const matchText = textFromMatch(confidence, violation, url, title);
+      logs.push({
+        title,
+        text: `[[${escapeTitle(title)}]] {{כ}}${matchText}`,
         rank: confidence,
       });
-      return;
-    }
-    const matchText = textFromMatch(confidence, violation, url, title);
-    logs.push({
-      title,
-      text: `[[${escapeTitle(title)}]] {{כ}}${matchText}`,
-      rank: confidence,
     });
-  });
 
-  return {
-    logs,
-    otherLogs,
-  };
+    return {
+      logs,
+      otherLogs,
+    };
+  } catch (e) {
+    logger.logError(e.message || e.toString());
+    throw e;
+  }
 }
 
 export async function runCopyrightViolationBot(basePage: string, runMode: 'new' | 'edit') {
@@ -240,7 +245,7 @@ export async function runCopyrightViolationBot(basePage: string, runMode: 'new' 
   const allOtherLogs: ArticleLog[] = [];
   const processedPages = new Set<string>();
 
-  await asyncGeneratorMapWithSequence(3, generator, (change: RecentChange) => async () => {
+  await asyncGeneratorMapWithSequence(1, generator, (change: RecentChange) => async () => {
     if (processedPages.has(change.title)) {
       return;
     }

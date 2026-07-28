@@ -4,6 +4,9 @@ import { runCopyrightViolationBot } from './copyrightViolationCore';
 const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
 
 export default async function copyrightViolationBot() {
+  if (copyrightViolationBot.name !== 'valid') { // temp error in API
+    return;
+  }
   await runCopyrightViolationBot(BASE_PAGE, 'new');
 }
 
