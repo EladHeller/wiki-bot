@@ -1302,7 +1302,12 @@ Content
 
       expect(wikiApi.edit).toHaveBeenCalledWith('TestPage/ארכיון 1', expect.any(String), expect.not.stringContaining('{{הועבר'), expect.any(Number));
       // Source page edit should fully remove the paragraph (no stub for non-targeted)
-      expect(wikiApi.edit).toHaveBeenCalledWith('TestPage', expect.any(String), expect.not.stringContaining('~~~~'), expect.any(Number));
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage',
+        expect.not.stringContaining('אורכב ל-'),
+        expect.not.stringContaining('~~~~'),
+        expect.any(Number),
+      );
 
       wikiApi.create.mockClear();
       wikiApi.edit.mockClear();
@@ -1310,7 +1315,17 @@ Content
       // 2. isTargeted = true (via תבנית ארכיון עם יעד algorithm for paragraph with ארכוב)
       await model.archive('TestPage', [paragraphWithTarget], 'תבנית ארכיון עם יעד', 'TestPage/Navigate');
 
-      expect(wikiApi.create).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.stringContaining('{{הועבר'));
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('אורכב ל-[[TargetPage]]'),
+        expect.stringContaining('{{הועבר'),
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'TestPage',
+        expect.stringContaining('אורכב ל-[[TargetPage]]'),
+        expect.any(String),
+        expect.any(Number),
+      );
       // Archive page edit should include stub with הועבר|ל and ~~~~
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון 1',

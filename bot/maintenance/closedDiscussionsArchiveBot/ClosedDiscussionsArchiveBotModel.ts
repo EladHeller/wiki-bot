@@ -111,10 +111,12 @@ function createArchiveSummary(
   paragraphName: string,
   status: string,
   handler?: string,
+  archiveTarget?: string,
   archive = true,
 ): string {
   const handlerPart = handler ? ` מטפל: [[user:${handler}|${handler}]].` : '';
-  return `${SUMMARY_PREFIX}: ${archive ? 'ארכוב' : 'מחיקת'} הדיון "${paragraphName}", ${status}.${handlerPart}`;
+  const archiveTargetPart = archiveTarget ? ` אורכב ל-[[${archiveTarget}]]` : '';
+  return `${SUMMARY_PREFIX}: ${archive ? 'ארכוב' : 'מחיקת'} הדיון "${paragraphName}", ${status}.${handlerPart}${archiveTargetPart}`;
 }
 
 function getQuarterFromDate(date: Date): { firstMonth: string; lastMonth: string; year: number } {
@@ -333,6 +335,7 @@ export default function ClosedDiscussionsArchiveBotModel(
       paragraphName,
       templateData.status,
       templateData.handler,
+      isTargeted ? archiveTitle : undefined,
     );
 
     const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
@@ -494,6 +497,7 @@ export default function ClosedDiscussionsArchiveBotModel(
           name,
           templateData.status,
           templateData.handler,
+          undefined,
           false,
         );
         const newContent = removeParagraphsFromContent(pageContent, [paragraph]);
