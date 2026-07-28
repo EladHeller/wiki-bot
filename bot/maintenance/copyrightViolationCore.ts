@@ -128,9 +128,10 @@ export async function checkHamichlol(title: string, wikipediaTitle: string) {
 }
 
 export async function handlePage(title: string, isMainNameSpace: boolean) {
+  const logs: ArticleLog[] = [];
+  const otherLogs: ArticleLog[] = [];
+
   try {
-    const logs: ArticleLog[] = [];
-    const otherLogs: ArticleLog[] = [];
     if (title.includes(`(${DISAMBIGUATION})`)) {
       otherLogs.push({
         text: DISAMBIGUATION,
@@ -224,7 +225,15 @@ export async function handlePage(title: string, isMainNameSpace: boolean) {
     };
   } catch (e) {
     logger.logError(e.message || e.toString());
-    throw e;
+    otherLogs.push({
+      text: 'Unknow error',
+      title,
+      error: true,
+    });
+    return {
+      logs,
+      otherLogs,
+    };
   }
 }
 
