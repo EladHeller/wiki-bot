@@ -21,6 +21,8 @@ function validateConfig(config: Partial<WikiApiConfig> = defaultConfig): config 
   return true;
 }
 
+const RETRY_CODES = ['read ETIMEDOUT', 'read ECONNRESET'];
+
 export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWikiApi {
   const botName = process.env.BOT_NAME;
   const jar = new CookieJar();
@@ -56,7 +58,7 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWik
     return getWikiToken(client, config.baseUrl, tokenType);
   }
 
-  async function request(path: string, method?: string, data?: Record<string, any>): Promise<any> {
+  async function request(path: string, method?: string, data?: Record<string, any>, retryCount = 0): Promise<any> {
     try {
       if (!token) {
         await login();
@@ -79,6 +81,11 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWik
       }
       return result.data;
     } catch (e) {
+      if (RETRY_CODES.includes(e.message) && retryCount < 3) {
+        console.log(`retrying ${retryCount + 1} time`);
+        await new Promise((resolve) => { setTimeout(resolve, 500); });
+        return request(path, method, data, retryCount + 1);
+      }
       const error = e.message || e.data || e.toString();
       logger.logError(JSON.stringify(error, null, 2));
       throw new Error('Failed to perform action');
