@@ -249,3 +249,309 @@ export type WikiNotification = {
     iconUrl: string;
   };
 }
+
+export type FlowGender = 'male' | 'female' | 'unknown';
+
+export type FlowUserLink = {
+  url: string;
+  title: string;
+  exists: boolean;
+};
+
+export type FlowUserLinks = {
+  contribs: FlowUserLink;
+  userpage: FlowUserLink;
+  talk: FlowUserLink;
+};
+
+export type FlowUser = {
+  name: string;
+  wiki: string;
+  gender: FlowGender;
+  links: FlowUserLinks;
+  id: number;
+};
+
+export type FlowLastEditUser = {
+  name: string | null;
+  wiki: string | null;
+  gender: FlowGender;
+  links: FlowUserLinks | [];
+  id: number | null;
+};
+
+export type FlowLink = {
+  url: string;
+  title: string;
+  text: string;
+};
+
+export type FlowTopicProperties = {
+  'topic-of-post': {
+    plaintext: string;
+  };
+  'topic-of-post-text-from-html': {
+    plaintext: string;
+  };
+};
+
+export type FlowRevisionLinks = {
+  'topic-history': FlowLink;
+  topic: FlowLink;
+  post: FlowLink;
+
+  'topic-revision'?: FlowLink;
+  'post-revision'?: FlowLink;
+  'post-history'?: FlowLink;
+
+  diff?: FlowLink;
+  'diff-prev'?: FlowLink;
+
+  'watch-topic'?: FlowLink;
+  'unwatch-topic'?: FlowLink;
+};
+
+export type FlowRevisionBase = {
+  workflowId: string;
+  articleTitle: string;
+  revisionId: string;
+
+  timestamp: string;
+  dateFormats: unknown[];
+
+  isOriginalContent: boolean;
+  isModerated: boolean;
+
+  actions: unknown[];
+
+  size: {
+    old: string;
+    new: string;
+  };
+
+  author: FlowUser;
+  creator: FlowUser;
+  lastEditUser: FlowLastEditUser;
+
+  lastEditId: string | null;
+  previousRevisionId: string | null;
+
+  isLocked: boolean;
+  isModeratedNotLocked: boolean;
+
+  isWatched: boolean;
+  watchable: boolean;
+
+  postId: string;
+  isMaxThreadingDepth: boolean;
+  isNewPage: boolean;
+
+  replies: string[];
+};
+
+export type FlowNewTopicRevision = FlowRevisionBase & {
+  changeType: 'new-post';
+
+  properties: FlowTopicProperties;
+
+  links: FlowRevisionLinks & {
+    'topic-revision': FlowLink;
+  };
+
+  content: {
+    content: string;
+    format: 'topic-title-html';
+    plaintext: string;
+  };
+
+  replyToId: null;
+
+  reply_count: number;
+  last_updated_readable: string;
+  last_updated: number;
+};
+
+export type FlowReplyRevision = FlowRevisionBase & {
+  changeType: 'reply';
+
+  properties: [];
+
+  links: FlowRevisionLinks & {
+    'post-revision': FlowLink;
+  };
+
+  content: {
+    content: string;
+    format: string;
+  };
+
+  replyToId: string;
+
+  reply_count?: never;
+  last_updated_readable?: never;
+  last_updated?: never;
+};
+
+export type FlowEditPostRevision = FlowRevisionBase & {
+  changeType: 'edit-post';
+
+  properties: [];
+
+  links: FlowRevisionLinks & {
+    'post-history': FlowLink;
+    'post-revision': FlowLink;
+    diff: FlowLink;
+    'diff-prev': FlowLink;
+  };
+
+  content: {
+    content: string;
+    format: 'fixed-html';
+  };
+
+  replyToId: string;
+
+  reply_count?: never;
+  last_updated_readable?: never;
+  last_updated?: never;
+};
+
+export type FlowModerationReason = {
+  content: string;
+  format: 'plaintext';
+};
+
+export type FlowLockTopicRevision = FlowRevisionBase & {
+  changeType: 'lock-topic';
+
+  properties: FlowTopicProperties;
+
+  links: Omit<FlowRevisionLinks, 'post'> & {
+    'topic-revision': FlowLink;
+  };
+
+  moderator: FlowUser;
+  moderateState: 'lock';
+  moderateReason: FlowModerationReason;
+
+  content: {
+    content: string;
+    format: 'topic-title-wikitext';
+    plaintext: string;
+  };
+
+  replyToId: null;
+
+  reply_count: number;
+  last_updated: number;
+};
+
+export type FlowRevision =
+  | FlowNewTopicRevision
+  | FlowReplyRevision
+  | FlowEditPostRevision
+  | FlowLockTopicRevision;
+
+export type FlowTopicAction = {
+  url: FlowLink;
+};
+
+export type FlowTopic = {
+  type: 'topic';
+
+  roots: string[];
+
+  /**
+   * The key is a post or topic ID.
+   * The value contains the associated revision IDs.
+   */
+  posts: Record<string, string[]>;
+
+  /**
+   * The key is a revision ID.
+   */
+  revisions: Record<string, FlowRevision>;
+
+  workflowId: string;
+
+  links: unknown[];
+
+  actions: {
+    newtopic: FlowTopicAction;
+  };
+
+  submitted: {
+    format: 'wikitext';
+  };
+
+  errors: unknown[];
+};
+
+export type FlowTopicResponse = {
+  flow: {
+    'view-topic': {
+      result: {
+        topic: FlowTopic;
+      };
+      status: 'ok';
+    };
+  };
+};
+
+export type FlowTopicList = {
+  submitted: {
+    'offset-dir': string;
+    sortby: string;
+    'offset-id': string | null;
+    offset: string | null;
+    limit: number;
+    format: string;
+  };
+
+  errors: unknown[];
+  sortby: string;
+  roots: string[];
+
+  /**
+   * The key is a post or topic ID.
+   * The value contains the associated revision IDs.
+   */
+  posts: Record<string, string[]>;
+
+  /**
+   * The key is a revision ID.
+   */
+  revisions: Record<string, FlowRevision>;
+
+  workflowId: string;
+  title: string;
+
+  actions: {
+    newtopic: FlowLink;
+  };
+
+  links: {
+    'board-sort': {
+      updated: string;
+      newest: string;
+    };
+    newtopic: string;
+    pagination: {
+      fwd?: FlowLink;
+      rev?: FlowLink;
+    };
+  };
+
+  type: 'topiclist';
+};
+
+export type FlowTopicListResponse = {
+  flow: {
+    'view-topiclist': {
+      result: {
+        topiclist: FlowTopicList;
+      };
+      status: 'ok';
+    };
+  };
+};

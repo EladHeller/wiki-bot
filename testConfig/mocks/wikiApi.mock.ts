@@ -3,6 +3,7 @@ import { IWikiApi } from '../../bot/wiki/WikiApi';
 import { Mocked } from './types';
 import {
   FileWithGlobalUsage,
+  FlowTopicListResponse,
   LogEvent, PageInfo, RecentChange, Revision, UserContribution, WikiPage,
   WikiRedirectData,
 } from '../../bot/types';
@@ -115,5 +116,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     searchPages: base.searchPages
       ?? jest.fn<(searchText: string, namespaces?: number[], limit?: number) =>
         AsyncGenerator<WikiPage[], void, void>>(),
+    viewFlowTopicList: base.viewFlowTopicList ?? jest.fn<(title: string) => Promise<FlowTopicListResponse>>(),
+
   };
 }

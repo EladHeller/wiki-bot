@@ -8,6 +8,7 @@ import {
   WikiRedirectData,
   EditResponse,
   PageInfo,
+  FlowTopicListResponse,
 } from '../types';
 import { contentFromPage, objectToFormData } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
@@ -71,6 +72,7 @@ export interface IWikiApi {
   getRedirectsTo(toNamespace: number, limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
   getUserGroups(username: string): Promise<string[]>;
+  viewFlowTopicList(title: string): Promise<FlowTopicListResponse>;
 }
 
 export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
@@ -174,6 +176,10 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     }
 
     return request(`?action=edit&format=json&assert=bot&bot=true&nocreate=true${minor ? '&minor=true' : ''}`, 'post', objectToFormData(data));
+  }
+
+  async function viewFlowTopicList(pageTitle: string) {
+    return request(`?action=flow&format=json&submodule=view-topiclist&page=${encodeURIComponent(pageTitle)}`, 'GET');
   }
 
   async function create(
@@ -524,5 +530,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     getUserGroups,
     recentChanges,
     filesWithGlobalUsage,
+    viewFlowTopicList,
   };
 }
