@@ -324,6 +324,88 @@ Content
 
     expect(paragraphs).toStrictEqual([]);
   });
+
+  it('should return all level 3 paragraphs correctly', () => {
+    const articleText = `
+===Level 3 Header A===
+Content of A
+===Level 3 Header B===
+Content of B
+`;
+
+    expect(getAllParagraphs(articleText, 'test', 3)).toStrictEqual([
+      '===Level 3 Header A===\nContent of A\n',
+      '===Level 3 Header B===\nContent of B\n',
+    ]);
+  });
+
+  it('should terminate a level 3 paragraph at a level 2 heading but not a level 4 heading', () => {
+    const articleText = `
+===Level 3 Header===
+Content here
+====Level 4 Header====
+Sub content
+==Level 2 Header==
+Next section
+`;
+
+    expect(getAllParagraphs(articleText, 'test', 3)).toStrictEqual([
+      '===Level 3 Header===\nContent here\n====Level 4 Header====\nSub content\n',
+    ]);
+  });
+
+  it('should return level 1 paragraphs correctly', () => {
+    const articleText = `
+=Level 1 Header A=
+Content 1
+=Level 1 Header B=
+Content 2
+`;
+
+    expect(getAllParagraphs(articleText, 'test', 1)).toStrictEqual([
+      '=Level 1 Header A=\nContent 1\n',
+      '=Level 1 Header B=\nContent 2\n',
+    ]);
+  });
+
+  it('should return level 4 paragraphs correctly', () => {
+    const articleText = `
+====Level 4 Header A====
+Content 4A
+====Level 4 Header B====
+Content 4B
+`;
+
+    expect(getAllParagraphs(articleText, 'test', 4)).toStrictEqual([
+      '====Level 4 Header A====\nContent 4A\n',
+      '====Level 4 Header B====\nContent 4B\n',
+    ]);
+  });
+
+  it('should handle equals signs in the middle of a line inside paragraph content', () => {
+    const articleText = `
+==First==
+Some text = not a header
+==Second==
+Content 2
+`;
+
+    expect(getAllParagraphs(articleText, 'test')).toStrictEqual([
+      '==First==\nSome text = not a header\n',
+      '==Second==\nContent 2\n',
+    ]);
+  });
+
+  it('should handle sub-paragraph header without newline at the end of article', () => {
+    const articleText = `
+===Level 3 Heading===
+Some content
+====Subheading`;
+
+    expect(getAllParagraphs(articleText, 'test', 3)).toStrictEqual([
+      '===Level 3 Heading===\nSome content\n====Subheading',
+    ]);
+  });
 });
 
 describe('parseParagraph', () => {

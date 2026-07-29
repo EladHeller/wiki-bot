@@ -1,4 +1,4 @@
-interface WikiStructure {
+export interface WikiStructure {
   type: 'template' | 'parameter' | 'brace' | 'link' | 'wikilink' | 'nowiki' | 'comment' | 'math';
   start: number;
   end: number;
@@ -131,7 +131,7 @@ export function parseWikiStructures(text: string, startIndex?: number, title?: s
   return structures.sort((a, b) => a.start - b.start);
 }
 
-function findStructureAtIndex(
+export function findStructureAtIndex(
   structures: WikiStructure[],
   currentIndex: number,
   ignoreTemplates?: boolean,
