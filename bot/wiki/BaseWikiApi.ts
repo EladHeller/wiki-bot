@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
-import { objectToQueryString } from '../utilities';
+import { getUserAgent, objectToQueryString } from '../utilities';
 import { baseLogin, getToken as getWikiToken } from './wikiLogin';
 import { IBaseWikiApi, WikiApiConfig } from '../types';
 import { logger } from '../utilities/logger';
@@ -29,7 +29,7 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWik
   const client = wrapper(axios.create({
     jar,
     headers: {
-      'User-Agent': `${botName}/1.0 (${wikiBaseUrl}/wiki/User:${botName})`,
+      'User-Agent': getUserAgent(),
     },
   }));
 

@@ -1,5 +1,6 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { WikiLink } from '../../wiki/wikiLinkParser';
+import { getUserAgent } from '../../utilities';
 
 export type LinkCheckState = 'alive' | 'dead' | 'blocked' | 'transient' | 'unknown';
 
@@ -32,17 +33,11 @@ const defaultDependencies: LinkCheckerDependencies = {
   now: Date.now,
 };
 
-export function getExternalLinkUserAgent(): string {
-  const botName = process.env.BOT_NAME ?? 'Sapper-bot';
-  const wikiBaseUrl = (process.env.BASE_URL ?? 'https://he.wikipedia.org').replace(/\/$/, '');
-  return `${botName}/1.0 (${wikiBaseUrl}/wiki/User:${botName})`;
-}
-
 function getReferrer(pageTitle?: string): string | undefined {
   if (!pageTitle) {
     return undefined;
   }
-  const wikiBaseUrl = (process.env.BASE_URL ?? 'https://he.wikipedia.org').replace(/\/$/, '');
+  const wikiBaseUrl = process.env.BASE_URL?.replace(/\/$/, '');
   return `${wikiBaseUrl}/wiki/${encodeURIComponent(pageTitle.replace(/ /g, '_'))}`;
 }
 
@@ -157,7 +152,7 @@ async function requestLink(
     const referrer = getReferrer(pageTitle);
     response = await dependencies.fetchFn(url, {
       headers: {
-        'User-Agent': getExternalLinkUserAgent(),
+        'User-Agent': getUserAgent(),
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'he-IL,he;q=0.9,en;q=0.7',
         ...(referrer ? { Referer: referrer } : {}),

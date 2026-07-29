@@ -2,8 +2,9 @@ import {
   beforeEach, describe, expect, it, jest,
 } from '@jest/globals';
 import {
-  checkLinksWithHttp, classifyLinkStatus, clearLinkCheckCache, getExternalLinkUserAgent,
+  checkLinksWithHttp, classifyLinkStatus, clearLinkCheckCache,
 } from '../tag-bot/actions/externalLinkChecker';
+import { getUserAgent } from '../utilities';
 
 const links = [{ link: 'https://example.com/page', text: 'Page' }];
 
@@ -40,7 +41,7 @@ describe('externalLinkChecker', () => {
       }),
     }));
     expect(result.get(links[0].link)?.state).toBe('alive');
-    expect(getExternalLinkUserAgent()).toContain('Sapper-bot/1.0');
+    expect(getUserAgent()).toContain('Sapper-bot/1.0');
   });
 
   it('should retry and confirm 404 responses', async () => {
@@ -198,23 +199,6 @@ describe('externalLinkChecker', () => {
 
   it('should support an empty check with default dependencies', async () => {
     await expect(checkLinksWithHttp([])).resolves.toStrictEqual(new Map());
-  });
-
-  it('should use the default bot name and Wikipedia base URL', async () => {
-    delete process.env.BOT_NAME;
-    delete process.env.BASE_URL;
-    fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
-
-    await checkLinksWithHttp(links, 'Page', {
-      fetchFn: fetchMock, sleep: sleepMock, now: () => now,
-    });
-
-    expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
-      headers: expect.objectContaining({
-        'User-Agent': 'Sapper-bot/1.0 (https://he.wikipedia.org/wiki/User:Sapper-bot)',
-        Referer: 'https://he.wikipedia.org/wiki/Page',
-      }),
-    }));
   });
 
   it('should pace different URLs on the same host', async () => {

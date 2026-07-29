@@ -1,10 +1,9 @@
-const wikiBaseUrl = process.env.BASE_URL;
-const botName = process.env.BOT_NAME;
+import { getUserAgent } from '../utilities';
 
 export async function querySparql(query: string): Promise<Record<string, string>[]> {
   const res = await fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}&format=json`, {
     headers: {
-      'User-Agent': `${botName}/1.0 (${wikiBaseUrl}/wiki/User:${botName})`,
+      'User-Agent': getUserAgent(),
     },
   });
   if (!res.ok) {

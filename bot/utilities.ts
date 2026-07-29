@@ -251,3 +251,9 @@ export async function firstPageOf<T>(generator: AsyncGenerator<T, any, any>): Pr
   const { value } = await generator.next();
   return value;
 }
+
+export function getUserAgent(): string {
+  const botName = process.env.BOT_NAME;
+  const wikiBaseUrl = process.env.BASE_URL?.replace(/\/$/, '');
+  return `${botName}/1.0 (${wikiBaseUrl}/wiki/User:${botName})`;
+}
