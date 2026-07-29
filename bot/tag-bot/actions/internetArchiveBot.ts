@@ -1,4 +1,5 @@
-import { getExternalLinkUserAgent, LinkCheckState } from './externalLinkChecker';
+import { getUserAgent } from '../../utilities';
+import { LinkCheckState } from './externalLinkChecker';
 
 type IABotUrlRecord = {
   url?: string;
@@ -93,7 +94,7 @@ export async function lookupIABotLinks(
   const response = await dependencies.fetchFn(IABOT_API_URL, {
     method: 'POST',
     headers: {
-      'User-Agent': getExternalLinkUserAgent(),
+      'User-Agent': getUserAgent(),
       Accept: 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
     },

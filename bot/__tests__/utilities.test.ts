@@ -7,6 +7,7 @@ import {
   fetchUrlLikeBrowser, getFullYear, prettyNumericValue, promiseSequence,
   getLocalDate, getLocalTimeAndDate, hebrewGimetriya, objectToFormData, objectToQueryString, parseLocalDate,
   firstPageOf,
+  getUserAgent,
 } from '../utilities';
 import { WikiPage } from '../types';
 
@@ -469,17 +470,25 @@ describe('contentFromPage', () => {
       revid: 1,
     });
   });
+});
 
-  describe('firstPageOf', () => {
-    it('should fetch first page', async () => {
-      async function* foo() {
-        yield 1;
-        yield 2;
-        yield 3;
-      }
+describe('firstPageOf', () => {
+  it('should fetch first page', async () => {
+    async function* foo() {
+      yield 1;
+      yield 2;
+      yield 3;
+    }
 
-      await expect(firstPageOf(foo())).resolves.toBe(1);
-      await expect(firstPageOf(foo())).resolves.toBe(1);
-    });
+    await expect(firstPageOf(foo())).resolves.toBe(1);
+    await expect(firstPageOf(foo())).resolves.toBe(1);
+  });
+});
+
+describe('getUserAgent', () => {
+  it('should return user agent from env', () => {
+    const res = getUserAgent();
+
+    expect(res).toBe('Test-bot/1.0 (https://he.wikipedia.org/wiki/User:Test-bot)');
   });
 });
