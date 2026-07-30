@@ -1,4 +1,4 @@
-import { nextWikiText } from './WikiParser';
+import { findStructureAtIndex, nextWikiText, parseWikiStructures } from './WikiParser';
 import { findTemplates } from './newTemplateParser';
 import { getInnerLinks } from './wikiLinkParser';
 
@@ -7,21 +7,52 @@ export interface Paragraph {
   content: string;
 }
 
-export function getParagraphEnd(articleText: string, startIndex: number, title?: string): number {
-  let endIndex = nextWikiText(articleText, startIndex, '==', false, title);
-  while (endIndex !== -1 && articleText.substring(endIndex, endIndex + 3) === '===') {
-    let nextIndex = endIndex;
-    while (articleText[nextIndex] === '=') {
-      nextIndex += 1;
-    }
-    endIndex = nextWikiText(articleText, nextIndex, '==', false, title);
-  }
-  if (endIndex === -1) {
-    endIndex = articleText.length;
-  }
-  return endIndex;
-}
+export function getParagraphEnd(articleText: string, startIndex: number, title?: string, level = 2): number {
+  const structures = parseWikiStructures(articleText, startIndex, title);
+  let index = startIndex;
+  while (index < articleText.length) {
+    const insideStructure = findStructureAtIndex(structures, index, false);
+    if (insideStructure) {
+      index = insideStructure.end;
+    } else if (articleText[index] === '=') {
+      const idx = index;
+      let count = 0;
+      while (idx + count < articleText.length && articleText[idx + count] === '=') {
+        count += 1;
+      }
 
+      let isStartOfLine = true;
+      for (let j = idx - 1; j >= 0; j -= 1) {
+        const char = articleText[j];
+        if (char === '\n') {
+          break;
+        }
+        if (char !== ' ' && char !== '\t') {
+          isStartOfLine = false;
+          break;
+        }
+      }
+
+      let advanced = false;
+      if (isStartOfLine) {
+        if (count <= level) {
+          return idx;
+        }
+        const lineEnd = articleText.indexOf('\n', idx);
+        index = lineEnd === -1 ? articleText.length : lineEnd;
+        advanced = true;
+      }
+
+      if (!advanced) {
+        index += count;
+      }
+    } else {
+      index += 1;
+    }
+  }
+
+  return articleText.length;
+}
 export function getParagraphContent(
   articleText: string,
   paragraphName: string,
@@ -57,27 +88,28 @@ export function parseParagraph(paragraphText: string): Paragraph {
   return { name, content };
 }
 
-export function getAllParagraphs(articleText: string, articleTitle: string): string[] {
+export function getAllParagraphs(articleText: string, articleTitle: string, level = 2): string[] {
   let currIndex = 0;
+  const levelText = '='.repeat(level);
   const paragraphContents: string[] = [];
   while (currIndex !== -1) {
-    const start = nextWikiText(articleText, currIndex, '==', false);
+    const start = nextWikiText(articleText, currIndex, levelText, false);
     if (start === -1) {
       break;
     }
-    if (articleText.substring(start, start + 3) === '===') {
-      currIndex = start + 3;
+    if (articleText.substring(start, start + level + 1) === `${levelText}=`) {
+      currIndex = start + level + 1;
     } else {
       const nextNewLine = articleText.indexOf('\n', start);
-      const titleStart = start + 2;
+      const titleStart = start + level;
 
-      const titleEnd = nextWikiText(articleText, titleStart, '==', false);
+      const titleEnd = nextWikiText(articleText, titleStart, levelText, false);
       if (titleEnd === -1) {
         currIndex = titleStart;
       } else if (nextNewLine !== -1 && nextNewLine < titleEnd) {
         currIndex = nextNewLine;
       } else {
-        const paragraphEnd = getParagraphEnd(articleText, titleEnd + 2, articleTitle);
+        const paragraphEnd = getParagraphEnd(articleText, titleEnd + level, articleTitle, level);
         paragraphContents.push(articleText.substring(start, paragraphEnd));
         currIndex = paragraphEnd;
       }
