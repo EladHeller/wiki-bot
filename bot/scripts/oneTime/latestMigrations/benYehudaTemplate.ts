@@ -1,7 +1,6 @@
 /* eslint-disable max-len */
 import { JSDOM } from 'jsdom';
 import fs from 'fs/promises';
-import WikiApi from '../../../wiki/WikiApi';
 import linksToTemplates, { basicConverter, PageData } from '../../linksToTemplates';
 import { WikiLink } from '../../../wiki/wikiLinkParser';
 import { CiteNewsTemplate, GeneralLinkTemplateData } from '../../types';

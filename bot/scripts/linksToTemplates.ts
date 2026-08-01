@@ -15,7 +15,9 @@ const citeNewsAllowedKeys = ['title', 'url', 'date', 'last', 'first', 'author', 
 const dateRegex = /\d{1,2}(?:[.-/])\d{1,2}(?:[.-/])(?:\[\[)?\d{2,4}(?:\]\])?/;
 const otherDateRegex = /(?:(?:\[\[)?\d{1,2}[\s,-]{1,3})?[א-ת]{3,8}(?:\]\])?[\s,-]{1,3}(?:\[\[)?\d{4}(?:\]\])?/;
 
-type GeneralLinkToTemplateCallback = (generalLink: GeneralLinkTemplateData | CiteNewsTemplate) => Promise<string | null>;
+type GeneralLinkToTemplateCallback = (
+  generalLink: GeneralLinkTemplateData | CiteNewsTemplate,
+) => Promise<string | null>;
 
 type ExternalLinkToTemplateCallback = (originalText: string, wikiLink: WikiLink, wikiPageTitle: string) =>
   Promise<string | null>;
@@ -127,7 +129,7 @@ export function basicConverter(
       authors.push(author);
     }
   }
-  const hebrewNames = findHebrewFullNames.default(remainText);
+  const hebrewNames = findHebrewFullNames(remainText);
   for (const name of hebrewNames) {
     if (remainText.includes(name)) {
       authors.push(name);
