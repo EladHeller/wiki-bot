@@ -15,10 +15,12 @@ const citeNewsAllowedKeys = ['title', 'url', 'date', 'last', 'first', 'author', 
 const dateRegex = /\d{1,2}(?:[.-/])\d{1,2}(?:[.-/])(?:\[\[)?\d{2,4}(?:\]\])?/;
 const otherDateRegex = /(?:(?:\[\[)?\d{1,2}[\s,-]{1,3})?[א-ת]{3,8}(?:\]\])?[\s,-]{1,3}(?:\[\[)?\d{4}(?:\]\])?/;
 
-type GeneralLinkToTemplateCallback = (generalLink: GeneralLinkTemplateData | CiteNewsTemplate) => Promise<string|null>;
+type GeneralLinkToTemplateCallback = (
+  generalLink: GeneralLinkTemplateData | CiteNewsTemplate,
+) => Promise<string | null>;
 
 type ExternalLinkToTemplateCallback = (originalText: string, wikiLink: WikiLink, wikiPageTitle: string) =>
-   Promise<string | null>;
+  Promise<string | null>;
 type ConvertionConfig = {
   generalLinkConverter: GeneralLinkToTemplateCallback;
   externalLinkConverter: ExternalLinkToTemplateCallback;
@@ -80,6 +82,7 @@ export function basicConverter(
     .replace(/ב-/g, '')
     .replace(/ ב /g, '')
     .replace(/מתוך/g, '')
+    .replace(/בתוך/g, '')
     .replace(/ראיון/g, '')
     .replace(/ספורט/g, '')
     .replace(/{{קישור שבור}}/g, '')
@@ -113,7 +116,9 @@ export function basicConverter(
     .replace(/\d{1,2}[\s,-]{1,3}[א-ת]{4,8}[\s,-]{1,3}\d{4}/g, '')
     .replace(/\d{1,2}(?:[.-/])\d{1,2}(?:[.-/])\d{2,4}/g, '')
     .replace(/ד"ר/g, '')
-    .replace(/{{סרטונים}}/g, '');
+    .replace(/{{סרטונים}}/g, '')
+    .replace(/{{סרטונים}}/g, '')
+    .replace(/[־\-.,]?\s*ב?\[?\[?פרויקט בן[־-]יהודה\]?\]?/g, '');
 
   let authors: string[] = [];
   if (pageData?.author) {
