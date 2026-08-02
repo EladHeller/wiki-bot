@@ -36,7 +36,10 @@ export default function NewCategoriesModel(api: IWikiApi) {
     }
 
     const categories = await getCategoriesCreatedIn(monthSearchString);
-    const content = categories.map((c) => `* [[:${c}]]`).join('\n');
+    const prefix = `בחודש ${monthPageTitleString} נוצרו ${categories.length} קטגוריות:`;
+    const categoriesContent = categories.map((c) => `* [[:${c}]]`).join('\n');
+    const category = `[[קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתם (${date.getFullYear()})]]`;
+    const content = `${prefix}\n${categoriesContent}\n\n${category}`;
     await api.create(title, `קטגוריות שנוצרו בחודש ${monthPageTitleString}`, content);
   }
 
