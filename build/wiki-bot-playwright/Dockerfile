@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.61.0-jammy AS playwright-browsers
+FROM mcr.microsoft.com/playwright:v1.62.0-jammy AS playwright-browsers
 
 FROM node:24
 
