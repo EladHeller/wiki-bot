@@ -62,3 +62,30 @@ graph TD
 
 ### CI - CD
 CI run on each PR before merging to master. After merging, CD run to updates production environment.
+
+The deployment workflow authenticates to AWS with GitHub Actions OIDC and short-lived credentials. Configure an IAM
+OIDC provider for `https://token.actions.githubusercontent.com` with the audience `sts.amazonaws.com`, then create an
+IAM role with the deployment permissions and this trust policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<AWS_ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:EladHeller/wiki-bot:environment:production"
+        }
+      }
+    }
+  ]
+}
+```
+
+Set `AWS_ROLE_ARN` as a GitHub Actions variable on the `production` environment.
