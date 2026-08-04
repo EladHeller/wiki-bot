@@ -2,6 +2,7 @@ import {
   Browser, BrowserContext, Page, Response as PlaywrightResponse, chromium,
 } from 'playwright';
 import botLoggerDecorator from '../../decorators/botLoggerDecorator';
+import chromiumLaunchOptions from '../../utilities/playwright';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { classifyLinkStatus, LinkCheckState } from '../actions/externalLinkChecker';
 
@@ -33,19 +34,6 @@ type SqsEvent = {
   Records?: {
     body?: string;
   }[];
-};
-
-const launchOptions = {
-  headless: true,
-  timeout: 30 * 1000,
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-gpu',
-    '--single-process',
-    '--no-zygote',
-  ],
 };
 
 const navigationOptions = {
@@ -112,7 +100,7 @@ export async function runLinkChecks(links: PlaywrightLinkCheckRequestLink[]): Pr
   let browser: Browser | null = null;
   let context: BrowserContext | null = null;
   try {
-    browser = await chromium.launch(launchOptions);
+    browser = await chromium.launch(chromiumLaunchOptions);
     context = await browser.newContext({
       locale: 'he-IL',
       timezoneId: 'Asia/Jerusalem',

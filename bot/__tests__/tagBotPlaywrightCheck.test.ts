@@ -98,6 +98,10 @@ describe('tagBotPlaywrightCheck', () => {
     await main({ Records: [{ body: queueBody([{ link: 'https://example.com/one', text: 'One' }]) }] });
 
     expect(wikiApiMock).toHaveBeenCalledWith();
+    expect(launchMock).toHaveBeenCalledWith({
+      headless: true,
+      timeout: 30 * 1000,
+    });
     expect(newContextMock).toHaveBeenCalledWith(expect.objectContaining({
       locale: 'he-IL',
       timezoneId: 'Asia/Jerusalem',
