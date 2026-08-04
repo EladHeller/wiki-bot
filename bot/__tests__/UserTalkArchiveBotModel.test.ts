@@ -327,6 +327,68 @@ Old discussion
 
       const archiveBoxContent = `{{תיבת ארכיון|
 * [[/ארכיון 1]]
+* [[/ארכיון 2]]
+* [[/ארכיון 3]]
+}}`;
+
+      const config = {
+        talkPage: 'שיחת משתמש:דוגמה',
+        inactivityDays: 14,
+        archiveBoxPage: 'שיחת משתמש:דוגמה',
+        directArchivePage: null,
+        maxArchiveSize: 50000,
+        archiveHeader: '{{ארכיון}}',
+        createNewArchive: true,
+        shouldArchive: true,
+      };
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.info.mockResolvedValueOnce([{ length: 50001 }]);
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: archiveBoxContent, revid: 2 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון}}', revid: 4 });
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: talkPageContent, revid: 1 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.archive(config, [`
+==Discussion 1==
+Old discussion
+12:42, 1 בינואר 2025 (IDT)
+`]);
+
+      expect(wikiApi.create).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 2',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: יצירת דף ארכיון חדש',
+        '{{ארכיון}}',
+      );
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'שיחת משתמש:דוגמה/ארכיון 2',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: ארכוב אוטומטי של דיונים ישנים',
+        expect.stringContaining('Discussion 1'),
+        4,
+      );
+    });
+
+    it('should not add new page in archive box when it already there', async () => {
+      fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
+
+      const talkPageContent = `
+==Discussion 1==
+Old discussion
+12:42, 1 בינואר 2025 (IDT)
+`;
+
+      const archiveBoxContent = `{{תיבת ארכיון|
+* [[/ארכיון 1]]
 }}`;
 
       const config = {
