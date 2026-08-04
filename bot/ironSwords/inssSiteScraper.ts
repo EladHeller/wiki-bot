@@ -1,7 +1,7 @@
 import {
   Browser, BrowserContext, Page, chromium,
 } from 'playwright';
-import chromiumLaunchOptions from '../utilities/playwright';
+import getChromiumLaunchOptions from '../utilities/playwright';
 
 const mainUrl = 'https://infogram.com/1p9y2l3j2l2vj2t75zmgg9d11pb3q31pw0x';
 
@@ -76,7 +76,7 @@ export default async function getWarData() {
   let context: BrowserContext | null = null;
   let page: Page | null = null;
   try {
-    browser = await chromium.launch(chromiumLaunchOptions);
+    browser = await chromium.launch(getChromiumLaunchOptions());
     context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
 

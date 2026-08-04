@@ -2,7 +2,7 @@ import {
   Browser, BrowserContext, Page, Response as PlaywrightResponse, chromium,
 } from 'playwright';
 import botLoggerDecorator from '../../decorators/botLoggerDecorator';
-import chromiumLaunchOptions from '../../utilities/playwright';
+import getChromiumLaunchOptions from '../../utilities/playwright';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { classifyLinkStatus, LinkCheckState } from '../actions/externalLinkChecker';
 
@@ -100,7 +100,7 @@ export async function runLinkChecks(links: PlaywrightLinkCheckRequestLink[]): Pr
   let browser: Browser | null = null;
   let context: BrowserContext | null = null;
   try {
-    browser = await chromium.launch(chromiumLaunchOptions);
+    browser = await chromium.launch(getChromiumLaunchOptions());
     context = await browser.newContext({
       locale: 'he-IL',
       timezoneId: 'Asia/Jerusalem',
