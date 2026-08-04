@@ -405,6 +405,11 @@ export default function UserTalkArchiveBotModel(
       );
     } else {
       const [parameter] = data;
+      const existingLinks = getInnerLinks(parameter);
+      if (existingLinks.some(({ link }) => link === archiveTitleLink)) {
+        return;
+      }
+
       const { prefix } = detectLinkStyle(parameter);
       const newArchiveLink = `${prefix}[[${archiveTitleLink}|${displayName}]]`;
       const newParameter = parameter + newArchiveLink;
