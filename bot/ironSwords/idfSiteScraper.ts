@@ -1,5 +1,6 @@
 import { JSDOM } from 'jsdom';
 import { Browser, chromium, Page } from 'playwright';
+import chromiumLaunchOptions from '../utilities/playwright';
 
 const url = 'https://www.idf.il/אתרי-יחידות/יומן-המלחמה/חללי-ופצועי-צה-ל-במלחמה/';
 
@@ -28,18 +29,7 @@ export default async function getCasualties() {
   let browser: Browser | null = null;
   let page: Page | null = null;
   try {
-    browser = await chromium.launch({
-      headless: true,
-      timeout: 10 * 1000,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-zygote',
-      ],
-    });
+    browser = await chromium.launch(chromiumLaunchOptions);
     page = await browser.newPage();
     await page.goto(url);
     const content = await page.content();
