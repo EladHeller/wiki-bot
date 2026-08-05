@@ -5,6 +5,7 @@ import {
   updateTemplate,
   updateElevationClaim,
   KineretApiResponse,
+  parseKineretDate,
 } from './utils';
 
 const SEA_OF_GALILEE_ITEM = 'Q126982';
@@ -21,18 +22,6 @@ export interface IKineretModel {
   updateWikiData(): Promise<void>;
 }
 
-function parseDateFromRecord(surveyDate: string): Date {
-  const dateMatch = surveyDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-  if (dateMatch) {
-    const [, day, month, year] = dateMatch;
-    const fullYear = year.length === 2 ? `20${year}` : year;
-    const paddedMonth = month.padStart(2, '0');
-    const paddedDay = day.padStart(2, '0');
-    return new Date(`${fullYear}-${paddedMonth}-${paddedDay}`);
-  }
-  return new Date(surveyDate);
-}
-
 export default function KineretModel(
   wikiApi: IWikiApi,
   wikiDataApi: IWikiDataAPI,
@@ -45,7 +34,7 @@ export default function KineretModel(
   async function fetchLevelData(): Promise<LevelData> {
     const levelRes = await dataFetcher(config.apiUrl);
     const record = levelRes.result.records[0];
-    const date = parseDateFromRecord(record.Survey_Date);
+    const date = parseKineretDate(record.Survey_Date);
     if (Number.isNaN(date.getTime())) {
       throw new Error('Invalid date from API');
     }

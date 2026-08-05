@@ -4,6 +4,7 @@ import { Mocked } from './types';
 
 export default function BaseWikiApiMock(base: Partial<Mocked<IBaseWikiApi>> = {}) : Mocked<IBaseWikiApi> {
   return {
+    assertBot: base.assertBot ?? true,
     login: base.login ?? jest.fn<() => Promise<string>>(),
     request: base.request ?? jest.fn<(path: string, method?: string, data?: Record<string, any>) => Promise<any>>(),
     continueQuery: base.continueQuery ?? jest.fn<(path: string,

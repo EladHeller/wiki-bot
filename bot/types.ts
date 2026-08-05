@@ -103,6 +103,7 @@ export type RecentChange = {
 }
 
 export type IBaseWikiApi = {
+  assertBot: boolean;
   login: () => Promise<string>;
   request: (path: string, method?: string, data?: Record<string, any>) => Promise<any>;
   continueQuery: (
