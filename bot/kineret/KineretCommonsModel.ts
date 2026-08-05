@@ -37,6 +37,10 @@ export function downsampleKineretData(data: KineretDataPoint[]): KineretDataPoin
   }, []);
 
   return monthlyData.flatMap((month) => {
+    if (month.length <= 4) {
+      return month;
+    }
+
     const first = month[0];
     const last = month[month.length - 1];
     const minimum = month.reduce((lowest, point) => (point[1] < lowest[1] ? point : lowest));
@@ -60,8 +64,8 @@ export function buildKineretTabularData(records: KineretLevelRecord[]): string {
   return JSON.stringify({
     license: 'CC0-1.0',
     description: {
-      he: 'מדידות מייצגות של מפלס הכנרת: המדידה הראשונה, האחרונה, הנמוכה והגבוהה בכל חודש',
-      en: 'Representative Sea of Galilee water level measurements: the first, last, lowest and highest measurement in each month',
+      he: 'מדידות מייצגות של מפלס הכנרת: כל המדידות בחודשים עם עד ארבע מדידות; אחרת הראשונה, האחרונה, הנמוכה והגבוהה',
+      en: 'Representative Sea of Galilee water level measurements: all measurements in months with up to four; otherwise the first, last, lowest and highest',
     },
     sources: `[${KINERET_RESOURCE_URL} Israel Government Data Portal]`,
     schema: {
