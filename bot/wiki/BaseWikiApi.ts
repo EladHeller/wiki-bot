@@ -107,6 +107,7 @@ export default function BaseWikiApi(apiConfig: Partial<WikiApiConfig>): IBaseWik
   }
 
   return {
+    assertBot: config.assertBot !== false,
     login,
     request,
     continueQuery,

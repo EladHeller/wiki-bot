@@ -77,6 +77,7 @@ export interface IWikiApi {
 
 export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWikiApi {
   let token: string;
+  const editRights = baseWikiApi.assertBot ? '&assert=bot&bot=true' : '&assert=user';
 
   async function init() {
     token = await baseWikiApi.login();
@@ -175,7 +176,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
       data.section = 'new';
     }
 
-    return request(`?action=edit&format=json&assert=bot&bot=true&nocreate=true${minor ? '&minor=true' : ''}`, 'post', objectToFormData(data));
+    return request(`?action=edit&format=json${editRights}&nocreate=true${minor ? '&minor=true' : ''}`, 'post', objectToFormData(data));
   }
 
   async function viewFlowTopicList(pageTitle: string) {
@@ -192,7 +193,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
       title: articleTitle, text: content, token, summary, createonly: 'true',
     };
 
-    return request(`?action=edit&format=json&assert=bot&bot=true${minor ? '&minor=true' : ''}`, 'post', objectToFormData(data));
+    return request(`?action=edit&format=json${editRights}${minor ? '&minor=true' : ''}`, 'post', objectToFormData(data));
   }
 
   async function articleContent(

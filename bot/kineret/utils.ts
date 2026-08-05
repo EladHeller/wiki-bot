@@ -29,6 +29,18 @@ export interface KineretApiResponse {
   };
 }
 
+export function parseKineretDate(surveyDate: string): Date {
+  const dateMatch = surveyDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (dateMatch) {
+    const [, day, month, year] = dateMatch;
+    const fullYear = year.length === 2 ? `20${year}` : year;
+    const paddedMonth = month.padStart(2, '0');
+    const paddedDay = day.padStart(2, '0');
+    return new Date(`${fullYear}-${paddedMonth}-${paddedDay}`);
+  }
+  return new Date(surveyDate);
+}
+
 export function getChangeData(change: number) {
   if (change === 0) {
     return {
