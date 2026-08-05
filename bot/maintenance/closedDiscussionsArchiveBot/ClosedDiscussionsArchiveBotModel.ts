@@ -111,12 +111,12 @@ function createArchiveSummary(
   paragraphName: string,
   status: string,
   handler?: string,
-  archiveTarget?: string,
+  archiveLink?: { title: string; direction: 'ל' | 'מ' },
   archive = true,
 ): string {
   const handlerPart = handler ? ` מטפל: [[user:${handler}|${handler}]].` : '';
-  const archiveTargetPart = archiveTarget ? ` אורכב ל-[[${archiveTarget}]]` : '';
-  return `${SUMMARY_PREFIX}: ${archive ? 'ארכוב' : 'מחיקת'} הדיון "${paragraphName}", ${status}.${handlerPart}${archiveTargetPart}`;
+  const archiveLinkPart = archiveLink ? ` אורכב ${archiveLink.direction}-[[${archiveLink.title}]]` : '';
+  return `${SUMMARY_PREFIX}: ${archive ? 'ארכוב' : 'מחיקת'} הדיון "${paragraphName}", ${status}.${handlerPart}${archiveLinkPart}`;
 }
 
 function getQuarterFromDate(date: Date): { firstMonth: string; lastMonth: string; year: number } {
@@ -331,11 +331,17 @@ export default function ClosedDiscussionsArchiveBotModel(
       return;
     }
 
-    const archiveSummary = createArchiveSummary(
+    const sourceAndRegularArchiveSummary = createArchiveSummary(
       paragraphName,
       templateData.status,
       templateData.handler,
-      isTargeted ? archiveTitle : undefined,
+      isTargeted ? { title: archiveTitle, direction: 'ל' } : undefined,
+    );
+    const targetArchiveSummary = createArchiveSummary(
+      paragraphName,
+      templateData.status,
+      templateData.handler,
+      isTargeted ? { title: pageTitle, direction: 'מ' } : undefined,
     );
 
     const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
@@ -354,25 +360,25 @@ export default function ClosedDiscussionsArchiveBotModel(
       const newContent = `${existingArchiveContent.content}\n\n${paragraphToArchive}`;
       await wikiApi.edit(
         archiveTitle,
-        archiveSummary,
+        targetArchiveSummary,
         newContent,
         existingArchiveContent.revid,
       );
     } else {
-      await wikiApi.create(archiveTitle, archiveSummary, archiveHeaderPerPage(pageTitle) + paragraphToArchive);
+      await wikiApi.create(archiveTitle, targetArchiveSummary, archiveHeaderPerPage(pageTitle) + paragraphToArchive);
     }
 
     const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, pageTitle);
 
     const updatedContent = removeParagraphsFromContent(sourceContent, [paragraph]);
-    await wikiApi.edit(pageTitle, archiveSummary, updatedContent, sourceRevid);
+    await wikiApi.edit(pageTitle, sourceAndRegularArchiveSummary, updatedContent, sourceRevid);
 
     if (isTargeted && regularArchivePage) {
       const { content, revid } = await getContent(wikiApi, regularArchivePage);
       const newContent = targetedArchiveRegularArchiveMode === 'ארכוב כפול'
         ? `${content}\n${paragraph}`
         : createTargetedArchiveRegularContent(content, paragraphName, archiveTitle);
-      await wikiApi.edit(regularArchivePage, archiveSummary, newContent, revid);
+      await wikiApi.edit(regularArchivePage, sourceAndRegularArchiveSummary, newContent, revid);
     }
   }
 

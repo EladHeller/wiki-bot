@@ -1316,8 +1316,8 @@ Content
       await model.archive('TestPage', [paragraphWithTarget], 'תבנית ארכיון עם יעד', 'TestPage/Navigate');
 
       expect(wikiApi.create).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.stringContaining('אורכב ל-[[TargetPage]]'),
+        'TargetPage',
+        expect.stringContaining('אורכב מ-[[TestPage]]'),
         expect.stringContaining('{{הועבר'),
       );
       expect(wikiApi.edit).toHaveBeenCalledWith(
@@ -1329,7 +1329,7 @@ Content
       // Archive page edit should include stub with הועבר|ל and ~~~~
       expect(wikiApi.edit).toHaveBeenCalledWith(
         'TestPage/ארכיון 1',
-        expect.any(String),
+        expect.stringContaining('אורכב ל-[[TargetPage]]'),
         expect.stringContaining('{{הועבר|ל=TargetPage}}'),
         expect.any(Number),
       );
