@@ -4,6 +4,7 @@ import {
 import KineretCommonsModel, {
   buildKineretChartDefinition,
   buildKineretTabularData,
+  downsampleKineretData,
   KINERET_CHART_PAGE,
   KINERET_DATA_PAGE,
   KINERET_HISTORY_API_URL,
@@ -34,6 +35,27 @@ describe('kineret Commons model', () => {
     expect(result.data).toStrictEqual([
       ['2024-12-01', -211.3],
       ['2025-01-02', -211.5],
+    ]);
+  });
+
+  it('keeps the first, last, lowest and highest measurement in each month', () => {
+    const result = downsampleKineretData([
+      ['2025-01-01', -211],
+      ['2025-01-05', -210],
+      ['2025-01-10', -211.2],
+      ['2025-01-20', -212],
+      ['2025-01-31', -211.5],
+      ['2025-02-01', -211.4],
+      ['2025-02-28', -211.4],
+    ]);
+
+    expect(result).toStrictEqual([
+      ['2025-01-01', -211],
+      ['2025-01-05', -210],
+      ['2025-01-20', -212],
+      ['2025-01-31', -211.5],
+      ['2025-02-01', -211.4],
+      ['2025-02-28', -211.4],
     ]);
   });
 

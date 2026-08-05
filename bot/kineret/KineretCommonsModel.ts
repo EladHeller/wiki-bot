@@ -14,7 +14,9 @@ export type KineretCommonsUpdateResult = {
   dataUpdated: boolean;
 };
 
-function normalizeRecord(record: KineretLevelRecord): [string, number] {
+type KineretDataPoint = [string, number];
+
+function normalizeRecord(record: KineretLevelRecord): KineretDataPoint {
   const date = parseKineretDate(record.Survey_Date);
   if (Number.isNaN(date.getTime())) {
     throw new Error(`Invalid Kinneret survey date: ${record.Survey_Date}`);
@@ -25,20 +27,41 @@ function normalizeRecord(record: KineretLevelRecord): [string, number] {
   return [date.toISOString().slice(0, 10), record.Kinneret_Level];
 }
 
+export function downsampleKineretData(data: KineretDataPoint[]): KineretDataPoint[] {
+  const monthlyData = data.reduce<KineretDataPoint[][]>((months, point) => {
+    const currentMonth = months.at(-1);
+    if (currentMonth?.[0][0].slice(0, 7) === point[0].slice(0, 7)) {
+      return [...months.slice(0, -1), [...currentMonth, point]];
+    }
+    return [...months, [point]];
+  }, []);
+
+  return monthlyData.flatMap((month) => {
+    const first = month[0];
+    const last = month[month.length - 1];
+    const minimum = month.reduce((lowest, point) => (point[1] < lowest[1] ? point : lowest));
+    const maximum = month.reduce((highest, point) => (point[1] > highest[1] ? point : highest));
+
+    return [first, minimum, maximum, last]
+      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+      .filter((point, index, points) => index === 0 || point[0] !== points[index - 1][0]);
+  });
+}
+
 export function buildKineretTabularData(records: KineretLevelRecord[]): string {
   if (records.length === 0) {
     throw new Error('Kinneret history API returned no records');
   }
 
-  const data = records
+  const data = downsampleKineretData(records
     .map(normalizeRecord)
-    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB));
+    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB)));
 
   return JSON.stringify({
     license: 'CC0-1.0',
     description: {
-      he: 'מדידות מפלס הכנרת',
-      en: 'Sea of Galilee water level measurements',
+      he: 'מדידות מייצגות של מפלס הכנרת: המדידה הראשונה, האחרונה, הנמוכה והגבוהה בכל חודש',
+      en: 'Representative Sea of Galilee water level measurements: the first, last, lowest and highest measurement in each month',
     },
     sources: `[${KINERET_RESOURCE_URL} Israel Government Data Portal]`,
     schema: {
