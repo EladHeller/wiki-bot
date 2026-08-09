@@ -4,7 +4,7 @@ import getDrafts, { getDumpModificationTimes } from './getDrafts';
 import { ArticleLog } from '../../admin/types';
 import writeAdminBotLogs from '../../admin/log';
 import { logger, stringify } from '../../utilities/logger';
-import { getInnerLinks } from '../../wiki/wikiLinkParser';
+import removeArticleCategories from './removeArticleCategories';
 
 const PAGE_TITLE = 'ויקיפדיה:בוט/הסרת דפי טיוטה מקטגוריות של מרחב הערכים';
 const LAST_RUN_PAGE = `${PAGE_TITLE}/ריצה אחרונה`;
@@ -81,11 +81,7 @@ const removeDraftsFromCategory = async (draft: string, api: IWikiApi): Promise<A
   const nameWithoutUnderscores = draft.replaceAll('_', ' ');
   try {
     const { content, revid } = await api.articleContent(draft);
-    const links = getInnerLinks(content).filter(({ link }) => link.startsWith('קטגוריה:') && !link.startsWith('קטגוריה:ויקיפדיה:'));
-    let newContent = content;
-    links.forEach(({ link }) => {
-      newContent = content.replaceAll(`[[${link}`, `[[:${link}`);
-    });
+    const newContent = removeArticleCategories(content);
     if (newContent === content) {
       console.log(`No changes for draft ${draft}, skipping`);
       return null;
