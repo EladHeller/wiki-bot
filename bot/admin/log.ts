@@ -157,7 +157,7 @@ export default async function writeAdminBotLogs(
   await api.edit(
     logPageTitle,
     titleAndSummary,
-    `${logPageContent}ֿ\n${title}\n${content}\n${usersToTag}~~~~`,
+    `${logPageContent}\n${title}\n${content}\n${usersToTag}~~~~`,
     revid,
   );
 }
