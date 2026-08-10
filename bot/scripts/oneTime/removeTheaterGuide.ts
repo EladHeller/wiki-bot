@@ -44,7 +44,7 @@ export default async function removeTheaterGuide() {
         if (arrayData[0] === theatherGuideId) {
           newContent = newContent.replace(`*${template}\n`, '');
           newContent = newContent.replace(`* ${template}\n`, '');
-          newContent = newContent.replace(`*ֿ\t${template}\n`, '');
+          newContent = newContent.replace(`*\t${template}\n`, '');
         }
       }
 
