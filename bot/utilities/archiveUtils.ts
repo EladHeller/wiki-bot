@@ -49,6 +49,11 @@ export function getParagraphRemovalText(pageContent: string, paragraph: string):
   ) ?? paragraph;
 }
 
+export function resolveArchiveTitle(pageTitle: string, link: string): string {
+  const archiveTitle = link.startsWith('/') ? `${pageTitle}${link}` : link;
+  return archiveTitle.replace(/\/$/, '');
+}
+
 function createTrackerKey(pageTitle: string, paragraphTitle: string): string {
   return `${pageTitle}\u0000${paragraphTitle}`;
 }
@@ -267,10 +272,7 @@ export async function getLastActiveArchiveLink(
   strategy: ArchiveLinkStrategy = 'any',
 ): Promise<string | null> {
   const reversedLinks = getInnerLinks(archiveBoxContent)
-    .map(({ link }) => {
-      const archiveTitle = link.startsWith('/') ? `${pageTitle}${link}` : link;
-      return archiveTitle.replace(/\/$/, '');
-    })
+    .map(({ link }) => resolveArchiveTitle(pageTitle, link))
     .reverse();
   const isSubpage = (archiveTitle: string) => archiveTitle.startsWith(`${pageTitle}/`);
   const subpageLinks = reversedLinks.filter(isSubpage);

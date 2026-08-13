@@ -2,6 +2,7 @@ import {
   afterEach, beforeEach, describe, expect, it, jest,
 } from '@jest/globals';
 import UserTalkArchiveBotModel, {
+  addArchiveLinkToParameter,
   collectBatchForArchive,
   IUserTalkArchiveBotModel,
   removeParagraphsFromContent,
@@ -2151,6 +2152,60 @@ Active content`);
         batch: [firstParagraph],
         remaining: [secondParagraph],
       });
+    });
+
+    it('should preserve an HTML break used between archive links', () => {
+      const talkPage = 'שיחת ויקיפדיה:קטגוריה';
+      const parameter = `
+[[שיחת ויקיפדיה:קטגוריה/ארכיון לפי נושאים|ארכיון לפי נושאים]]<br />[[/ארכיון 1/]]<br />[[/ארכיון 2/]]<br />[[/ארכיון 3/]]<br />[[/ארכיון 4/]]<br />[[/ארכיון 5|ארכיון 5]]`;
+
+      expect(addArchiveLinkToParameter(
+        parameter,
+        talkPage,
+        talkPage,
+        `${talkPage}/ארכיון 6`,
+      )).toBe(`${parameter}<br />[[/ארכיון 6|ארכיון 6]]`);
+    });
+
+    it('should recognize an existing relative archive link on a nested talk page', () => {
+      const talkPage = 'שיחת ויקיפדיה:מדריך לעיצוב ערכים/ביוגרפיות';
+      const parameter = `
+#[[/ארכיון 1|ארכיון 1]]
+#[[/ארכיון 2|ארכיון 2]]`;
+
+      expect(addArchiveLinkToParameter(
+        parameter,
+        talkPage,
+        talkPage,
+        `${talkPage}/ארכיון 2`,
+      )).toBe(parameter);
+    });
+
+    it('should infer archive separators without using adjacent reference links', () => {
+      const talkPage = 'שיחת משתמש:דוגמה';
+      const parameter = `
+#[[/ארכיון 5|שם חמישי]] <small>[[מקור חמישי|♪]]</small>
+#[[/ארכיון 6|שם שישי]] <small>[[מקור שישי|♪]]</small>`;
+
+      expect(addArchiveLinkToParameter(
+        parameter,
+        talkPage,
+        talkPage,
+        `${talkPage}/ארכיון 7`,
+      )).toBe(`${parameter}
+#[[/ארכיון 7|ארכיון 7]]`);
+    });
+
+    it('should preserve whitespace between inline archive links', () => {
+      const talkPage = 'שיחת משתמש:דוגמה';
+      const parameter = '[[/ארכיון 1]] [[/ארכיון 2]]';
+
+      expect(addArchiveLinkToParameter(
+        parameter,
+        talkPage,
+        talkPage,
+        `${talkPage}/ארכיון 3`,
+      )).toBe(`${parameter} [[/ארכיון 3|ארכיון 3]]`);
     });
   });
 

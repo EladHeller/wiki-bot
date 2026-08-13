@@ -9,6 +9,7 @@ import {
   getUndatedParagraphsToArchive,
   normalizeMultipleNewlines,
   removeArchivedUndatedParagraphsFromTracker,
+  resolveArchiveTitle,
 } from '../../utilities/archiveUtils';
 import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
 import { WikiPage } from '../../types';
@@ -147,6 +148,67 @@ function incrementArchivePageName(archiveName: string): string | null {
 
   parts[parts.length - 1] = newLastPart;
   return parts.join('/');
+}
+
+function detectLinkStyle(archiveBoxContent: string, talkPage: string): string {
+  const allLinks = getInnerLinks(archiveBoxContent);
+  const subpageLinks = allLinks.filter(
+    ({ link }) => resolveArchiveTitle(talkPage, link).startsWith(`${talkPage}/`),
+  );
+  const links = subpageLinks.length > 0 ? subpageLinks : allLinks;
+
+  if (links.length === 0) {
+    return '\n# ';
+  }
+  if (links.length < 2) {
+    const [firstLink] = links;
+    const firstLinkIndex = archiveBoxContent.indexOf(`[[${firstLink.link}`);
+    const prefix = archiveBoxContent.slice(0, firstLinkIndex).trim().split('\n').at(-1)
+      ?.trim();
+    return prefix ? `\n${prefix}` : '\n#';
+  }
+
+  const lastLink = links[links.length - 1];
+  const secondLastLink = links[links.length - 2];
+  const lastLinkStart = archiveBoxContent.lastIndexOf(`[[${lastLink.link}`);
+  const secondLastLinkEnd = archiveBoxContent.indexOf(
+    ']]',
+    archiveBoxContent.lastIndexOf(`[[${secondLastLink.link}`),
+  ) + 2;
+
+  const separator = archiveBoxContent.slice(secondLastLinkEnd, lastLinkStart);
+  const structuralSeparator = separator.match(/((?:\r?\n|<br\s*\/?>)\s*[*#]?\s*)$/i);
+  if (structuralSeparator) {
+    return structuralSeparator[1];
+  }
+
+  const [, whitespaceSeparator] = separator.match(/^(\s*[*#]?\s*)/) as RegExpMatchArray;
+  return whitespaceSeparator;
+}
+
+function getDisplayName(pagePath: string): string {
+  const lastSlashIndex = pagePath.lastIndexOf('/');
+  return lastSlashIndex >= 0 ? pagePath.slice(lastSlashIndex + 1) : pagePath;
+}
+
+export function addArchiveLinkToParameter(
+  parameter: string,
+  talkPage: string,
+  archiveBoxPage: string,
+  newArchivePage: string,
+): string {
+  const normalizedNewArchivePage = resolveArchiveTitle(talkPage, newArchivePage);
+  const existingLinks = getInnerLinks(parameter);
+  if (existingLinks.some(({ link }) => resolveArchiveTitle(talkPage, link) === normalizedNewArchivePage)) {
+    return parameter;
+  }
+
+  const displayName = getDisplayName(newArchivePage);
+  const archiveTitleLink = archiveBoxPage === talkPage && newArchivePage.startsWith(`${talkPage}/`)
+    ? newArchivePage.slice(talkPage.length)
+    : newArchivePage;
+  const prefix = detectLinkStyle(parameter, talkPage);
+  return `${parameter}${prefix}[[${archiveTitleLink}|${displayName}]]`;
 }
 
 async function getArchiveTitleFromBox(
@@ -363,41 +425,9 @@ export default function UserTalkArchiveBotModel(
     await wikiApi.edit(talkPage, archiveSummary, updatedContent, sourceRevid, undefined, true);
   }
 
-  function detectLinkStyle(archiveBoxContent: string): { prefix: string; suffix: string } {
-    const links = getInnerLinks(archiveBoxContent);
-    if (links.length === 0) {
-      return { prefix: '\n# ', suffix: '' };
-    }
-    if (links.length < 2) {
-      const [firstLink] = links;
-      const firstLinkIndex = archiveBoxContent.indexOf(`[[${firstLink.link}`);
-      const prefix = archiveBoxContent.slice(0, firstLinkIndex).trim().split('\n').at(-1)
-        ?.trim();
-      return { prefix: prefix ? `\n${prefix}` : '\n#', suffix: '' };
-    }
-
-    const lastLink = links[links.length - 1];
-    const secondLastLink = links[links.length - 2];
-
-    const lastLinkStart = archiveBoxContent.lastIndexOf(`[[${lastLink.link}`);
-    const secondLastLinkEnd = archiveBoxContent.indexOf(
-      ']]',
-      archiveBoxContent.lastIndexOf(`[[${secondLastLink.link}`),
-    ) + 2;
-
-    const separator = archiveBoxContent.slice(secondLastLinkEnd, lastLinkStart);
-    const [, prefix] = separator.match(/^(\s*[*#]?\s*)/) as RegExpMatchArray;
-
-    return { prefix, suffix: '' };
-  }
-
-  function getDisplayName(pagePath: string): string {
-    const lastSlashIndex = pagePath.lastIndexOf('/');
-    return lastSlashIndex >= 0 ? pagePath.slice(lastSlashIndex + 1) : pagePath;
-  }
-
   async function updateArchiveBoxWithNewPage(
     api: IWikiApi,
+    talkPage: string,
     archiveBoxPage: string,
     newArchivePage: string,
   ): Promise<void> {
@@ -417,14 +447,8 @@ export default function UserTalkArchiveBotModel(
       true,
     );
 
-    const displayName = getDisplayName(newArchivePage);
-    const archiveTitleLink = newArchivePage.startsWith(`${archiveBoxPage}/`) && !archiveBoxPage.includes('/')
-      ? newArchivePage.slice(archiveBoxPage.length)
-      : newArchivePage;
-
     if (data.length === 0) {
-      const { prefix } = detectLinkStyle('');
-      const newArchiveLink = `${prefix}[[${archiveTitleLink}|${displayName}]]`;
+      const newArchiveLink = addArchiveLinkToParameter('', talkPage, archiveBoxPage, newArchivePage);
       const newTemplate = `${archiveBox.slice(0, -2)}|${newArchiveLink}}}`;
 
       await api.edit(
@@ -435,14 +459,10 @@ export default function UserTalkArchiveBotModel(
       );
     } else {
       const [parameter] = data;
-      const existingLinks = getInnerLinks(parameter);
-      if (existingLinks.some(({ link }) => link === archiveTitleLink)) {
+      const newParameter = addArchiveLinkToParameter(parameter, talkPage, archiveBoxPage, newArchivePage);
+      if (newParameter === parameter) {
         return;
       }
-
-      const { prefix } = detectLinkStyle(parameter);
-      const newArchiveLink = `${prefix}[[${archiveTitleLink}|${displayName}]]`;
-      const newParameter = parameter + newArchiveLink;
 
       await api.edit(
         archiveBoxPage,
@@ -608,13 +628,14 @@ export default function UserTalkArchiveBotModel(
         const firstArchiveName = 'ארכיון 1';
         const archiveTitle = `${talkPage}/${firstArchiveName}`;
 
-        await updateArchiveBoxWithNewPage(wikiApi, archiveBoxPage, archiveTitle);
+        await updateArchiveBoxWithNewPage(wikiApi, talkPage, archiveBoxPage, archiveTitle);
         return performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
           archiveTitle,
           maxSizeNotification: `דף הארכיון [[${archiveTitle}]] הגיע לגודל המקסימלי. `
             + 'יש ליצור דף ארכיון חדש ולעדכן את תיבת הארכיון.',
           onNewArchiveCreated: (newArchiveTitle) => updateArchiveBoxWithNewPage(
             wikiApi,
+            talkPage,
             archiveBoxPage,
             newArchiveTitle,
           ),
@@ -627,7 +648,12 @@ export default function UserTalkArchiveBotModel(
     return performArchive(talkPage, archiveHeader, maxArchiveSize, createNewArchive, paragraphs, {
       archiveTitle: archiveTitleResult.archiveTitle,
       maxSizeNotification: `דף הארכיון [[${archiveTitleResult.archiveTitle}]] הגיע לגודל המקסימלי. יש ליצור דף ארכיון חדש ולעדכן את תיבת הארכיון.`,
-      onNewArchiveCreated: (newArchiveTitle) => updateArchiveBoxWithNewPage(wikiApi, archiveBoxPage, newArchiveTitle),
+      onNewArchiveCreated: (newArchiveTitle) => updateArchiveBoxWithNewPage(
+        wikiApi,
+        talkPage,
+        archiveBoxPage,
+        newArchiveTitle,
+      ),
     });
   }
 
