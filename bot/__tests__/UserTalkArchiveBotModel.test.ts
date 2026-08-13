@@ -271,7 +271,7 @@ Old discussion
 
       const archiveBoxContent = `{{תיבת ארכיון|
 * [[/ארכיון 1]]
-* [[/ארכיון 2]]
+* [[/ארכיון 2]] <small>[[Archive naming reference|♪]]</small>
 }}`;
 
       const existingArchiveContent = `{{ארכיון}}

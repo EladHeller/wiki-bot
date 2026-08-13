@@ -29,7 +29,7 @@ describe('archiveUtils', () => {
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
       wikiApi.info.mockResolvedValueOnce([{}]);
 
-      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', false);
+      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', 'any');
 
       expect(result).toBe('TestPage/ארכיון 2');
     });
@@ -42,12 +42,12 @@ describe('archiveUtils', () => {
 
       wikiApi.info.mockResolvedValue([{ missing: '' }]);
 
-      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', false);
+      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', 'any');
 
       expect(result).toBeNull();
     });
 
-    it('should skip non-matching prefixes when matchPrefix is true', async () => {
+    it('should skip non-subpages when strategy is subpage-only', async () => {
       const archiveBoxContent = `
 [[OtherPage/ארכיון 1]]
 [[/ארכיון 1]]
@@ -56,14 +56,14 @@ describe('archiveUtils', () => {
 
       wikiApi.info.mockResolvedValueOnce([{}]);
 
-      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', true);
+      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', 'subpage-only');
 
       expect(result).toBe('TestPage/ארכיון 2');
       expect(wikiApi.info).toHaveBeenCalledTimes(1);
       expect(wikiApi.info).toHaveBeenCalledWith(['TestPage/ארכיון 2']);
     });
 
-    it('should check all links when matchPrefix is false', async () => {
+    it('should check all links when strategy is any', async () => {
       const archiveBoxContent = `
 [[/ארכיון 1]]
 [[OtherPage/ארכיון 1]]
@@ -71,7 +71,7 @@ describe('archiveUtils', () => {
 
       wikiApi.info.mockResolvedValueOnce([{}]);
 
-      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', false);
+      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', 'any');
 
       expect(result).toBe('OtherPage/ארכיון 1');
     });
@@ -83,12 +83,12 @@ describe('archiveUtils', () => {
 
       wikiApi.info.mockResolvedValueOnce([{}]);
 
-      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', false);
+      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', 'any');
 
       expect(result).toBe('OtherPage/ארכיון 1');
     });
 
-    it('should use default matchPrefix value of false', async () => {
+    it('should use any as the default strategy', async () => {
       const archiveBoxContent = `
 [[/ארכיון 1]]
 [[OtherPage/ארכיון 1]]
@@ -108,23 +108,78 @@ describe('archiveUtils', () => {
 
       wikiApi.info.mockResolvedValueOnce([{}]);
 
-      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', false);
+      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', 'any');
 
       expect(result).toBe('TestPage/ארכיון 1');
       expect(wikiApi.info).toHaveBeenCalledWith(['TestPage/ארכיון 1']);
     });
 
-    it('should return null when matchPrefix is true and no links match the prefix', async () => {
+    it('should return null when subpage-only has no matching links', async () => {
       const archiveBoxContent = `
 [[OtherPage/ארכיון 1]]
 [[SomePage/ארכיון 2]]
 [[DifferentPage/ארכיון 3]]
 `;
 
-      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', true);
+      const result = await getLastActiveArchiveLink(wikiApi, archiveBoxContent, 'TestPage', 'subpage-only');
 
       expect(result).toBeNull();
       expect(wikiApi.info).not.toHaveBeenCalled();
+    });
+
+    it('should require a subpage boundary with subpage-only', async () => {
+      const archiveBoxContent = '[[TestPage2/ארכיון 1]]';
+
+      const result = await getLastActiveArchiveLink(
+        wikiApi,
+        archiveBoxContent,
+        'TestPage',
+        'subpage-only',
+      );
+
+      expect(result).toBeNull();
+      expect(wikiApi.info).not.toHaveBeenCalled();
+    });
+
+    it('should prefer an archive subpage over a later reference link', async () => {
+      const archiveBoxContent = `
+#[[/ארכיון 5|איך שגלגל מסתובב לו]] <small>[[גלגל מסתובב (אלבום)|♪]]</small>
+#[[/ארכיון 6|עוד חוזר הניגון]] <small>[[עוד חוזר הניגון|♪]]</small>
+`;
+
+      wikiApi.info.mockResolvedValueOnce([{}]);
+
+      const result = await getLastActiveArchiveLink(
+        wikiApi,
+        archiveBoxContent,
+        'שיחת משתמש:החבלן',
+        'prefer-subpage',
+      );
+
+      expect(result).toBe('שיחת משתמש:החבלן/ארכיון 6');
+      expect(wikiApi.info).toHaveBeenCalledTimes(1);
+      expect(wikiApi.info).toHaveBeenCalledWith(['שיחת משתמש:החבלן/ארכיון 6']);
+    });
+
+    it('should fall back to an external archive when preferred subpages are missing', async () => {
+      const archiveBoxContent = `
+[[ExternalArchive]]
+[[/ארכיון 1]]
+`;
+
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
+      wikiApi.info.mockResolvedValueOnce([{}]);
+
+      const result = await getLastActiveArchiveLink(
+        wikiApi,
+        archiveBoxContent,
+        'TestPage',
+        'prefer-subpage',
+      );
+
+      expect(result).toBe('ExternalArchive');
+      expect(wikiApi.info).toHaveBeenNthCalledWith(1, ['TestPage/ארכיון 1']);
+      expect(wikiApi.info).toHaveBeenNthCalledWith(2, ['ExternalArchive']);
     });
   });
 
@@ -140,7 +195,7 @@ Some content
 
       wikiApi.info.mockResolvedValueOnce([{}]);
 
-      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', false);
+      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', 'any');
 
       expect(result).toStrictEqual({ archiveTitle: 'TestPage/ארכיון 2' });
     });
@@ -148,7 +203,7 @@ Some content
     it('should return error when archive box not found', async () => {
       const pageContent = 'No archive box here';
 
-      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', false);
+      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', 'any');
 
       expect(result).toStrictEqual({ error: 'תיבת ארכיון לא נמצאה' });
     });
@@ -156,7 +211,7 @@ Some content
     it('should return error when archive box content is empty', async () => {
       const pageContent = '{{תיבת ארכיון}}';
 
-      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', false);
+      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', 'any');
 
       expect(result).toStrictEqual({ error: 'התוכן של תיבת הארכיון לא נמצא' });
     });
@@ -170,12 +225,12 @@ Some content
 
       wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
 
-      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', false);
+      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', 'any');
 
       expect(result).toStrictEqual({ error: 'לא נמצא דף ארכיון פעיל' });
     });
 
-    it('should use matchPrefix when specified', async () => {
+    it('should use subpage-only strategy when specified', async () => {
       const pageContent = `
 {{תיבת ארכיון|
 [[OtherPage/ארכיון 1]]
@@ -185,13 +240,13 @@ Some content
 
       wikiApi.info.mockResolvedValueOnce([{}]);
 
-      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', true);
+      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', 'subpage-only');
 
       expect(result).toStrictEqual({ archiveTitle: 'TestPage/ארכיון 1' });
       expect(wikiApi.info).toHaveBeenCalledWith(['TestPage/ארכיון 1']);
     });
 
-    it('should use default matchPrefix value of false', async () => {
+    it('should use any as the default strategy', async () => {
       const pageContent = `
 {{תיבת ארכיון|
 [[/ארכיון 1]]
@@ -216,7 +271,7 @@ Some content
 
       wikiApi.info.mockResolvedValueOnce([{}]);
 
-      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', false);
+      const result = await getArchiveTitle(wikiApi, pageContent, 'TestPage', 'any');
 
       expect(result).toStrictEqual({ archiveTitle: 'TestPage/ארכיון 2' });
     });
