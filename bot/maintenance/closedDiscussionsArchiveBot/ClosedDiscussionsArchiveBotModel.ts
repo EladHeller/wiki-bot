@@ -6,7 +6,9 @@ import { getAllParagraphs, parseParagraph } from '../../wiki/paragraphParser';
 import parseTableText from '../../wiki/wikiTableParser';
 import {
   getArchiveTitle,
+  getParagraphRemovalText,
   getUndatedParagraphsToArchive,
+  normalizeMultipleNewlines,
   removeArchivedUndatedParagraphsFromTracker,
 } from '../../utilities/archiveUtils';
 import { getInnerLink } from '../../wiki/wikiLinkParser';
@@ -142,14 +144,14 @@ function getArchivePageName(basePageTitle: string, date: Date): string {
 
 function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: string[]): string {
   const newContent = paragraphsToRemove.reduce(
-    (content, paragraph) => content.split(paragraph).join(''),
+    (content, paragraph) => content.split(getParagraphRemovalText(content, paragraph)).join(''),
     pageContent,
   );
   if (newContent === pageContent) {
     return pageContent;
   }
 
-  const cleanedContent = newContent.replace(/\n\n\n+/g, '\n\n');
+  const cleanedContent = normalizeMultipleNewlines(newContent);
   return cleanedContent.trim();
 }
 

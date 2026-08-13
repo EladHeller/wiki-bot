@@ -2,7 +2,7 @@ import { IWikiApi } from '../wiki/WikiApi';
 import { findTemplate, getTemplateData } from '../wiki/newTemplateParser';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import parseTableText, { buildTable } from '../wiki/wikiTableParser';
-import { parseParagraph } from '../wiki/paragraphParser';
+import { getAllParagraphs, parseParagraph } from '../wiki/paragraphParser';
 import { isInactiveForDays } from './signatureUtils';
 
 const SIMPLE_ARCHIVE_BOX_TEMPLATE = 'תיבת ארכיון';
@@ -29,6 +29,25 @@ type TrackerRow = {
   paragraphTitle: string;
   firstSeenDate: string;
 };
+
+export function normalizeMultipleNewlines(content: string): string {
+  return content.replace(/\n\n\n+/g, '\n\n');
+}
+
+export function getParagraphRemovalText(pageContent: string, paragraph: string): string {
+  if (pageContent.includes(paragraph)) {
+    return paragraph;
+  }
+
+  const normalizedParagraph = normalizeMultipleNewlines(paragraph);
+  if (pageContent.includes(normalizedParagraph)) {
+    return normalizedParagraph;
+  }
+
+  return getAllParagraphs(pageContent, '').find(
+    (currentParagraph) => normalizeMultipleNewlines(currentParagraph).trimEnd() === normalizedParagraph.trimEnd(),
+  ) ?? paragraph;
+}
 
 function createTrackerKey(pageTitle: string, paragraphTitle: string): string {
   return `${pageTitle}\u0000${paragraphTitle}`;

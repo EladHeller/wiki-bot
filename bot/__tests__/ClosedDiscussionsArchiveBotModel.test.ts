@@ -820,6 +820,45 @@ Third discussion
       expect(wikiApi.edit).toHaveBeenCalledTimes(5); // 2 archive edits + 3 source edits
     });
 
+    it('should remove later paragraphs after an earlier edit normalized their newlines', async () => {
+      fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
+
+      const pageContent = `==Discussion 1==
+{{מצב|הועבר}}
+First discussion
+10:00, 1 בפברואר 2025 (IDT)
+
+==Discussion 2==
+{{מצב|טופל}}
+Second discussion
+
+
+11:00, 5 בפברואר 2025 (IDT)
+`;
+      const sourceAfterFirstEdit = `==Discussion 2==
+{{מצב|טופל}}
+Second discussion
+
+11:00, 5 בפברואר 2025 (IDT)`;
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const archivableParagraphs = await model.getArchivableParagraphs('TestPage', ['הועבר', 'טופל'], 14);
+
+      wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '{{ארכיון הדט}}\n\n==Discussion 1==', revid: 2 });
+      wikiApi.articleContent.mockResolvedValueOnce({ content: sourceAfterFirstEdit, revid: 3 });
+
+      await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
+
+      const sourceEdits = jest.mocked(wikiApi.edit).mock.calls.filter((call) => call[0] === 'TestPage');
+
+      expect(sourceEdits).toHaveLength(2);
+      expect(sourceEdits[1]?.[2]).not.toContain('Discussion 2');
+    });
+
     it('should clean up multiple newlines in source page', async () => {
       fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
 

@@ -1,7 +1,12 @@
 import {
   afterEach, beforeEach, describe, expect, it, jest,
 } from '@jest/globals';
-import UserTalkArchiveBotModel, { IUserTalkArchiveBotModel, splitExpressions } from '../maintenance/userTalkArchiveBot/UserTalkArchiveBotModel';
+import UserTalkArchiveBotModel, {
+  collectBatchForArchive,
+  IUserTalkArchiveBotModel,
+  removeParagraphsFromContent,
+  splitExpressions,
+} from '../maintenance/userTalkArchiveBot/UserTalkArchiveBotModel';
 import { IWikiApi } from '../wiki/WikiApi';
 import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
@@ -2114,6 +2119,38 @@ Old discussion
 
     it('should split and trim semicolon-delimited expressions', () => {
       expect(splitExpressions('Alpha*; Beta* ; ;Gamma*')).toStrictEqual(['Alpha*', 'Beta*', 'Gamma*']);
+    });
+  });
+
+  describe('archive content helpers', () => {
+    it('should remove a cached paragraph after earlier batches normalized its newlines', () => {
+      const cachedParagraph = `==Discussion==
+Content
+
+
+{{הועבר|סוף}}
+`;
+      const currentContent = `==Discussion==
+Content
+
+{{הועבר|סוף}}
+
+==Active discussion==
+Active content`;
+
+      expect(removeParagraphsFromContent(currentContent, [cachedParagraph])).toBe(`
+==Active discussion==
+Active content`);
+    });
+
+    it('should measure archive batches using UTF-8 bytes including paragraph separators', () => {
+      const firstParagraph = 'א'.repeat(4);
+      const secondParagraph = 'ב'.repeat(4);
+
+      expect(collectBatchForArchive([firstParagraph, secondParagraph], 0, 10)).toStrictEqual({
+        batch: [firstParagraph],
+        remaining: [secondParagraph],
+      });
     });
   });
 

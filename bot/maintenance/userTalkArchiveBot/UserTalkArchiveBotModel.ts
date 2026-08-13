@@ -5,7 +5,9 @@ import { getInnerLink, getInnerLinks } from '../../wiki/wikiLinkParser';
 import { extractLastSignatureDate, isInactiveForDays } from '../../utilities/signatureUtils';
 import {
   getArchiveTitle,
+  getParagraphRemovalText,
   getUndatedParagraphsToArchive,
+  normalizeMultipleNewlines,
   removeArchivedUndatedParagraphsFromTracker,
 } from '../../utilities/archiveUtils';
 import { asyncGeneratorMapWithSequence, contentFromPage } from '../../utilities';
@@ -72,14 +74,42 @@ async function getContent(wikiApi: IWikiApi, title: string) {
   return result;
 }
 
-function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: string[]): string {
+export function removeParagraphsFromContent(pageContent: string, paragraphsToRemove: string[]): string {
   const newContent = paragraphsToRemove.reduce(
-    (content, paragraph) => content.replace(paragraph, ''),
+    (content, paragraph) => content.replace(getParagraphRemovalText(content, paragraph), ''),
     pageContent,
   );
 
-  const cleanedContent = newContent.replace(/\n\n\n+/g, '\n\n');
+  const cleanedContent = normalizeMultipleNewlines(newContent);
   return cleanedContent.trimEnd();
+}
+
+export function collectBatchForArchive(
+  paragraphs: string[],
+  currentArchiveSize: number,
+  maxArchiveSize: number,
+): { batch: string[]; remaining: string[] } {
+  let totalSize = currentArchiveSize;
+  let batchSize = 0;
+
+  const splitIndex = paragraphs.findIndex((paragraph) => {
+    const newSize = totalSize + Buffer.byteLength(`\n\n${paragraph}`, 'utf8');
+    if (newSize > maxArchiveSize && batchSize > 0) {
+      return true;
+    }
+    totalSize = newSize;
+    batchSize += 1;
+    return false;
+  });
+
+  if (splitIndex === -1) {
+    return { batch: paragraphs, remaining: [] };
+  }
+
+  return {
+    batch: paragraphs.slice(0, splitIndex),
+    remaining: paragraphs.slice(splitIndex),
+  };
 }
 
 export function splitExpressions(expression?: string): string[] {
@@ -503,32 +533,6 @@ export default function UserTalkArchiveBotModel(
     return newArchiveTitle;
   }
 
-  function collectBatchForArchive(
-    paragraphs: string[],
-    currentArchiveSize: number,
-    maxArchiveSize: number,
-  ): { batch: string[]; remaining: string[] } {
-    let totalSize = currentArchiveSize;
-
-    const splitIndex = paragraphs.findIndex((paragraph) => {
-      const newSize = totalSize + paragraph.length;
-      if (newSize > maxArchiveSize && totalSize > currentArchiveSize) {
-        return true;
-      }
-      totalSize = newSize;
-      return false;
-    });
-
-    if (splitIndex === -1) {
-      return { batch: paragraphs, remaining: [] };
-    }
-
-    return {
-      batch: paragraphs.slice(0, splitIndex),
-      remaining: paragraphs.slice(splitIndex),
-    };
-  }
-
   async function performArchive(
     talkPage: string,
     archiveHeader: string,
@@ -558,7 +562,7 @@ export default function UserTalkArchiveBotModel(
         }
         currentArchiveTitle = newTitle;
       } else {
-        const currentSize = archiveInfo.exists ? archiveInfo.size : 0;
+        const currentSize = archiveInfo.exists ? archiveInfo.size : Buffer.byteLength(archiveHeader, 'utf8');
         const { batch, remaining } = collectBatchForArchive(
           remainingParagraphs,
           currentSize,
