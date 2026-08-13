@@ -13,6 +13,7 @@ const UNDATED_PARAGRAPH_TRACKER_SUMMARY = 'בוט ארכוב: עדכון טבל�
 
 export type ArchiveTitleError = 'תיבת ארכיון לא נמצאה' | 'התוכן של תיבת הארכיון לא נמצא' | 'לא נמצא דף ארכיון פעיל';
 export type ArchiveTitleResult = { archiveTitle: string } | { error: ArchiveTitleError };
+export type ArchiveLinkStrategy = 'any' | 'prefer-subpage' | 'subpage-only';
 export type UndatedParagraphArchivePolicy = { type: 'inactivityDays'; inactivityDays: number } | {
   type: 'archiveMonth';
   archiveMonthDate: Date;
@@ -244,22 +245,33 @@ export async function getLastActiveArchiveLink(
   api: IWikiApi,
   archiveBoxContent: string,
   pageTitle: string,
-  matchPrefix: boolean = false,
+  strategy: ArchiveLinkStrategy = 'any',
 ): Promise<string | null> {
-  const links = getInnerLinks(archiveBoxContent);
-  const reversedLinks = links.reverse();
+  const reversedLinks = getInnerLinks(archiveBoxContent)
+    .map(({ link }) => {
+      const archiveTitle = link.startsWith('/') ? `${pageTitle}${link}` : link;
+      return archiveTitle.replace(/\/$/, '');
+    })
+    .reverse();
+  const isSubpage = (archiveTitle: string) => archiveTitle.startsWith(`${pageTitle}/`);
+  const subpageLinks = reversedLinks.filter(isSubpage);
+  let candidates: string[];
 
-  for (const link of reversedLinks) {
-    const linkTitle = link.link;
-    const archiveTitle = linkTitle.startsWith('/') ? `${pageTitle}${linkTitle}` : linkTitle;
-    const fixedArchiveTitle = archiveTitle.replace(/\/$/, '');
-    const shouldCheck = !matchPrefix || fixedArchiveTitle.startsWith(pageTitle);
+  if (strategy === 'subpage-only') {
+    candidates = subpageLinks;
+  } else if (strategy === 'prefer-subpage') {
+    candidates = [
+      ...subpageLinks,
+      ...reversedLinks.filter((archiveTitle) => !isSubpage(archiveTitle)),
+    ];
+  } else {
+    candidates = reversedLinks;
+  }
 
-    if (shouldCheck) {
-      const articleContent = await api.info([fixedArchiveTitle]);
-      if (articleContent[0]?.missing == null) {
-        return fixedArchiveTitle;
-      }
+  for (const archiveTitle of candidates) {
+    const articleContent = await api.info([archiveTitle]);
+    if (articleContent[0]?.missing == null) {
+      return archiveTitle;
     }
   }
 
@@ -270,7 +282,7 @@ export async function getArchiveTitle(
   api: IWikiApi,
   pageContent: string,
   pageTitle: string,
-  matchPrefix: boolean = false,
+  strategy: ArchiveLinkStrategy = 'any',
 ): Promise<ArchiveTitleResult> {
   const simpleArchiveBox = findTemplate(pageContent, SIMPLE_ARCHIVE_BOX_TEMPLATE, pageTitle);
   const autoArchiveBox = findTemplate(pageContent, AUTO_ARCHIVE_BOX_TEMPLATE, pageTitle);
@@ -288,7 +300,7 @@ export async function getArchiveTitle(
   if (!archiveBoxContent) {
     return { error: 'התוכן של תיבת הארכיון לא נמצא' };
   }
-  const archiveTitle = await getLastActiveArchiveLink(api, archiveBoxContent, pageTitle, matchPrefix);
+  const archiveTitle = await getLastActiveArchiveLink(api, archiveBoxContent, pageTitle, strategy);
   if (!archiveTitle) {
     return { error: 'לא נמצא דף ארכיון פעיל' };
   }

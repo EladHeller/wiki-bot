@@ -459,7 +459,7 @@ export default function ClosedDiscussionsArchiveBotModel(
       wikiApi,
       navigateContent.content,
       pageTitle,
-      true,
+      'subpage-only',
     );
 
     if ('error' in archiveTitleResult) {
@@ -569,7 +569,7 @@ export default function ClosedDiscussionsArchiveBotModel(
           wikiApi,
           navigateContent.content,
           pageTitle,
-          true,
+          'subpage-only',
         );
 
         if ('error' in archiveTitleResult) {
@@ -632,7 +632,7 @@ export default function ClosedDiscussionsArchiveBotModel(
       wikiApi,
       navigateContent.content,
       pageTitle,
-      true,
+      'subpage-only',
     );
     if ('error' in archiveTitleResult) {
       throw new Error(`Failed to get archive title: ${archiveTitleResult.error}`);

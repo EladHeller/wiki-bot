@@ -125,7 +125,7 @@ async function getArchiveTitleFromBox(
   talkPage: string,
 ): Promise<{ archiveTitle: string } | { error: string }> {
   const boxContent = await getContent(api, archiveBoxPage);
-  return getArchiveTitle(api, boxContent.content, talkPage);
+  return getArchiveTitle(api, boxContent.content, talkPage, 'prefer-subpage');
 }
 
 async function notifyUserAboutArchive(

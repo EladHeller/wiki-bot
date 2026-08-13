@@ -137,7 +137,7 @@ export default async function archiveParagraph(
   requestedUser: string,
   [type, target]: (string | null)[] = [],
 ): Promise<{ error: string } | { success: string }> {
-  const archiveTitleResult = await getArchiveTitle(api, pageContent, pageTitle, false);
+  const archiveTitleResult = await getArchiveTitle(api, pageContent, pageTitle, 'any');
   if ('error' in archiveTitleResult) {
     return { error: archiveTitleResult.error };
   }
