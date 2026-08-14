@@ -50,6 +50,18 @@ describe('findTemplates', () => {
     expect(result).toStrictEqual(['{{test|text=hello}}', '{{test|text=world}}']);
   });
 
+  it.each([
+    ['nowiki', '<nowiki>', '</nowiki>'],
+    ['comment', '<!--', '-->'],
+    ['math', '<math>', '</math>'],
+  ])('should ignore templates inside %s structures', (_, opening, closing) => {
+    const text = `${opening}{{test|ignored=yes}}${closing} {{test|active=yes}}`;
+
+    const result = findTemplates(text, 'test', 'test');
+
+    expect(result).toStrictEqual(['{{test|active=yes}}']);
+  });
+
   it('should not return templates that starts with template name', () => {
     const text = 'hello world {{template1| test}}';
     const templateName = 'template';

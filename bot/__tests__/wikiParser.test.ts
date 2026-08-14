@@ -22,6 +22,23 @@ describe('parseWikiStructures', () => {
     expect(structures).toHaveLength(1);
     expect(structures[0].type).toBe('template');
   });
+
+  it.each([
+    ['nowiki', '<nowiki>', '</nowiki>'],
+    ['comment', '<!--', '-->'],
+    ['math', '<math>', '</math>'],
+  ] as const)('should ignore all wiki syntax inside %s structures', (type, opening, closing) => {
+    const hiddenText = '{{hidden}} {{{parameter}}} {brace} [[wikilink]] [link]';
+    const inertEnd = opening.length + hiddenText.length + closing.length;
+    const text = `${opening}${hiddenText}${closing} {{visible}}`;
+
+    const structures = parseWikiStructures(text);
+
+    expect(structures).toStrictEqual([
+      { type, start: 0, end: inertEnd },
+      { type: 'template', start: inertEnd + 1, end: text.length },
+    ]);
+  });
 });
 
 describe('nextWikiText', () => {

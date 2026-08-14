@@ -13,6 +13,12 @@ function findLastInStack<T extends { type: string }>(stack: T[], type: string): 
   return -1;
 }
 
+const inertClosingTags: Partial<Record<WikiStructure['type'], string>> = {
+  nowiki: '</nowiki>',
+  math: '</math>',
+  comment: '-->',
+};
+
 export function parseWikiStructures(text: string, startIndex?: number, title?: string): WikiStructure[] {
   const actualStartIndex = startIndex ?? 0;
   const structures: WikiStructure[] = [];
@@ -20,8 +26,22 @@ export function parseWikiStructures(text: string, startIndex?: number, title?: s
 
   let i = actualStartIndex;
   while (i < text.length) {
-    // Check for opening tags (longest first to avoid partial matches)
-    if (text.substring(i, i + 8) === '<nowiki>') {
+    const currentStructure = stack.at(-1);
+    const inertClosingTag = currentStructure && inertClosingTags[currentStructure.type];
+
+    if (currentStructure && inertClosingTag) {
+      if (text.substring(i, i + inertClosingTag.length) === inertClosingTag) {
+        stack.pop();
+        structures.push({
+          type: currentStructure.type,
+          start: currentStructure.start,
+          end: i + inertClosingTag.length,
+        });
+        i += inertClosingTag.length;
+      } else {
+        i += 1;
+      }
+    } else if (text.substring(i, i + 8) === '<nowiki>') {
       stack.push({ type: 'nowiki', start: i });
       i += 8;
     } else if (text.substring(i, i + 6) === '<math>') {
@@ -46,28 +66,6 @@ export function parseWikiStructures(text: string, startIndex?: number, title?: s
     } else if (text[i] === '[') {
       stack.push({ type: 'link', start: i });
       i += 1;
-    } else if (text.substring(i, i + 9) === '</nowiki>') {
-      // Check for closing tags
-      const lastNowiki = findLastInStack(stack, 'nowiki');
-      if (lastNowiki !== -1) {
-        const item = stack.splice(lastNowiki, 1)[0];
-        structures.push({ type: 'nowiki', start: item.start, end: i + 9 });
-      }
-      i += 9;
-    } else if (text.substring(i, i + 7) === '</math>') {
-      const lastMath = findLastInStack(stack, 'math');
-      if (lastMath !== -1) {
-        const item = stack.splice(lastMath, 1)[0];
-        structures.push({ type: 'math', start: item.start, end: i + 7 });
-      }
-      i += 7;
-    } else if (text.substring(i, i + 3) === '-->') {
-      const lastComment = findLastInStack(stack, 'comment');
-      if (lastComment !== -1) {
-        const item = stack.splice(lastComment, 1)[0];
-        structures.push({ type: 'comment', start: item.start, end: i + 3 });
-      }
-      i += 3;
     } else if (text[i] === '}') {
       // For closing braces, check what's on the stack to determine how many to consume
       // Priority: }}} for parameter, }} for template, } for single brace
