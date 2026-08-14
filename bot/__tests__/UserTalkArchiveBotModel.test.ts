@@ -107,6 +107,37 @@ describe('userTalkArchiveBotModel', () => {
       expect(config?.archiveBoxPage).toBe('שיחת משתמש:דוגמה');
     });
 
+    it.each([
+      [
+        'שיחת ויקיפדיה:כיכר העיר',
+        '{{תיבת ארכיון אוטומטי|הצג תבנית=כן|ימים מתגובה אחרונה=90}}',
+        '<nowiki>{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=ויקיפדיה:כיכר העיר/ארכיון 191|גודל דף ארכיון=300000}}</nowiki>',
+      ],
+      [
+        'שיחת ויקיפדיה:מזנון',
+        `{{תיבת ארכיון אוטומטי|הצג תבנית=כן|ימים מתגובה אחרונה=90|
+*[[/ארכיון 1/]]
+*[[/ארכיון 2/]]
+*[[/ארכיון 3/]]}}`,
+        '<code><nowiki>{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=ויקיפדיה:מזנון/ארכיון 462|גודל דף ארכיון=300000}}</nowiki></code>',
+      ],
+    ])('should ignore an inert archive config on %s', (pageTitle, activeTemplate, inertTemplate) => {
+      const pageContent = `${activeTemplate}
+==דיון על הגדרת הבוט==
+${inertTemplate}`;
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const config = model.getConfigFromPageContent(pageTitle, pageContent);
+
+      expect(config).toMatchObject({
+        talkPage: pageTitle,
+        archiveBoxPage: pageTitle,
+        directArchivePage: null,
+        inactivityDays: 90,
+      });
+    });
+
     it('should parse maxArchiveSize with commas', () => {
       const pageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון 1]]|גודל דף ארכיון=100,000}}
 ==דיון==
