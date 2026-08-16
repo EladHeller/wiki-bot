@@ -8,7 +8,7 @@ export default function NewCategoriesModel(api: IWikiApi) {
       titles.push(...pages.map((page) => page.title));
     }
 
-    return titles;
+    return titles.sort((a, b) => a.localeCompare(b));
   }
 
   async function updateNewCategories() {
@@ -16,22 +16,22 @@ export default function NewCategoriesModel(api: IWikiApi) {
     const categories = await getCategoriesCreatedIn(currentMonth);
 
     const newCategoriesPageTitle = 'ויקיפדיה:קטגוריות חדשות';
-    const newCategoriesContent = categories.map((c) => `* [[:${c}]]`).join('\n');
+    const newCategoriesContent = categories.map((c) => `* [[:${c}]]\n`).join('');
     const { content, revid } = await api.articleContent(newCategoriesPageTitle);
 
-    const newContent = content.replaceAll(/\* \[\[:קטגוריה:.*\n?/g, '') + newCategoriesContent;
+    const newContent = content.replace(/(\* \[\[:קטגוריה:.*\n?)+/, newCategoriesContent);
     if (newContent !== content) {
       await api.edit(newCategoriesPageTitle, 'עדכון קטגוריות חדשות', newContent, revid);
     }
   }
 
-  async function createPerMonthIfNeeded(date: Date) {
+  async function createPerMonthIfNeeded(date: Date, edit = false) {
     const monthPageTitleString = date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
     const monthSearchString = date.toISOString().slice(0, 7);
     const title = `ויקיפדיה:קטגוריות לפי זמן יצירתם/${monthPageTitleString}`;
 
     const [info] = await api.info([title]);
-    if (!('missing' in info)) {
+    if (!('missing' in info) && !edit) {
       return;
     }
 
@@ -40,7 +40,11 @@ export default function NewCategoriesModel(api: IWikiApi) {
     const categoriesContent = categories.map((c) => `* [[:${c}]]`).join('\n');
     const category = `[[קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתם (${date.getFullYear()})]]`;
     const content = `${prefix}\n${categoriesContent}\n\n${category}`;
-    await api.create(title, `קטגוריות שנוצרו בחודש ${monthPageTitleString}`, content);
+    if (edit) {
+      await api.edit(title, `קטגוריות שנוצרו בחודש ${monthPageTitleString}`, content, info.lastrevid ?? -1);
+    } else {
+      await api.create(title, `קטגוריות שנוצרו בחודש ${monthPageTitleString}`, content);
+    }
   }
 
   async function createLastMonthCategoriesPageIfNeeded() {
