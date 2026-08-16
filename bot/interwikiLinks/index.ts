@@ -128,23 +128,6 @@ function replaceTemplateParam(
   }, templateName);
 }
 
-function addTemplateKeyValueParam(
-  template: string,
-  pageTitle: string,
-  templateName: string,
-  key: string,
-  value: string,
-): string {
-  const templateData = getTemplateData(template, templateName, pageTitle);
-  return templateFromTemplateData({
-    ...templateData,
-    keyValueData: {
-      ...templateData.keyValueData,
-      [key]: value,
-    },
-  }, templateName);
-}
-
 export function fixTitleBracketsAndDots(title: string): string | null {
   let newTitle = title;
 
@@ -194,25 +177,6 @@ export function replaceTemplateForeignTitle(
       ),
     }))
     .find(({ newTemplate }) => newTemplate != null);
-
-  return replacement?.newTemplate
-    ? content.replaceAll(replacement.template, replacement.newTemplate)
-    : content;
-}
-
-export function addTemplateWithoutWikidataItem(
-  content: string,
-  pageTitle: string,
-  templateName: string,
-  foreignTitle: string,
-): string {
-  const replacement = findTemplates(content, templateName, pageTitle)
-    .map((template) => ({
-      template,
-      newTemplate: addTemplateKeyValueParam(template, pageTitle, templateName, 'ללא פריט', 'כן'),
-    }))
-    .find(({ template }) => getTemplateArrayData(template, templateName, pageTitle, true)
-      .some((value) => value === foreignTitle));
 
   return replacement?.newTemplate
     ? content.replaceAll(replacement.template, replacement.newTemplate)
@@ -282,10 +246,6 @@ async function checkMissingRedirect(api: IWikiApi, title: string) {
   };
 }
 
-function titleCouldBeRelevantToNoWikidata(title: string) {
-  return !title.match(/[#:]/);
-}
-
 async function handleError(pageTitle: string, content: string, error: ParamValidatorError): Promise<string> {
   const languageApi = getLanguageApi(error.languageCode);
   const redirectTargetResult = await getEasyRedirectTarget(languageApi, error.foreignTitle);
@@ -317,32 +277,6 @@ async function handleError(pageTitle: string, content: string, error: ParamValid
   const newTarget = newTitle || redirectTarget;
 
   if (newTarget == null) {
-    if (!isMissing && redirectTargetResult.failedReason === 'redirect not found or invalid' && titleCouldBeRelevantToNoWikidata(error.foreignTitle)) {
-      const [redirectTargetInfo] = await languageApi.info([error.foreignTitle]);
-      if (redirectTargetInfo?.missing == null) {
-        const titleToCheck = newTitle || error.foreignTitle;
-        const wikidataItem = await languageApi.getWikiDataItem(titleToCheck);
-
-        if (wikidataItem == null) {
-          const newContent = addTemplateWithoutWikidataItem(
-            content,
-            pageTitle,
-            error.templateName,
-            error.foreignTitle,
-          );
-
-          addLog({
-            ...error,
-            pageTitle,
-            success: newContent !== content,
-            reason: newContent === content ? 'matching template not found' : undefined,
-          });
-
-          return newContent;
-        }
-      }
-    }
-
     if (isMissing) {
       addLog({
         ...error,
