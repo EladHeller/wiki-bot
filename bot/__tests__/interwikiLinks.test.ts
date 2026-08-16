@@ -28,7 +28,6 @@ const {
   formatLog,
   parseRemainingPageTitles,
   formatRemainingPageTitles,
-  addTemplateWithoutWikidataItem,
   fixTitleBracketsAndDots,
   handlePageSafely,
   runSinglePage,
@@ -294,26 +293,6 @@ describe('replaceTemplateForeignTitle', () => {
     const content = '{{אנג|Google}}';
 
     expect(replaceTemplateForeignTitle(content, 'Title', 'אנג', 'NotInTemplate', 'NewGoogle', false)).toBe(content);
-  });
-});
-
-describe('addTemplateWithoutWikidataItem', () => {
-  it('adds ללא פריט=כן to matching template', () => {
-    const content = '{{אנג|Google}}';
-
-    expect(addTemplateWithoutWikidataItem(content, 'Title', 'אנג', 'Google')).toBe('{{אנג|Google|ללא פריט=כן}}');
-  });
-
-  it('preserves existing params when adding ללא פריט=כן', () => {
-    const content = '{{אנג|Google|שם=גוגל}}';
-
-    expect(addTemplateWithoutWikidataItem(content, 'Title', 'אנג', 'Google')).toBe('{{אנג|Google|שם=גוגל|ללא פריט=כן}}');
-  });
-
-  it('returns same content when matching template is not found', () => {
-    const content = '{{גרמ|Google}}';
-
-    expect(addTemplateWithoutWikidataItem(content, 'Title', 'אנג', 'Google')).toBe(content);
   });
 });
 
@@ -631,7 +610,6 @@ describe('handlePageSafely and page processing logic', () => {
     api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
     mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({});
     mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
-    mockLanguageApi.getWikiDataItem.mockResolvedValueOnce('Q1');
     const page = {
       title: 'TestPage',
       pageid: 1,
@@ -879,7 +857,6 @@ describe('handlePageSafely and page processing logic', () => {
       missing: '',
     }]);
     mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
-    mockLanguageApi.getWikiDataItem.mockResolvedValueOnce('Q1');
 
     const page = {
       title: 'TestPage',
@@ -896,68 +873,6 @@ describe('handlePageSafely and page processing logic', () => {
     await handlePageSafely(api, page);
 
     expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('redirect not found or invalid'));
-
-    consoleLogSpy.mockRestore();
-
-    expect(api.edit).not.toHaveBeenCalled();
-  });
-
-  it('adds ללא פריט=כן when page exists and has no wikidata item', async () => {
-    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
-    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({
-      redirect: {
-        from: '',
-        to: '',
-      },
-    });
-    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
-    mockLanguageApi.getWikiDataItem.mockResolvedValueOnce(undefined);
-
-    const page = {
-      title: 'TestPage',
-      pageid: 1,
-      ns: 0,
-      extlinks: [],
-      revisions: [{
-        revid: 123,
-        slots: { main: { '*': '{{אנג|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
-        user: 'User',
-        size: 100,
-      }],
-    };
-    await handlePageSafely(api, page);
-
-    expect(api.edit).toHaveBeenCalledWith('TestPage', 'תיקון קישורי שפה', '{{אנג|Google|ללא פריט=כן}}', 123);
-    expect(mockLanguageApi.getWikiDataItem).toHaveBeenCalledWith('Google');
-  });
-
-  it('skips without wikidata item when matching template is not found', async () => {
-    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
-    api.getParsedContent.mockResolvedValueOnce('<span class="paramvalidator-error">שימוש בתבנית אנג עבור "Google" בשפה en אך ערך זה לא קיים בשפה זו</span>');
-    mockLanguageApi.getRedirecTarget.mockResolvedValueOnce({
-      redirect: {
-        from: '',
-        to: '',
-      },
-    });
-    mockLanguageApi.info.mockResolvedValueOnce([{ title: 'Google' }]);
-    mockLanguageApi.getWikiDataItem.mockResolvedValueOnce(undefined);
-
-    const page = {
-      title: 'TestPage',
-      pageid: 1,
-      ns: 0,
-      extlinks: [],
-      revisions: [{
-        revid: 123,
-        slots: { main: { '*': '{{גרמ|Google}}', contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
-        user: 'User',
-        size: 100,
-      }],
-    };
-    await handlePageSafely(api, page);
-
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('matching template not found'));
 
     consoleLogSpy.mockRestore();
 
