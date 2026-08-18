@@ -24,6 +24,10 @@ const BOT_NOTIFICATION_HEADER = '== הודעה מבוט הארכוב ==';
 const DEFAULT_INACTIVITY_DAYS = 30;
 const DEFAULT_ARCHIVE_HEADER = '{{ארכיון}}';
 const DEFAULT_ARCHIVE_SIZE = 150000;
+const DEFAULT_DELETE_SUMMARY = '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב';
+const SPECIAL_DELETE_SUMMARIES: Record<string, string> = {
+  'ויקיפדיה:לוח המודעות': '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות ישנות מלוח המודעות',
+};
 
 export interface UserTalkArchiveConfig {
   talkPage: string;
@@ -753,7 +757,7 @@ export default function UserTalkArchiveBotModel(
       const updatedContent = removeParagraphsFromContent(latestContent, paragraphsToDeleteOnly);
       await wikiApi.edit(
         config.talkPage,
-        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב',
+        SPECIAL_DELETE_SUMMARIES[config.talkPage] ?? DEFAULT_DELETE_SUMMARY,
         updatedContent,
         revid,
         undefined,
