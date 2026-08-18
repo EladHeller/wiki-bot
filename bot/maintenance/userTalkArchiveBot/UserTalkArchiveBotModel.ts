@@ -26,7 +26,7 @@ const DEFAULT_ARCHIVE_HEADER = '{{ארכיון}}';
 const DEFAULT_ARCHIVE_SIZE = 150000;
 const DEFAULT_DELETE_SUMMARY = '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות תפוצה ללא ארכוב';
 const SPECIAL_DELETE_SUMMARIES: Record<string, string> = {
-  'ויקיפדיה:לוח המודעות': '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות ישנות מלוח המודעות',
+  'ויקיפדיה:לוח מודעות': '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות ישנות מלוח המודעות',
 };
 
 export interface UserTalkArchiveConfig {

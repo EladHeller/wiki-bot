@@ -2746,7 +2746,7 @@ This should stay
       );
     });
 
-    it('should use the special delete summary for ויקיפדיה:לוח המודעות', async () => {
+    it('should use the special delete summary for ויקיפדיה:לוח מודעות', async () => {
       fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
 
       const pageContent = `{{בוט ארכוב אוטומטי|ביטויים למחיקה=*|ימים מתגובה אחרונה=14}}
@@ -2758,7 +2758,7 @@ This should be deleted
       }
 
       async function* mockGenerator() {
-        yield [convertContentToWikiPage(pageContent, 123, 'ויקיפדיה:לוח המודעות')];
+        yield [convertContentToWikiPage(pageContent, 123, 'ויקיפדיה:לוח מודעות')];
       }
 
       wikiApi.getArticlesWithTemplate
@@ -2773,7 +2773,7 @@ This should be deleted
       await model.run();
 
       expect(wikiApi.edit).toHaveBeenCalledWith(
-        'ויקיפדיה:לוח המודעות',
+        'ויקיפדיה:לוח מודעות',
         '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות ישנות מלוח המודעות',
         expect.not.stringContaining('Old notice'),
         12,
