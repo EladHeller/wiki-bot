@@ -2746,6 +2746,43 @@ This should stay
       );
     });
 
+    it('should use the special delete summary for ויקיפדיה:לוח מודעות', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+
+      const pageContent = `{{בוט ארכוב אוטומטי|ביטויים למחיקה=*|ימים מתגובה אחרונה=14}}
+==Old notice==
+This should be deleted
+12:00, 1 בינואר 2026 (IDT)`;
+      async function* emptyGenerator() {
+        yield [];
+      }
+
+      async function* mockGenerator() {
+        yield [convertContentToWikiPage(pageContent, 123, 'ויקיפדיה:לוח מודעות')];
+      }
+
+      wikiApi.getArticlesWithTemplate
+        .mockReturnValueOnce(mockGenerator())
+        .mockReturnValueOnce(emptyGenerator())
+        .mockReturnValueOnce(emptyGenerator());
+      wikiApi.info.mockResolvedValueOnce([{}]);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 12 });
+
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        'ויקיפדיה:לוח מודעות',
+        '[[ויקיפדיה:בוט/בוט ארכוב אוטומטי|בוט ארכוב אוטומטי]]: מחיקת הודעות ישנות מלוח המודעות',
+        expect.not.stringContaining('Old notice'),
+        12,
+        undefined,
+        true,
+      );
+      expect(wikiApi.create).not.toHaveBeenCalled();
+    });
+
     it('should archive a tracked undated paragraph during run', async () => {
       fakerTimers.setSystemTime(new Date('2026-02-01T00:00:00Z'));
 
