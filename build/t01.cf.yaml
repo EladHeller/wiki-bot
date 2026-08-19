@@ -192,6 +192,18 @@ Resources:
             Schedule: cron(0 8 ? * 1-6 *)
             Name: archive-user-talk-scheduler
 
+  ArchiveBotUsersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: archive-bot-users-function
+      Handler: dist/maintenance/archiveBotUsers/index.main
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 8 ? * 1 *)
+            Name: archive-bot-users-scheduler
+
   RunScriptsFunction:
     Type: AWS::Serverless::Function
     Properties:
