@@ -5,6 +5,9 @@ import botLoggerDecorator from '../../decorators/botLoggerDecorator';
 import getChromiumLaunchOptions from '../../utilities/playwright';
 import WikiApi, { IWikiApi } from '../../wiki/WikiApi';
 import { classifyLinkStatus, LinkCheckState } from '../actions/externalLinkChecker';
+import {
+  addHebrewConjunction, formatBrokenLinkCount, formatLinkCount, formatUnverifiedLinkCount,
+} from '../linkCheckSummary';
 
 export type PlaywrightLinkCheckRequestLink = {
   link: string;
@@ -42,6 +45,25 @@ const navigationOptions = {
 };
 
 const challengeStatuses = [403, 429, 503];
+
+const navigationErrorMessages: [RegExp, string][] = [
+  [/ERR_NAME_NOT_RESOLVED/, 'שם המתחם לא נמצא'],
+  [/ERR_CONNECTION_TIMED_OUT|Timeout/i, 'האתר לא הגיב בזמן'],
+];
+
+function formatUnverifiedReason(result: PlaywrightLinkCheckResult): string {
+  if (result.state === 'blocked') {
+    return `האתר חסם את הבדיקה (HTTP ${result.status})`;
+  }
+  const knownError = navigationErrorMessages.find(([pattern]) => pattern.test(result.error ?? ''));
+  if (knownError) {
+    return knownError[1];
+  }
+  if (result.status) {
+    return `לא ניתן לאמת את הקישור (HTTP ${result.status})`;
+  }
+  return 'לא ניתן לאמת את הקישור';
+}
 
 async function hasChallengePage(page: Page): Promise<boolean> {
   const [title, content] = await Promise.allSettled([page.title(), page.content()]);
@@ -94,7 +116,8 @@ async function checkLink(page: Page, link: PlaywrightLinkCheckRequestLink): Prom
 }
 
 export async function runLinkChecks(links: PlaywrightLinkCheckRequestLink[]): Promise<PlaywrightLinkCheckResponse> {
-  if (links.length === 0) {
+  const uniqueLinks = [...new Map(links.map((link) => [link.link, link])).values()];
+  if (uniqueLinks.length === 0) {
     return { results: [] };
   }
   let browser: Browser | null = null;
@@ -111,7 +134,7 @@ export async function runLinkChecks(links: PlaywrightLinkCheckRequestLink[]): Pr
     });
     const results: PlaywrightLinkCheckResult[] = [];
 
-    for (const link of links) {
+    for (const link of uniqueLinks) {
       const page = await context.newPage();
       try {
         results.push(await checkLink(page, link));
@@ -134,12 +157,13 @@ export async function handleQueueMessage(api: IWikiApi, body: string) {
   const unresolved = results.results.filter((result) => !['alive', 'dead'].includes(result.state));
   const sections: string[] = [];
   if (dead.length > 0) {
-    sections.push(`קישורים שבורים בבדיקה ברקע:\n${dead.map((link) => `* [${link.link} ${link.text}], לא ניתן להגיע לקישור - ${link.status} - ${link.statusText}`).join('\n')}`);
+    sections.push(`קישורים שבורים:\n${dead.map((link) => `* [${link.link} ${link.text}] — הקישור החזיר שגיאת HTTP ${link.status}`).join('\n')}`);
   }
   if (unresolved.length > 0) {
-    sections.push(`קישורים שלא ניתן היה לאמת בבדיקה ברקע:\n${unresolved.map((link) => `* [${link.link} ${link.text}], ${link.error ?? `לא ניתן לאמת את הקישור - ${link.status} - ${link.statusText}`}`).join('\n')}`);
+    sections.push(`קישורים שלא ניתן היה לאמת:\n${unresolved.map((link) => `* [${link.link} ${link.text}] — ${formatUnverifiedReason(link)}`).join('\n')}`);
   }
-  const content = sections.length === 0 ? 'כל הקישורים שנבדקו ברקע תקינים' : sections.join('\n');
+  const summary = `בדיקת הרקע כללה ${formatLinkCount(results.results.length)}. מתוכם ${formatBrokenLinkCount(dead.length)}, ${addHebrewConjunction(unresolved.length, formatUnverifiedLinkCount(unresolved.length))}.`;
+  const content = sections.length === 0 ? summary : `${summary}\n\n${sections.join('\n\n')}`;
 
   if (message.title && message.commentSummary && message.commentId) {
     await api.addComment(message.title, message.commentSummary, content, message.commentId);

@@ -68,7 +68,7 @@ describe('checkExternalLinks', () => {
     expect(checkLinksWithHttpMock).toHaveBeenCalledWith(expect.any(Array), 'Page title');
     expect(lookupIABotLinksMock).not.toHaveBeenCalled();
     expect(queuePlaywrightLinkCheckMock).not.toHaveBeenCalled();
-    expect(result).toBe('כל הקישורים תקינים');
+    expect(result).toBe('הבוט בדק 2 קישורים. 0 קישורים נמצאו לא תקינים, ו־0 קישורים נשלחו לבדיקה ברקע.');
   });
 
   it('should accept an alive IABot result for a blocked link', async () => {
@@ -81,7 +81,7 @@ describe('checkExternalLinks', () => {
     const result = await checkExternalLinks('content');
 
     expect(queuePlaywrightLinkCheckMock).not.toHaveBeenCalled();
-    expect(result).toBe('כל הקישורים תקינים');
+    expect(result).toBe('הבוט בדק 2 קישורים. 0 קישורים נמצאו לא תקינים, ו־0 קישורים נשלחו לבדיקה ברקע.');
   });
 
   it('should report an IABot-confirmed dead link as broken', async () => {
@@ -93,7 +93,7 @@ describe('checkExternalLinks', () => {
 
     const result = await checkExternalLinks('content');
 
-    expect(result).toBe('קישורים שבורים:\n* [https://example.com/two Two], לא ניתן להגיע לקישור - 403 - Forbidden');
+    expect(result).toBe('הבוט בדק 2 קישורים. קישור אחד נמצא לא תקין, ו־0 קישורים נשלחו לבדיקה ברקע.\nקישורים שבורים:\n* [https://example.com/two Two], לא ניתן להגיע לקישור - 403 - Forbidden');
   });
 
   it('should queue blocked, transient, and unknown links for a background check', async () => {
@@ -112,7 +112,7 @@ describe('checkExternalLinks', () => {
       commentId: '1',
       links: [{ link: 'https://example.com/two', text: 'Two' }],
     });
-    expect(result).toBe('כל הקישורים שניתן היה לאמת תקינים. קישורים שלא ניתן היה לאמת נשלחו לבדיקה ברקע.');
+    expect(result).toBe('הבוט בדק 2 קישורים. 0 קישורים נמצאו לא תקינים, וקישור אחד נשלח לבדיקה ברקע.');
   });
 
   it('should keep a repeatedly missing link broken when IABot has no result', async () => {
@@ -121,7 +121,7 @@ describe('checkExternalLinks', () => {
 
     const result = await checkExternalLinks('content');
 
-    expect(result).toBe('קישורים שבורים:\n* [https://example.com/one One], לא ניתן להגיע לקישור - 404 - Not Found');
+    expect(result).toBe('הבוט בדק קישור אחד. קישור אחד נמצא לא תקין, ו־0 קישורים נשלחו לבדיקה ברקע.\nקישורים שבורים:\n* [https://example.com/one One], לא ניתן להגיע לקישור - 404 - Not Found');
   });
 
   it('should format broken links with errors or without HTTP details', async () => {
@@ -144,7 +144,7 @@ describe('checkExternalLinks', () => {
 
     const result = await checkExternalLinks('content');
 
-    expect(result).toContain('קישורים שלא ניתן היה לאמת נשלחו לבדיקה ברקע.');
+    expect(result).toContain('קישור אחד נשלח לבדיקה ברקע.');
     expect(result).toContain('לא ניתן להגיע לקישור - 404 - ');
   });
 
@@ -157,7 +157,7 @@ describe('checkExternalLinks', () => {
 
     expect(logWarningMock).toHaveBeenCalledWith(new Error('IABot unavailable'));
     expect(queuePlaywrightLinkCheckMock).toHaveBeenCalledWith(expect.any(Object));
-    expect(result).toContain('נשלחו לבדיקה ברקע');
+    expect(result).toContain('קישור אחד נשלח לבדיקה ברקע');
   });
 
   it('should report a queue failure as unverifiable rather than broken', async () => {
@@ -168,7 +168,7 @@ describe('checkExternalLinks', () => {
     const result = await checkExternalLinks('content');
 
     expect(logErrorMock).toHaveBeenCalledWith(new Error('queue failed'));
-    expect(result).toBe('קישורים שלא ניתן היה לאמת:\n* [https://example.com/one One], לא ניתן להעביר לבדיקה ברקע - queue failed');
+    expect(result).toBe('הבוט בדק קישור אחד. 0 קישורים נמצאו לא תקינים, ו־0 קישורים נשלחו לבדיקה ברקע.\nקישורים שלא ניתן היה לאמת:\n* [https://example.com/one One], לא ניתן להעביר לבדיקה ברקע - queue failed');
     expect(result).not.toContain('קישורים שבורים');
   });
 
@@ -189,7 +189,22 @@ describe('checkExternalLinks', () => {
     const result = await checkExternalLinks('content');
 
     expect(queuePlaywrightLinkCheckMock).toHaveBeenCalledWith(expect.any(Object));
-    expect(result).toContain('נשלחו לבדיקה ברקע');
+    expect(result).toContain('קישור אחד נשלח לבדיקה ברקע');
+  });
+
+  it('should count duplicate URLs only once', async () => {
+    getExternalLinksMock.mockReturnValue([
+      { link: 'https://example.com/one', text: 'First' },
+      { link: 'https://example.com/one', text: 'Second' },
+    ]);
+    httpResults([['https://example.com/one', { state: 'alive', status: 200 }]]);
+
+    const result = await checkExternalLinks('content');
+
+    expect(checkLinksWithHttpMock).toHaveBeenCalledWith([
+      { link: 'https://example.com/one', text: 'Second' },
+    ], undefined);
+    expect(result).toContain('הבוט בדק קישור אחד.');
   });
 });
 
