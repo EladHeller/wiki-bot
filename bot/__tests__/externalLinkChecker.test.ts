@@ -44,6 +44,111 @@ describe('externalLinkChecker', () => {
     expect(getUserAgent()).toContain('Sapper-bot/1.0');
   });
 
+  it('should verify Wayback links through the availability API', async () => {
+    const waybackLink = {
+      link: 'https://web.archive.org/web/20120401201535/https://grrm.livejournal.com/3797.html?view=all#comments',
+      text: 'Archived post',
+    };
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({
+      archived_snapshots: {
+        closest: { available: true, status: '200' },
+      },
+    }), { status: 200, statusText: 'OK' }));
+
+    const result = await checkLinksWithHttp([waybackLink], undefined, {
+      fetchFn: fetchMock,
+      sleep: sleepMock,
+      now: () => now,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://archive.org/wayback/available?url=https%3A%2F%2Fgrrm.livejournal.com%2F3797.html%3Fview%3Dall&timestamp=20120401201535',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Accept: 'application/json' }),
+      }),
+    );
+    expect(result.get(waybackLink.link)).toStrictEqual({ state: 'alive', status: 200, statusText: 'OK' });
+  });
+
+  it('should accept an available Wayback snapshot without a reported status', async () => {
+    const waybackLink = {
+      link: 'https://web.archive.org/web/20120401201535/http://example.com/page',
+      text: 'Archived page',
+    };
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({
+      archived_snapshots: { closest: { available: true } },
+    }), { status: 200 }));
+
+    const result = await checkLinksWithHttp([waybackLink], undefined, {
+      fetchFn: fetchMock,
+      sleep: sleepMock,
+      now: () => now,
+    });
+
+    expect(result.get(waybackLink.link)?.state).toBe('alive');
+    expect(result.get(waybackLink.link)?.status).toBe(200);
+  });
+
+  it('should retry and report unavailable Wayback snapshots as dead', async () => {
+    const waybackLink = {
+      link: 'http://web.archive.org/web/20060101id_/http://example.com/missing',
+      text: 'Missing snapshot',
+    };
+    fetchMock.mockImplementation(async () => new Response(
+      JSON.stringify({ archived_snapshots: {} }),
+      { status: 200 },
+    ));
+
+    const result = await checkLinksWithHttp([waybackLink], undefined, {
+      fetchFn: fetchMock,
+      sleep: sleepMock,
+      now: () => now,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.get(waybackLink.link)).toStrictEqual({
+      state: 'dead', status: 404, statusText: 'שמירה לא נמצאה בארכיון',
+    });
+  });
+
+  it('should fall back to the regular flow when the availability API fails', async () => {
+    const waybackLink = {
+      link: 'https://web.archive.org/web/20120401201535/http://example.com/page',
+      text: 'Archived page',
+    };
+    fetchMock.mockRejectedValue(new Error('availability timeout'));
+
+    const result = await checkLinksWithHttp([waybackLink], undefined, {
+      fetchFn: fetchMock,
+      sleep: sleepMock,
+      now: () => now,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.get(waybackLink.link)).toStrictEqual({
+      state: 'transient', error: 'availability timeout',
+    });
+  });
+
+  it('should classify Wayback API HTTP failures normally', async () => {
+    const waybackLink = {
+      link: 'https://web.archive.org/web/20120401201535/http://example.com/page',
+      text: 'Archived page',
+    };
+    fetchMock.mockResolvedValue(new Response(null, { status: 503, statusText: 'Unavailable' }));
+
+    const result = await checkLinksWithHttp([waybackLink], undefined, {
+      fetchFn: fetchMock,
+      sleep: sleepMock,
+      now: () => now,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.get(waybackLink.link)).toStrictEqual(expect.objectContaining({
+      state: 'transient', status: 503,
+    }));
+  });
+
   it('should retry and confirm 404 responses', async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 404, statusText: 'Not Found' }));
 
