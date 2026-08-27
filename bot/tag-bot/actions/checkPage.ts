@@ -4,6 +4,9 @@ import { getExternalLinks, WikiLink } from '../../wiki/wikiLinkParser';
 import { checkLinksWithHttp, LinkCheckResult, LinkCheckState } from './externalLinkChecker';
 import { lookupIABotLinks } from './internetArchiveBot';
 import { queuePlaywrightLinkCheck } from './playwrightLinkQueue';
+import {
+  addHebrewConjunction, formatBrokenLinkCount, formatLinkCount, formatQueuedLinkCount,
+} from '../linkCheckSummary';
 
 type CheckedLink = WikiLink & { error: string };
 
@@ -25,7 +28,7 @@ export async function checkExternalLinks(
     commentId: string;
   },
 ) {
-  const links = getExternalLinks(content);
+  const links = [...new Map(getExternalLinks(content).map((link) => [link.link, link])).values()];
   const httpResults = await checkLinksWithHttp(links, queueContext?.title);
   const unresolvedLinks = links.filter((link) => httpResults.get(link.link)?.state !== 'alive');
   let iabotResults = new Map<string, LinkCheckState>();
@@ -77,14 +80,9 @@ export async function checkExternalLinks(
       unverified: unverifiedLinks.length,
     },
   });
-  const messages: string[] = [];
-  if (brokenLinks.length === 0 && unverifiedLinks.length === 0) {
-    messages.push(queuedLinksCount > 0
-      ? 'כל הקישורים שניתן היה לאמת תקינים. קישורים שלא ניתן היה לאמת נשלחו לבדיקה ברקע.'
-      : 'כל הקישורים תקינים');
-  } else if (queuedLinksCount > 0) {
-    messages.push('קישורים שלא ניתן היה לאמת נשלחו לבדיקה ברקע.');
-  }
+  const messages = [
+    `הבוט בדק ${formatLinkCount(links.length)}. ${formatBrokenLinkCount(brokenLinks.length)}, ${addHebrewConjunction(queuedLinksCount, formatQueuedLinkCount(queuedLinksCount))}.`,
+  ];
   if (brokenLinks.length > 0) {
     messages.push(`קישורים שבורים:\n${brokenLinks.map((link) => `* [${link.link} ${link.text}], ${link.error}`).join('\n')}`);
   }
