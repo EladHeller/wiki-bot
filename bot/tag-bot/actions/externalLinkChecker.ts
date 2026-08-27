@@ -23,6 +23,8 @@ const REQUEST_TIMEOUT_MS = 15 * 1000;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TRANSIENT_CACHE_TTL_MS = 60 * 1000;
 const MAX_RESPONSE_SAMPLE_BYTES = 32 * 1024;
+const WAYBACK_AVAILABILITY_API_URL = 'https://archive.org/wayback/available';
+const WAYBACK_LINK_PATTERN = /^https?:\/\/web\.archive\.org\/web\/(\d{1,14})[a-z_]*\/(https?:\/\/.+)$/i;
 
 const resultCache = new Map<string, { result: LinkCheckResult; expiresAt: number }>();
 const hostNextRequestAt = new Map<string, number>();
@@ -31,6 +33,15 @@ const defaultDependencies: LinkCheckerDependencies = {
   fetchFn: fetch,
   sleep,
   now: Date.now,
+};
+
+type WaybackAvailabilityResponse = {
+  archived_snapshots?: {
+    closest?: {
+      available?: boolean;
+      status?: string;
+    };
+  };
 };
 
 function getReferrer(pageTitle?: string): string | undefined {
@@ -112,6 +123,30 @@ async function classifyResponse(response: Response): Promise<LinkCheckResult> {
   };
 }
 
+async function classifyWaybackResponse(response: Response): Promise<LinkCheckResult> {
+  if (!response.ok) {
+    return classifyResponse(response);
+  }
+  const data = await response.json() as WaybackAvailabilityResponse;
+  const closest = data.archived_snapshots?.closest;
+  if (!closest?.available) {
+    return { state: 'dead', status: 404, statusText: 'שמירה לא נמצאה בארכיון' };
+  }
+  const status = Number(closest.status) || 200;
+  return { state: 'alive', status, statusText: response.statusText };
+}
+
+function getWaybackAvailabilityUrl(url: string): string | null {
+  const match = url.match(WAYBACK_LINK_PATTERN);
+  if (!match) {
+    return null;
+  }
+  const availabilityUrl = new URL(WAYBACK_AVAILABILITY_API_URL);
+  availabilityUrl.searchParams.set('url', match[2].split('#', 1)[0]);
+  availabilityUrl.searchParams.set('timestamp', match[1]);
+  return availabilityUrl.toString();
+}
+
 function getRetryDelay(response: Response | undefined): number {
   const retryAfter = response?.headers?.get('retry-after');
   if (!retryAfter) {
@@ -146,21 +181,28 @@ async function requestLink(
   pageTitle: string | undefined,
   dependencies: LinkCheckerDependencies,
 ): Promise<{ result: LinkCheckResult; response?: Response }> {
-  await waitForHost(url, dependencies);
+  const waybackAvailabilityUrl = getWaybackAvailabilityUrl(url);
+  const requestUrl = waybackAvailabilityUrl ?? url;
+  await waitForHost(requestUrl, dependencies);
   let response: Response | undefined;
   try {
     const referrer = getReferrer(pageTitle);
-    response = await dependencies.fetchFn(url, {
+    response = await dependencies.fetchFn(requestUrl, {
       headers: {
         'User-Agent': getUserAgent(),
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        Accept: waybackAvailabilityUrl
+          ? 'application/json'
+          : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'he-IL,he;q=0.9,en;q=0.7',
         ...(referrer ? { Referer: referrer } : {}),
       },
       redirect: 'follow',
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    return { result: await classifyResponse(response), response };
+    const result = waybackAvailabilityUrl
+      ? await classifyWaybackResponse(response)
+      : await classifyResponse(response);
+    return { result, response };
   } catch (error) {
     return {
       result: {
