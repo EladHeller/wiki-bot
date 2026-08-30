@@ -27,26 +27,33 @@ export default function NewCategoriesModel(api: IWikiApi) {
     }
   }
 
+  async function createYearCategoryIfNeeded(year: number) {
+    const title = `${yearlyCategoriesParent} (${year})`;
+    const [info] = await api.info([title]);
+    if (!('missing' in info)) {
+      return title;
+    }
+
+    await api.create(
+      title,
+      `יצירת קטגוריה לשנת ${year}`,
+      `[[${yearlyCategoriesParent}]]`,
+    );
+    return title;
+  }
+
   async function createPerMonthIfNeeded(date: Date, edit = false) {
     const monthPageTitleString = date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
     const monthSearchString = date.toISOString().slice(0, 7);
     const title = `ויקיפדיה:קטגוריות לפי זמן יצירתם/${monthPageTitleString}`;
     const year = date.getFullYear();
-    const yearCategoryTitle = `${yearlyCategoriesParent} (${year})`;
 
     const [info] = await api.info([title]);
     if (!('missing' in info) && !edit) {
       return;
     }
 
-    const [yearCategoryInfo] = await api.info([yearCategoryTitle]);
-    if ('missing' in yearCategoryInfo) {
-      await api.create(
-        yearCategoryTitle,
-        `יצירת קטגוריה לשנת ${year}`,
-        `[[${yearlyCategoriesParent}]]`,
-      );
-    }
+    const yearCategoryTitle = await createYearCategoryIfNeeded(year);
 
     const categories = await getCategoriesCreatedIn(monthSearchString);
     const prefix = `בחודש ${monthPageTitleString} נוצרו ${categories.length} קטגוריות:`;
@@ -60,6 +67,27 @@ export default function NewCategoriesModel(api: IWikiApi) {
     }
   }
 
+  async function createPerYearIfNeeded(date: Date, edit = false) {
+    const year = date.getFullYear();
+    const title = `ויקיפדיה:קטגוריות לפי זמן יצירתם/${year}`;
+    const [info] = await api.info([title]);
+    if (!('missing' in info) && !edit) {
+      return;
+    }
+
+    const yearCategoryTitle = await createYearCategoryIfNeeded(year);
+    const categories = await getCategoriesCreatedIn(year.toString());
+    const prefix = `בשנת ${year} נוצרו ${categories.length} קטגוריות:`;
+    const categoriesContent = categories.map((category) => `* [[:${category}]]`).join('\n');
+    const content = `${prefix}\n${categoriesContent}\n\n[[${yearCategoryTitle}]]`;
+    const summary = `קטגוריות שנוצרו בשנת ${year}`;
+    if (edit) {
+      await api.edit(title, summary, content, info.lastrevid ?? -1);
+    } else {
+      await api.create(title, summary, content);
+    }
+  }
+
   async function createLastMonthCategoriesPageIfNeeded() {
     const lastMonth = new Date();
     lastMonth.setDate(1);
@@ -67,10 +95,19 @@ export default function NewCategoriesModel(api: IWikiApi) {
     await createPerMonthIfNeeded(lastMonth);
   }
 
+  async function createLastYearCategoriesPageIfNeeded() {
+    const lastYear = new Date();
+    lastYear.setFullYear(lastYear.getFullYear() - 1);
+    await createPerYearIfNeeded(lastYear);
+  }
+
   return {
     getCategoriesCreatedIn,
     updateNewCategories,
+    createYearCategoryIfNeeded,
     createPerMonthIfNeeded,
+    createPerYearIfNeeded,
     createLastMonthCategoriesPageIfNeeded,
+    createLastYearCategoriesPageIfNeeded,
   };
 }

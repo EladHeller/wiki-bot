@@ -10,6 +10,7 @@ export default async function newCategories() {
 
   await model.updateNewCategories();
   await model.createLastMonthCategoriesPageIfNeeded();
+  await model.createLastYearCategoriesPageIfNeeded();
 }
 
 export const main = botLoggerDecorator(newCategories, {

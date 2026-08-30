@@ -135,6 +135,79 @@ describe('new categories model', () => {
     );
   });
 
+  it('does nothing when the requested year page already exists', async () => {
+    api.info.mockResolvedValue([{ pageid: 1 }]);
+
+    await NewCategoriesModel(api).createPerYearIfNeeded(new Date('2026-01-01T00:00:00.000Z'));
+
+    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתם/2026']);
+    expect(api.info).toHaveBeenCalledTimes(1);
+    expect(api.create).not.toHaveBeenCalled();
+    expect(api.searchPages).not.toHaveBeenCalled();
+  });
+
+  it('creates a complete year page and its missing category', async () => {
+    api.info
+      .mockResolvedValueOnce([{ missing: '' }])
+      .mockResolvedValueOnce([{ missing: '' }]);
+    mockCategorySearch(api, [['קטגוריה:ב', 'קטגוריה:א']]);
+
+    await NewCategoriesModel(api).createPerYearIfNeeded(new Date('2026-01-01T00:00:00.000Z'));
+
+    expect(api.searchPages).toHaveBeenCalledWith('creationdate:2026', [14], 500);
+    expect(api.create).toHaveBeenNthCalledWith(
+      1,
+      `${yearlyCategoriesParent} (2026)`,
+      'יצירת קטגוריה לשנת 2026',
+      `[[${yearlyCategoriesParent}]]`,
+    );
+    expect(api.create).toHaveBeenNthCalledWith(
+      2,
+      'ויקיפדיה:קטגוריות לפי זמן יצירתם/2026',
+      'קטגוריות שנוצרו בשנת 2026',
+      [
+        'בשנת 2026 נוצרו 2 קטגוריות:',
+        '* [[:קטגוריה:א]]',
+        '* [[:קטגוריה:ב]]',
+        '',
+        `[[${yearlyCategoriesParent} (2026)]]`,
+      ].join('\n'),
+    );
+  });
+
+  it('uses the existing year category when editing a year page', async () => {
+    api.info
+      .mockResolvedValueOnce([{ lastrevid: 789 }])
+      .mockResolvedValueOnce([{ pageid: 2 }]);
+    mockCategorySearch(api, [[]]);
+
+    await NewCategoriesModel(api).createPerYearIfNeeded(new Date('2026-01-01T00:00:00.000Z'), true);
+
+    expect(api.create).not.toHaveBeenCalled();
+    expect(api.edit).toHaveBeenCalledWith(
+      'ויקיפדיה:קטגוריות לפי זמן יצירתם/2026',
+      'קטגוריות שנוצרו בשנת 2026',
+      `בשנת 2026 נוצרו 0 קטגוריות:\n\n\n[[${yearlyCategoriesParent} (2026)]]`,
+      789,
+    );
+  });
+
+  it('uses a fallback revision when explicitly editing a missing year page', async () => {
+    api.info
+      .mockResolvedValueOnce([{ missing: '' }])
+      .mockResolvedValueOnce([{ pageid: 2 }]);
+    mockCategorySearch(api, [[]]);
+
+    await NewCategoriesModel(api).createPerYearIfNeeded(new Date('2026-01-01T00:00:00.000Z'), true);
+
+    expect(api.edit).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      -1,
+    );
+  });
+
   it('requests the previous month when creating the monthly archive', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2027-01-15T12:00:00.000Z'));
     api.info.mockResolvedValue([{ pageid: 1 }]);
@@ -142,5 +215,14 @@ describe('new categories model', () => {
     await NewCategoriesModel(api).createLastMonthCategoriesPageIfNeeded();
 
     expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתם/דצמבר 2026']);
+  });
+
+  it('requests the previous year when creating the yearly archive', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2027-08-30T12:00:00.000Z'));
+    api.info.mockResolvedValue([{ pageid: 1 }]);
+
+    await NewCategoriesModel(api).createLastYearCategoriesPageIfNeeded();
+
+    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתם/2026']);
   });
 });
