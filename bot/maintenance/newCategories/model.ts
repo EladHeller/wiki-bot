@@ -1,5 +1,7 @@
 import type { IWikiApi } from '../../wiki/WikiApi';
 
+const yearlyCategoriesParent = 'קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתם';
+
 export default function NewCategoriesModel(api: IWikiApi) {
   async function getCategoriesCreatedIn(date: string) {
     const titles: string[] = [];
@@ -29,16 +31,27 @@ export default function NewCategoriesModel(api: IWikiApi) {
     const monthPageTitleString = date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
     const monthSearchString = date.toISOString().slice(0, 7);
     const title = `ויקיפדיה:קטגוריות לפי זמן יצירתם/${monthPageTitleString}`;
+    const year = date.getFullYear();
+    const yearCategoryTitle = `${yearlyCategoriesParent} (${year})`;
 
     const [info] = await api.info([title]);
     if (!('missing' in info) && !edit) {
       return;
     }
 
+    const [yearCategoryInfo] = await api.info([yearCategoryTitle]);
+    if ('missing' in yearCategoryInfo) {
+      await api.create(
+        yearCategoryTitle,
+        `יצירת קטגוריה לשנת ${year}`,
+        `[[${yearlyCategoriesParent}]]`,
+      );
+    }
+
     const categories = await getCategoriesCreatedIn(monthSearchString);
     const prefix = `בחודש ${monthPageTitleString} נוצרו ${categories.length} קטגוריות:`;
     const categoriesContent = categories.map((c) => `* [[:${c}]]`).join('\n');
-    const category = `[[קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתם (${date.getFullYear()})]]`;
+    const category = `[[${yearCategoryTitle}]]`;
     const content = `${prefix}\n${categoriesContent}\n\n${category}`;
     if (edit) {
       await api.edit(title, `קטגוריות שנוצרו בחודש ${monthPageTitleString}`, content, info.lastrevid ?? -1);
