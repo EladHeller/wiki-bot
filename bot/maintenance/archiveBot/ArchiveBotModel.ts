@@ -8,11 +8,12 @@ import {
 import { extractLastSignatureDate } from '../../utilities/signatureUtils';
 
 type ArchiveMode = 'titles' | 'signatureDate' | 'titleDate';
+type DeleteMode = 'titles' | 'titleDate';
 
 export interface IArchiveBotModel {
   updateArchiveTemplate(logPage: string): Promise<void>;
   archiveContent(logPage: string, archiveMode?: ArchiveMode): Promise<void>;
-  deleteContent(logPage: string, archiveMode?: ArchiveMode): Promise<void>;
+  deleteContent(logPage: string, archiveMode: DeleteMode): Promise<void>;
 }
 
 type ArchiveConfig = {
@@ -88,10 +89,6 @@ function getArchiveContentByTitleDate(
     text += paragraph;
     newContent = newContent.replace(paragraph, '');
   });
-
-  while (newContent.includes('\n\n\n')) {
-    newContent = newContent.replace(/\n\n\n/g, '\n\n');
-  }
 
   return { newContent, text, archivedParagraphs: paragraphsToArchive };
 }
@@ -228,11 +225,10 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
     }
   }
 
-  async function deleteContent(logPage: string, archiveMode: ArchiveMode = 'titles') {
+  async function deleteContent(logPage: string, archiveMode: DeleteMode) {
     const {
       newContent,
       text,
-      archivedParagraphs,
       revid,
     } = await getArchiveContent(logPage, archiveMode);
 
@@ -241,9 +237,6 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
     }
 
     await wikiApi.edit(logPage, `מחיקת לוגים מחודש ${month} ${year}`, newContent, revid, undefined, true);
-    if (archiveMode === 'signatureDate') {
-      await removeArchivedUndatedParagraphsFromTracker(wikiApi, logPage, archivedParagraphs);
-    }
   }
 
   return {
