@@ -1,17 +1,18 @@
 import { IWikiApi } from '../../wiki/WikiApi';
 import { findTemplate, getTemplateArrayData } from '../../wiki/newTemplateParser';
-import { getAllParagraphs, getParagraphContent } from '../../wiki/paragraphParser';
+import { getAllParagraphs, getParagraphContent, parseParagraph } from '../../wiki/paragraphParser';
 import {
   getUndatedParagraphsToArchive,
   removeArchivedUndatedParagraphsFromTracker,
 } from '../../utilities/archiveUtils';
 import { extractLastSignatureDate } from '../../utilities/signatureUtils';
 
-type ArchiveMode = 'titles' | 'signatureDate';
+type ArchiveMode = 'titles' | 'signatureDate' | 'titleDate';
 
 export interface IArchiveBotModel {
   updateArchiveTemplate(logPage: string): Promise<void>;
   archiveContent(logPage: string, archiveMode?: ArchiveMode): Promise<void>;
+  deleteContent(logPage: string, archiveMode?: ArchiveMode): Promise<void>;
 }
 
 type ArchiveConfig = {
@@ -63,6 +64,36 @@ function getArchiveContentByTitles(archiveMonthDate: Date, config: ArchiveConfig
     newContent = newContent.replace(/\n\n\n/g, '\n\n');
   }
   return { newContent, text, archivedParagraphs: [] as string[] };
+}
+
+function getArchiveContentByTitleDate(
+  archiveMonthDate: Date,
+  config: ArchiveConfig,
+  pageContent: string,
+  pageTitle: string,
+) {
+  const targetMonthName = new Intl.DateTimeFormat(config.languageCode, { month: 'long' }).format(archiveMonthDate);
+  const targetYear = archiveMonthDate.getFullYear();
+  const titleDateRegex = new RegExp(
+    String.raw`^\d{1,2}\s+ב${RegExp.escape(targetMonthName)}\s+${targetYear}(?:,\s+\d{1,2}:\d{2})?$`,
+    'u',
+  );
+
+  let text = '';
+  let newContent = pageContent;
+  const paragraphsToArchive = getAllParagraphs(pageContent, pageTitle)
+    .filter((paragraph) => titleDateRegex.test(parseParagraph(paragraph).name));
+
+  paragraphsToArchive.forEach((paragraph) => {
+    text += paragraph;
+    newContent = newContent.replace(paragraph, '');
+  });
+
+  while (newContent.includes('\n\n\n')) {
+    newContent = newContent.replace(/\n\n\n/g, '\n\n');
+  }
+
+  return { newContent, text, archivedParagraphs: paragraphsToArchive };
 }
 
 function getArchiveContentBySignatureDate(
@@ -120,6 +151,29 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
     return `${logPage}/${config.monthArchivePath(monthAndYear)}`;
   }
 
+  async function getArchiveContent(logPage: string, archiveMode: ArchiveMode) {
+    const { content, revid } = await getContent(wikiApi, logPage);
+
+    if (archiveMode === 'signatureDate') {
+      return {
+        revid,
+        ...(await getArchiveContentBySignatureDate(wikiApi, archiveMonthDate, config, content, logPage)),
+      };
+    }
+
+    if (archiveMode === 'titleDate') {
+      return {
+        revid,
+        ...getArchiveContentByTitleDate(archiveMonthDate, config, content, logPage),
+      };
+    }
+
+    return {
+      revid,
+      ...getArchiveContentByTitles(archiveMonthDate, config, content),
+    };
+  }
+
   async function updateArchiveTemplate(logPage: string) {
     const archivePage = logPage + config.archiveTemplatePath;
     const { content: archivePageContent, revid: archivePageRevid } = await getContent(wikiApi, archivePage);
@@ -156,15 +210,12 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
       return;
     }
 
-    const { content, revid } = await getContent(wikiApi, logPage);
-
     const {
       newContent,
       text,
       archivedParagraphs,
-    } = archiveMode === 'signatureDate'
-      ? await getArchiveContentBySignatureDate(wikiApi, archiveMonthDate, config, content, logPage)
-      : getArchiveContentByTitles(archiveMonthDate, config, content);
+      revid,
+    } = await getArchiveContent(logPage, archiveMode);
 
     if (text === '') {
       return;
@@ -177,8 +228,27 @@ export default function ArchiveBotModel(wikiApi: IWikiApi, config: ArchiveConfig
     }
   }
 
+  async function deleteContent(logPage: string, archiveMode: ArchiveMode = 'titles') {
+    const {
+      newContent,
+      text,
+      archivedParagraphs,
+      revid,
+    } = await getArchiveContent(logPage, archiveMode);
+
+    if (text === '') {
+      return;
+    }
+
+    await wikiApi.edit(logPage, `מחיקת לוגים מחודש ${month} ${year}`, newContent, revid, undefined, true);
+    if (archiveMode === 'signatureDate') {
+      await removeArchivedUndatedParagraphsFromTracker(wikiApi, logPage, archivedParagraphs);
+    }
+  }
+
   return {
     updateArchiveTemplate,
     archiveContent,
+    deleteContent,
   };
 }
