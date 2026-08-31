@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import {
+  beforeEach, describe, expect, it,
+} from '@jest/globals';
 import ArchiveBotModel, { defaultConfig, IArchiveBotModel } from '../maintenance/archiveBot/ArchiveBotModel';
 import { IWikiApi } from '../wiki/WikiApi';
 import { Mocked } from '../../testConfig/mocks/types';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 
-describe('ArchiveBotModel deleteContent', () => {
+describe('archiveBotModel deleteContent', () => {
   let archiveBotModel: IArchiveBotModel;
   let wikiApi: Mocked<IWikiApi>;
 
