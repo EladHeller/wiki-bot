@@ -16,6 +16,10 @@ const archiveBySignatureDatePages = [
   `משתמש:${process.env.BOT_NAME}/לוג ריצות`,
 ];
 
+const deleteByTitleDatePages = [
+  'ויקיפדיה:בוט/קישורי שפה',
+];
+
 export default async function archiveBot() {
   console.log('Starting archive bot');
   const model = ArchiveBotModel(WikiApi());
@@ -27,6 +31,10 @@ export default async function archiveBot() {
   for (const page of archiveBySignatureDatePages) {
     await model.updateArchiveTemplate(page);
     await model.archiveContent(page, 'signatureDate');
+  }
+
+  for (const page of deleteByTitleDatePages) {
+    await model.deleteContent(page, 'titleDate');
   }
 }
 
