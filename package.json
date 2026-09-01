@@ -30,7 +30,7 @@
   },
   "homepage": "https://github.com/EladHeller/wiki-bot#readme",
   "dependencies": {
-    "@aws-sdk/client-sqs": "^3.1070.0",
+    "@aws-sdk/client-sqs": "^3.1121.0",
     "@hebcal/core": "^6.9.1",
     "axios": "^1.18.1",
     "axios-cookiejar-support": "7.0.0",
