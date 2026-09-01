@@ -782,17 +782,17 @@ export default function UserTalkArchiveBotModel(
       }
     };
     await asyncGeneratorMapWithSequence(
-      5,
+      1,
       generator,
       generatorCallback,
     );
     await asyncGeneratorMapWithSequence(
-      5,
+      1,
       generator2,
       generatorCallback,
     );
     await asyncGeneratorMapWithSequence(
-      5,
+      1,
       generator3,
       generatorCallback,
     );

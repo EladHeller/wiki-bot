@@ -2241,6 +2241,46 @@ Active content`);
   });
 
   describe('run', () => {
+    it('should finish each page before starting the next across batches and templates', async () => {
+      fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
+      const templates = ['בוט ארכוב אוטומטי', 'תיבת ארכיון אוטומטי', 'מחיקת הודעות תפוצה'];
+      const pagesByTemplate = templates.map((template, templateIndex) => [1, 2, 3].map((pageIndex) => {
+        const title = `שיחת משתמש:דוגמה ${templateIndex}-${pageIndex}`;
+        const content = `{{${template}}}\n==חדשופדיה 2025 שבוע 1==\nתוכן`;
+        return convertContentToWikiPage(content, templateIndex * 3 + pageIndex, title);
+      }));
+      const pages = pagesByTemplate.flat();
+      const events: string[] = [];
+
+      wikiApi.getArticlesWithTemplate.mockImplementation(async function* generator(template) {
+        const templatePages = pagesByTemplate[templates.indexOf(template)];
+        yield templatePages.slice(0, 2);
+        yield templatePages.slice(2);
+      });
+      wikiApi.articleContent.mockImplementation(async (title) => {
+        events.push(`start:${title}`);
+        return { content: '{{מחיקת הודעות תפוצה}}\n==חדשופדיה 2025 שבוע 1==\nתוכן', revid: 1 };
+      });
+      wikiApi.edit.mockImplementation(async (title) => {
+        await new Promise<void>((resolve) => { setTimeout(resolve, 1); });
+        events.push(`finish:${title}`);
+        return {
+          edit: {
+            result: 'Success', pageid: 1, title, contentmodel: 'wikitext',
+          },
+        };
+      });
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      const run = model.run();
+      await jest.runAllTimersAsync();
+      await run;
+
+      expect(events).toStrictEqual(pages.flatMap(({ title }) => [`start:${title}`, `finish:${title}`]));
+      expect(wikiApi.edit).toHaveBeenCalledTimes(pages.length);
+      expect(loggerLogErrorSpy).not.toHaveBeenCalled();
+    });
+
     it('should process pages from generator and archive old discussions', async () => {
       fakerTimers.setSystemTime(new Date('2025-02-01T00:00:00Z'));
 
@@ -2313,17 +2353,20 @@ Active content`);
       expect(loggerLogWarningSpy).toHaveBeenCalledWith('No valid config found for שיחת משתמש:דוגמה');
     });
 
-    it('should handle errors during page processing', async () => {
+    it('should continue processing the next page after a page fails', async () => {
       const pageContent = `{{בוט ארכוב אוטומטי|מיקום דף ארכיון אחרון=[[שיחת משתמש:דוגמה/ארכיון 1]]}}
 ==דיון==
 תוכן`;
 
       async function* mockGenerator() {
-        yield [convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה')];
+        yield [
+          convertContentToWikiPage(pageContent, 123, 'שיחת משתמש:דוגמה'),
+          convertContentToWikiPage(pageContent, 124, 'שיחת משתמש:הבא'),
+        ];
       }
 
       wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
-      wikiApi.info.mockRejectedValue(new Error('API Error'));
+      wikiApi.info.mockRejectedValueOnce(new Error('API Error'));
       model = UserTalkArchiveBotModel(wikiApi);
 
       await model.run();
@@ -2331,6 +2374,9 @@ Active content`);
       expect(loggerLogErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Failed to process שיחת משתמש:דוגמה: Error: API Error'),
       );
+      expect(loggerLogErrorSpy).toHaveBeenCalledTimes(1);
+      expect(wikiApi.articleContent).toHaveBeenCalledTimes(1);
+      expect(wikiApi.articleContent).toHaveBeenCalledWith('שיחת משתמש:הבא');
     });
 
     it('should process pages with no archivable paragraphs without archiving', async () => {
