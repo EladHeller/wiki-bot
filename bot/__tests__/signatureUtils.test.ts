@@ -16,6 +16,32 @@ describe('signatureUtils', () => {
   });
 
   describe('extractSignatureDates', () => {
+    it('should extract a legacy signature without a month prefix', () => {
+      expect(extractSignatureDates('05:54, 16 דצמבר 2005 (UTC)')).toStrictEqual([new Date(2005, 11, 16)]);
+    });
+
+    it('should sort mixed legacy and modern signature dates chronologically', () => {
+      const text = `
+        Latest: 12:00, 2 בספטמבר 2026 (IDT)
+        Earliest: 05:54, 16 דצמבר 2005 (UTC)
+        Middle: 10:00, 9 אוגוסט 2006 (IDT)
+      `;
+
+      expect(extractSignatureDates(text)).toStrictEqual([
+        new Date(2005, 11, 16),
+        new Date(2006, 7, 9),
+        new Date(2026, 8, 2),
+      ]);
+      expect(extractFirstSignatureDate(text)).toStrictEqual(new Date(2005, 11, 16));
+      expect(extractLastSignatureDate(text)).toStrictEqual(new Date(2026, 8, 2));
+    });
+
+    it('should ignore unknown legacy months and ordinary dates without a signature time', () => {
+      const text = '12:00, 5 טעות 2005 (UTC), 16 דצמבר 2005, 16 בדצמבר 2005';
+
+      expect(extractSignatureDates(text)).toStrictEqual([]);
+    });
+
     it('should extract single signature date', () => {
       const text = 'Some content 12:42, 1 בינואר 2025 (IDT) more content';
       const dates = extractSignatureDates(text);
@@ -85,11 +111,12 @@ describe('signatureUtils', () => {
       { month: 'אוקטובר', text: '10:00, 1 באוקטובר 2025 (IDT)', expected: new Date(2025, 9, 1) },
       { month: 'נובמבר', text: '10:00, 1 בנובמבר 2025 (IDT)', expected: new Date(2025, 10, 1) },
       { month: 'דצמבר', text: '10:00, 1 בדצמבר 2025 (IDT)', expected: new Date(2025, 11, 1) },
-    ])('should handle Hebrew month name $month', ({ text, expected }) => {
+    ])('should handle Hebrew month name $month', ({ month, text, expected }) => {
       const dates = extractSignatureDates(text);
 
       expect(dates).toHaveLength(1);
       expect(dates[0]).toStrictEqual(expected);
+      expect(extractSignatureDates(text.replace(`ב${month}`, month))).toStrictEqual([expected]);
     });
   });
 
