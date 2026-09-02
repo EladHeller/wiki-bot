@@ -2241,6 +2241,58 @@ Active content`);
   });
 
   describe('run', () => {
+    it('should archive legacy signatures while retaining discussions with recent replies', async () => {
+      fakerTimers.setSystemTime(new Date('2026-09-02T13:00:00Z'));
+
+      const talkPage = 'שיחת ויקיפדיה:כללים לתעתיק מערבית';
+      const archivePage = `${talkPage}/ארכיון 1`;
+      const legacyDiscussion = '==Legacy discussion==\n05:54, 16 דצמבר 2005 (UTC)';
+      const modernDiscussion = '==Inactive modern discussion==\n12:00, 1 בינואר 2026 (IST)';
+      const activeDiscussion = `==Active discussion==
+05:54, 16 דצמבר 2005 (UTC)
+12:00, 1 בספטמבר 2026 (IDT)`;
+      const header = `{{בוט ארכוב אוטומטי|ימים מתגובה אחרונה=90|מיקום דף ארכיון אחרון=${archivePage}}}`;
+      const pageContent = `${header}
+${legacyDiscussion}
+${modernDiscussion}
+${activeDiscussion}`;
+
+      async function* mockGenerator() {
+        yield [convertContentToWikiPage(pageContent, 123, talkPage)];
+      }
+
+      wikiApi.getArticlesWithTemplate.mockReturnValue(mockGenerator());
+      const pages: Record<string, { content: string; revid: number }> = {
+        [talkPage]: { content: pageContent, revid: 1 },
+        [archivePage]: { content: '{{ארכיון}}', revid: 2 },
+        'ויקיפדיה:בוט/ארכוב פסקאות ללא תאריך': { content: '', revid: 3 },
+      };
+      wikiApi.articleContent.mockImplementation(async (title) => pages[title]);
+      model = UserTalkArchiveBotModel(wikiApi);
+
+      await model.run();
+
+      const archiveEdit = wikiApi.edit.mock.calls.find(([title]) => title === archivePage);
+
+      expect(wikiApi.edit).toHaveBeenCalledTimes(2);
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        archivePage,
+        expect.any(String),
+        expect.stringContaining(legacyDiscussion),
+        2,
+      );
+      expect(wikiApi.edit).toHaveBeenCalledWith(
+        talkPage,
+        expect.any(String),
+        `${header}\n${activeDiscussion}`,
+        1,
+        undefined,
+        true,
+      );
+      expect(archiveEdit?.[2]).toContain(modernDiscussion);
+      expect(archiveEdit?.[2]).not.toContain(activeDiscussion);
+    });
+
     it('should finish each page before starting the next across batches and templates', async () => {
       fakerTimers.setSystemTime(new Date('2026-04-21T00:00:00Z'));
       const templates = ['בוט ארכוב אוטומטי', 'תיבת ארכיון אוטומטי', 'מחיקת הודעות תפוצה'];

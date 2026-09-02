@@ -14,7 +14,7 @@ export const hebrewMonthNames: Record<string, number> = {
 };
 
 export function extractSignatureDates(paragraphContent: string): Date[] {
-  const signatureRegex = /(\d{1,2}):(\d{2}),\s+(\d{1,2})\s+ב([א-ת]+)\s+(\d{4})/gu;
+  const signatureRegex = /(\d{1,2}):(\d{2}),\s+(\d{1,2})\s+ב?([א-ת]+)\s+(\d{4})/gu;
 
   return Array.from(paragraphContent.matchAll(signatureRegex))
     .map((match) => {
