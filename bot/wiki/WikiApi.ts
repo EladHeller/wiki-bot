@@ -260,6 +260,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
       + `&generator=search&gsrsearch=${encodeURIComponent(searchText)}`
       + `&gsrnamespace=${ns}`
       + `&gsrlimit=${Math.min(limit, 500)}`
+      + '&gsrsort=title_natural_asc'
       + '&prop=info';
 
     yield* baseWikiApi.continueQuery(path, (result) => Object.values(result?.query?.pages ?? {}));
