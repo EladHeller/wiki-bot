@@ -26,7 +26,7 @@ export default function NewCategoriesModel(api: IWikiApi) {
     }
     const deletedCategories = new Set<string>();
     const checkedCategories = new Set<string>();
-    const generator = api.searchPages(`creationdate:${year}`, [15], 50);
+    const generator = api.searchPages(`creationdate:${year}`, [15], 25);
     for await (const pages of generator) {
       const titles = [...new Set(pages.map((page) => page.title.replace(/^שיחת קטגוריה:/, 'קטגוריה:')))]
         .filter((title) => !checkedCategories.has(title));
@@ -83,6 +83,14 @@ export default function NewCategoriesModel(api: IWikiApi) {
       `[[${yearlyCategoriesParent}]]`,
     );
     return title;
+  }
+
+  async function createDeletedCategoriesForTalkPagesCreatedIn(year: number) {
+    const categories = await getDeletedCategoriesForTalkPagesCreatedIn(year);
+    const yearCategoryTitle = await createYearCategoryIfNeeded(year);
+
+    const content = `${categories.map((c) => `* [[שיחת ${c}]]`).join('\n')}\n\n[[${yearCategoryTitle}]]`;
+    await api.edit(`ויקיפדיה:קטגוריות לפי זמן יצירתם/נמחקו ב-${year}`, `קטגוריות שנמחקו ב-${year}`, content, 0);
   }
 
   async function createPerMonthIfNeeded(date: Date, edit = false) {
@@ -146,6 +154,7 @@ export default function NewCategoriesModel(api: IWikiApi) {
 
   return {
     getDeletedCategoriesForTalkPagesCreatedIn,
+    createDeletedCategoriesForTalkPagesCreatedIn,
     getCategoriesCreatedIn,
     updateNewCategories,
     createYearCategoryIfNeeded,

@@ -59,7 +59,7 @@ describe('new categories model', () => {
       const result = await NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026);
 
       expect(result).toStrictEqual(['קטגוריה:א:ב', 'קטגוריה:ג']);
-      expect(api.searchPages).toHaveBeenCalledWith('creationdate:2026', [15], 50);
+      expect(api.searchPages).toHaveBeenCalledWith('creationdate:2026', [15], 25);
       expect(api.info.mock.calls).toStrictEqual([
         [['קטגוריה:ג', 'קטגוריה:קיימת', 'קטגוריה:שוחזרה']],
         [['קטגוריה:א:ב']],
@@ -92,19 +92,42 @@ describe('new categories model', () => {
       });
     });
 
-    it('processes all search pages using 50 results per request', async () => {
+    it('processes all search pages using 25 results per request', async () => {
       const titles = Array.from({ length: 101 }, (_, index) => `קטגוריה:${index}`);
       const talkTitles = titles.map((title) => title.replace(/^קטגוריה:/, 'שיחת קטגוריה:'));
-      mockCategorySearch(api, [talkTitles.slice(0, 50), talkTitles.slice(50, 100), talkTitles.slice(100)]);
+      mockCategorySearch(api, Array.from({ length: 5 }, (_, index) => talkTitles.slice(index * 25, (index + 1) * 25)));
       api.info.mockImplementation(async (batch) => batch.map((title) => ({ title, missing: '' })));
       api.request.mockResolvedValue(deletionResponse());
 
       const result = await NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026);
 
-      expect(api.searchPages).toHaveBeenCalledWith('creationdate:2026', [15], 50);
-      expect(api.info.mock.calls.map(([batch]) => batch.length)).toStrictEqual([50, 50, 1]);
+      expect(api.searchPages).toHaveBeenCalledWith('creationdate:2026', [15], 25);
+      expect(api.info.mock.calls.map(([batch]) => batch.length)).toStrictEqual([25, 25, 25, 25, 1]);
       expect(api.info.mock.calls.flatMap(([batch]) => batch)).toStrictEqual(titles);
       expect(result).toStrictEqual([...titles].sort((a, b) => a.localeCompare(b)));
+    });
+
+    it('writes deleted categories to the requested year page', async () => {
+      mockCategorySearch(api, [['שיחת קטגוריה:ב', 'שיחת קטגוריה:א']]);
+      api.info.mockResolvedValueOnce([
+        { title: 'קטגוריה:ב', missing: '' },
+        { title: 'קטגוריה:א', missing: '' },
+      ]).mockResolvedValueOnce([{ missing: '' }]);
+      api.request.mockResolvedValue(deletionResponse());
+
+      await NewCategoriesModel(api).createDeletedCategoriesForTalkPagesCreatedIn(2026);
+
+      expect(api.create).toHaveBeenCalledWith(
+        `${yearlyCategoriesParent} (2026)`,
+        'יצירת קטגוריה לשנת 2026',
+        `[[${yearlyCategoriesParent}]]`,
+      );
+      expect(api.edit).toHaveBeenCalledWith(
+        'ויקיפדיה:קטגוריות לפי זמן יצירתם/נמחקו ב-2026',
+        'קטגוריות שנמחקו ב-2026',
+        `* [[שיחת קטגוריה:א]]\n* [[שיחת קטגוריה:ב]]\n\n[[${yearlyCategoriesParent} (2026)]]`,
+        0,
+      );
     });
 
     it.each([
