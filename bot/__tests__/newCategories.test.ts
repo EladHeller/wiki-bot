@@ -93,6 +93,24 @@ describe('new categories model', () => {
     });
 
     it.each([
+      [50, [50]],
+      [51, [50, 1]],
+      [101, [50, 50, 1]],
+      [500, [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]],
+    ] as const)('checks all %s categories in info batches of at most 50', async (count, batchSizes) => {
+      const titles = Array.from({ length: count }, (_, index) => `קטגוריה:${index}`);
+      mockCategorySearch(api, [titles.map((title) => title.replace(/^קטגוריה:/, 'שיחת קטגוריה:'))]);
+      api.info.mockImplementation(async (batch) => batch.map((title) => ({ title, missing: '' })));
+      api.request.mockResolvedValue(deletionResponse());
+
+      const result = await NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026);
+
+      expect(api.info.mock.calls.map(([batch]) => batch.length)).toStrictEqual(batchSizes);
+      expect(api.info.mock.calls.flatMap(([batch]) => batch)).toStrictEqual(titles);
+      expect(result).toStrictEqual([...titles].sort((a, b) => a.localeCompare(b)));
+    });
+
+    it.each([
       ['no deletion history', { query: { ...deletionResponse().query, logevents: [] } }],
       ['no logs returned', { query: { pages: deletionResponse().query.pages } }],
       ['hidden timestamp', { query: { ...deletionResponse().query, logevents: [{}] } }],

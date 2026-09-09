@@ -30,8 +30,9 @@ export default function NewCategoriesModel(api: IWikiApi) {
     for await (const pages of generator) {
       const titles = [...new Set(pages.map((page) => page.title.replace(/^שיחת קטגוריה:/, 'קטגוריה:')))]
         .filter((title) => !checkedCategories.has(title));
-      if (titles.length > 0) {
-        const info = await api.info(titles);
+      for (let offset = 0; offset < titles.length; offset += 50) {
+        const batch = titles.slice(offset, offset + 50);
+        const info = await api.info(batch);
         const missingTitles = info.filter((page) => 'missing' in page)
           .map((page) => page.title)
           .filter((title): title is string => title !== undefined);
@@ -40,7 +41,7 @@ export default function NewCategoriesModel(api: IWikiApi) {
             deletedCategories.add(title);
           }
         }
-        titles.forEach((title) => checkedCategories.add(title));
+        batch.forEach((title) => checkedCategories.add(title));
       }
     }
     return [...deletedCategories].sort((a, b) => a.localeCompare(b));
