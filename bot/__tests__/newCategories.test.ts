@@ -59,7 +59,7 @@ describe('new categories model', () => {
       const result = await NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026);
 
       expect(result).toStrictEqual(['קטגוריה:א:ב', 'קטגוריה:ג']);
-      expect(api.searchPages).toHaveBeenCalledWith('creationdate:2026', [15], 500);
+      expect(api.searchPages).toHaveBeenCalledWith('creationdate:2026', [15], 50);
       expect(api.info.mock.calls).toStrictEqual([
         [['קטגוריה:ג', 'קטגוריה:קיימת', 'קטגוריה:שוחזרה']],
         [['קטגוריה:א:ב']],
@@ -92,20 +92,17 @@ describe('new categories model', () => {
       });
     });
 
-    it.each([
-      [50, [50]],
-      [51, [50, 1]],
-      [101, [50, 50, 1]],
-      [500, [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]],
-    ] as const)('checks all %s categories in info batches of at most 50', async (count, batchSizes) => {
-      const titles = Array.from({ length: count }, (_, index) => `קטגוריה:${index}`);
-      mockCategorySearch(api, [titles.map((title) => title.replace(/^קטגוריה:/, 'שיחת קטגוריה:'))]);
+    it('processes all search pages using 50 results per request', async () => {
+      const titles = Array.from({ length: 101 }, (_, index) => `קטגוריה:${index}`);
+      const talkTitles = titles.map((title) => title.replace(/^קטגוריה:/, 'שיחת קטגוריה:'));
+      mockCategorySearch(api, [talkTitles.slice(0, 50), talkTitles.slice(50, 100), talkTitles.slice(100)]);
       api.info.mockImplementation(async (batch) => batch.map((title) => ({ title, missing: '' })));
       api.request.mockResolvedValue(deletionResponse());
 
       const result = await NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026);
 
-      expect(api.info.mock.calls.map(([batch]) => batch.length)).toStrictEqual(batchSizes);
+      expect(api.searchPages).toHaveBeenCalledWith('creationdate:2026', [15], 50);
+      expect(api.info.mock.calls.map(([batch]) => batch.length)).toStrictEqual([50, 50, 1]);
       expect(api.info.mock.calls.flatMap(([batch]) => batch)).toStrictEqual(titles);
       expect(result).toStrictEqual([...titles].sort((a, b) => a.localeCompare(b)));
     });
