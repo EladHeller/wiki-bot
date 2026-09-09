@@ -26,7 +26,7 @@ export default function NewCategoriesModel(api: IWikiApi) {
     }
     const deletedCategories = new Set<string>();
     const checkedCategories = new Set<string>();
-    const generator = api.searchPages(`creationdate:${year}`, [15], 500);
+    const generator = api.searchPages(`creationdate:${year}`, [15], 50);
     for await (const pages of generator) {
       const titles = [...new Set(pages.map((page) => page.title.replace(/^שיחת קטגוריה:/, 'קטגוריה:')))]
         .filter((title) => !checkedCategories.has(title));
