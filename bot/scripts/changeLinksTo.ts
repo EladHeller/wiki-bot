@@ -20,7 +20,7 @@ export default async function changeLinksTo(
   await api.login();
 
   const generator = isCategory ? api.categroyPages(currentTarget.replace('קטגוריה:', ''))
-    : api.backlinksTo(currentTarget, namespaces.join(','));
+    : api.backlinksTo(currentTarget, namespaces.join('|'));
 
   await asyncGeneratorMapWithSequence<WikiPage>(1, generator, (page) => async () => {
     if (page.title === REQUESTS_FROM_BOTS_PAGE) {
