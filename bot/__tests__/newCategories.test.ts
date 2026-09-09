@@ -32,6 +32,128 @@ describe('new categories model', () => {
     expect(api.searchPages).toHaveBeenCalledWith('creationdate:2027-02', [14], 500);
   });
 
+  describe('deleted categories for talk pages created in a year', () => {
+    function deletionResponse(timestamp = '2027-05-01T00:00:00Z', createdAt = '2026-06-01T00:00:00Z') {
+      return {
+        query: {
+          pages: { 1: { revisions: [{ timestamp: createdAt }] } },
+          logevents: [{ timestamp }],
+        },
+      };
+    }
+
+    it('checks every batch, preserves colons, sorts and deduplicates deleted categories', async () => {
+      mockCategorySearch(api, [
+        ['שיחת קטגוריה:ג', 'שיחת קטגוריה:ג', 'שיחת קטגוריה:קיימת', 'שיחת קטגוריה:שוחזרה'],
+        [],
+        ['שיחת קטגוריה:ג'],
+        ['שיחת קטגוריה:א:ב'],
+      ]);
+      api.info.mockResolvedValueOnce([
+        { title: 'קטגוריה:שוחזרה', pageid: 3 },
+        { title: 'קטגוריה:קיימת', pageid: 2 },
+        { title: 'קטגוריה:ג', missing: '' },
+      ]).mockResolvedValueOnce([{ title: 'קטגוריה:א:ב', missing: '' }]);
+      api.request.mockResolvedValue(deletionResponse());
+
+      const result = await NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026);
+
+      expect(result).toStrictEqual(['קטגוריה:א:ב', 'קטגוריה:ג']);
+      expect(api.searchPages).toHaveBeenCalledWith('creationdate:2026', [15], 500);
+      expect(api.info.mock.calls).toStrictEqual([
+        [['קטגוריה:ג', 'קטגוריה:קיימת', 'קטגוריה:שוחזרה']],
+        [['קטגוריה:א:ב']],
+      ]);
+
+      const params = new URLSearchParams(api.request.mock.calls[1][0]);
+
+      expect(Object.fromEntries(params)).toStrictEqual({
+        action: 'query',
+        format: 'json',
+        prop: 'revisions',
+        titles: 'שיחת קטגוריה:א:ב',
+        rvprop: 'timestamp',
+        rvlimit: '1',
+        rvdir: 'newer',
+        list: 'logevents',
+        leaction: 'delete/delete',
+        leprop: 'timestamp',
+        lelimit: '1',
+        ledir: 'older',
+        letitle: 'קטגוריה:א:ב',
+      });
+      expect({
+        requests: api.request.mock.calls.length,
+        edits: api.edit.mock.calls,
+        creations: api.create.mock.calls,
+        deletions: api.deletePage.mock.calls,
+      }).toStrictEqual({
+        requests: 2, edits: [], creations: [], deletions: [],
+      });
+    });
+
+    it.each([
+      ['no deletion history', { query: { ...deletionResponse().query, logevents: [] } }],
+      ['no logs returned', { query: { pages: deletionResponse().query.pages } }],
+      ['hidden timestamp', { query: { ...deletionResponse().query, logevents: [{}] } }],
+      ['deletion before talk creation', deletionResponse('2026-05-01T00:00:00Z')],
+      ['creation outside requested year', deletionResponse('2027-05-01T00:00:00Z', '2025-06-01T00:00:00Z')],
+    ])('excludes a missing category with %s', async (_description, response) => {
+      mockCategorySearch(api, [['שיחת קטגוריה:א']]);
+      api.info.mockResolvedValue([{ title: 'קטגוריה:א', missing: '' }]);
+      api.request.mockResolvedValue(response);
+
+      await expect(NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026)).resolves.toStrictEqual([]);
+    });
+
+    it.each([
+      {},
+      { query: {} },
+      { query: { pages: {} } },
+      { query: { pages: { 1: {} } } },
+      { query: { pages: { 1: { revisions: [] } } } },
+      { query: { pages: { 1: { revisions: [{}] } } } },
+    ])('rejects when the talk creation date cannot be checked: %j', async (response) => {
+      mockCategorySearch(api, [['שיחת קטגוריה:א']]);
+      api.info.mockResolvedValue([{ title: 'קטגוריה:א', missing: '' }]);
+      api.request.mockResolvedValue(response);
+
+      await expect(NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026))
+        .rejects.toThrow('Could not determine creation date for שיחת קטגוריה:א');
+    });
+
+    it('ignores missing info without a title', async () => {
+      mockCategorySearch(api, [['שיחת קטגוריה:א']]);
+      api.info.mockResolvedValue([{ missing: '' }]);
+
+      await expect(NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026)).resolves.toStrictEqual([]);
+      expect(api.request).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty list without querying info when no talk pages match', async () => {
+      mockCategorySearch(api, []);
+
+      await expect(NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026)).resolves.toStrictEqual([]);
+      expect(api.info).not.toHaveBeenCalled();
+    });
+
+    it('does not turn API failures into an incomplete result', async () => {
+      mockCategorySearch(api, [['שיחת קטגוריה:א'], ['שיחת קטגוריה:ב']]);
+      api.info.mockResolvedValueOnce([{ title: 'קטגוריה:א', missing: '' }])
+        .mockRejectedValueOnce(new Error('API failed'));
+      api.request.mockResolvedValue(deletionResponse());
+
+      await expect(NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(2026))
+        .rejects.toThrow('API failed');
+    });
+
+    it.each([0, -1, 2026.5, Number.NaN, Number.POSITIVE_INFINITY, 10000])('rejects invalid year %s', async (year) => {
+      await expect(NewCategoriesModel(api).getDeletedCategoriesForTalkPagesCreatedIn(year))
+        .rejects.toThrow('Year must be an integer between 1 and 9999');
+      expect(api.searchPages).not.toHaveBeenCalled();
+    });
+  });
+
   it('updates the current month categories when the content changed', async () => {
     const currentMonth = new Date().toISOString().slice(0, 7);
     mockCategorySearch(api, [['קטגוריה:ב', 'קטגוריה:א']]);
