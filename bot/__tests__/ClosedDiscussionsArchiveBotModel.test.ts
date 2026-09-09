@@ -13,6 +13,17 @@ const getMockResponse = <T>(
   defaultValue: T,
 ): T => responses[key] || defaultValue;
 
+const getMockArticle = (
+  responses: Record<string, { content: string; revid: number }>,
+  title: string,
+) => {
+  const response = responses[title];
+  if (!response) {
+    throw new Error('Page not found');
+  }
+  return response;
+};
+
 describe('closedDiscussionsArchiveBotModel', () => {
   let model: IClosedDiscussionsArchiveBotModel;
   let wikiApi: Mocked<IWikiApi>;
@@ -29,6 +40,83 @@ describe('closedDiscussionsArchiveBotModel', () => {
     jest.setSystemTime(jest.getRealSystemTime());
     jest.restoreAllMocks();
     loggerLogWarningSpy.mockRestore();
+  });
+
+  describe('archive target reads and failures', () => {
+    const source = 'TestPage';
+    const target = 'TargetPage';
+    const paragraph = '\n==Discussion==\n{{מצב|טופל|ארכוב=TargetPage}}\nDiscussion content\n';
+
+    it.each([
+      {
+        archiveType: 'רבעון' as const,
+        discussion: '\n==Discussion==\n{{מצב|טופל}}\n10:00, 1 בפברואר 2025 (IDT)\n',
+        archiveTitle: 'TestPage/ארכיון ינואר-מרץ 2025',
+      },
+      { archiveType: 'מחיקה' as const, discussion: paragraph, archiveTitle: target },
+    ])('should edit an existing empty target in $archiveType mode', async ({ archiveType, discussion, archiveTitle }) => {
+      wikiApi.articleContent.mockResolvedValueOnce({ content: '', revid: 43700556 });
+      wikiApi.articleContent.mockResolvedValueOnce({ content: discussion, revid: 10 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await model.archive(source, [discussion], archiveType, null);
+
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).toHaveBeenNthCalledWith(1, archiveTitle, expect.any(String), expect.stringContaining('==Discussion=='), 43700556);
+      expect(wikiApi.edit).toHaveBeenNthCalledWith(2, source, expect.any(String), '', 10);
+    });
+
+    it.each([{ pageInfo: [{}] }, { pageInfo: [] }])('should stop on a failed read without a missing-page response: %j', async ({ pageInfo }) => {
+      const error = new Error('Read failed');
+      wikiApi.articleContent.mockRejectedValue(error);
+      wikiApi.info.mockResolvedValue(pageInfo);
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await expect(model.archive(source, [paragraph], 'מחיקה', null)).rejects.toThrow(
+        'Failed to read archive: source=TestPage; paragraph=Discussion; target=TargetPage; Error: Read failed',
+      );
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
+    it('should stop if the existence check also fails', async () => {
+      wikiApi.articleContent.mockRejectedValue(new Error('Read failed'));
+      wikiApi.info.mockRejectedValue(new Error('Info failed'));
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await expect(model.archive(source, [paragraph], 'מחיקה', null)).rejects.toThrow(
+        'Failed to read archive: source=TestPage; paragraph=Discussion; target=TargetPage; Error: Info failed',
+      );
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {
+        operation: 'create' as const,
+        readArchive: async () => { throw new Error('Page not found'); },
+        message: 'articleexists',
+      },
+      {
+        operation: 'edit' as const,
+        readArchive: async () => ({ content: '', revid: 43700556 }),
+        message: 'editconflict',
+      },
+    ])('should identify a failed $operation and retain the source discussion', async ({ operation, readArchive, message }) => {
+      wikiApi.articleContent.mockImplementation(readArchive);
+      const error = new Error(message);
+      wikiApi[operation].mockRejectedValue(error);
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const result = model.archive(source, [paragraph], 'מחיקה', null);
+
+      await expect(result).rejects.toThrow(
+        `Failed to ${operation} archive: source=TestPage; paragraph=Discussion; target=TargetPage; ${String(error)}`,
+      );
+      await expect(result).rejects.toHaveProperty('cause', error);
+      expect(wikiApi.articleContent).not.toHaveBeenCalledWith(source);
+      expect(wikiApi.edit.mock.calls.filter(([title]) => title === source)).toHaveLength(0);
+    });
   });
 
   describe('getPagesToArchive', () => {
@@ -297,6 +385,8 @@ No signature here
 
       wikiApi.articleContent.mockRejectedValueOnce(new Error('Page not found'));
       wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+
+      wikiApi.info.mockResolvedValueOnce([{ missing: '' }]);
 
       await model.archive('TestPage', archivableParagraphs, 'רבעון', 'TestPage');
 
@@ -1186,11 +1276,11 @@ Discussion content
 
       const sourceContent = `${paragraphWithTarget}\n${paragraphWithDefault}\n${paragraphWithoutArchive}`;
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: sourceContent, revid: 1 },
         'TestPage/ארכיון 1': { content: '{{ארכיון הדט}}', revid: 3 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
 
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
         'TestPage/ארכיון 1': {},
@@ -1250,10 +1340,10 @@ Discussion content
 `;
       const navigatePageContent = 'No archive box here';
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: paragraphWithDefault, revid: 1 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
 
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
@@ -1283,10 +1373,11 @@ Discussion 2 content
 }}
 `;
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
+        'TestPage/ארכיון 1': { content: '{{ארכיון}}', revid: 3 },
         TestPage: { content: `${paragraph1}\n${paragraph2}`, revid: 1 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
 
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
         'TestPage/ארכיון 1': {},
@@ -1324,11 +1415,11 @@ Content
 }}
 `;
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: `${paragraphWithoutTarget}\n${paragraphWithTarget}`, revid: 1 },
         'TestPage/ארכיון 1': { content: '{{ארכיון הדט}}', revid: 3 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
 
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
         'TestPage/ארכיון 1': {},
@@ -1392,10 +1483,10 @@ Discussion content
 
       const sourceContent = `${paragraphWithTarget}\n${paragraphWithoutTarget}`;
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         TestPage: { content: sourceContent, revid: 1 },
         'TestPage/ארכיון ינואר-מרץ 2025': { content: '{{ארכיון הדט}}', revid: 2 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
 
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
         'TestPage/ארכיון 1': {},
@@ -1452,11 +1543,11 @@ Discussion content
 `;
 
       const sourceContent = `${paragraphWithTarget}\n${paragraphWithoutTarget}`;
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: sourceContent, revid: 1 },
         'TestPage/ארכיון 1': { content: '{{ארכיון הדט}}', revid: 3 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
 
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
         'TestPage/ארכיון 1': {},
@@ -1499,9 +1590,9 @@ Discussion content
 10:00, 1 בפברואר 2025 (IDT)
 `;
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'ויקיפדיה:העברת דפי טיוטה': { content: pageContent, revid: 1 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
 
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
@@ -1687,11 +1778,11 @@ Discussion content
 `;
       const sourceContent = paragraphWithTarget;
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: sourceContent, revid: 1 },
         'TestPage/ארכיון 1': { content: '{{ארכיון הדט}}\n\nExisting content', revid: 3 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
         'TestPage/ארכיון 1': {},
       }, title, { missing: '' })));
@@ -1746,11 +1837,11 @@ Discussion content
 `;
       const sourceContent = paragraphWithTarget;
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: sourceContent, revid: 1 },
         'TestPage/ארכיון 1': { content: '{{ארכיון הדט}}\n\nExisting content', revid: 3 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
         'TestPage/ארכיון 1': {},
       }, title, { missing: '' })));
@@ -1818,11 +1909,11 @@ Discussion content
 `;
       const sourceContent = `${paragraphWithTarget}\n${paragraphWithoutTarget}`;
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: sourceContent, revid: 1 },
         'TestPage/ארכיון 1': { content: '{{ארכיון הדט}}\n\nExisting content', revid: 3 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
       wikiApi.info.mockImplementation(async (titles) => titles.map((title) => getMockResponse({
         'TestPage/ארכיון 1': {},
       }, title, { missing: '' })));
@@ -1864,10 +1955,10 @@ Discussion content
 `;
       const navigatePageContent = 'No archive box here';
 
-      wikiApi.articleContent.mockImplementation(async (title) => getMockResponse({
+      wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
         'TestPage/Navigate': { content: navigatePageContent, revid: 2 },
         TestPage: { content: paragraphWithTarget, revid: 1 },
-      }, title, { content: '', revid: 0 }));
+      }, title));
 
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 

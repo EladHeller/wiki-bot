@@ -54,15 +54,19 @@ const NEW_STATE = 'חדש';
 const IN_DISCUSSION_STATE = 'בדיון';
 
 async function getContentOrNull(wikiApi: IWikiApi, title: string) {
-  const result = await wikiApi.articleContent(title).catch(() => null);
-  if (!result?.content) {
-    return null;
+  try {
+    return await wikiApi.articleContent(title);
+  } catch (error) {
+    const [pageInfo] = await wikiApi.info([title]);
+    if (pageInfo && 'missing' in pageInfo) {
+      return null;
+    }
+    throw error;
   }
-  return result;
 }
 async function getContent(wikiApi: IWikiApi, title: string) {
   const result = await getContentOrNull(wikiApi, title);
-  if (!result) {
+  if (!result?.content) {
     throw new Error(`Missing content for ${title}`);
   }
   return result;
@@ -317,6 +321,36 @@ export default function ClosedDiscussionsArchiveBotModel(
     return allParagraphs.filter((paragraph) => archivableParagraphsSet.has(paragraph));
   }
 
+  async function appendToArchive(
+    pageTitle: string,
+    paragraphName: string,
+    archiveTitle: string,
+    summary: string,
+    paragraph: string,
+  ): Promise<void> {
+    let operation = 'read archive';
+    try {
+      const existingArchive = await getContentOrNull(wikiApi, archiveTitle);
+      if (existingArchive) {
+        operation = 'edit archive';
+        await wikiApi.edit(
+          archiveTitle,
+          summary,
+          `${existingArchive.content}\n\n${paragraph}`,
+          existingArchive.revid,
+        );
+      } else {
+        operation = 'create archive';
+        await wikiApi.create(archiveTitle, summary, archiveHeaderPerPage(pageTitle) + paragraph);
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to ${operation}: source=${pageTitle}; paragraph=${paragraphName}; target=${archiveTitle}; ${String(error)}`,
+        { cause: error },
+      );
+    }
+  }
+
   async function archiveSingleParagraphTemplate(
     pageTitle: string,
     paragraph: string,
@@ -346,8 +380,6 @@ export default function ClosedDiscussionsArchiveBotModel(
       isTargeted ? { title: pageTitle, direction: 'מ' } : undefined,
     );
 
-    const existingArchiveContent = await getContentOrNull(wikiApi, archiveTitle);
-
     const statusTemplate = findTemplate(paragraph, TEMPLATE_NAME, pageTitle);
     const { keyValueData, arrayData } = getTemplateData(statusTemplate, TEMPLATE_NAME, pageTitle);
     delete keyValueData?.['ארכוב'];
@@ -358,17 +390,7 @@ export default function ClosedDiscussionsArchiveBotModel(
       ? `==${parsedParagraph.name}==\n${createTransferredTemplate(pageTitle, 'מ')}\n${parsedParagraph.content.replace(statusTemplate, newTemplate)}\n{{סוף העברה}}`
       : paragraph;
 
-    if (existingArchiveContent) {
-      const newContent = `${existingArchiveContent.content}\n\n${paragraphToArchive}`;
-      await wikiApi.edit(
-        archiveTitle,
-        targetArchiveSummary,
-        newContent,
-        existingArchiveContent.revid,
-      );
-    } else {
-      await wikiApi.create(archiveTitle, targetArchiveSummary, archiveHeaderPerPage(pageTitle) + paragraphToArchive);
-    }
+    await appendToArchive(pageTitle, paragraphName, archiveTitle, targetArchiveSummary, paragraphToArchive);
 
     const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, pageTitle);
 
@@ -410,19 +432,7 @@ export default function ClosedDiscussionsArchiveBotModel(
       templateData.handler,
     );
 
-    const existingContent = await getContentOrNull(wikiApi, archivePageName);
-
-    if (existingContent) {
-      const newContent = `${existingContent.content}\n\n${paragraph}`;
-      await wikiApi.edit(
-        archivePageName,
-        archiveSummary,
-        newContent,
-        existingContent.revid,
-      );
-    } else {
-      await wikiApi.create(archivePageName, archiveSummary, archiveHeaderPerPage(pageTitle) + paragraph);
-    }
+    await appendToArchive(pageTitle, paragraphName, archivePageName, archiveSummary, paragraph);
 
     // Remove the paragraph from the source page
     const { content: sourceContent, revid: sourceRevid } = await getContent(wikiApi, pageTitle);
