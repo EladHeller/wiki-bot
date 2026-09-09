@@ -1,8 +1,51 @@
 import type { IWikiApi } from '../../wiki/WikiApi';
+import type { LogEvent, WikiPage } from '../../types';
 
 const yearlyCategoriesParent = 'קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתם';
 
 export default function NewCategoriesModel(api: IWikiApi) {
+  async function wasCategoryDeletedAfterTalkPageCreation(categoryTitle: string, year: number) {
+    const talkTitle = categoryTitle.replace(/^קטגוריה:/, 'שיחת קטגוריה:');
+    const result = await api.request('?action=query&format=json&prop=revisions'
+      + `&titles=${encodeURIComponent(talkTitle)}&rvprop=timestamp&rvlimit=1&rvdir=newer`
+      + '&list=logevents&leaction=delete%2Fdelete&leprop=timestamp&lelimit=1&ledir=older'
+      + `&letitle=${encodeURIComponent(categoryTitle)}`);
+    const pages = Object.values(result.query?.pages ?? {}) as WikiPage[];
+    const createdAt = pages[0]?.revisions?.[0]?.timestamp;
+    if (!createdAt) {
+      throw new Error(`Could not determine creation date for ${talkTitle}`);
+    }
+    const logs: LogEvent[] = result.query?.logevents ?? [];
+    return createdAt.startsWith(`${String(year).padStart(4, '0')}-`)
+      && logs.some((log) => log.timestamp !== undefined && log.timestamp >= createdAt);
+  }
+
+  async function getDeletedCategoriesForTalkPagesCreatedIn(year: number): Promise<string[]> {
+    if (!Number.isInteger(year) || year < 1 || year > 9999) {
+      throw new Error('Year must be an integer between 1 and 9999');
+    }
+    const deletedCategories = new Set<string>();
+    const checkedCategories = new Set<string>();
+    const generator = api.searchPages(`creationdate:${year}`, [15], 500);
+    for await (const pages of generator) {
+      const titles = [...new Set(pages.map((page) => page.title.replace(/^שיחת קטגוריה:/, 'קטגוריה:')))]
+        .filter((title) => !checkedCategories.has(title));
+      if (titles.length > 0) {
+        const info = await api.info(titles);
+        const missingTitles = info.filter((page) => 'missing' in page)
+          .map((page) => page.title)
+          .filter((title): title is string => title !== undefined);
+        for (const title of missingTitles) {
+          if (await wasCategoryDeletedAfterTalkPageCreation(title, year)) {
+            deletedCategories.add(title);
+          }
+        }
+        titles.forEach((title) => checkedCategories.add(title));
+      }
+    }
+    return [...deletedCategories].sort((a, b) => a.localeCompare(b));
+  }
+
   async function getCategoriesCreatedIn(date: string) {
     const titles: string[] = [];
     const generator = api.searchPages(`creationdate:${date}`, [14], 500);
@@ -102,6 +145,7 @@ export default function NewCategoriesModel(api: IWikiApi) {
   }
 
   return {
+    getDeletedCategoriesForTalkPagesCreatedIn,
     getCategoriesCreatedIn,
     updateNewCategories,
     createYearCategoryIfNeeded,
