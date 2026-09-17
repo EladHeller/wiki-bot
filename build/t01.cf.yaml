@@ -78,7 +78,7 @@ Resources:
     Properties:
       FunctionName: US-stocks-function
       Handler: dist/usMarketValue/index.main
-      Timeout: 360
+      Timeout: 900
       MemorySize: 2048
       Events:
         Schedule:
