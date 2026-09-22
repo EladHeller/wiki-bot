@@ -12,13 +12,16 @@ const baseMarketValueTemplate = 'תבנית:שווי שוק חברה בורסא�
 const marketValueTemplate = `${baseMarketValueTemplate}/נתונים`;
 
 async function updateTemplate(api: IWikiApi, marketValues: WikiPageWithGoogleFinance[]) {
+  const relevantCompanies = marketValues.filter(({ gf: { marketCap } }) => marketCap.number !== '0');
+  if (relevantCompanies.length === 0) {
+    throw new Error('No valid market caps received from Google Finance; aborting template update.');
+  }
   const { content, revid } = await api.articleContent(marketValueTemplate);
   if (!content) {
     throw new Error('Failed to get template content');
   }
   const oldTemplate = findTemplate(content, '#switch: {{{ID}}}', marketValueTemplate);
   const oldData = getTemplateKeyValueData(oldTemplate);
-  const relevantCompanies = marketValues.filter(({ gf: { marketCap } }) => marketCap.number !== '0');
   const companies = relevantCompanies.map(
     (marketValue) => [
       marketValue.ticker,
@@ -122,6 +125,7 @@ export default async function usMarketValueBot() {
     }
   }));
 
+  console.log(`Google Finance: checked ${pages.length} pages, received ${marketValues.length} market caps`);
   await updateTemplate(api, marketValues);
 }
 
