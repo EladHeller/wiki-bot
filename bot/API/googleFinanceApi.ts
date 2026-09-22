@@ -3,10 +3,6 @@ import { WikiPage } from '../types';
 import { logger, stringify } from '../utilities/logger';
 import { CurrencyCode, currencyName } from '../utilities';
 
-function getTextNodeByText(textNodes: Text[], label: string): Text | undefined {
-  return textNodes.find((textNode) => textNode.textContent?.trim().toUpperCase() === label);
-}
-
 export const googleFinanceRegex = /^https:\/\/www\.google\.com\/finance\?q=([0-9A-Za-z.\-:_]+)$/;
 
 const numberSignToHebrewNumber = {
@@ -41,18 +37,18 @@ function isNumberName(str: string): str is keyof typeof numberSignToHebrewNumber
 }
 
 function textToMarketCap(marketCap: string): MarketCap | null {
-  const matches = marketCap.match(/(\d{1,3}(?:\.\d{1,2}))(\w) (\w+)/);
-  if (!matches?.[1]) {
+  const matches = marketCap.trim().match(/^(\d+(?:\.\d+)?)([A-Z])\s+([A-Z]{3})$/);
+  if (!matches) {
     return null;
   }
   const num = matches[1];
   const numberName = matches[2];
   const currencyCode = matches[3];
-  if (!isCurrency(currencyCode)) {
+  if (!isCurrency(currencyCode) || !isNumberName(numberName) || Number(num) <= 0) {
     return null;
   }
   return {
-    number: `${num}${isNumberName(numberName) ? ` [[${numberSignToHebrewNumber[numberName]}]]` : ''}`,
+    number: `${num} [[${numberSignToHebrewNumber[numberName]}]]`,
     currency: currencyCode,
   };
 }
@@ -60,11 +56,22 @@ function textToMarketCap(marketCap: string): MarketCap | null {
 export default async function getStockData(
   googleFinanceUrl: string,
 ): Promise<GoogleFinanceData | null> {
-  const dom = await fetch(googleFinanceUrl).then((res) => res.text());
+  const url = new URL(googleFinanceUrl);
+  url.searchParams.set('hl', 'en');
+  const response = await fetch(url.toString(), {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+    },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Google Finance HTTP ${response.status}: ${url}`);
+  }
+  const dom = await response.text();
   const { document } = new JSDOM(dom.replace(/<style[^>]*>[^<]*<\/style>/g, '')).window;
   const mainElement = document.querySelector('main');
   if (!mainElement) {
-    return null;
+    throw new Error(`Google Finance returned no main element (${document.title}): ${url}`);
   }
 
   const treeWalker = document.createTreeWalker(mainElement, 4);
@@ -74,20 +81,34 @@ export default async function getStockData(
     textNodes.push(textNode as Text);
     textNode = treeWalker.nextNode();
   }
-  const marketCapLabel = getTextNodeByText(textNodes, 'MARKET CAP');
-  const marketCap = marketCapLabel
-    ?.parentElement?.parentElement?.parentElement?.lastChild?.textContent ?? undefined;
-
-  const dateString = getTextNodeByText(textNodes, 'CLOSED:')?.nextSibling?.textContent;
-
-  const now = new Date();
-  const date = dateString ? new Date(dateString) : now;
-  if (date > now) {
-    date.setFullYear(date.getFullYear() - 1);
+  const quoteTime = textNodes.map((node) => node.textContent as string)
+    .find((text) => /\s·\s+[A-Z]{3}\s*$/.test(text)) ?? '';
+  const currency = quoteTime.match(/\b([A-Z]{3})\s*$/)?.[1] ?? '';
+  const marketCapLabel = textNodes.find((node) => /^(market cap|mkt\. cap)$/i.test(node.textContent.trim()));
+  let marketCapElement = marketCapLabel?.parentElement ?? null;
+  let marketCapData: MarketCap | null = null;
+  while (marketCapElement && marketCapElement !== mainElement && !marketCapData) {
+    const value = marketCapElement.lastElementChild?.textContent ?? '';
+    marketCapData = textToMarketCap(value) ?? textToMarketCap(`${value} ${currency}`);
+    marketCapElement = marketCapElement.parentElement;
   }
-  const marketCapData = textToMarketCap(marketCap ?? '');
   if (!marketCapData) {
     return null;
+  }
+  const closedNode = textNodes.find((node) => /^Closed:/i.test(node.textContent.trim()));
+  const dateString = closedNode
+    ? `${closedNode.textContent} ${closedNode.nextSibling?.textContent ?? ''}`
+      .replace(/^Closed:\s*/i, '').split('·')[0].trim().replace(/\s+/g, ' ')
+    : '';
+  const now = new Date();
+  const date = dateString
+    ? new Date(dateString.replace(/^([A-Za-z]{3} \d{1,2}), (?=\d{1,2}:)/, `$1, ${now.getFullYear()} `))
+    : now;
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Google Finance returned an invalid close date: ${dateString}`);
+  }
+  if (date > now) {
+    date.setFullYear(date.getFullYear() - 1);
   }
   return {
     marketCap: { ...marketCapData, date: date.toJSON() },
@@ -118,31 +139,20 @@ export async function getCompanyData(
   }
   const [base, ticker] = extLink.split('?q=');
   try {
-    let res = await getStockData(extLink);
-    if (!res || res.marketCap.number === '0') {
-      res = await getStockData(`${extLink}:NASDAQ`);
+    const urls = [
+      extLink,
+      `${extLink}:NASDAQ`,
+      `${extLink}:NYSE`,
+      `${base}/quote/${ticker}:NASDAQ`,
+      `${base}/quote/${ticker}:NYSE`,
+    ];
+    for (const url of urls) {
+      const res = await getStockData(url);
+      if (res) {
+        return { gf: res, ticker, wiki: page };
+      }
     }
-    if (!res || res.marketCap.number === '0') {
-      res = await getStockData(`${extLink}:NYSE`);
-    }
-    if (!res || res.marketCap.number === '0') {
-      res = await getStockData(`${base}/quote/${ticker}:NASDAQ`);
-    }
-    if (!res || res.marketCap.number === '0') {
-      res = await getStockData(`${base}/quote/${ticker}:NYSE`);
-    }
-    if (res?.marketCap.number === '0') {
-      console.log('equal zero', page.title);
-      return undefined;
-    }
-    if (res) {
-      return {
-        gf: res,
-        ticker,
-        wiki: page,
-      };
-    }
-    console.log('no results', page.title);
+    logger.logWarning(`No market cap found for ${page.title} (${ticker})`);
   } catch (e) {
     logger.logError(`${page.title}: ${stringify(e)}`);
   }
