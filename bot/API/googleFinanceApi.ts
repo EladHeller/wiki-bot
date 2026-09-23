@@ -152,7 +152,7 @@ export async function getCompanyData(
         return { gf: res, ticker, wiki: page };
       }
     }
-    logger.logWarning(`No market cap found for ${page.title} (${ticker})`);
+    console.warn(`No market cap found for ${page.title} (${ticker})`);
   } catch (e) {
     logger.logError(`${page.title}: ${stringify(e)}`);
   }

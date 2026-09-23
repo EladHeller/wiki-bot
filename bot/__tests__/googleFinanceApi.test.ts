@@ -152,12 +152,14 @@ describe('googleFinanceApi', () => {
       ]);
     });
 
-    it('logs exhausted lookups with the page and ticker', async () => {
+    it('logs exhausted lookups to console without adding wiki warnings', async () => {
       fetchMock.mockImplementation(async () => new Response('<main>No matching quote</main>'));
-      const warning = jest.spyOn(logger, 'logWarning');
+      const warning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const wikiWarning = jest.spyOn(logger, 'logWarning');
 
       await expect(getCompanyData(page)).resolves.toBeUndefined();
       expect(warning).toHaveBeenCalledWith('No market cap found for Apple (AAPL)');
+      expect(wikiWarning).not.toHaveBeenCalled();
     });
 
     it('logs fetch errors with the affected page', async () => {
