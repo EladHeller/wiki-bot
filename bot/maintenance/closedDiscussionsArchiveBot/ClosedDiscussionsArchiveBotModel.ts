@@ -200,7 +200,8 @@ function updateParagraphState(paragraph: string, addNewState: boolean, updateInD
   const commenterCount = getUniqueCommentersCount(parsedParagraph.content);
 
   if (!hasStatusTemplate && addNewState) {
-    const updatedContent = `{{${TEMPLATE_NAME}|${NEW_STATE}}}\n${parsedParagraph.content}`;
+    const initialState = updateInDiscussionState && commenterCount > 1 ? IN_DISCUSSION_STATE : NEW_STATE;
+    const updatedContent = `{{${TEMPLATE_NAME}|${initialState}}}\n${parsedParagraph.content}`;
     return paragraph.replace(parsedParagraph.content, updatedContent);
   }
 

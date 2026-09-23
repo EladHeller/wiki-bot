@@ -456,6 +456,58 @@ Invalid month: 12:00, 5 בטעות 2025 (IDT)
   });
 
   describe('state updates', () => {
+    it.each([
+      { commenters: [], updateInDiscussionState: true, expectedState: 'חדש' },
+      { commenters: ['Alice'], updateInDiscussionState: true, expectedState: 'חדש' },
+      { commenters: ['Alice', 'Alice'], updateInDiscussionState: true, expectedState: 'חדש' },
+      { commenters: ['Alice', 'Bob'], updateInDiscussionState: true, expectedState: 'בדיון' },
+      { commenters: ['Alice', 'Bob'], updateInDiscussionState: false, expectedState: 'חדש' },
+    ])('should select the initial state from commenters and configuration: %j', async ({
+      commenters, updateInDiscussionState, expectedState,
+    }) => {
+      const pageContent = `==Discussion==\nOpening comment\n${commenters.map((user) => `Comment [[משתמש:${user}]] 10:00, 1 בספטמבר 2026 (IDT)`).join('\n')}\n`;
+      const expectedContent = pageContent.replace('==Discussion==\n', `==Discussion==\n{{מצב|${expectedState}}}\n`);
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await model.archive('TestPage', [], 'רבעון', null, 'תבנית הועבר', true, updateInDiscussionState);
+
+      expect(wikiApi.edit).toHaveBeenCalledTimes(1);
+      expect(wikiApi.edit).toHaveBeenCalledWith('TestPage', expect.any(String), expectedContent, 1);
+    });
+
+    it('should mark a transferred discussion as in discussion on the first run and leave it unchanged on the next', async () => {
+      const pageContent = `==Discussion==
+{{הועבר|מ=שיחת תבנית:Example}}
+Comment [[משתמש:Alice]] 10:00, 1 בספטמבר 2026 (IDT)
+:Reply [[משתמש:Bob]] 11:00, 1 בספטמבר 2026 (IDT)
+{{סוף העברה}}
+`;
+      const expectedContent = pageContent.replace('==Discussion==\n', '==Discussion==\n{{מצב|בדיון}}\n');
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 43959132 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await model.archive('TestPage', [], 'תבנית ארכיון עם יעד', null, 'תבנית הועבר', true, true);
+
+      expect(wikiApi.edit).toHaveBeenCalledWith('TestPage', expect.any(String), expectedContent, 43959132);
+
+      wikiApi.articleContent.mockResolvedValueOnce({ content: expectedContent, revid: 43959213 });
+
+      await model.archive('TestPage', [], 'תבנית ארכיון עם יעד', null, 'תבנית הועבר', true, true);
+
+      expect(wikiApi.edit).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not insert a status when only updating existing statuses is enabled', async () => {
+      const pageContent = '==Discussion==\n[[משתמש:Alice]]\n[[משתמש:Bob]]\n';
+      wikiApi.articleContent.mockResolvedValueOnce({ content: pageContent, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await model.archive('TestPage', [], 'רבעון', null, 'תבנית הועבר', false, true);
+
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
     it('should add new state to a paragraph without מצב before archiving', async () => {
       fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
 
