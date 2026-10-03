@@ -5,6 +5,7 @@ import writeAdminBotLogs from './log';
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { ArticleLog } from './types';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
+import shouldSkipRedirect from './shouldSkipRedirect';
 
 const fixBrokenRedirectsBotNames = ['EmausBot', 'Xqbot'];
 
@@ -19,7 +20,7 @@ async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons:
 
   const all: WikiPage[] = [];
   const errors: string[] = [];
-  const mutlyRevisions: WikiPage[] = [];
+  const skippedPages: WikiPage[] = [];
   try {
     await asyncGeneratorMapWithSequence(10, generator, (p: WikiPage) => async () => {
       try {
@@ -38,13 +39,17 @@ async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons:
           return;
         }
         all.push(p);
+        if (shouldSkipRedirect(p)) {
+          skippedPages.push(p);
+          return;
+        }
         const revisions: Revision[] = await firstPageOf(api.getArticleRevisions(p.title, 2, 'user'));
         const revisionsLength = revisions?.length;
         const isRevisionsLengthValid = revisionsLength === 1
           || (revisionsLength === 2 && revisions?.[0].user
             && fixBrokenRedirectsBotNames.includes(revisions?.[0].user));
         if (!isRevisionsLengthValid) {
-          mutlyRevisions.push(p);
+          skippedPages.push(p);
           return;
         }
         const reason = reasons[0];
@@ -62,7 +67,7 @@ async function deleteRedirects(api: IWikiApi, from: number, to: number, reasons:
   const logs: ArticleLog[] = unique.map((x) => {
     const error = errors.includes(x.title);
     const skipped = x.links?.length !== 1 || x.templates != null || x.categories != null
-      || mutlyRevisions.includes(x);
+      || skippedPages.includes(x);
     return {
       title: x.title,
       text: `[[${x.title}]] ${x.links?.length === 1 ? ` {{כ}}← [[${x.links?.[0].title}]]` : 'לא ברור'}${error ? ' - שגיאה' : ''}`,
