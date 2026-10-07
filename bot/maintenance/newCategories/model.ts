@@ -64,7 +64,15 @@ export default function NewCategoriesModel(api: IWikiApi) {
     const newCategoriesContent = categories.map((c) => `* [[:${c}]]\n`).join('');
     const { content, revid } = await api.articleContent(newCategoriesPageTitle);
 
-    const newContent = content.replace(/(\* \[\[:קטגוריה:.*\n?)+/, newCategoriesContent);
+    const categoryListPattern = /(\* \[\[:קטגוריה:.*\n?)+/;
+    let newContent = content.replace(categoryListPattern, () => newCategoriesContent);
+    if (!categoryListPattern.test(content) && categories.length > 0) {
+      const footerIndex = content.search(/^\[\[קטגוריה:/m);
+      const insertAt = footerIndex === -1 ? content.length : footerIndex;
+      const prefix = content.slice(0, insertAt);
+      const separator = prefix.length > 0 && !prefix.endsWith('\n') ? '\n' : '';
+      newContent = `${prefix}${separator}${newCategoriesContent}${content.slice(insertAt)}`;
+    }
     if (newContent !== content) {
       await api.edit(newCategoriesPageTitle, 'עדכון קטגוריות חדשות', newContent, revid);
     }
