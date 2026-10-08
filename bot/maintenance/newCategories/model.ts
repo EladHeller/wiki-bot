@@ -1,7 +1,7 @@
 import type { IWikiApi } from '../../wiki/WikiApi';
 import type { LogEvent, WikiPage } from '../../types';
 
-const yearlyCategoriesParent = 'קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתם';
+const yearlyCategoriesParent = 'קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתן';
 
 export default function NewCategoriesModel(api: IWikiApi) {
   async function wasCategoryDeletedAfterTalkPageCreation(categoryTitle: string, year: number) {
@@ -90,13 +90,13 @@ export default function NewCategoriesModel(api: IWikiApi) {
     const yearCategoryTitle = await createYearCategoryIfNeeded(year);
 
     const content = `${categories.map((c) => `* [[שיחת ${c}]]`).join('\n')}\n\n[[${yearCategoryTitle}]]`;
-    await api.edit(`ויקיפדיה:קטגוריות לפי זמן יצירתם/נמחקו ב-${year}`, `קטגוריות שנמחקו ב-${year}`, content, 0);
+    await api.edit(`ויקיפדיה:קטגוריות לפי זמן יצירתן/נמחקו ב-${year}`, `קטגוריות שנמחקו ב-${year}`, content, 0);
   }
 
   async function createPerMonthIfNeeded(date: Date, edit = false) {
     const monthPageTitleString = date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
     const monthSearchString = date.toISOString().slice(0, 7);
-    const title = `ויקיפדיה:קטגוריות לפי זמן יצירתם/${monthPageTitleString}`;
+    const title = `ויקיפדיה:קטגוריות לפי זמן יצירתן/${monthPageTitleString}`;
     const year = date.getFullYear();
 
     const [info] = await api.info([title]);
@@ -120,7 +120,7 @@ export default function NewCategoriesModel(api: IWikiApi) {
 
   async function createPerYearIfNeeded(date: Date, edit = false) {
     const year = date.getFullYear();
-    const title = `ויקיפדיה:קטגוריות לפי זמן יצירתם/${year}`;
+    const title = `ויקיפדיה:קטגוריות לפי זמן יצירתן/${year}`;
     const [info] = await api.info([title]);
     if (!('missing' in info) && !edit) {
       return;
