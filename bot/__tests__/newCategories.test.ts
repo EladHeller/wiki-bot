@@ -4,7 +4,7 @@ import {
 import NewCategoriesModel from '../maintenance/newCategories/model';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
 
-const yearlyCategoriesParent = 'קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתם';
+const yearlyCategoriesParent = 'קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתן';
 
 function mockCategorySearch(api: ReturnType<typeof WikiApiMock>, batches: string[][]) {
   api.searchPages.mockImplementation(async function* searchPages() {
@@ -123,7 +123,7 @@ describe('new categories model', () => {
         `[[${yearlyCategoriesParent}]]`,
       );
       expect(api.edit).toHaveBeenCalledWith(
-        'ויקיפדיה:קטגוריות לפי זמן יצירתם/נמחקו ב-2026',
+        'ויקיפדיה:קטגוריות לפי זמן יצירתן/נמחקו ב-2026',
         'קטגוריות שנמחקו ב-2026',
         `* [[שיחת קטגוריה:א]]\n* [[שיחת קטגוריה:ב]]\n\n[[${yearlyCategoriesParent} (2026)]]`,
         0,
@@ -228,7 +228,7 @@ describe('new categories model', () => {
 
     await NewCategoriesModel(api).createPerMonthIfNeeded(new Date('2027-02-01T00:00:00.000Z'));
 
-    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתם/פברואר 2027']);
+    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתן/פברואר 2027']);
     expect(api.info).toHaveBeenCalledTimes(1);
     expect(api.create).not.toHaveBeenCalled();
     expect(api.searchPages).not.toHaveBeenCalled();
@@ -250,7 +250,7 @@ describe('new categories model', () => {
     );
     expect(api.create).toHaveBeenNthCalledWith(
       2,
-      'ויקיפדיה:קטגוריות לפי זמן יצירתם/פברואר 2027',
+      'ויקיפדיה:קטגוריות לפי זמן יצירתן/פברואר 2027',
       'קטגוריות שנוצרו בחודש פברואר 2027',
       [
         'בחודש פברואר 2027 נוצרו 2 קטגוריות:',
@@ -272,7 +272,7 @@ describe('new categories model', () => {
 
     expect(api.create).not.toHaveBeenCalled();
     expect(api.edit).toHaveBeenCalledWith(
-      'ויקיפדיה:קטגוריות לפי זמן יצירתם/פברואר 2027',
+      'ויקיפדיה:קטגוריות לפי זמן יצירתן/פברואר 2027',
       'קטגוריות שנוצרו בחודש פברואר 2027',
       `בחודש פברואר 2027 נוצרו 0 קטגוריות:\n\n\n[[${yearlyCategoriesParent} (2027)]]`,
       456,
@@ -300,7 +300,7 @@ describe('new categories model', () => {
 
     await NewCategoriesModel(api).createPerYearIfNeeded(new Date('2026-01-01T00:00:00.000Z'));
 
-    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתם/2026']);
+    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתן/2026']);
     expect(api.info).toHaveBeenCalledTimes(1);
     expect(api.create).not.toHaveBeenCalled();
     expect(api.searchPages).not.toHaveBeenCalled();
@@ -323,7 +323,7 @@ describe('new categories model', () => {
     );
     expect(api.create).toHaveBeenNthCalledWith(
       2,
-      'ויקיפדיה:קטגוריות לפי זמן יצירתם/2026',
+      'ויקיפדיה:קטגוריות לפי זמן יצירתן/2026',
       'קטגוריות שנוצרו בשנת 2026',
       [
         'בשנת 2026 נוצרו 2 קטגוריות:',
@@ -345,7 +345,7 @@ describe('new categories model', () => {
 
     expect(api.create).not.toHaveBeenCalled();
     expect(api.edit).toHaveBeenCalledWith(
-      'ויקיפדיה:קטגוריות לפי זמן יצירתם/2026',
+      'ויקיפדיה:קטגוריות לפי זמן יצירתן/2026',
       'קטגוריות שנוצרו בשנת 2026',
       `בשנת 2026 נוצרו 0 קטגוריות:\n\n\n[[${yearlyCategoriesParent} (2026)]]`,
       789,
@@ -374,7 +374,7 @@ describe('new categories model', () => {
 
     await NewCategoriesModel(api).createLastMonthCategoriesPageIfNeeded();
 
-    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתם/דצמבר 2026']);
+    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתן/דצמבר 2026']);
   });
 
   it('requests the previous year when creating the yearly archive', async () => {
@@ -383,6 +383,6 @@ describe('new categories model', () => {
 
     await NewCategoriesModel(api).createLastYearCategoriesPageIfNeeded();
 
-    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתם/2026']);
+    expect(api.info).toHaveBeenCalledWith(['ויקיפדיה:קטגוריות לפי זמן יצירתן/2026']);
   });
 });
