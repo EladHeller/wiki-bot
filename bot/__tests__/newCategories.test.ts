@@ -223,6 +223,69 @@ describe('new categories model', () => {
     expect(api.edit).not.toHaveBeenCalled();
   });
 
+  it('resumes updates after an empty search at the start of a month', async () => {
+    const footer = '[[קטגוריה:ויקיפדיה:קטגוריה]]\n[[קטגוריה:ויקיפדיה:קטגוריות לפי זמן יצירתם|*]]\n[[קטגוריה:ויקיפדיה:דפים חדשים]]';
+    let content = `\n\n* [[:קטגוריה:ישן]]\n\n${footer}`;
+    api.articleContent.mockImplementation(async () => ({ content, revid: 123 }));
+    api.edit.mockImplementation(async (_title, _summary, newContent) => {
+      content = newContent;
+      return {
+        edit: {
+          result: 'Success', pageid: 1, title: _title, contentmodel: 'wikitext',
+        },
+      };
+    });
+    const model = NewCategoriesModel(api);
+    mockCategorySearch(api, []);
+
+    await model.updateNewCategories();
+
+    expect(content).toBe(`\n\n\n${footer}`);
+
+    mockCategorySearch(api, [['קטגוריה:חדש']]);
+
+    await model.updateNewCategories();
+
+    expect(content).toBe(`\n\n\n* [[:קטגוריה:חדש]]\n${footer}`);
+
+    await model.updateNewCategories();
+
+    expect(api.edit).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['', '* [[:קטגוריה:חדש]]\n'],
+    ['פתיח', 'פתיח\n* [[:קטגוריה:חדש]]\n'],
+    ['פתיח\n', 'פתיח\n* [[:קטגוריה:חדש]]\n'],
+    ['[[קטגוריה:מעקב]]', '* [[:קטגוריה:חדש]]\n[[קטגוריה:מעקב]]'],
+    ['פתיח\n[[קטגוריה:מעקב]]', 'פתיח\n* [[:קטגוריה:חדש]]\n[[קטגוריה:מעקב]]'],
+  ])('inserts a missing list while preserving surrounding content: %s', async (content, expected) => {
+    mockCategorySearch(api, [['קטגוריה:חדש']]);
+    api.articleContent.mockResolvedValue({ content, revid: 123 });
+
+    await NewCategoriesModel(api).updateNewCategories();
+
+    expect(api.edit).toHaveBeenCalledWith('ויקיפדיה:קטגוריות חדשות', 'עדכון קטגוריות חדשות', expected, 123);
+  });
+
+  it('does not edit an empty list when the search is still empty', async () => {
+    mockCategorySearch(api, []);
+    api.articleContent.mockResolvedValue({ content: '\n[[קטגוריה:מעקב]]', revid: 123 });
+
+    await NewCategoriesModel(api).updateNewCategories();
+
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+
+  it('preserves dollar sequences in category titles literally', async () => {
+    mockCategorySearch(api, [['קטגוריה:$&']]);
+    api.articleContent.mockResolvedValue({ content: '* [[:קטגוריה:ישן]]\n', revid: 123 });
+
+    await NewCategoriesModel(api).updateNewCategories();
+
+    expect(api.edit).toHaveBeenCalledWith('ויקיפדיה:קטגוריות חדשות', 'עדכון קטגוריות חדשות', '* [[:קטגוריה:$&]]\n', 123);
+  });
+
   it('does nothing when the requested month page already exists', async () => {
     api.info.mockResolvedValue([{ pageid: 1 }]);
 
