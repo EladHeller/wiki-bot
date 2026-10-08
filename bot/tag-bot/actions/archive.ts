@@ -6,9 +6,9 @@ import { getArchiveTitle } from '../../utilities/archiveUtils';
 const botName = process.env.BOT_NAME as string;
 const escapedBotName = RegExp.escape(botName);
 const botMentionPattern = `@\\[\\[(?:(?:משתמש|user):)?${escapedBotName}(?:\\|${escapedBotName})?\\]\\]`;
-const archiveCommandRegex = new RegExp(`^ *(:)*${botMentionPattern} +ארכב(\\s+ל)?:.*`, 'im');
-const archiveCommandRegexGlobal = new RegExp(`^ *(:)*${botMentionPattern} +ארכב(\\s+ל)?:.*`, 'gim');
-const moveCommandRegexGlobal = new RegExp(`^ *(:)*${botMentionPattern} +העבר:.*`, 'gim');
+const archiveCommandRegex = new RegExp(`^.*?${botMentionPattern} +ארכב(\\s+ל)?:.*`, 'im');
+const archiveCommandRegexGlobal = new RegExp(`^.*?${botMentionPattern} +ארכב(\\s+ל)?:.*`, 'gim');
+const moveCommandRegexGlobal = new RegExp(`^.*?${botMentionPattern} +העבר:.*`, 'gim');
 
 async function innerMove(
   api: IWikiApi,
