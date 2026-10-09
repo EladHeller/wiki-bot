@@ -24,7 +24,15 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 const TRANSIENT_CACHE_TTL_MS = 60 * 1000;
 const MAX_RESPONSE_SAMPLE_BYTES = 32 * 1024;
 const WAYBACK_AVAILABILITY_API_URL = 'https://archive.org/wayback/available';
+const WAYBACK_CDX_API_URL = 'https://web.archive.org/cdx/search/cdx';
+const WAYBACK_REQUEST_TIMEOUT_MS = 25 * 1000;
 const WAYBACK_LINK_PATTERN = /^https?:\/\/web\.archive\.org\/web\/(\d{1,14})[a-z_]*\/(https?:\/\/.+)$/i;
+
+type WaybackQuery = {
+  url: string;
+  timestamp: string;
+  source: 'availability' | 'cdx';
+};
 
 const resultCache = new Map<string, { result: LinkCheckResult; expiresAt: number }>();
 const hostNextRequestAt = new Map<string, number>();
@@ -40,6 +48,7 @@ type WaybackAvailabilityResponse = {
     closest?: {
       available?: boolean;
       status?: string;
+      timestamp?: string;
     };
   };
 };
@@ -123,28 +132,47 @@ async function classifyResponse(response: Response): Promise<LinkCheckResult> {
   };
 }
 
-async function classifyWaybackResponse(response: Response): Promise<LinkCheckResult> {
-  if (!response.ok) {
-    return classifyResponse(response);
-  }
-  const data = await response.json() as WaybackAvailabilityResponse;
-  const closest = data.archived_snapshots?.closest;
-  if (!closest?.available) {
-    return { state: 'dead', status: 404, statusText: 'שמירה לא נמצאה בארכיון' };
-  }
-  const status = Number(closest.status) || 200;
-  return { state: 'alive', status, statusText: response.statusText };
+function matchesWaybackTimestamp(timestamp: unknown, requested: string): boolean {
+  return typeof timestamp === 'string' && /^\d{14}$/.test(timestamp) && timestamp.startsWith(requested);
 }
 
-function getWaybackAvailabilityUrl(url: string): string | null {
-  const match = url.match(WAYBACK_LINK_PATTERN);
-  if (!match) {
-    return null;
+async function classifyWaybackResponse(response: Response, query: WaybackQuery): Promise<LinkCheckResult> {
+  if (!response.ok) {
+    const result = await classifyResponse(response);
+    return { ...result, state: result.state === 'dead' ? 'transient' : result.state };
   }
-  const availabilityUrl = new URL(WAYBACK_AVAILABILITY_API_URL);
-  availabilityUrl.searchParams.set('url', match[2].split('#', 1)[0]);
-  availabilityUrl.searchParams.set('timestamp', match[1]);
-  return availabilityUrl.toString();
+  const data = await response.json();
+  if (query.source === 'cdx') {
+    const matches = Array.isArray(data)
+      && JSON.stringify(data[0]) === JSON.stringify(['timestamp', 'statuscode'])
+      && data.slice(1).some((row) => Array.isArray(row)
+        && matchesWaybackTimestamp(row[0], query.timestamp) && /^2\d\d$/.test(row[1]));
+    return matches ? { state: 'alive' } : { state: 'unknown' };
+  }
+  const closest = (data as WaybackAvailabilityResponse | null)?.archived_snapshots?.closest;
+  const status = Number(closest?.status);
+  if (closest?.available === true && matchesWaybackTimestamp(closest.timestamp, query.timestamp)
+    && status >= 200 && status < 300) {
+    return { state: 'alive', status, statusText: response.statusText };
+  }
+  return { state: 'unknown' };
+}
+
+function getWaybackQuery(match: RegExpMatchArray, source: WaybackQuery['source']): WaybackQuery {
+  const queryUrl = new URL(source === 'availability' ? WAYBACK_AVAILABILITY_API_URL : WAYBACK_CDX_API_URL);
+  queryUrl.searchParams.set('url', match[2].split('#', 1)[0]);
+  if (source === 'availability') {
+    queryUrl.searchParams.set('timestamp', match[1]);
+    queryUrl.searchParams.set('timeout', '20');
+  } else {
+    queryUrl.searchParams.set('output', 'json');
+    queryUrl.searchParams.set('fl', 'timestamp,statuscode');
+    queryUrl.searchParams.set('from', match[1]);
+    queryUrl.searchParams.set('to', match[1]);
+    queryUrl.searchParams.set('filter', 'statuscode:2[0-9][0-9]');
+    queryUrl.searchParams.set('limit', '1');
+  }
+  return { url: queryUrl.toString(), timestamp: match[1], source };
 }
 
 function getRetryDelay(response: Response | undefined): number {
@@ -180,27 +208,26 @@ async function requestLink(
   url: string,
   pageTitle: string | undefined,
   dependencies: LinkCheckerDependencies,
+  waybackQuery?: WaybackQuery,
 ): Promise<{ result: LinkCheckResult; response?: Response }> {
-  const waybackAvailabilityUrl = getWaybackAvailabilityUrl(url);
-  const requestUrl = waybackAvailabilityUrl ?? url;
-  await waitForHost(requestUrl, dependencies);
+  await waitForHost(url, dependencies);
   let response: Response | undefined;
   try {
     const referrer = getReferrer(pageTitle);
-    response = await dependencies.fetchFn(requestUrl, {
+    response = await dependencies.fetchFn(url, {
       headers: {
         'User-Agent': getUserAgent(),
-        Accept: waybackAvailabilityUrl
+        Accept: waybackQuery
           ? 'application/json'
           : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'he-IL,he;q=0.9,en;q=0.7',
         ...(referrer ? { Referer: referrer } : {}),
       },
       redirect: 'follow',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(waybackQuery ? WAYBACK_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS),
     });
-    const result = waybackAvailabilityUrl
-      ? await classifyWaybackResponse(response)
+    const result = waybackQuery
+      ? await classifyWaybackResponse(response, waybackQuery)
       : await classifyResponse(response);
     return { result, response };
   } catch (error) {
@@ -223,14 +250,20 @@ async function checkLink(
   if (cached && cached.expiresAt > dependencies.now()) {
     return cached.result;
   }
-  const initialCheck = await requestLink(url, pageTitle, dependencies);
+  const waybackMatch = url.match(WAYBACK_LINK_PATTERN);
+  const availabilityQuery = waybackMatch ? getWaybackQuery(waybackMatch, 'availability') : undefined;
+  const initialCheck = await requestLink(availabilityQuery?.url ?? url, pageTitle, dependencies, availabilityQuery);
   const { response } = initialCheck;
   let { result } = initialCheck;
-  if (shouldRetry(result)) {
+  if (waybackMatch && result.state !== 'alive') {
+    const cdxQuery = getWaybackQuery(waybackMatch, 'cdx');
+    ({ result } = await requestLink(cdxQuery.url, pageTitle, dependencies, cdxQuery));
+  } else if (shouldRetry(result)) {
     await dependencies.sleep(getRetryDelay(response));
     ({ result } = await requestLink(url, pageTitle, dependencies));
   }
-  const ttl = result.state === 'transient' ? TRANSIENT_CACHE_TTL_MS : CACHE_TTL_MS;
+  const ttl = result.state === 'transient' || (waybackMatch && result.state !== 'alive')
+    ? TRANSIENT_CACHE_TTL_MS : CACHE_TTL_MS;
   resultCache.set(url, { result, expiresAt: dependencies.now() + ttl });
   return result;
 }
