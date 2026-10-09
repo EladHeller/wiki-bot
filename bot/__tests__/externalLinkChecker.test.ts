@@ -44,109 +44,183 @@ describe('externalLinkChecker', () => {
     expect(getUserAgent()).toContain('Sapper-bot/1.0');
   });
 
-  it('should verify Wayback links through the availability API', async () => {
-    const waybackLink = {
-      link: 'https://web.archive.org/web/20120401201535/https://grrm.livejournal.com/3797.html?view=all#comments',
-      text: 'Archived post',
-    };
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({
-      archived_snapshots: {
-        closest: { available: true, status: '200' },
-      },
-    }), { status: 200, statusText: 'OK' }));
-
-    const result = await checkLinksWithHttp([waybackLink], undefined, {
-      fetchFn: fetchMock,
-      sleep: sleepMock,
-      now: () => now,
+  describe('wayback snapshots', () => {
+    const timestamp = '20120401201535';
+    const original = 'https://grrm.livejournal.com/3797.html?view=all';
+    const waybackLink = { link: `https://web.archive.org/web/${timestamp}/${original}#comments`, text: 'Archived post' };
+    const cdxRows = [['timestamp', 'statuscode'], [timestamp, '200']];
+    const dependencies = { fetchFn: fetchMock, sleep: sleepMock, now: () => now };
+    const jsonResponse = (data: unknown) => new Response(JSON.stringify(data), { status: 200, statusText: 'OK' });
+    const available = (captureTimestamp: string = timestamp, status: string = '200') => ({
+      archived_snapshots: { closest: { available: true, timestamp: captureTimestamp, status } },
     });
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://archive.org/wayback/available?url=https%3A%2F%2Fgrrm.livejournal.com%2F3797.html%3Fview%3Dall&timestamp=20120401201535',
-      expect.objectContaining({
-        headers: expect.objectContaining({ Accept: 'application/json' }),
-      }),
-    );
-    expect(result.get(waybackLink.link)).toStrictEqual({ state: 'alive', status: 200, statusText: 'OK' });
-  });
+    it('should accept only a successful snapshot at the requested timestamp', async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(available()));
+      const timeoutSpy = jest.spyOn(AbortSignal, 'timeout');
 
-  it('should accept an available Wayback snapshot without a reported status', async () => {
-    const waybackLink = {
-      link: 'https://web.archive.org/web/20120401201535/http://example.com/page',
-      text: 'Archived page',
-    };
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({
-      archived_snapshots: { closest: { available: true } },
-    }), { status: 200 }));
+      const result = await checkLinksWithHttp([waybackLink], 'Page', dependencies);
 
-    const result = await checkLinksWithHttp([waybackLink], undefined, {
-      fetchFn: fetchMock,
-      sleep: sleepMock,
-      now: () => now,
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      const requestUrl = new URL(fetchMock.mock.calls[0][0] as string);
+
+      expect(requestUrl.origin + requestUrl.pathname).toBe('https://archive.org/wayback/available');
+      expect(Object.fromEntries(requestUrl.searchParams)).toStrictEqual({ url: original, timestamp, timeout: '20' });
+      expect(timeoutSpy).toHaveBeenCalledWith(25000);
+
+      timeoutSpy.mockRestore();
+
+      expect(result.get(waybackLink.link)).toStrictEqual({ state: 'alive', status: 200, statusText: 'OK' });
     });
 
-    expect(result.get(waybackLink.link)?.state).toBe('alive');
-    expect(result.get(waybackLink.link)?.status).toBe(200);
-  });
+    it.each([
+      ['empty search', { archived_snapshots: {} }],
+      ['missing fields', {}],
+      ['null response', null],
+      ['unavailable capture', { archived_snapshots: { closest: { available: false } } }],
+      ['different timestamp', available('20260827171906')],
+      ['missing timestamp', { archived_snapshots: { closest: { available: true, status: '200' } } }],
+      ['invalid timestamp', available('2012')],
+      ['missing status', { archived_snapshots: { closest: { available: true, timestamp } } }],
+      ['error capture', available(timestamp, '404')],
+      ['redirect capture', available(timestamp, '301')],
+      ['invalid status', available(timestamp, '0')],
+    ])('should consult exact CDX records after %s', async (_name, response) => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(response)).mockResolvedValueOnce(jsonResponse(cdxRows));
 
-  it('should retry and report unavailable Wayback snapshots as dead', async () => {
-    const waybackLink = {
-      link: 'http://web.archive.org/web/20060101id_/http://example.com/missing',
-      text: 'Missing snapshot',
-    };
-    fetchMock.mockImplementation(async () => new Response(
-      JSON.stringify({ archived_snapshots: {} }),
-      { status: 200 },
-    ));
+      const result = await checkLinksWithHttp([waybackLink], undefined, dependencies);
 
-    const result = await checkLinksWithHttp([waybackLink], undefined, {
-      fetchFn: fetchMock,
-      sleep: sleepMock,
-      now: () => now,
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      const requestUrl = new URL(fetchMock.mock.calls[1][0] as string);
+
+      expect(requestUrl.origin + requestUrl.pathname).toBe('https://web.archive.org/cdx/search/cdx');
+      expect(Object.fromEntries(requestUrl.searchParams)).toStrictEqual({
+        url: original,
+        output: 'json',
+        fl: 'timestamp,statuscode',
+        from: timestamp,
+        to: timestamp,
+        filter: 'statuscode:2[0-9][0-9]',
+        limit: '1',
+      });
+      expect(result.get(waybackLink.link)).toStrictEqual({ state: 'alive' });
+      expect(fetchMock.mock.calls.some(([url]) => url === waybackLink.link)).toBe(false);
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(result.get(waybackLink.link)).toStrictEqual({
-      state: 'dead', status: 404, statusText: 'שמירה לא נמצאה בארכיון',
-    });
-  });
+    it.each([[], [['timestamp', 'statuscode']], null, {}, [['wrong header'], [timestamp, '200']],
+      [['timestamp', 'statuscode'], null], [['timestamp', 'statuscode'], ['20260827171906', '200']],
+      [['timestamp', 'statuscode'], [timestamp, '404']], [['timestamp', 'statuscode'], [timestamp, '302']],
+    ].map((response) => [response]))('should leave absent or inconclusive CDX records unverified (%j)', async (cdxResponse) => {
+      fetchMock.mockResolvedValueOnce(jsonResponse({})).mockResolvedValueOnce(jsonResponse(cdxResponse));
 
-  it('should fall back to the regular flow when the availability API fails', async () => {
-    const waybackLink = {
-      link: 'https://web.archive.org/web/20120401201535/http://example.com/page',
-      text: 'Archived page',
-    };
-    fetchMock.mockRejectedValue(new Error('availability timeout'));
+      const result = await checkLinksWithHttp([waybackLink], undefined, dependencies);
 
-    const result = await checkLinksWithHttp([waybackLink], undefined, {
-      fetchFn: fetchMock,
-      sleep: sleepMock,
-      now: () => now,
+      expect(result.get(waybackLink.link)).toStrictEqual({ state: 'unknown' });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(result.get(waybackLink.link)).toStrictEqual({
-      state: 'transient', error: 'availability timeout',
-    });
-  });
+    it.each([403, 404, 410, 429, 503])('should use CDX after availability endpoint HTTP %s', async (status) => {
+      fetchMock.mockResolvedValueOnce(new Response(null, { status })).mockResolvedValueOnce(jsonResponse(cdxRows));
 
-  it('should classify Wayback API HTTP failures normally', async () => {
-    const waybackLink = {
-      link: 'https://web.archive.org/web/20120401201535/http://example.com/page',
-      text: 'Archived page',
-    };
-    fetchMock.mockResolvedValue(new Response(null, { status: 503, statusText: 'Unavailable' }));
+      const result = await checkLinksWithHttp([waybackLink], undefined, dependencies);
 
-    const result = await checkLinksWithHttp([waybackLink], undefined, {
-      fetchFn: fetchMock,
-      sleep: sleepMock,
-      now: () => now,
+      expect(result.get(waybackLink.link)?.state).toBe('alive');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(result.get(waybackLink.link)).toStrictEqual(expect.objectContaining({
-      state: 'transient', status: 503,
-    }));
+    it.each([404, 410, 503])('should treat CDX HTTP %s as a service failure, not a broken snapshot', async (status) => {
+      fetchMock.mockResolvedValueOnce(jsonResponse({})).mockResolvedValueOnce(new Response(null, { status }));
+
+      const result = await checkLinksWithHttp([waybackLink], undefined, dependencies);
+
+      expect(result.get(waybackLink.link)).toStrictEqual(expect.objectContaining({ state: 'transient', status }));
+    });
+
+    it.each([403, 429])('should preserve CDX blocking status %s', async (status) => {
+      fetchMock.mockResolvedValueOnce(jsonResponse({})).mockResolvedValueOnce(new Response(null, { status }));
+
+      const result = await checkLinksWithHttp([waybackLink], undefined, dependencies);
+
+      expect(result.get(waybackLink.link)).toStrictEqual(expect.objectContaining({ state: 'blocked', status }));
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should use CDX after an availability timeout', async () => {
+      fetchMock.mockRejectedValueOnce(new Error('availability timeout')).mockResolvedValueOnce(jsonResponse(cdxRows));
+
+      const result = await checkLinksWithHttp([waybackLink], undefined, dependencies);
+
+      expect(result.get(waybackLink.link)?.state).toBe('alive');
+    });
+
+    it('should handle invalid JSON from either archive API without reporting a broken snapshot', async () => {
+      fetchMock.mockResolvedValueOnce(new Response('not JSON')).mockResolvedValueOnce(new Response('not JSON'));
+
+      const result = await checkLinksWithHttp([waybackLink], undefined, dependencies);
+
+      expect(result.get(waybackLink.link)?.state).toBe('transient');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should keep a CDX timeout unresolved', async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse({})).mockRejectedValueOnce(new Error('CDX timeout'));
+
+      const result = await checkLinksWithHttp([waybackLink], undefined, dependencies);
+
+      expect(result.get(waybackLink.link)).toStrictEqual({ state: 'transient', error: 'CDX timeout' });
+    });
+
+    it('should cache successful archive checks', async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(available()));
+
+      await checkLinksWithHttp([waybackLink], undefined, dependencies);
+      now += 61000;
+      await checkLinksWithHttp([waybackLink], undefined, dependencies);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should refresh inconclusive archive results after one minute', async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse({})).mockResolvedValueOnce(jsonResponse([]))
+        .mockResolvedValueOnce(jsonResponse(available()));
+
+      await checkLinksWithHttp([waybackLink], undefined, dependencies);
+      await checkLinksWithHttp([waybackLink], undefined, dependencies);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      now += 61000;
+      const result = await checkLinksWithHttp([waybackLink], undefined, dependencies);
+
+      expect(result.get(waybackLink.link)?.state).toBe('alive');
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('should support partial timestamps and replay modifiers through availability', async () => {
+      const link = { link: `http://web.archive.org/web/201204id_/${original}`, text: 'Archived page' };
+      fetchMock.mockResolvedValueOnce(jsonResponse(available()));
+
+      const result = await checkLinksWithHttp([link], undefined, dependencies);
+
+      expect(result.get(link.link)?.state).toBe('alive');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should support partial timestamps and replay modifiers through CDX', async () => {
+      const link = { link: `http://web.archive.org/web/201204id_/${original}`, text: 'Archived page' };
+      fetchMock.mockResolvedValueOnce(jsonResponse({})).mockResolvedValueOnce(jsonResponse(cdxRows));
+
+      const result = await checkLinksWithHttp([link], undefined, dependencies);
+
+      expect(result.get(link.link)?.state).toBe('alive');
+
+      const cdxUrl = new URL(fetchMock.mock.calls[1][0] as string);
+
+      expect(cdxUrl.searchParams.get('from')).toBe('201204');
+      expect(cdxUrl.searchParams.get('to')).toBe('201204');
+    });
   });
 
   it('should retry and confirm 404 responses', async () => {

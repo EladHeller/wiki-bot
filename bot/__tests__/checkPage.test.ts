@@ -115,6 +115,19 @@ describe('checkExternalLinks', () => {
     expect(result).toBe('הבוט בדק 2 קישורים. 0 קישורים נמצאו לא תקינים, וקישור אחד נשלח לבדיקה ברקע.');
   });
 
+  it('should send an unverified archive snapshot to the background instead of reporting a synthetic 404', async () => {
+    const link = { link: 'https://web.archive.org/web/20120401201535/https://example.com/page', text: 'Archive' };
+    getExternalLinksMock.mockReturnValue([link]);
+    httpResults([[link.link, { state: 'unknown' }]]);
+
+    const result = await checkExternalLinks('content');
+
+    expect(queuePlaywrightLinkCheckMock).toHaveBeenCalledWith(expect.objectContaining({ links: [link] }));
+    expect(result).toContain('קישור אחד נשלח לבדיקה ברקע');
+    expect(result).not.toContain('קישורים שבורים');
+    expect(result).not.toContain('404');
+  });
+
   it('should keep a repeatedly missing link broken when IABot has no result', async () => {
     getExternalLinksMock.mockReturnValue([{ link: 'https://example.com/one', text: 'One' }]);
     httpResults([['https://example.com/one', { state: 'dead', status: 404, statusText: 'Not Found' }]]);
