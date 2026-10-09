@@ -18,7 +18,7 @@ describe('moveTo', () => {
   const userSign = '[[user:Homer Simpson|Homer]] [[user talk:Homer Simpson|Mmmm donats!]] 12:23 7 במאי 2025.';
   const statusTemplate = '{{מצב|טופל|Lisa|ליזה}}';
 
-  it('should move the paragraph successfully to an existing page', async () => {
+  it.each(['', 'הדיון הסתיים. '])('should move the paragraph successfully to an existing page with prefix %s', async (prefix) => {
     api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValue({ content: 'targetContent', revid: 678 });
     api.edit.mockResolvedValue({
@@ -34,7 +34,7 @@ describe('moveTo', () => {
     const paragraphContent = `==paragraph headline==
 ${statusTemplate}
 paragraphContent
-:@[[משתמש:${botName}]] העבר: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
+:${prefix}@[[משתמש:${botName}]] העבר: [[שיחת תבנית:ספרינגפילד]] ${userSign}`;
     const pageContent = `some content before\n${paragraphContent}\nsome content after`;
 
     const result = await moveTo(

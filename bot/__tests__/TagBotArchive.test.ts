@@ -109,7 +109,7 @@ describe('archiveParagraph', () => {
 
   const userSign = '[[user:Homer Simpson|Homer]] [[user talk:Homer Simpson|Mmmm donats!]] 12:23 7 במאי 2025.';
 
-  it('should replace archive command with bot comment', async () => {
+  it.each(['', 'הדיון הסתיים. '])('should replace archive command with bot comment with prefix %s', async (prefix) => {
     api.info.mockResolvedValue([{}]);
     api.articleContent.mockResolvedValue({ content: 'existingContent', revid: 456 });
     api.edit.mockResolvedValue({
@@ -123,7 +123,7 @@ describe('archiveParagraph', () => {
     });
 
     const archiveBox = '{{תיבת ארכיון|[[archiveBoxContent]]}}';
-    const paragraphContent = `paragraphContent\n:@[[משתמש:${botName}]] ארכב: ${userSign}`;
+    const paragraphContent = `paragraphContent\n:${prefix}@[[משתמש:${botName}]] ארכב: ${userSign}`;
     const pageContent = `${archiveBox}\n${paragraphContent}`;
     const result = await archiveParagraph(api, pageContent, 123, 'pageTitle', paragraphContent, 'summary', 'Homer Simpson');
 

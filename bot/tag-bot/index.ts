@@ -13,15 +13,12 @@ import { getRedirectTargetFromContent } from '../wiki/redirectParser';
 const botName = process.env.BOT_NAME as string;
 const escapedBotName = RegExp.escape(botName);
 const botMentionRegex = new RegExp(`@\\[\\[(?:(?:משתמש|user):)?${escapedBotName}(?:\\|${escapedBotName})?\\]\\]`, 'i');
-const directBotMentionRegex = new RegExp(`^@(?:(?:משתמש|user):)?${escapedBotName}`, 'i');
-const botNameRegex = new RegExp(`@?${escapedBotName}`, 'i');
 const TAG_PAGE_NAME = `משתמש:${botName}/בוט התיוג`;
 const EMAILS_PAGE_NAME = `user:${botName}/אימיילים`;
 const SUMMARY_PREFIX = `[[${TAG_PAGE_NAME}|בוט התיוג]]: `;
 
 const failedMessage = 'שגיאה לא ידועה: [[משתמש:החבלן]], שים לב ותקן.';
 const notAllowedUserMessage = `אני מצטער, אבל אינך מורשה להשתמש בבוט. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ולאחר מכן הוסף בקשה להרשאות [[שיחת ${TAG_PAGE_NAME}|בדף השיחה]].`;
-const notSupportedCommandMessage = `מצטער, אבל הפקודה שהזנת לא נתמכת. אנא קרא את ההוראות המפורטות בדף [[${TAG_PAGE_NAME}]] ונסה שוב.`;
 
 type AllowedConfiguration = {
   users: string[];
@@ -81,6 +78,8 @@ async function performAction(
   api: IWikiApi,
   notification: WikiNotification,
   actionType: 'ארכב' | 'העבר',
+  argument: string,
+  archiveTo = false,
 ) {
   const title = notification.title.full;
   const user = notification.agent.name;
@@ -108,19 +107,12 @@ async function performAction(
     }
 
     const { name: paragraphName } = parseParagraph(paragraphContent);
-    const { body } = notification['*'];
 
     if (actionType === 'ארכב') {
       const archiveSummary = getArchiveSummary(user, paragraphName);
-      const archiveToMatch = body.match(/ארכב\s+ל:\s*(.+)/);
-      const oldFormatMatch = body.match(/ארכב:\s*יעד:\s*(.+)/);
-      const isArchiveTo = archiveToMatch != null || oldFormatMatch != null;
-      let target = '';
-      if (archiveToMatch) {
-        target = archiveToMatch[1].trim();
-      } else if (oldFormatMatch) {
-        target = oldFormatMatch[1].trim();
-      }
+      const oldFormatMatch = argument.match(/^יעד:\s*(.+)/);
+      const isArchiveTo = archiveTo || oldFormatMatch != null;
+      const target = archiveTo ? argument : oldFormatMatch?.[1].trim() ?? '';
       const res = await archiveParagraph(
         api,
         pageContent.content,
@@ -136,12 +128,10 @@ async function performAction(
       }
     } else {
       const moveSummary = getMoveSummary(user, paragraphName);
-      const moveMatch = body.match(/העבר:\s*(.+)/);
-      if (!moveMatch) {
+      if (!argument) {
         await api.addComment(title, commentSummary, `${commentPrefix}לא נמצא יעד להעברה`, commentId);
         return;
       }
-      const target = moveMatch[1].trim();
       const res = await moveTo(
         api,
         user,
@@ -150,7 +140,7 @@ async function performAction(
         pageContent.revid,
         title,
         moveSummary,
-        target,
+        argument,
       );
       if ('error' in res) {
         await api.addComment(title, commentSummary, `${commentPrefix}ההעברה נכשלה: ${res.error}.`, commentId);
@@ -162,15 +152,19 @@ async function performAction(
   }
 }
 
-export async function archiveAction(api: IWikiApi, notification: WikiNotification) {
-  return performAction(api, notification, 'ארכב');
+export async function archiveAction(api: IWikiApi, notification: WikiNotification, argument: string) {
+  return performAction(api, notification, 'ארכב', argument);
 }
 
-export async function moveAction(api: IWikiApi, notification: WikiNotification) {
-  return performAction(api, notification, 'העבר');
+async function archiveToAction(api: IWikiApi, notification: WikiNotification, argument: string) {
+  return performAction(api, notification, 'ארכב', argument, true);
 }
 
-async function askAction(api: IWikiApi, notification: WikiNotification) {
+export async function moveAction(api: IWikiApi, notification: WikiNotification, argument: string) {
+  return performAction(api, notification, 'העבר', argument);
+}
+
+async function askAction(api: IWikiApi, notification: WikiNotification, question: string) {
   const title = notification.title.full;
   const user = notification.agent.name;
   const commentSummary = getCommentSummary(user);
@@ -179,7 +173,6 @@ async function askAction(api: IWikiApi, notification: WikiNotification) {
   const commentId = decodeURIComponent(url.hash.replace('#', ''));
 
   try {
-    const question = notification['*'].body.split(':')[1].trim();
     const response = await askGPT(question);
 
     const commentRes = await api.addComment(title, commentSummary, `${commentPrefix}\n${response}.`, commentId);
@@ -191,7 +184,7 @@ async function askAction(api: IWikiApi, notification: WikiNotification) {
   }
 }
 
-async function checkAction(api: IWikiApi, notification: WikiNotification) {
+async function checkAction(api: IWikiApi, notification: WikiNotification, checkTitle: string) {
   const title = notification.title.full;
   const user = notification.agent.name;
   const commentSummary = getCommentSummary(user);
@@ -200,8 +193,6 @@ async function checkAction(api: IWikiApi, notification: WikiNotification) {
   const commentId = decodeURIComponent(url.hash.replace('#', ''));
 
   try {
-    const page = notification['*'].body.split(':')[1].trim();
-    const checkTitle = page.trim();
     if (!checkTitle) {
       await api.addComment(title, commentSummary, `${commentPrefix}לא נמצא קישור לדף`, commentId);
       return;
@@ -240,12 +231,15 @@ async function checkAction(api: IWikiApi, notification: WikiNotification) {
 
 const actions = {
   ארכב: archiveAction,
-  'ארכב ל': archiveAction,
+  'ארכב ל': archiveToAction,
   ענה: askAction,
   העבר: moveAction,
   בדוק: checkAction,
 };
-const supportedActions = Object.keys(actions);
+const commandRegex = new RegExp(
+  `(?<![\\p{L}\\p{N}_@])@(?:(?:משתמש|user):)?${escapedBotName}\\s+(${Object.keys(actions).join('|')}):([\\s\\S]*)`,
+  'iu',
+);
 const allowedGroups = ['autopatrolled', 'sysop', 'bureaucrat', 'patroller', 'templateeditor'];
 async function handleNotification(
   api: IWikiApi,
@@ -264,19 +258,15 @@ async function handleNotification(
   console.log({ title });
   const { body } = notification['*'];
   console.log({ body });
-  if (!body.trim().match(directBotMentionRegex)) {
-    console.log('Not for bot');
+  const match = body.match(commandRegex);
+  if (!match) {
+    console.log('No supported command addressed to bot');
     return;
   }
+  const [, command, argument] = match;
   const user = notification.agent.name;
   const commentSummary = getCommentSummary(user);
   const commentPrefix = getCommentPrefix(user);
-  const withoutTag = body.replace(botNameRegex, '').trim();
-  console.log({ withoutTag });
-  if (!withoutTag.includes(':')) {
-    console.log('Probably it is just mention?');
-    return;
-  }
 
   const isUserInWhiteList = allowedConfiguration.users.includes(user);
   let isUserAllowed = isUserInWhiteList;
@@ -292,15 +282,8 @@ async function handleNotification(
     return;
   }
 
-  const [command] = withoutTag.split(':');
-  console.log({ command });
-  if (!supportedActions.includes(command)) {
-    const commentRes = await api.addComment(title, commentSummary, commentPrefix + notSupportedCommandMessage, decodeURIComponent(url.hash.replace('#', '')));
-    console.log({ commentRes });
-    return;
-  }
   const action = actions[command as keyof typeof actions];
-  await action(api, notification);
+  await action(api, notification, argument.trim());
 }
 
 async function saveNotification(api: IWikiApi, notification: WikiNotification) {
