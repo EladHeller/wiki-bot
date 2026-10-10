@@ -6,7 +6,7 @@ export default async function importanceDiscussions() {
   const api = WikiApi();
   await api.login();
   await ImportanceDiscussionsModel(api, {
-    stateTitle: `משתמש:${process.env.BOT_NAME}/בוט חשיבות/מצב`,
+    stateTitle: 'ויקיפדיה:בוט/דיוני חשיבות/מצב',
     dryRun: process.env.IMPORTANCE_DISCUSSIONS_DRY_RUN !== 'false',
   }).run();
 }
