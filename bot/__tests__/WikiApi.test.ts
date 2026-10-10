@@ -4,6 +4,59 @@ import {
 import WikiApi from '../wiki/WikiApi';
 import BaseWikiApiMock from '../../testConfig/mocks/baseWikiApi.mock';
 
+describe('wiki API page snapshots', () => {
+  it('requests the latest revision and page flags by title without following redirects', async () => {
+    const base = BaseWikiApiMock();
+    const page = { title: 'שיחה:א & ב', redirect: '', revisions: [{ revid: 20 }] };
+    base.request.mockResolvedValue({ query: { pages: { 1: page } } });
+    const result = await WikiApi(base).getPage(page.title);
+    const params = new URLSearchParams(base.request.mock.calls[0][0]);
+
+    expect(result).toStrictEqual(page);
+    expect(Object.fromEntries(params)).toStrictEqual({
+      action: 'query',
+      format: 'json',
+      prop: 'revisions|info',
+      rvprop: 'ids|content',
+      rvslots: 'main',
+      rvlimit: '1',
+      rvdir: 'older',
+      titles: page.title,
+    });
+  });
+
+  it('requests the most recent revision at or before the given timestamp', async () => {
+    const base = BaseWikiApiMock();
+    const page = { title: 'Page', revisions: [{ revid: 10 }] };
+    base.request.mockResolvedValue({ query: { pages: { 1: page } } });
+    const result = await WikiApi(base).getPage('Page', new Date('2026-10-05T10:00:00Z'));
+    const params = new URLSearchParams(base.request.mock.calls[0][0]);
+
+    expect(result).toStrictEqual(page);
+    expect(params.get('rvstart')).toBe('2026-10-05T10:00:00.000Z');
+    expect(params.get('rvdir')).toBe('older');
+    expect(params.get('rvlimit')).toBe('1');
+  });
+
+  it.each([
+    { title: 'Page', missing: '' },
+    { title: 'Page' },
+    { title: 'Page', revisions: [{ revid: 20, texthidden: '' }] },
+  ])('preserves missing pages, absent historical revisions and suppressed content: %j', async (page) => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({ query: { pages: { 1: page } } });
+
+    await expect(WikiApi(base).getPage('Page')).resolves.toStrictEqual(page);
+  });
+
+  it('rejects responses without a page', async () => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({ query: { pages: {} } });
+
+    await expect(WikiApi(base).getPage('Page')).rejects.toThrow('No page returned for Page');
+  });
+});
+
 describe('wiki API search pagination', () => {
   it('requests a stable title order and preserves all search batches', async () => {
     const baseWikiApi = BaseWikiApiMock();

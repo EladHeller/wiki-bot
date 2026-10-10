@@ -507,6 +507,22 @@ Resources:
             Schedule: rate(1 hour)
             Name: interwiki-links-scheduler
 
+  ImportanceDiscussionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: importance-discussions-function
+      Handler: dist/maintenance/importanceDiscussions/index.main
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          IMPORTANCE_DISCUSSIONS_DRY_RUN: 'true'
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 10 ? * * *)
+            Name: importance-discussions-scheduler
+
   NewCategoriesFunction:
     Type: AWS::Serverless::Function
     Properties:
