@@ -30,5 +30,7 @@ description: Guides Hebrew Wikipedia and Wikidata editing, parsing, and API usag
 
 ## APIs
 
+- Prefer typed, reusable methods on `IWikiApi`/`WikiApi` over calling `api.request` from bot code. When an operation is missing, add or extend a generic WikiApi method, with tests and mocks. Reserve direct `api.request` calls for exceptionally specific operations that cannot reasonably be expressed by a generic method.
+
 - Reuse types from `bot/types.ts` (`WikiPage`, `WikiDataEntity`, `WikiApiConfig`, etc.)
 - **Wikimedia Commons**: Hebrew Wikipedia credentials work there, but the bot may lack a bot flag; use `assertBot: false` in `WikiApiConfig` (see `bot/maintenance/aiGeneratedImages/index.ts`). Wikidata defaults already set this in `bot/wiki/WikidataAPI.ts`
