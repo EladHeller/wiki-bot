@@ -47,6 +47,37 @@ describe('closedDiscussionsArchiveBotModel', () => {
     const target = 'TargetPage';
     const paragraph = '\n==Discussion==\n{{מצב|טופל|ארכוב=TargetPage}}\nDiscussion content\n';
 
+    it('should retry a failed read of a confirmed existing target and preserve its content', async () => {
+      wikiApi.articleContent
+        .mockRejectedValueOnce(new Error('No revid for TargetPage'))
+        .mockResolvedValueOnce({ content: 'Existing discussion', revid: 21 })
+        .mockResolvedValueOnce({ content: paragraph, revid: 10 });
+      wikiApi.info.mockResolvedValueOnce([{ pageid: 7, lastrevid: 20 }]);
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await model.archive(source, [paragraph], 'מחיקה', null);
+
+      expect(wikiApi.info).toHaveBeenCalledWith([target]);
+      expect(wikiApi.articleContent.mock.calls).toStrictEqual([[target], [target], [source]]);
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).toHaveBeenNthCalledWith(1, target, expect.any(String), expect.stringContaining('Existing discussion\n\n==Discussion=='), 21);
+      expect(wikiApi.edit).toHaveBeenNthCalledWith(2, source, expect.any(String), '', 10);
+    });
+
+    it('should stop after one retry with page metadata and retain the source discussion', async () => {
+      const error = new Error('No revid for TargetPage');
+      wikiApi.articleContent.mockRejectedValue(error);
+      wikiApi.info.mockResolvedValue([{ pageid: 7, lastrevid: 20 }]);
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await expect(model.archive(source, [paragraph], 'מחיקה', null)).rejects.toThrow(
+        'Failed to read existing page TargetPage: pageid=7; lastrevid=20; initial=Error: No revid for TargetPage; retry=Error: No revid for TargetPage',
+      );
+      expect(wikiApi.articleContent.mock.calls).toStrictEqual([[target], [target]]);
+      expect(wikiApi.create).not.toHaveBeenCalled();
+      expect(wikiApi.edit).not.toHaveBeenCalled();
+    });
+
     it.each([
       {
         archiveType: 'רבעון' as const,

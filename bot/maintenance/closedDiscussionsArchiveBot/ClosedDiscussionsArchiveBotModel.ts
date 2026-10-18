@@ -61,6 +61,16 @@ async function getContentOrNull(wikiApi: IWikiApi, title: string) {
     if (pageInfo && 'missing' in pageInfo) {
       return null;
     }
+    if (pageInfo?.lastrevid) {
+      try {
+        return await wikiApi.articleContent(title);
+      } catch (retryError) {
+        throw new Error(
+          `Failed to read existing page ${title}: pageid=${pageInfo.pageid}; lastrevid=${pageInfo.lastrevid}; initial=${String(error)}; retry=${String(retryError)}`,
+          { cause: retryError },
+        );
+      }
+    }
     throw error;
   }
 }
