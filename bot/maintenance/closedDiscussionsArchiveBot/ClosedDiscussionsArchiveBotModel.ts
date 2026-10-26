@@ -85,6 +85,8 @@ async function getContent(wikiApi: IWikiApi, title: string) {
 function archiveHeaderPerPage(title: string) {
   if (title === 'ויקיפדיה:העברת דפי טיוטה') {
     return '{{ארכיון הדט}}\n\n';
+  } if (title === 'ויקיפדיה:מפעיל נולד') {
+    return '{{ארכיון מפעיל נולד}}\n\n';
   }
   return '';
 }
