@@ -1663,7 +1663,11 @@ Discussion content
       );
     });
 
-    it('should prepend the draft transfer archive header on the special page', async () => {
+    it.each([
+      { pageTitle: 'ויקיפדיה:העברת דפי טיוטה', header: '{{ארכיון הדט}}\n\n' },
+      { pageTitle: 'ויקיפדיה:מפעיל נולד', header: '{{ארכיון מפעיל נולד}}\n\n' },
+      { pageTitle: 'TestPage', header: '' },
+    ])('should create the archive for $pageTitle with its expected header', async ({ pageTitle, header }) => {
       fakerTimers.setSystemTime(new Date('2025-07-01T00:00:00Z'));
 
       const pageContent = `
@@ -1674,19 +1678,19 @@ Discussion content
 `;
 
       wikiApi.articleContent.mockImplementation(async (title) => getMockArticle({
-        'ויקיפדיה:העברת דפי טיוטה': { content: pageContent, revid: 1 },
+        [pageTitle]: { content: pageContent, revid: 1 },
       }, title));
 
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      const archivableParagraphs = await model.getArchivableParagraphs('ויקיפדיה:העברת דפי טיוטה', ['טופל'], 14);
+      const archivableParagraphs = await model.getArchivableParagraphs(pageTitle, ['טופל'], 14);
 
-      await model.archive('ויקיפדיה:העברת דפי טיוטה', archivableParagraphs, 'רבעון', '');
+      await model.archive(pageTitle, archivableParagraphs, 'רבעון', '');
 
       expect(wikiApi.create).toHaveBeenCalledWith(
-        'ויקיפדיה:העברת דפי טיוטה/ארכיון ינואר-מרץ 2025',
+        `${pageTitle}/ארכיון ינואר-מרץ 2025`,
         expect.any(String),
-        expect.stringContaining('{{ארכיון הדט}}\n\n==Discussion 1=='),
+        header + pageContent.trimStart(),
       );
     });
   });
