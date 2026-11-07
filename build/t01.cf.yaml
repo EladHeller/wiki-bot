@@ -504,7 +504,7 @@ Resources:
         Schedule:
           Type: Schedule
           Properties:
-            Schedule: rate(1 day)
+            Schedule: rate(3 hours)
             Name: interwiki-links-scheduler
 
   NewCategoriesFunction:
