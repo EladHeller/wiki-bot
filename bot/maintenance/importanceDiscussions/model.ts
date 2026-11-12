@@ -10,7 +10,7 @@ const gracePeriod = 30 * 60 * 1000;
 const historyLimit = 500;
 const summary = 'פתיחת דיון חשיבות בעקבות הצבת תבנית';
 
-type Snapshot = { content: string; revid: number; pageid: number; missing: boolean };
+type Snapshot = { content: string; revid: number; missing: boolean };
 type Placement = { revid: number; timestamp: string; user: string };
 type State = Record<string, 'pending' | 'done'>;
 type Options = { stateTitle: string; dryRun: boolean; now?: Date };
@@ -21,12 +21,10 @@ export default function ImportanceDiscussionsModel(api: IWikiApi, options: Optio
   let statePage: Snapshot;
 
   async function readPage(title: string): Promise<Snapshot> {
-    const result = await api.request('?action=query&format=json&prop=revisions%7Cinfo&rvprop=ids%7Ccontent&rvslots=main'
-      + `&titles=${encodeURIComponent(title)}`);
-    const [page] = Object.values(result.query.pages) as WikiPage[];
+    const page = await api.getPage(title);
     if ('missing' in page) {
       return {
-        content: '', revid: 0, pageid: 0, missing: true,
+        content: '', revid: 0, missing: true,
       };
     }
     if ('redirect' in page) throw new Error(`Redirect requires manual review: ${title}`);
@@ -34,7 +32,7 @@ export default function ImportanceDiscussionsModel(api: IWikiApi, options: Optio
     const content = revision?.slots?.main?.['*'];
     if (!revision?.revid || typeof content !== 'string') throw new Error(`Unreadable page: ${title}`);
     return {
-      content, revid: revision.revid, pageid: page.pageid, missing: false,
+      content, revid: revision.revid, missing: false,
     };
   }
 
@@ -49,7 +47,7 @@ export default function ImportanceDiscussionsModel(api: IWikiApi, options: Optio
     }
     state = nextState;
     statePage = {
-      content, revid: result.edit.newrevid, pageid: result.edit.pageid, missing: false,
+      content, revid: result.edit.newrevid, missing: false,
     };
   }
 
@@ -76,10 +74,8 @@ export default function ImportanceDiscussionsModel(api: IWikiApi, options: Optio
   }
 
   async function talkBeforePlacement(title: string, timestamp: string) {
-    const cutoff = new Date(Date.parse(timestamp) - day).toISOString();
-    const result = await api.request('?action=query&format=json&prop=revisions&rvprop=content&rvslots=main&rvlimit=1'
-      + `&rvstart=${encodeURIComponent(cutoff)}&titles=${encodeURIComponent(title)}`);
-    const [page] = Object.values(result.query.pages) as WikiPage[];
+    const cutoff = new Date(Date.parse(timestamp) - day);
+    const page = await api.getPage(title, cutoff);
     if (!page.revisions?.length) return '';
     const content = page.revisions[0].slots?.main?.['*'];
     if (typeof content !== 'string') throw new Error(`Unreadable talk history: ${title}`);
@@ -102,7 +98,7 @@ export default function ImportanceDiscussionsModel(api: IWikiApi, options: Optio
       logger.logWarning(`Template date differs from placement history; manual review: [[${page.title}]]`);
       return;
     }
-    const key = `${source.pageid}:${placement.revid}`;
+    const key = `${page.title}:${placement.revid}`;
     if (state[key]) {
       if (state[key] === 'pending') {
         logger.logWarning(`Uncertain previous importance edit; review before retrying: [[${page.title}]] (${key})`);
@@ -152,12 +148,12 @@ export default function ImportanceDiscussionsModel(api: IWikiApi, options: Optio
       || Object.values(state).some((status) => status !== 'pending' && status !== 'done')) {
       throw new Error('Invalid importance discussion state');
     }
-    const seen = new Set<number>();
+    const seen = new Set<string>();
     for (const name of templateNames) {
       for await (const pages of api.getArticlesWithTemplate(name, undefined, 'תבנית', '0|1')) {
         for (const page of pages) {
-          if (!seen.has(page.pageid)) {
-            seen.add(page.pageid);
+          if (!seen.has(page.title)) {
+            seen.add(page.title);
             try {
               await processPage(page);
             } catch (error) {

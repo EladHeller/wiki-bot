@@ -23,6 +23,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     backlinksTo:
       base.backlinksTo
       ?? jest.fn<(target: string, namespace?: string) => AsyncGenerator<WikiPage[], void, void>>(),
+    getPage: base.getPage ?? jest.fn<IWikiApi['getPage']>(),
     articleContent:
       base.articleContent
       ?? jest.fn<(title: string) => Promise<any>>(),

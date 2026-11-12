@@ -13,7 +13,6 @@ jest.unstable_mockModule('../maintenance/importanceDiscussions/model', () => ({ 
 jest.unstable_mockModule('../decorators/botLoggerDecorator', () => ({ default: decorate }));
 const { default: execute, main } = await import('../maintenance/importanceDiscussions/index');
 const initialDryRun = process.env.IMPORTANCE_DISCUSSIONS_DRY_RUN;
-const initialBotName = process.env.BOT_NAME;
 
 function setDryRun(setting: string | undefined) {
   if (setting === undefined) delete process.env.IMPORTANCE_DISCUSSIONS_DRY_RUN;
@@ -24,18 +23,15 @@ describe('importance discussion entry point', () => {
   afterEach(() => {
     if (initialDryRun === undefined) delete process.env.IMPORTANCE_DISCUSSIONS_DRY_RUN;
     else process.env.IMPORTANCE_DISCUSSIONS_DRY_RUN = initialDryRun;
-    if (initialBotName === undefined) delete process.env.BOT_NAME;
-    else process.env.BOT_NAME = initialBotName;
   });
 
   it.each([undefined, 'true', 'false'])('handles dry-run configuration %s', async (setting) => {
     setDryRun(setting);
-    process.env.BOT_NAME = 'Sapper-bot';
     await execute();
 
     expect(api.login).toHaveBeenCalledWith();
     expect(model).toHaveBeenLastCalledWith(api, {
-      stateTitle: 'משתמש:Sapper-bot/בוט חשיבות/מצב', dryRun: setting !== 'false',
+      stateTitle: 'ויקיפדיה:בוט/דיוני חשיבות/מצב', dryRun: setting !== 'false',
     });
     expect(run).toHaveBeenCalledWith();
   });

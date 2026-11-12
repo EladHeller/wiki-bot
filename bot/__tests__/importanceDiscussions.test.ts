@@ -11,7 +11,7 @@ import type { Revision, WikiPage } from '../types';
 
 const title = 'ערך לדוגמה';
 const talkTitle = `שיחה:${title}`;
-const stateTitle = 'משתמש:Sapper-bot/בוט חשיבות/מצב';
+const stateTitle = 'ויקיפדיה:בוט/דיוני חשיבות/מצב';
 const template = '{{הבהרת חשיבות עם זמן|זמן=6.10.2026}}';
 const now = new Date('2026-10-07T10:00:00Z');
 const placedAt = '2026-10-06T10:00:00Z';
@@ -28,9 +28,6 @@ function revision(content = template, revid = 20, timestamp = placedAt, user = '
 }
 function page(content: string, revid = 20, pageid = 1) {
   return { pageid, revisions: [revision(content, revid)] };
-}
-function response(value: object) {
-  return { query: { pages: { 1: value } } };
 }
 function candidate(pageTitle = title, ns = 0, pageid = 1) {
   return { title: pageTitle, ns, pageid } as WikiPage;
@@ -104,10 +101,7 @@ describe('daily importance discussions', () => {
     baseline = {};
     candidates = [[candidate()]];
     storedRevid = 100;
-    api.request.mockImplementation(async (path) => {
-      const params = new URLSearchParams(path);
-      return response(params.has('rvstart') ? baseline : pages[params.get('titles') as string]);
-    });
+    api.getPage.mockImplementation(async (pageTitle, revisionAt) => (revisionAt ? baseline : pages[pageTitle]));
     api.getArticlesWithTemplate.mockImplementation(async function* getPages(name) {
       if (name === 'הבהרת חשיבות עם זמן') yield* candidates;
     });
@@ -139,13 +133,11 @@ describe('daily importance discussions', () => {
 
     expect(talkEdits()).toStrictEqual([[talkTitle, expect.any(String),
       expect.stringContaining('מבוא\n== ישן ==\nדיון קודם\n\n== חשיבות: ערך לדוגמה =='), 10]]);
-    expect(api.create.mock.calls[0][2]).toContain('"1:20": "pending"');
+    expect(api.create.mock.calls[0][2]).toContain('"ערך לדוגמה:20": "pending"');
     expect(api.create.mock.invocationCallOrder[0]).toBeLessThan(api.edit.mock.invocationCallOrder[0]);
-    expect(pages[stateTitle].revisions[0].slots.main['*']).toContain('"1:20": "done"');
+    expect(pages[stateTitle].revisions[0].slots.main['*']).toContain('"ערך לדוגמה:20": "done"');
 
-    const historyCall = api.request.mock.calls.find(([path]) => new URLSearchParams(path).has('rvstart'));
-
-    expect(historyCall?.[0]).toContain(encodeURIComponent('2026-10-05T10:00:00.000Z'));
+    expect(api.getPage).toHaveBeenCalledWith(talkTitle, new Date('2026-10-05T10:00:00.000Z'));
   });
 
   it('creates a missing talk page with create-only semantics', async () => {
@@ -165,7 +157,7 @@ describe('daily importance discussions', () => {
   });
 
   it('deduplicates template query pages and daily runs even after message deletion', async () => {
-    candidates = [[candidate(), candidate()], [candidate()]];
+    candidates = [[candidate(), candidate(title, 0, 99)], [candidate(title, 0, 100)]];
     await run();
     pages[talkTitle] = page('', 200);
     await run();
@@ -179,6 +171,19 @@ describe('daily importance discussions', () => {
     expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining(talkTitle));
     expect(api.edit).not.toHaveBeenCalled();
     expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps separate titles distinct even when candidate page IDs match', async () => {
+    const otherTitle = 'ערך נוסף';
+    candidates = [[candidate(), candidate(otherTitle)]];
+    pages[otherTitle] = page(template);
+    pages[`שיחה:${otherTitle}`] = { missing: '' };
+    await run();
+
+    expect(JSON.parse(pages[stateTitle].revisions[0].slots.main['*'])).toStrictEqual({
+      [`${title}:20`]: 'done', [`${otherTitle}:20`]: 'done',
+    });
+    expect(api.create).toHaveBeenCalledWith(`שיחה:${otherTitle}`, expect.any(String), expect.any(String));
   });
 
   it.each([[false, 1], [true, 0]] as const)('recognizes manual discussion (dryRun=%s)', async (dryRun, writes) => {
@@ -214,7 +219,7 @@ describe('daily importance discussions', () => {
     expect(talkEdits()).toHaveLength(1);
   });
 
-  it.each(['', '[]', 'null', '123', '{"1:20":"bad"}'])('fails closed on invalid state %s', async (content) => {
+  it.each(['', '[]', 'null', '123', '{"ערך לדוגמה:20":"bad"}'])('fails closed on invalid state %s', async (content) => {
     pages[stateTitle] = page(content);
 
     await expect(run()).rejects.toThrow(/Invalid importance|JSON/);
@@ -222,7 +227,7 @@ describe('daily importance discussions', () => {
   });
 
   it('does not reopen a pending case after an uncertain previous write', async () => {
-    pages[stateTitle] = page('{"1:20":"pending"}');
+    pages[stateTitle] = page('{"ערך לדוגמה:20":"pending"}');
     await run();
 
     expect(warningSpy).toHaveBeenCalledWith(expect.stringContaining('Uncertain previous'));
@@ -334,13 +339,12 @@ describe('daily importance discussions', () => {
 
   function changePageOnSecondRead(changedTitle: string) {
     let reads = 0;
-    api.request.mockImplementation(async (path) => {
-      const params = new URLSearchParams(path);
-      if (params.get('titles') === changedTitle && !params.has('rvstart')) {
+    api.getPage.mockImplementation(async (pageTitle, revisionAt) => {
+      if (pageTitle === changedTitle && !revisionAt) {
         reads += 1;
-        if (reads === 2) return response(page(changedTitle === title ? '' : 'נפתח דיון', 99));
+        if (reads === 2) return { ...pages[pageTitle], ...page(changedTitle === title ? '' : 'נפתח דיון', 99) };
       }
-      return response(params.has('rvstart') ? baseline : pages[params.get('titles') as string]);
+      return revisionAt ? baseline : pages[pageTitle];
     });
   }
 
