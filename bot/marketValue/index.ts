@@ -102,9 +102,6 @@ async function getWikiDataCompanies() {
   const data: MayaMarketValue[] = [];
   for (const result of results) {
     const res = await getMarketValueById(result.mayaId);
-    if (!res) {
-      throw new Error(`Failed to get market value for ${result.mayaId}`);
-    }
     data.push({
       wikiDataId: result.entityId,
       id: res.id,
