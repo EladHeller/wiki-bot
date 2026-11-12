@@ -1,5 +1,6 @@
 import axios, { type AxiosResponse } from 'axios';
 import { logger } from '../utilities/logger';
+import requestMayaMarketValue from './mayaMarketValueRequest';
 
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';
 const jsonAllLink = 'https://mayaapi.tase.co.il/api/company/alldetails?companyId=';
@@ -258,7 +259,7 @@ export async function getMarketValueById(
   const url = jsonAllLink + companyId;
 
   try {
-    const response = await axios(url, mayaGetOptions);
+    const response = await requestMayaMarketValue(url, mayaGetOptions);
     const result = response.data;
     if (!result) {
       return undefined;
