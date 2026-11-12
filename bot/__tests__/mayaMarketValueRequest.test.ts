@@ -1,7 +1,7 @@
 import {
   afterEach, describe, expect, it, jest,
 } from '@jest/globals';
-import axios, { AxiosError, type AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosHeaders } from 'axios';
 
 const sleep = jest.fn<(delay: number) => Promise<void>>().mockResolvedValue(undefined);
 jest.unstable_mockModule('node:timers/promises', () => ({ setTimeout: sleep }));
@@ -16,7 +16,13 @@ const httpError = (status: number, retryAfter?: string) => new AxiosError(
   undefined,
   undefined,
   undefined,
-  { status, headers: { 'retry-after': retryAfter } } as AxiosResponse,
+  {
+    status,
+    statusText: '',
+    data: null,
+    headers: new AxiosHeaders({ 'retry-after': retryAfter ?? null }),
+    config: { headers: new AxiosHeaders() },
+  },
 );
 
 describe('requestMayaMarketValue', () => {
