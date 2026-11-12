@@ -1,6 +1,8 @@
 import axios, { type AxiosResponse } from 'axios';
 import { logger } from '../utilities/logger';
 
+export { getMarketValueById, type MayaMarketValue } from './mayaMarketValue';
+
 const jsonLink = 'https://mayaapi.tase.co.il/api/company/financereports?companyId=';
 const jsonAllLink = 'https://mayaapi.tase.co.il/api/company/alldetails?companyId=';
 const indicesListApiUrl = 'https://api.tase.co.il/api/index/indiceslistmarketdata';
@@ -138,15 +140,6 @@ export type MayaAllDetails = {
   };
 };
 
-export type MayaMarketValue = {
-  marketValue: number;
-  correctionDate: string;
-  title?: string;
-  wikiDataId?: string;
-  id: number;
-  companyLongName?: string;
-};
-
 export interface SymbolResult {
   id: string;
   symbol?: string;
@@ -247,32 +240,6 @@ export async function getIndexStocks(indexId: string): Promise<Stock[]> {
   } catch (e) {
     logger.logError(
       `getIndicesList error: ${e?.data || e?.message || e}`,
-    );
-    throw e;
-  }
-}
-
-export async function getMarketValueById(
-  companyId: string | number,
-): Promise<MayaMarketValue | undefined> {
-  const url = jsonAllLink + companyId;
-
-  try {
-    const response = await axios(url, mayaGetOptions);
-    const result = response.data;
-    if (!result) {
-      return undefined;
-    }
-
-    return {
-      marketValue: result.CompanyDetails?.MarketValue,
-      correctionDate: result.CompanyDetails?.CorrectionDate,
-      id: result.CompanyDetails?.CompanyId,
-      companyLongName: result.CompanyDetails?.CompanyLongName,
-    };
-  } catch (e) {
-    logger.logError(
-      `companyAllDetailsUrl: ${companyId}. ${e?.data || e?.message || e}`,
     );
     throw e;
   }
