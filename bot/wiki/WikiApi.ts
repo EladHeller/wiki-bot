@@ -26,7 +26,6 @@ export interface IWikiApi {
   create(
     articleTitle: string, summary: string, content: string, minor?: boolean
   ): Promise<any>;
-  getPage(title: string, revisionAt?: Date): Promise<WikiPage>;
   articleContent(title: string): Promise<{ content: string, revid: number }>;
   externalUrl(link: string, protocol?: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<PageInfo[]>;
@@ -195,15 +194,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     };
 
     return request(`?action=edit&format=json${editRights}${minor ? '&minor=true' : ''}`, 'post', objectToFormData(data));
-  }
-
-  async function getPage(title: string, revisionAt?: Date): Promise<WikiPage> {
-    const timestamp = revisionAt ? `&rvstart=${encodeURIComponent(revisionAt.toISOString())}` : '';
-    const result = await request('?action=query&format=json&prop=revisions%7Cinfo&rvprop=ids%7Ccontent'
-      + `&rvslots=main&rvlimit=1&rvdir=older&titles=${encodeURIComponent(title)}${timestamp}`);
-    const [page] = Object.values(result.query.pages) as WikiPage[];
-    if (!page) throw new Error(`No page returned for ${title}`);
-    return page;
   }
 
   async function articleContent(
@@ -509,7 +499,6 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     recursiveSubCategories,
     backlinksTo,
     articleContent,
-    getPage,
     externalUrl,
     categroyTitles,
     info,
