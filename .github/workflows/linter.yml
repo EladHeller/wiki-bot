@@ -54,10 +54,5 @@ jobs:
       - name: Smoke test
         run: npm run smoke-test
 
-      - name: Format and emit new bot files
-        run: |
-          npx eslint --fix bot/maintenance/inactiveKnowledgeExperts/model.ts bot/__tests__/inactiveKnowledgeExperts.test.ts || true
-          node -e "const fs=require('node:fs'); for(const [name,file] of [['MODEL','bot/maintenance/inactiveKnowledgeExperts/model.ts'],['TESTS','bot/__tests__/inactiveKnowledgeExperts.test.ts']]) console.log('FORMATTED_'+name+':'+JSON.stringify(fs.readFileSync(file,'utf8')))"
-
       - name: Run ESLint
         run: npm run lint:test
