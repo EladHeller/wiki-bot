@@ -308,7 +308,7 @@ describe('remaining guarded branches', () => {
   it('refuses to close a warning when its marker has been removed', () => {
     const warning = requireWarning(warningMessage(['CSS'], now));
 
-    expect(() => closeWarning('No marker in this content', warning, 'done')).toThrow('Warning marker');
+    expect(() => closeWarning('No marker in this content', warning, 'done', now)).toThrow('Warning marker');
   });
 
   it('plans removals without editing even after a full warning month', async () => {
@@ -342,6 +342,7 @@ describe('monthly idempotency', () => {
     });
     api.edit.mockImplementation(async (title, _summary, text) => {
       if (title === 'שיחת משתמש:1Or') talk = text;
+      return { edit: { result: 'Success', pageid: 1, title, contentmodel: 'wikitext' } };
     });
 
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
@@ -364,6 +365,7 @@ describe('monthly idempotency', () => {
     });
     api.edit.mockImplementation(async (title, _summary, text) => {
       if (title === 'שיחת משתמש:1Or') talk = text;
+      return { edit: { result: 'Success', pageid: 1, title, contentmodel: 'wikitext' } };
     });
 
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
@@ -398,6 +400,7 @@ describe('monthly idempotency', () => {
     });
     api.edit.mockImplementation(async (title, _summary, text) => {
       if (title === 'שיחת משתמש:1Or') talk = text;
+      return { edit: { result: 'Success', pageid: 1, title, contentmodel: 'wikitext' } };
     });
 
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
