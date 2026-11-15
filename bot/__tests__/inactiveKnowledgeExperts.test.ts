@@ -8,6 +8,13 @@ import runInactiveKnowledgeExperts, {
 } from '../maintenance/inactiveKnowledgeExperts/model';
 
 const now = new Date('2026-12-10T09:00:00Z');
+
+function requireWarning(content: string): NonNullable<ReturnType<typeof pendingWarning>> {
+  const warning = pendingWarning(content);
+  if (!warning) throw new Error('Expected a pending warning');
+  return warning;
+}
+
 const css = 'תבנית:בעלי ידע/CSS';
 const html = 'תבנית:בעלי ידע/HTML';
 
@@ -78,7 +85,7 @@ describe('inactive knowledge experts cleanup', () => {
     const warning = warningMessage(['CSS', 'HTML'], now);
     const parsed = pendingWarning(warning);
     expect(parsed?.topics).toStrictEqual(['CSS', 'HTML']);
-    expect(pendingWarning(closeWarning(warning, parsed!, 'ההסרה בוטלה'))).toBeNull();
+    expect(pendingWarning(closeWarning(warning, (parsed as NonNullable<typeof parsed>), 'ההסרה בוטלה'))).toBeNull();
     expect(formerExpertTemplates(Array.from({ length: 11 }, (_, i) => String(i))))
       .toBe('{{בעל ידע לשעבר|0|1|2|3|4|5|6|7|8|9}}\n{{בעל ידע לשעבר|10}}');
   });
@@ -145,7 +152,7 @@ describe('inactive knowledge experts cleanup', () => {
   it('does not repeat a completed notification on a second run', async () => {
     const closed = closeWarning(
       warningMessage(['CSS'], new Date('2026-11-09')),
-      pendingWarning(warningMessage(['CSS'], new Date('2026-11-09')))!,
+      requireWarning(warningMessage(['CSS'], new Date('2026-11-09'))),
       'הוסר',
     );
     expect(pendingWarning(closed)).toBeNull();
@@ -245,7 +252,7 @@ describe('inactive knowledge experts edge cases', () => {
   it('inserts a follow-up within the original warning section', () => {
     const talk = warningMessage(['CSS'], new Date('2026-11-09'))
       + '\n== הודעה אחרת ==\nתוכן אחר';
-    const pending = pendingWarning(talk)!;
+    const pending = requireWarning(talk);
     const closed = closeWarning(talk, pending, 'ההסרה בוצעה');
     expect(closed.indexOf('ההסרה בוצעה')).toBeLessThan(closed.indexOf('== הודעה אחרת =='));
     expect(pendingWarning(closed)).toBeNull();
@@ -253,7 +260,7 @@ describe('inactive knowledge experts edge cases', () => {
 
   it('selects the newest still pending warning when older warnings are already closed', () => {
     const older = warningMessage(['CSS'], new Date('2026-09-09'));
-    const closed = closeWarning(older, pendingWarning(older)!, 'הוסר');
+    const closed = closeWarning(older, requireWarning(older), 'הוסר');
     const newer = warningMessage(['HTML'], new Date('2026-11-09'));
     expect(pendingWarning(closed + newer)?.topics).toStrictEqual(['HTML']);
   });
@@ -270,7 +277,7 @@ describe('remaining guarded branches', () => {
   });
 
   it('refuses to close a warning when its marker has been removed', () => {
-    const warning = pendingWarning(warningMessage(['CSS'], now))!;
+    const warning = requireWarning(warningMessage(['CSS'], now));
     expect(() => closeWarning('No marker in this content', warning, 'done')).toThrow('Warning marker');
   });
 
@@ -278,6 +285,16 @@ describe('remaining guarded branches', () => {
     const api = mockWiki(warningMessage(['CSS', 'HTML'], new Date('2026-11-09')));
     const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1 });
     expect(report).toMatchObject({ dryRun: true, removed: ['1Or'] });
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+});
+
+describe('default options', () => {
+  it('uses the system date, read-only mode and all discovered users without explicit options', async () => {
+    const api = mockWiki();
+    const report = await runInactiveKnowledgeExperts(api);
+    expect(report.totalUsers).toBe(3);
+    expect(report.dryRun).toBe(true);
     expect(api.edit).not.toHaveBeenCalled();
   });
 });
