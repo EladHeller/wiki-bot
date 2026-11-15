@@ -7,6 +7,10 @@ import runInactiveKnowledgeExperts, {
   pendingWarning, removeMember, warningMessage,
 } from '../maintenance/inactiveKnowledgeExperts/model';
 
+function selectOverride<T, U>(overrides: Record<string, T>, key: string, fallback: U): T | U {
+  return overrides[key] ?? fallback;
+}
+
 const now = new Date('2026-12-10T09:00:00Z');
 
 function requireWarning(content: string): NonNullable<ReturnType<typeof pendingWarning>> {
@@ -213,7 +217,7 @@ describe('inactive knowledge experts edge cases', () => {
       [html]: { content: '[[משתמש:1Or]]', revid: 26 },
     };
     api.articleContent.mockImplementation(async (title) => (
-      overrides[title] ?? { content: warningMessage(['CSS'], new Date('2026-11-09')), revid: 27 }
+      selectOverride(overrides, title, { content: warningMessage(['CSS'], new Date('2026-11-09')), revid: 27 })
     ));
     const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
 
@@ -228,7 +232,7 @@ describe('inactive knowledge experts edge cases', () => {
       [css]: [{ title: css, missing: '' }],
     };
     api.info.mockImplementation(async (titles) => (
-      overrides[titles[0]] ?? [{ title: titles[0], pageid: 1 }]
+      selectOverride(overrides, titles[0], [{ title: titles[0], pageid: 1 }])
     ));
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
 
@@ -240,7 +244,7 @@ describe('inactive knowledge experts edge cases', () => {
     const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
     const overrides: Record<string, { title: string }[]> = { [css]: [] };
     api.info.mockImplementation(async (titles) => (
-      overrides[titles[0]] ?? [{ title: titles[0], pageid: 1 }]
+      selectOverride(overrides, titles[0], [{ title: titles[0], pageid: 1 }])
     ));
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
 
