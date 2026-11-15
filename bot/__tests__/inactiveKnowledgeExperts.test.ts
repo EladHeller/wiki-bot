@@ -263,3 +263,21 @@ describe('inactive knowledge experts edge cases', () => {
     expect(removeMember('[[משתמש:Unique]]', 'Unique')).toBe('');
   });
 });
+
+describe('remaining guarded branches', () => {
+  it('removes the trailing member and its preceding separator', () => {
+    expect(removeMember('[[משתמש:First]], [[משתמש:Second]]', 'Second')).toBe('[[משתמש:First]]');
+  });
+
+  it('refuses to close a warning when its marker has been removed', () => {
+    const warning = pendingWarning(warningMessage(['CSS'], now))!;
+    expect(() => closeWarning('No marker in this content', warning, 'done')).toThrow('Warning marker');
+  });
+
+  it('plans removals without editing even after a full warning month', async () => {
+    const api = mockWiki(warningMessage(['CSS', 'HTML'], new Date('2026-11-09')));
+    const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1 });
+    expect(report).toMatchObject({ dryRun: true, removed: ['1Or'] });
+    expect(api.edit).not.toHaveBeenCalled();
+  });
+});
