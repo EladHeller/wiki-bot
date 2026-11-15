@@ -331,19 +331,30 @@ describe('default options', () => {
   });
 });
 
+function persistentWiki(talk: string) {
+  const api = mockWiki(talk);
+  const contents = new Map([
+    [css, '{{א|1Or}}, [[משתמשת:דנה]], [[משתמש:פעיל]]'],
+    [html, '[[משתמש:1Or]]'],
+    ['שיחת משתמש:1Or', talk],
+  ]);
+  api.articleContent.mockImplementation(async (title) => ({
+    content: contents.get(title) ?? '', revid: 27,
+  }));
+  api.edit.mockImplementation(async (title, _summary, text) => {
+    contents.set(title, text);
+    return {
+      edit: {
+        result: 'Success', pageid: 1, title, contentmodel: 'wikitext',
+      },
+    };
+  });
+  return { api, contents };
+}
+
 describe('monthly idempotency', () => {
   it('writes a warning only once on repeated runs in the same month', async () => {
-    const api = mockWiki();
-    let talk = '';
-    api.articleContent.mockImplementation(async (title) => {
-      if (title === css) return { content: '{{א|1Or}}', revid: 25 };
-      if (title === html) return { content: '[[משתמש:1Or]]', revid: 26 };
-      return { content: talk, revid: 27 };
-    });
-    api.edit.mockImplementation(async (title, _summary, text) => {
-      if (title === 'שיחת משתמש:1Or') talk = text;
-      return { edit: { result: 'Success', pageid: 1, title, contentmodel: 'wikitext' } };
-    });
+    const { api } = persistentWiki('');
 
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
     const repeat = await runInactiveKnowledgeExperts(api, {
@@ -356,24 +367,14 @@ describe('monthly idempotency', () => {
   });
 
   it('does not repeat a completed removal or issue a new warning in the same month', async () => {
-    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
-    let talk = warningMessage(['CSS'], new Date('2026-11-09'));
-    api.articleContent.mockImplementation(async (title) => {
-      if (title === css) return { content: '[[משתמש:1Or]]', revid: 25 };
-      if (title === html) return { content: '[[משתמש:1Or]]', revid: 26 };
-      return { content: talk, revid: 27 };
-    });
-    api.edit.mockImplementation(async (title, _summary, text) => {
-      if (title === 'שיחת משתמש:1Or') talk = text;
-      return { edit: { result: 'Success', pageid: 1, title, contentmodel: 'wikitext' } };
-    });
+    const { api, contents } = persistentWiki(warningMessage(['CSS'], new Date('2026-11-09')));
 
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
     const repeat = await runInactiveKnowledgeExperts(api, {
       now: new Date('2026-12-11T09:00:00Z'), maxUsers: 1, dryRun: false,
     });
 
-    expect(talk).toContain('Sapper-bot:knowledge-expert-closed:2026-12');
+    expect(contents.get('שיחת משתמש:1Or')).toContain('Sapper-bot:knowledge-expert-closed:2026-12');
     expect(api.edit).toHaveBeenCalledTimes(2);
     expect(api.userContributes).toHaveBeenCalledTimes(1);
     expect(repeat.skipped).toStrictEqual(['1Or']);
@@ -390,17 +391,9 @@ describe('monthly idempotency', () => {
   });
 
   it('does not repeat a canceled warning in the same month', async () => {
-    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
-    let talk = warningMessage(['CSS'], new Date('2026-11-09'));
-    api.articleContent.mockImplementation(async (title) => (
-      title === css ? { content: '[[משתמש:1Or]]', revid: 25 } : { content: talk, revid: 27 }
-    ));
+    const { api } = persistentWiki(warningMessage(['CSS'], new Date('2026-11-09')));
     api.userContributes.mockImplementation(async function* active() {
       yield [{ title: 'Article' }] as any;
-    });
-    api.edit.mockImplementation(async (title, _summary, text) => {
-      if (title === 'שיחת משתמש:1Or') talk = text;
-      return { edit: { result: 'Success', pageid: 1, title, contentmodel: 'wikitext' } };
     });
 
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
