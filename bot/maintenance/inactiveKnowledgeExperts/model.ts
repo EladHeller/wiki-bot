@@ -26,11 +26,6 @@ const keyOf = (value: string) => normalize(value).toLocaleLowerCase('en');
 const unique = (values: string[]) => [...new Set(values)];
 const topicOf = (title: string) => title.slice(PREFIX.length);
 const talkTitle = (username: string) => `שיחת משתמש:${username}`;
-const monthOf = (date: Date) => dateOnly(date).toISOString().slice(0, 7);
-const processedThisMonth = (content: string, now: Date) => (
-  content.includes(`<!-- ${WARNING_MARKER}${monthOf(now)}-`)
-  || content.includes(`<!-- ${CLOSED_MARKER}:${monthOf(now)} -->`)
-);
 const wikiUserLink = /\[\[\s*(?:משתמש|משתמשת|User)\s*:\s*([^\]|#]+)(?:\|[^\]]*)?\]\]/;
 const wikiUserTemplate = /\{\{\s*א\s*\|\s*([^|}]+)(?:\|[^}]*)?\}\}/;
 const userPattern = new RegExp(`${wikiUserLink.source}|${wikiUserTemplate.source}`, 'giu');
@@ -38,6 +33,12 @@ const userPattern = new RegExp(`${wikiUserLink.source}|${wikiUserTemplate.source
 function dateOnly(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
+
+const monthOf = (date: Date) => dateOnly(date).toISOString().slice(0, 7);
+const processedThisMonth = (content: string, now: Date) => (
+  content.includes(`<!-- ${WARNING_MARKER}${monthOf(now)}-`)
+  || content.includes(`<!-- ${CLOSED_MARKER}:${monthOf(now)} -->`)
+);
 
 function oneMonthLater(date: Date): Date {
   const year = date.getUTCFullYear();
@@ -207,13 +208,11 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
   for (const { username, topics: rawTopics } of users.slice(0, options.maxUsers ?? users.length)) {
     const topics = unique(rawTopics);
     const talk = await readTalk(api, username);
-    if (processedThisMonth(talk.content, now)) {
-      result.skipped.push(username);
-      continue;
-    }
-    const active = await recentlyActive(api, username, now);
-    const warning = pendingWarning(talk.content);
-    if (active) {
+    const processed = processedThisMonth(talk.content, now);
+    const active = processed || await recentlyActive(api, username, now);
+    const warning = processed ? null : pendingWarning(talk.content);
+    if (processed) result.skipped.push(username);
+    else if (active) {
       if (warning) {
         await writeTalk(
           api,
