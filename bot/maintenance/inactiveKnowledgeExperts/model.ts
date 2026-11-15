@@ -26,6 +26,11 @@ const keyOf = (value: string) => normalize(value).toLocaleLowerCase('en');
 const unique = (values: string[]) => [...new Set(values)];
 const topicOf = (title: string) => title.slice(PREFIX.length);
 const talkTitle = (username: string) => `שיחת משתמש:${username}`;
+const monthOf = (date: Date) => dateOnly(date).toISOString().slice(0, 7);
+const processedThisMonth = (content: string, now: Date) => (
+  content.includes(`<!-- ${WARNING_MARKER}${monthOf(now)}-`)
+  || content.includes(`<!-- ${CLOSED_MARKER}:${monthOf(now)} -->`)
+);
 const wikiUserLink = /\[\[\s*(?:משתמש|משתמשת|User)\s*:\s*([^\]|#]+)(?:\|[^\]]*)?\]\]/;
 const wikiUserTemplate = /\{\{\s*א\s*\|\s*([^|}]+)(?:\|[^}]*)?\}\}/;
 const userPattern = new RegExp(`${wikiUserLink.source}|${wikiUserTemplate.source}`, 'giu');
@@ -103,12 +108,12 @@ export function warningMessage(topics: string[], now: Date): string {
     + 'תודה על תרומתך למיזם. [[משתמש:Sapper-bot|Sapper-bot]]\n';
 }
 
-export function closeWarning(content: string, warning: Warning, message: string): string {
+export function closeWarning(content: string, warning: Warning, message: string, now: Date): string {
   const start = content.indexOf(warning.marker);
   if (start < 0) throw new Error('Warning marker was not found');
   const end = sectionEnd(content, start);
   return `${content.slice(0, end).trimEnd()
-  }\n: ${message}\n<!-- ${CLOSED_MARKER} -->\n${content.slice(end)}`;
+  }\n: ${message}\n<!-- ${CLOSED_MARKER}:${monthOf(now)} -->\n${content.slice(end)}`;
 }
 
 export function formerExpertTemplates(topics: string[]): string {
@@ -201,15 +206,19 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
 
   for (const { username, topics: rawTopics } of users.slice(0, options.maxUsers ?? users.length)) {
     const topics = unique(rawTopics);
-    const active = await recentlyActive(api, username, now);
     const talk = await readTalk(api, username);
+    if (processedThisMonth(talk.content, now)) {
+      result.skipped.push(username);
+      continue;
+    }
+    const active = await recentlyActive(api, username, now);
     const warning = pendingWarning(talk.content);
     if (active) {
       if (warning) {
         await writeTalk(
           api,
           talk,
-          closeWarning(talk.content, warning, 'ההסרה בוטלה בעקבות חזרה לפעילות. תודה!'),
+          closeWarning(talk.content, warning, 'ההסרה בוטלה בעקבות חזרה לפעילות. תודה!', now),
           'ביטול הסרה מרשימות בעלי הידע',
           dryRun,
         );
@@ -227,7 +236,7 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
         await writeTalk(
           api,
           talk,
-          closeWarning(talk.content, warning, note),
+          closeWarning(talk.content, warning, note, now),
           'עדכון על הסרה מרשימות בעלי הידע',
           dryRun,
         );
@@ -235,7 +244,7 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
       }
     } else {
       const prior = warning
-        ? closeWarning(talk.content, warning, 'ההתראה הישנה פקעה. ניתנת התראה חדשה.')
+        ? closeWarning(talk.content, warning, 'ההתראה הישנה פקעה. ניתנת התראה חדשה.', now)
         : talk.content;
       await writeTalk(
         api,
