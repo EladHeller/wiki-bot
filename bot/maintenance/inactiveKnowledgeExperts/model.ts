@@ -168,8 +168,7 @@ async function removeFromTopics(
     const entries = parseMembers(page.content).filter((entry) => keyOf(entry.username) === keyOf(username));
     if (entries.length === 0) continue;
     if (entries.length !== 1) throw new Error('Ambiguous knowledge expert entry: ' + title + ': ' + username);
-    const content = removeMember(page.content, username);
-    if (content === null) throw new Error('Failed to remove knowledge expert: ' + title + ': ' + username);
+    const content = removeMember(page.content, username)!;
     if (!dryRun) await api.edit(title, 'הסרת בעל ידע לאחר התראה וחוסר פעילות', content, page.revid);
     removed.push(topic);
   }
@@ -217,8 +216,6 @@ export default async function runInactiveKnowledgeExperts(
           'עדכון על הסרה מרשימות בעלי הידע', dryRun);
         result.removed.push(username);
       }
-    } else if (!topics.length) {
-      result.skipped.push(username);
     } else {
       const prior = warning
         ? closeWarning(talk.content, warning, 'ההתראה הישנה פקעה. ניתנת התראה חדשה.')
