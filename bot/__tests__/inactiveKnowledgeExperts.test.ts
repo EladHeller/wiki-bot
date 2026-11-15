@@ -202,28 +202,33 @@ describe('inactive knowledge experts edge cases', () => {
     const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
 
     expect(report.warned).toStrictEqual(['1Or']);
-    expect(api.edit.mock.calls[0][2]).toEqual(expect.stringContaining('Sapper-bot:knowledge-expert-closed'));
-    expect(api.edit.mock.calls[0][2]).toEqual(expect.stringContaining('Sapper-bot:knowledge-expert-warning:2026-12-10'));
+    expect(api.edit.mock.calls[0][2]).toStrictEqual(expect.stringContaining('Sapper-bot:knowledge-expert-closed'));
+    expect(api.edit.mock.calls[0][2]).toStrictEqual(expect.stringContaining('Sapper-bot:knowledge-expert-warning:2026-12-10'));
   });
 
   it('closes an old notice without attempting to remove a manually deleted membership', async () => {
     const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
-    api.articleContent.mockImplementation(async (title) => {
-      if (title === css) return { content: '[[משתמש:Someone]]', revid: 25 };
-      if (title === html) return { content: '[[משתמש:1Or]]', revid: 26 };
-      return { content: warningMessage(['CSS'], new Date('2026-11-09')), revid: 27 };
-    });
+    const overrides: Record<string, { content: string; revid: number }> = {
+      [css]: { content: '[[משתמש:Someone]]', revid: 25 },
+      [html]: { content: '[[משתמש:1Or]]', revid: 26 },
+    };
+    api.articleContent.mockImplementation(async (title) => (
+      overrides[title] ?? { content: warningMessage(['CSS'], new Date('2026-11-09')), revid: 27 }
+    ));
     const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
 
     expect(report.removed).toStrictEqual(['1Or']);
     expect(api.edit).toHaveBeenCalledTimes(1);
-    expect(api.edit.mock.calls[0][2]).toEqual(expect.stringContaining('לא נמצאו עוד רישומים'));
+    expect(api.edit.mock.calls[0][2]).toStrictEqual(expect.stringContaining('לא נמצאו עוד רישומים'));
   });
 
   it('handles a missing knowledge template safely during removal', async () => {
     const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
+    const overrides: Record<string, { title: string; missing?: string }[]> = {
+      [css]: [{ title: css, missing: '' }],
+    };
     api.info.mockImplementation(async (titles) => (
-      titles[0] === css ? [{ title: css, missing: '' }] : [{ title: titles[0], pageid: 1 }]
+      overrides[titles[0]] ?? [{ title: titles[0], pageid: 1 }]
     ));
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
 
@@ -233,8 +238,9 @@ describe('inactive knowledge experts edge cases', () => {
 
   it('also handles a knowledge template with no info record', async () => {
     const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
+    const overrides: Record<string, { title: string }[]> = { [css]: [] };
     api.info.mockImplementation(async (titles) => (
-      titles[0] === css ? [] : [{ title: titles[0], pageid: 1 }]
+      overrides[titles[0]] ?? [{ title: titles[0], pageid: 1 }]
     ));
     await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
 
