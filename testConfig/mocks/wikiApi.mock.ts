@@ -4,7 +4,7 @@ import { Mocked } from './types';
 import {
   FileWithGlobalUsage,
   FlowTopicListResponse,
-  LogEvent, PageInfo, RecentChange, Revision, UserContribution, WikiPage,
+  LogEvent, PageInfo, RecentChange, UserContribution, WikiPage,
   WikiRedirectData,
 } from '../../bot/types';
 
@@ -23,6 +23,8 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     backlinksTo:
       base.backlinksTo
       ?? jest.fn<(target: string, namespace?: string) => AsyncGenerator<WikiPage[], void, void>>(),
+    getPage: base.getPage ?? jest.fn<IWikiApi['getPage']>(),
+    registeredUsers: base.registeredUsers ?? jest.fn<IWikiApi['registeredUsers']>(),
     articleContent:
       base.articleContent
       ?? jest.fn<(title: string) => Promise<any>>(),
@@ -69,7 +71,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
       ?? jest.fn<(title: string) => Promise<string | undefined>>(),
     getArticleRevisions:
       base.getArticleRevisions
-      ?? jest.fn<(title: string, limit: number, props?: string) => AsyncGenerator<Revision[], void, void>>(),
+      ?? jest.fn<IWikiApi['getArticleRevisions']>(),
     logs:
       base.logs
       ?? jest.fn<(type: string, namespaces: number[], endTimestamp: string, limit?: number) =>
@@ -104,7 +106,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
     getNotifications: base.getNotifications ?? jest.fn<() => Promise<any>>(),
     addComment: base.addComment
       ?? jest.fn<(page: string, summary: string, content: string, commentid: string) => Promise<any>>(),
-    allPages: base.allPages ?? jest.fn<(namespace?: number, from?: string) => AsyncGenerator<WikiPage[], void, void>>(),
+    allPages: base.allPages ?? jest.fn<IWikiApi['allPages']>(),
     getParsedContent: base.getParsedContent ?? jest.fn<(title: string) => Promise<string>>(),
     getUserGroups: base.getUserGroups ?? jest.fn<(username: string) => Promise<string[]>>(),
     recentChanges: base.recentChanges ?? jest.fn<(namespaces: number[], endTimestamp: string, limit?: number,

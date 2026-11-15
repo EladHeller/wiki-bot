@@ -1,259 +1,254 @@
 import { WikiPage } from '../../types';
-import { contentFromPage } from '../../utilities';
+import { logger } from '../../utilities/logger';
 import { IWikiApi } from '../../wiki/WikiApi';
+import {
+  isTopic, listKnowledgeExperts, TOPIC_PREFIX, withoutMember,
+} from './memberships';
+import {
+  existingContent, Pending, readState, writePage,
+} from './state';
 
-const PREFIX = 'תבנית:בעלי ידע/';
-const WARNING_MARKER = 'Sapper-bot:knowledge-expert-warning:';
-const CLOSED_MARKER = 'Sapper-bot:knowledge-expert-closed';
-const DAY_MS = 24 * 60 * 60 * 1000;
+type Options = { botName: string; now?: Date; dryRun?: boolean };
+type Outcome = 'warned' | 'removed' | 'closed' | 'skipped';
+type Report = Record<Outcome, string[]> & { dryRun: boolean; failed: string[] };
 
-type Membership = { username: string; title: string };
-type Warning = { timestamp: Date; topics: string[]; marker: string };
-type UserEntry = { username: string; start: number; end: number };
+const HEADING = 'רשימות בעלי הידע';
+const warningSummary = (date: string) => `הודעה על חוסר פעילות ברשימות בעלי הידע (${date})`;
+const closureSummary = (date: string) => `עדכון בנוגע לרשימות בעלי הידע (${date})`;
+const warningMarker = (date: string) => `<!-- Sapper-bot:knowledge-expert:v2:${date} -->`;
+const closedMarker = (date: string) => `<!-- Sapper-bot:knowledge-expert:closed:${date} -->`;
+const israelDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Jerusalem' });
+const topicLinks = (titles: string[]) => titles.map((title) => `* [[${title}]]`).join('\n');
 
-export type RunOptions = { now?: Date; dryRun?: boolean; maxUsers?: number };
-export type RunReport = {
-  dryRun: boolean;
-  totalUsers: number;
-  warned: string[];
-  removed: string[];
-  canceled: string[];
-  skipped: string[];
-};
-
-const normalize = (value: string) => value.replaceAll('_', ' ').replace(/\s+/g, ' ').trim();
-const keyOf = (value: string) => normalize(value).toLocaleLowerCase('en');
-const unique = (values: string[]) => [...new Set(values)];
-const topicOf = (title: string) => title.slice(PREFIX.length);
-const talkTitle = (username: string) => `שיחת משתמש:${username}`;
-const wikiUserLink = /\[\[\s*(?:משתמש|משתמשת|User)\s*:\s*([^\]|#]+)(?:\|[^\]]*)?\]\]/;
-const wikiUserTemplate = /\{\{\s*א\s*\|\s*([^|}]+)(?:\|[^}]*)?\}\}/;
-const userPattern = new RegExp(`${wikiUserLink.source}|${wikiUserTemplate.source}`, 'giu');
-
-function dateOnly(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+function shiftDate(date: Date, years: number, months: number): Date {
+  const target = new Date(date);
+  const day = target.getUTCDate();
+  target.setUTCDate(1);
+  target.setUTCFullYear(target.getUTCFullYear() + years, target.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(day, lastDay));
+  return target;
 }
 
-const monthOf = (date: Date) => dateOnly(date).toISOString().slice(0, 7);
-const processedThisMonth = (content: string, now: Date) => (
-  content.includes(`<!-- ${WARNING_MARKER}${monthOf(now)}-`)
-  || content.includes(`<!-- ${CLOSED_MARKER}:${monthOf(now)} -->`)
-);
-
-function oneMonthLater(date: Date): Date {
-  const year = date.getUTCFullYear();
-  const month = date.getUTCMonth() + 1;
-  const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  return new Date(Date.UTC(year, month, Math.min(date.getUTCDate(), days)));
+function readTalk(page: WikiPage): string {
+  return page.missing !== undefined ? '' : existingContent(page).content;
 }
 
-export function parseMembers(content: string): UserEntry[] {
-  const end = content.search(/<noinclude\b/i);
-  const body = (end < 0 ? content : content.slice(0, end));
-  const comments = [...body.matchAll(/<!--[\s\S]*?-->/g)]
-    .map((match) => ({ start: (match.index as number), end: (match.index as number) + match[0].length }));
-  return [...body.matchAll(userPattern)].filter((match) => (
-    !comments.some((comment) => (match.index as number) >= comment.start && (match.index as number) < comment.end)
-  )).map((match) => ({
-    username: normalize(match[1] ?? match[2]),
-    start: (match.index as number),
-    end: (match.index as number) + match[0].length,
-  }));
+function warningText(warning: Pending): string {
+  return `\n\n== ${HEADING} ==\n${warningMarker(warning.warnedOn)}\n`
+    + 'שלום, ותודה על נכונותך לשתף מהידע שלך עם עורכי ויקיפדיה. שמך מופיע ברשימות הבאות:\n'
+    + `${topicLinks(warning.topics)}\n\n`
+    + 'חלפו לפחות שלוש שנים מאז העריכה האחרונה שלך בוויקיפדיה העברית. '
+    + 'כדי שהפניות ברשימות יגיעו לעורכים שזמינים להשיב, בעוד כחודש נסיר את שמך מהרשימות האלה. '
+    + 'עריכה בוויקיפדיה העברית לפני ההסרה תשאיר את שמך ברשימות. '
+    + 'גם אחרי ההסרה אפשר להוסיף את שמך בחזרה בכל עת. תודה על תרומתך לוויקיפדיה. ~~~~\n';
 }
 
-export function removeMember(content: string, username: string): string | null {
-  const entries = parseMembers(content).filter((entry) => keyOf(entry.username) === keyOf(username));
-  if (entries.length !== 1) return null;
-  const { start, end } = entries[0];
-  const before = content.slice(0, start);
-  const after = content.slice(end);
-  if (/,\s*$/.test(before)) return before.replace(/,\s*$/, '') + after;
-  if (/^\s*,/.test(after)) return before + after.replace(/^\s*,\s*/, '');
-  return before + after;
+function warningSection(content: string, date: string): number {
+  const marker = `== ${HEADING} ==\n${warningMarker(date)}\n`;
+  const start = content.indexOf(marker);
+  if (start < 0) return -1;
+  const afterMarker = start + marker.length;
+  const nextHeading = /^==(?!=).+?==[ \t]*$/m.exec(content.slice(afterMarker));
+  return nextHeading ? afterMarker + nextHeading.index : content.length;
 }
 
-function sectionEnd(content: string, start: number): number {
-  const remaining = content.slice(start);
-  const next = remaining.search(/^==[^=\n].*==\s*$/m);
-  return next < 0 ? content.length : start + next;
-}
+function followUp(content: string, warning: Pending, removed: string[], active: boolean): string {
+  const date = warning.warnedOn;
+  const end = warningSection(content, date);
+  if (end < 0 && removed.length === 0) return content;
 
-export function pendingWarning(content: string): Warning | null {
-  const markers = [...content.matchAll(/<!-- Sapper-bot:knowledge-expert-warning:(\d{4}-\d{2}-\d{2}) -->/g)];
-  const warnings = markers.reverse().map((match) => {
-    const section = content.slice((match.index as number), sectionEnd(content, (match.index as number)));
-    if (section.includes(CLOSED_MARKER)) return null;
-    const topics = [...section.matchAll(/\[\[\s*תבנית:בעלי ידע\/([^\]|]+)(?:\|[^\]]*)?\]\]/g)]
-      .map((topic) => normalize(topic[1]));
-    return {
-      timestamp: new Date(`${match[1]}T00:00:00Z`),
-      topics: unique(topics),
-      marker: match[0],
-    };
-  });
-  return warnings.find((warning) => warning !== null) ?? null;
-}
-
-const topicLinks = (topics: string[]) => topics.map((topic) => `* [[תבנית:בעלי ידע/${topic}]]`).join('\n');
-
-export function warningMessage(topics: string[], now: Date): string {
-  return '\n\n== הודעה בנושא רשימות בעלי הידע ==\n'
-    + `<!-- ${WARNING_MARKER}${dateOnly(now).toISOString().slice(0, 10)} -->\n`
-    + `שלום, ותודה על נכונותך לשתף את הידע שלך עם עורכי ויקיפדיה בתחומים הבאים:\n${
-      topicLinks(topics)}\n\n`
-    + 'במסגרת תחזוקת רשימות בעלי הידע, נמצאה תקופה של יותר משלוש שנים ללא עריכות מחשבון זה '
-    + 'בוויקיפדיה העברית. כדי שפניות יגיעו לעורכים זמינים, שמך צפוי להיות מוסר מהרשימות '
-    + 'בעוד כחודש, אם לא תהיה פעילות נוספת בחשבון.\n\n'
-    + 'אם ברצונך להישאר ברשימות, די בעריכה בוויקיפדיה העברית במהלך החודש הקרוב. '
-    + 'גם לאחר הסרה אפשר להצטרף מחדש לרשימות בכל עת.\n\n'
-    + 'תודה על תרומתך למיזם. [[משתמש:Sapper-bot|Sapper-bot]]\n';
-}
-
-export function closeWarning(content: string, warning: Warning, message: string, now: Date): string {
-  const start = content.indexOf(warning.marker);
-  if (start < 0) throw new Error('Warning marker was not found');
-  const end = sectionEnd(content, start);
-  return `${content.slice(0, end).trimEnd()
-  }\n: ${message}\n<!-- ${CLOSED_MARKER}:${monthOf(now)} -->\n${content.slice(end)}`;
-}
-
-export function formerExpertTemplates(topics: string[]): string {
-  return Array.from({ length: Math.ceil(topics.length / 10) }, (_, index) => (
-    `{{בעל ידע לשעבר|${topics.slice(index * 10, (index + 1) * 10).join('|')}}}`
-  )).join('\n');
-}
-
-export async function listKnowledgeExperts(api: IWikiApi): Promise<Membership[]> {
-  const memberships: Membership[] = [];
-  for await (const pages of api.allPages(10, 'בעלי ידע/')) {
-    for (const page of pages) {
-      if (!page.title.startsWith(PREFIX)) return memberships;
-      const { content } = contentFromPage(page as WikiPage);
-      if (content === undefined) throw new Error(`Missing template content: ${page.title}`);
-      memberships.push(...parseMembers(content).map((entry) => ({
-        title: page.title, username: entry.username,
-      })));
-    }
-  }
-  return memberships;
+  const links = removed.map((title) => `[[${title}|${title.slice(TOPIC_PREFIX.length)}]]`).join(', ');
+  const message = removed.length > 0 ? `שמך הוסר מרשימות בעלי הידע בתחומים ${links}. `
+    + 'אפשר להוסיף את שמך בחזרה בכל עת. תודה על תרומתך לוויקיפדיה.'
+    : 'הטיפול ברשימות שהוזכרו בהודעה הסתיים.';
+  const response = active
+    ? `${removed.length > 0 ? `${message} ` : ''}תודה על חזרתך לפעילות. אין צורך בהסרה נוספת.`
+    : message;
+  const note = `${response} ~~~~\n${closedMarker(date)}\n`;
+  if (end < 0) return `${content.trimEnd()}\n\n== ${HEADING} ==\n${note}`;
+  return `${content.slice(0, end).trimEnd()}\n\n: ${note}\n${content.slice(end)}`;
 }
 
 async function recentlyActive(api: IWikiApi, username: string, now: Date): Promise<boolean> {
-  const cutoff = new Date(now);
-  cutoff.setUTCFullYear(now.getUTCFullYear() - 3);
-  for await (const revisions of api.userContributes(username, cutoff, now, 1)) {
-    if (revisions.length > 0) return true;
+  for await (const edits of api.userContributes(username, shiftDate(now, -3, 0), now, 1)) {
+    if (edits.length > 0) return true;
   }
   return false;
 }
 
-async function readTalk(api: IWikiApi, username: string) {
-  const title = talkTitle(username);
-  const [info] = await api.info([title]);
-  if (!info || info.missing !== undefined) {
-    return {
-      title, exists: false, content: '', revid: 0,
-    };
-  }
-  const state = await api.articleContent(title);
-  return { title, exists: true, ...state };
+async function readTopic(api: IWikiApi, title: string, username: string) {
+  const page = await api.getPage(title);
+  if (page.missing !== undefined || page.redirect !== undefined) return undefined;
+  const { content, revid } = existingContent(page);
+  if (!isTopic(content)) return undefined;
+  return { page, revid, updated: withoutMember(content, username) };
 }
 
-async function writeTalk(
+async function botEdited(
   api: IWikiApi,
-  talk: Awaited<ReturnType<typeof readTalk>>,
-  content: string,
+  title: string,
   summary: string,
-  dryRun: boolean,
-): Promise<void> {
-  if (dryRun) return;
-  if (talk.exists) await api.edit(talk.title, summary, content, talk.revid);
-  else await api.create(talk.title, summary, content);
+  botName: string,
+  warnedOn: string,
+  baseRev = 0,
+) {
+  const since = new Date(warnedOn);
+  since.setUTCDate(since.getUTCDate() - 1);
+  for await (const revisions of api.getArticleRevisions(title, 25, 'ids|user|comment', { user: botName, since })) {
+    for (const { revid, user, comment } of revisions) {
+      if ((revid as number) <= baseRev) return false;
+      if (user === botName && comment === summary) return true;
+    }
+  }
+  return false;
 }
 
-async function removeFromTopics(api: IWikiApi, username: string, topics: string[], dryRun: boolean): Promise<string[]> {
+async function planRemovals(api: IWikiApi, warning: Pending, username: string): Promise<Pending> {
+  const removals: NonNullable<Pending['removals']> = [];
+  for (const title of warning.topics) {
+    const topic = await readTopic(api, title, username);
+    if (topic && topic.updated !== undefined) removals.push({ title, revid: topic.revid });
+  }
+  return { ...warning, removals };
+}
+
+async function removeFromTopics(
+  api: IWikiApi,
+  warning: Pending & Required<Pick<Pending, 'removals'>>,
+  username: string,
+  botName: string,
+  canRemove: boolean,
+  dryRun: boolean,
+) {
   const removed: string[] = [];
-  for (const topic of unique(topics)) {
-    const title = PREFIX + topic;
-    const [info] = await api.info([title]);
-    const page = info && info.missing === undefined ? await api.articleContent(title) : null;
-    if (page) {
-      const entries = parseMembers(page.content).filter((entry) => keyOf(entry.username) === keyOf(username));
-      if (entries.length > 0) {
-        if (entries.length !== 1) throw new Error(`Ambiguous knowledge expert entry: ${title}: ${username}`);
-        const content = removeMember(page.content, username) as string;
-        if (!dryRun) await api.edit(title, 'הסרת בעל ידע לאחר התראה וחוסר פעילות', content, page.revid);
-        removed.push(topic);
+  const summary = `הסרה מרשימת בעלי ידע לאחר התראה ([[משתמש:${username}]], ${warning.warnedOn})`;
+  for (const { title, revid } of warning.removals) {
+    const topic = await readTopic(api, title, username);
+    if (topic) {
+      const alreadyRemoved = topic.revid !== revid
+        && await botEdited(api, title, summary, botName, warning.warnedOn, revid);
+      if (alreadyRemoved) {
+        if (topic.updated === undefined) removed.push(title);
+      } else if (canRemove && topic.updated !== undefined) {
+        if (!dryRun) await writePage(api, topic.page, summary, topic.updated);
+        removed.push(title);
       }
     }
   }
   return removed;
 }
 
-export default async function runInactiveKnowledgeExperts(api: IWikiApi, options: RunOptions = {}): Promise<RunReport> {
-  const now = options.now ?? new Date();
-  const dryRun = options.dryRun !== false;
-  const all = await listKnowledgeExperts(api);
-  const byUser = new Map<string, { username: string; topics: string[] }>();
-  all.forEach(({ username, title }) => {
-    const key = keyOf(username);
-    if (!byUser.has(key)) byUser.set(key, { username, topics: [] });
-    (byUser.get(key) as { username: string; topics: string[] }).topics.push(topicOf(title));
-  });
-  const users = [...byUser.values()];
-  const result: RunReport = {
-    dryRun, totalUsers: users.length, warned: [], removed: [], canceled: [], skipped: [],
+async function processUser(
+  api: IWikiApi,
+  username: string,
+  topics: string[],
+  state: Awaited<ReturnType<typeof readState>>,
+  options: Required<Options>,
+  today: string,
+): Promise<Outcome> {
+  const current = state.users.get(username);
+  if (current && 'closedOn' in current && current.closedOn.slice(0, 7) === today.slice(0, 7)) return 'skipped';
+  const warning = current && 'warnedOn' in current ? current : undefined;
+  const title = `שיחת משתמש:${username}`;
+  if (!warning && await recentlyActive(api, username, options.now)) return 'skipped';
+
+  const talk = await api.getPage(title);
+  const content = readTalk(talk);
+  if (warning && content.includes(closedMarker(warning.warnedOn))) {
+    await state.save(username, { closedOn: today });
+    return 'skipped';
+  }
+
+  const noticeExists = !!warning && warningSection(content, warning.warnedOn) >= 0;
+  const sameMonth = warning?.warnedOn.slice(0, 7) === today.slice(0, 7);
+  if (noticeExists && sameMonth) return 'skipped';
+
+  if (warning?.removals && !noticeExists
+    && await botEdited(api, title, closureSummary(warning.warnedOn), options.botName, warning.warnedOn)) {
+    await state.save(username, { closedOn: today });
+    return 'skipped';
+  }
+
+  const active = !!warning && await recentlyActive(api, username, options.now);
+  if (!warning || (!noticeExists && !warning.removals && !active)) {
+    if (!topics.length) {
+      await state.save(username, { closedOn: today });
+      return 'skipped';
+    }
+    if (warning && sameMonth
+        && await botEdited(api, title, warningSummary(warning.warnedOn), options.botName, warning.warnedOn)) {
+      return 'skipped';
+    }
+    const newWarning = { warnedOn: today, topics };
+    await state.save(username, newWarning);
+    if (!options.dryRun) {
+      await writePage(api, talk, warningSummary(today), content + warningText(newWarning));
+    }
+    return 'warned';
+  }
+
+  if (!active && noticeExists && !warning.removals) {
+    const due = shiftDate(new Date(`${warning.warnedOn}T00:00:00Z`), 0, 1).toISOString().slice(0, 10);
+    if (today < due) return 'skipped';
+    const delivered = await botEdited(api, title, warningSummary(warning.warnedOn), options.botName, warning.warnedOn);
+    if (!delivered) throw new Error(`Cannot verify warning for ${username}`);
+  }
+
+  const plan = active || !noticeExists || warning.removals
+    ? warning
+    : await planRemovals(api, warning, username);
+  if (plan !== warning) await state.save(username, plan);
+  const canRemove = !active && noticeExists;
+  const removed = plan.removals
+    ? await removeFromTopics(
+      api,
+      { ...plan, removals: plan.removals },
+      username,
+      options.botName,
+      canRemove,
+      options.dryRun,
+    )
+    : [];
+  const latestTalk = removed.length > 0 ? await api.getPage(title) : talk;
+  const latestContent = readTalk(latestTalk);
+  const updated = followUp(latestContent, plan, removed, active);
+  if (!options.dryRun && updated !== latestContent) {
+    await writePage(api, latestTalk, closureSummary(plan.warnedOn), updated);
+  }
+  await state.save(username, { closedOn: today });
+  return removed.length > 0 ? 'removed' : 'closed';
+}
+
+export default async function runInactiveKnowledgeExperts(api: IWikiApi, options: Options): Promise<Report> {
+  const { now = new Date(), botName, dryRun = true } = options;
+  const today = israelDate.format(now);
+  const state = await readState(api, botName, today.slice(0, 7), dryRun);
+  const topicsByUser = await listKnowledgeExperts(api);
+  const pendingUsers = [...state.users].filter(([, status]) => 'warnedOn' in status).map(([username]) => username);
+  const usernames = [...new Set([...pendingUsers, ...topicsByUser.keys()])];
+  const cutoff = shiftDate(now, -3, 0);
+  const accounts = await api.registeredUsers(usernames);
+  const eligible = new Set(accounts.filter(({ registration }) => !registration || new Date(registration) <= cutoff)
+    .map(({ name }) => name));
+  const report: Report = {
+    dryRun, warned: [], removed: [], closed: [], skipped: [], failed: [],
   };
 
-  for (const { username, topics: rawTopics } of users.slice(0, options.maxUsers ?? users.length)) {
-    const topics = unique(rawTopics);
-    const talk = await readTalk(api, username);
-    const processed = processedThisMonth(talk.content, now);
-    const active = processed || await recentlyActive(api, username, now);
-    const warning = processed ? null : pendingWarning(talk.content);
-    if (processed) result.skipped.push(username);
-    else if (active) {
-      if (warning) {
-        await writeTalk(
-          api,
-          talk,
-          closeWarning(talk.content, warning, 'ההסרה בוטלה בעקבות חזרה לפעילות. תודה!', now),
-          'ביטול הסרה מרשימות בעלי הידע',
-          dryRun,
-        );
-        result.canceled.push(username);
-      } else result.skipped.push(username);
-    } else if (warning && now.getTime() - warning.timestamp.getTime() <= 90 * DAY_MS) {
-      if (dateOnly(now) < oneMonthLater(warning.timestamp)) {
-        result.skipped.push(username);
+  for (const username of usernames) {
+    try {
+      if (eligible.has(username)) {
+        const topics = topicsByUser.get(username) ?? [];
+        const outcome = await processUser(api, username, topics, state, { now, botName, dryRun }, today);
+        report[outcome].push(username);
       } else {
-        const removed = await removeFromTopics(api, username, warning.topics, dryRun);
-        const note = removed.length
-          ? `בהמשך להודעה הקודמת, לאחר חודש נוסף ללא פעילות, שמך הוסר מהרשימות הבאות:\n${
-            topicLinks(removed)}\n${formerExpertTemplates(removed)}`
-          : 'לא נמצאו עוד רישומים להסרה מהרשימות שצוינו בהודעה הקודמת.';
-        await writeTalk(
-          api,
-          talk,
-          closeWarning(talk.content, warning, note, now),
-          'עדכון על הסרה מרשימות בעלי הידע',
-          dryRun,
-        );
-        result.removed.push(username);
+        if (pendingUsers.includes(username)) await state.save(username, { closedOn: today });
+        report.skipped.push(username);
       }
-    } else {
-      const prior = warning
-        ? closeWarning(talk.content, warning, 'ההתראה הישנה פקעה. ניתנת התראה חדשה.', now)
-        : talk.content;
-      await writeTalk(
-        api,
-        talk,
-        prior + warningMessage(topics, now),
-        'התראה לפני הסרה מרשימות בעלי הידע',
-        dryRun,
-      );
-      result.warned.push(username);
+    } catch (error) {
+      logger.logError(`Knowledge-expert maintenance failed for ${username}: ${error}`);
+      report.failed.push(username);
     }
   }
-  return result;
+  return report;
 }

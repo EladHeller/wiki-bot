@@ -525,6 +525,7 @@ Resources:
     Properties:
       FunctionName: inactive-knowledge-experts-function
       Handler: dist/maintenance/inactiveKnowledgeExperts/index.main
+      ReservedConcurrentExecutions: 1
       Timeout: 900
       MemorySize: 512
       Environment:
