@@ -1,408 +1,546 @@
 import {
-  describe, expect, it,
+  afterEach, describe, expect, it, jest,
 } from '@jest/globals';
 import WikiApiMock from '../../testConfig/mocks/wikiApi.mock';
-import runInactiveKnowledgeExperts, {
-  closeWarning, formerExpertTemplates, listKnowledgeExperts, parseMembers,
-  pendingWarning, removeMember, warningMessage,
-} from '../maintenance/inactiveKnowledgeExperts/model';
-
-function selectOverride<T, U>(overrides: Record<string, T>, key: string, fallback: U): T | U {
-  return overrides[key] ?? fallback;
-}
-
-const now = new Date('2026-12-10T09:00:00Z');
-
-function requireWarning(content: string): NonNullable<ReturnType<typeof pendingWarning>> {
-  const warning = pendingWarning(content);
-  if (!warning) throw new Error('Expected a pending warning');
-  return warning;
-}
+import { WikiPage, UserContribution } from '../types';
+import runInactiveKnowledgeExperts from '../maintenance/inactiveKnowledgeExperts/model';
+import {
+  listKnowledgeExperts, parseMembers, withoutMember,
+} from '../maintenance/inactiveKnowledgeExperts/memberships';
 
 const css = 'תבנית:בעלי ידע/CSS';
 const html = 'תבנית:בעלי ידע/HTML';
+const js = 'תבנית:בעלי ידע/JS';
+const aliceTalk = 'שיחת משתמש:Alice';
+const botName = 'Test-bot';
+const stateTitle = `משתמש:${botName}/תחזוקת בעלי ידע`;
+const category = '<noinclude>[[קטגוריה:ויקיפדיה: בעלי ידע במחשבים]]</noinclude>';
+const closeSummary = 'עדכון בנוגע לרשימות בעלי הידע';
+const createApi = jest.fn<() => ReturnType<typeof WikiApiMock>>();
+jest.unstable_mockModule('../wiki/WikiApi', () => ({ default: createApi }));
+const { main, default: runHandler } = await import('../maintenance/inactiveKnowledgeExperts/index');
 
-function page(title: string, content: string) {
+function makePage(title: string, content: string, revid = 1, user = 'Human', comment = ''): WikiPage {
   return {
+    pageid: revid,
+    ns: 0,
     title,
-    revisions: [{ revid: 10, slots: { main: { '*': content } } }],
-  } as any;
+    extlinks: [],
+    revisions: [{
+      revid,
+      user,
+      comment,
+      size: content.length,
+      slots: { main: { '*': content, contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
+    }],
+  };
 }
 
-function mockWiki(talk = '', content = '{{א|1Or}}, [[משתמשת:דנה]], [[משתמש:פעיל]]') {
+function wiki() {
   const api = WikiApiMock();
-  api.allPages.mockImplementation(async function* pages() {
-    yield [page(css, content), page(html, '[[משתמש:1Or]]')];
-    yield [page('תבנית:בעלי יכולת', '[[משתמש:Other]]')];
+  const history = new Map<string, WikiPage[]>();
+  const active = new Set<string>();
+  const unregistered = new Set<string>();
+  const registrations = new Map<string, string>();
+  const hidden = new Set<string>();
+  const redirects = new Set<string>();
+  const failures = new Map<string, 'throw' | 'rejected' | 'committed' | 'nochange'>();
+  const failEdit = (key: string, mode: 'throw' | 'rejected' | 'committed' | 'nochange' = 'throw') => failures.set(key, mode);
+  let revision = 0;
+
+  function put(title: string, content: string, user = 'Human', summary = '') {
+    const page = makePage(title, content, revision + 1, user, summary);
+    revision += 1;
+    history.set(title, [page, ...(history.get(title) ?? [])]);
+    return page;
+  }
+
+  const pageFor = (title: string) => history.get(title)?.[0] ?? { ...makePage(title, ''), missing: '' };
+  const contentOf = (title: string) => pageFor(title).revisions?.[0].slots.main['*'];
+  const write = (title: string, summary: string, content: string) => {
+    const key = failures.has(title) ? title : summary.split(' (')[0];
+    const failure = failures.get(key);
+    failures.delete(key);
+    if (failure === 'throw') throw new Error('Edit failed before commit');
+    if (failure === 'nochange') {
+      const page = pageFor(title);
+      return {
+        edit: {
+          result: 'Success', oldrevid: page.pageid, pageid: page.pageid, title, contentmodel: 'wikitext',
+        },
+      };
+    }
+    const page = put(title, content, botName, summary);
+    if (failure === 'committed') throw new Error('Edit response lost');
+    const result = failure === 'rejected' ? 'Failure' : 'Success';
+    return {
+      edit: {
+        result, newrevid: page.pageid, pageid: page.pageid, title, contentmodel: 'wikitext',
+      },
+    };
+  };
+
+  api.getPage.mockImplementation(async (title) => {
+    const page = pageFor(title);
+    if (hidden.has(title)) return { ...page, revisions: undefined };
+    if (redirects.has(title)) return { ...page, redirect: '' };
+    return page;
   });
-  api.articleContent.mockImplementation(async (title) => {
-    if (title === css) return { content, revid: 25 };
-    if (title === html) return { content: '[[משתמש:1Or]]', revid: 26 };
-    return { content: talk, revid: 27 };
+  api.getArticleRevisions.mockImplementation(async function* getRevisions(title) {
+    yield (history.get(title) ?? []).flatMap((page) => page.revisions ?? []);
   });
-  api.info.mockResolvedValue([{ title: 'Page', pageid: 3 }]);
-  api.userContributes.mockImplementation(async function* noContributions() {
-    yield [];
+  api.allPages.mockImplementation(async function* listPages() {
+    yield [...history.keys()].filter((title) => title.startsWith('תבנית:בעלי ידע/'))
+      .map(pageFor);
   });
-  return api;
+  api.registeredUsers.mockImplementation(async (names) => names.filter((name) => !unregistered.has(name))
+    .map((name) => ({ name, registration: registrations.get(name) ?? null })));
+  api.userContributes.mockImplementation(async function* contributions(name) {
+    yield active.has(name) ? [{ title: 'Article' } as UserContribution] : [];
+  });
+  api.create.mockImplementation(async (title, summary, content) => {
+    if (pageFor(title).missing === undefined) throw new Error('Page already created');
+    return write(title, summary, content);
+  });
+  api.edit.mockImplementation(async (title, summary, content, revid) => {
+    if (pageFor(title).revisions?.[0].revid !== revid) throw new Error('Edit conflict');
+    return write(title, summary, content);
+  });
+  const run = (date: string, dryRun = false) => {
+    const now = new Date(date);
+    return runInactiveKnowledgeExperts(api, { botName, now, dryRun });
+  };
+
+  return {
+    api, active, hidden, redirects, unregistered, registrations, put, contentOf, run, failEdit,
+  };
 }
 
-describe('inactive knowledge experts cleanup', () => {
-  it('recognizes user links, female namespace, and user templates but ignores excluded markup', () => {
-    const content = '[[משתמש:1Or|אור]], [[משתמשת:דנה]] {{א|Foo_Bar|display}}\n'
-      + '<!-- [[משתמש:Comment]] -->\n<noinclude>[[משתמש:Documentation]]</noinclude>';
+describe('knowledge-expert membership syntax', () => {
+  it('matches only transcluded user links, mentions and group mentions', () => {
+    const source = '<noinclude>{{א|Example}}</noinclude>{{א|1=alice_s|display}}, '
+      + '[[משתמשת:דנה]], [[User:CaseSensitive]], {{@@|Bob|Carol}}\n'
+      + '<!--{{א|Comment}}--><nowiki class="x">{{א|Sample}}</nowiki>\n'
+      + '{{#שווה:{{יום מקומי}}|6||{{א|Sunday}}}} {{other|[[משתמש:Nesting]]}}\n'
+      + '{{@@|1=Named}} [[משתמש:Root/Sandbox]] [[מש:Short]] [[CSS]] {{א| }} [https://example.test link]';
 
-    expect(parseMembers(content).map((entry) => entry.username)).toStrictEqual(['1Or', 'דנה', 'Foo Bar']);
-    expect(removeMember(content, 'Foo Bar')).not.toContain('{{א|Foo_Bar|display}}');
-    expect(removeMember(content, 'Unknown')).toBeNull();
-  });
-
-  it('deletes only the exact username, leaving other users and noinclude untouched', () => {
-    const content = '[[משתמש:1Or]], [[משתמש:1OrExtra]], {{א|Dana}}'
-      + '<noinclude>[[משתמש:1Or]]</noinclude>';
-
-    expect(removeMember(content, '1Or')).toBe(
-      '[[משתמש:1OrExtra]], {{א|Dana}}<noinclude>[[משתמש:1Or]]</noinclude>',
-    );
-    expect(removeMember('{{א|1Or}} / [[משתמש:1Or]]', '1Or')).toBeNull();
-  });
-
-  it('collects experts from template subpages independently of any Mod report', async () => {
-    const api = mockWiki();
-    const experts = await listKnowledgeExperts(api);
-
-    expect(experts).toStrictEqual([
-      { username: '1Or', title: css },
-      { username: 'דנה', title: css },
-      { username: 'פעיל', title: css },
-      { username: '1Or', title: html },
+    expect(parseMembers(source).map(({ username }) => username)).toStrictEqual([
+      'Alice s', 'דנה', 'CaseSensitive', 'Bob', 'Carol', 'Sunday', 'Short',
     ]);
-    expect(api.allPages).toHaveBeenCalledWith(10, 'בעלי ידע/');
   });
 
-  it('rejects templates without fetched source rather than silently skipping them', async () => {
-    const api = mockWiki();
-    api.allPages.mockImplementation(async function* pages() {
-      yield [{ title: css }] as any;
+  it('preserves unrelated text and detects duplicate membership', () => {
+    expect([
+      withoutMember('{{א|Alice}}, {{א|Bob}}', 'Alice'),
+      withoutMember('{{א|Bob}}, {{א|Alice}} (הערה)\n<!-- comment -->', 'Alice'),
+      withoutMember('{{א|Bob}} ו־{{א|Alice}}', 'Alice'),
+      withoutMember('{{@@|Bob|Alice|Carol}}', 'Alice'),
+      withoutMember('{{@@|Alice}}', 'Alice'),
+      withoutMember('{{א|AliceB}} {{א|ALICE}}', 'Alice'),
+    ]).toStrictEqual([
+      '{{א|Bob}}', '{{א|Bob}}\n<!-- comment -->', '{{א|Bob}}', '{{@@|Bob|Carol}}', '', undefined,
+    ]);
+    expect(() => withoutMember('[[משתמש:Alice]], {{א|Alice}}', 'Alice')).toThrow('Ambiguous');
+  });
+
+  it('uses every batch and excludes example and auxiliary templates', async () => {
+    const { api } = wiki();
+    api.allPages.mockImplementation(async function* listPages() {
+      yield [makePage('תבנית:בעלי ידע/תיעוד', '{{א|Example}}'), makePage(css, `{{א|Alice}}${category}`)];
+      yield [makePage(html, `{{@@|Alice|Bob}}${category}`)];
+    });
+
+    await expect(listKnowledgeExperts(api)).resolves.toStrictEqual(new Map([
+      ['Alice', [css, html]], ['Bob', [html]],
+    ]));
+    expect(api.allPages).toHaveBeenCalledWith(10, '', 'בעלי ידע/');
+
+    api.allPages.mockImplementation(async function* listPages() {
+      yield [{ ...makePage(css, ''), revisions: undefined }];
     });
 
     await expect(listKnowledgeExperts(api)).rejects.toThrow('Missing template content');
   });
+});
 
-  it('parses pending and closed warnings and formats multiple groups of ten topics', () => {
-    const warning = warningMessage(['CSS', 'HTML'], now);
-    const parsed = pendingWarning(warning);
+describe('the monthly cleanup', () => {
+  it('plans a warning without wiki edits by default, and ignores active and unregistered users', async () => {
+    const {
+      api, put, active, unregistered, registrations,
+    } = wiki();
+    put(css, `{{א|Alice}}, {{א|Active}}, {{א|Renamed}}, {{א|New}}${category}`);
+    active.add('Active');
+    unregistered.add('Renamed');
+    registrations.set('New', new Date().toISOString());
+    registrations.set('Alice', '2012-08-01T12:00:00Z');
 
-    expect(parsed?.topics).toStrictEqual(['CSS', 'HTML']);
-    expect(pendingWarning(closeWarning(warning, (parsed as NonNullable<typeof parsed>), 'ההסרה בוטלה', now))).toBeNull();
-    expect(formerExpertTemplates(Array.from({ length: 11 }, (_, i) => String(i))))
-      .toBe('{{בעל ידע לשעבר|0|1|2|3|4|5|6|7|8|9}}\n{{בעל ידע לשעבר|10}}');
-  });
-
-  it('plans a single warning per inactive user, including all topics, with no edits by default', async () => {
-    const api = mockWiki();
-    const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1 });
-
-    expect(report).toMatchObject({ totalUsers: 3, dryRun: true, warned: ['1Or'] });
+    await expect(runInactiveKnowledgeExperts(api, { botName })).resolves.toMatchObject({
+      dryRun: true, warned: ['Alice'], skipped: ['Active', 'Renamed', 'New'],
+    });
     expect(api.edit).not.toHaveBeenCalled();
     expect(api.create).not.toHaveBeenCalled();
   });
 
-  it('writes only a talk-page warning in its first live run', async () => {
-    const api = mockWiki();
-    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+  it('warns once and waits a full month before removing only warned memberships', async () => {
+    const {
+      api, put, contentOf, run, active,
+    } = wiki();
+    active.add('Bob');
+    put(css, `[[משתמש:Alice]], {{א|Bob}}${category}`);
+    put(html, `{{@@|Bob|Alice}}${category}`);
+    put(aliceTalk, 'Earlier discussion');
+    const first = await run('2026-09-04T08:00Z');
 
-    expect(api.edit).toHaveBeenCalledTimes(1);
-    expect(api.edit).toHaveBeenCalledWith(
-      'שיחת משתמש:1Or',
-      'התראה לפני הסרה מרשימות בעלי הידע',
-      expect.stringContaining('[[תבנית:בעלי ידע/HTML]]'),
-      27,
-    );
-  });
+    expect(first.warned).toStrictEqual(['Alice']);
+    expect(contentOf(aliceTalk)).toContain(`* [[${html}]]`);
 
-  it('creates a missing talk page to send the warning', async () => {
-    const api = mockWiki();
-    api.info.mockResolvedValue([{ title: 'שיחת משתמש:1Or', missing: '' }]);
-    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+    put(aliceTalk, `${contentOf(aliceTalk)}\n== Another discussion ==\nKeep this.`);
+    put(js, `{{א|Alice}}${category}`);
+    const writes = api.edit.mock.calls.length + api.create.mock.calls.length;
+    await run('2026-09-04T08:10Z');
+    await run('2026-10-02T08:00Z');
 
-    expect(api.create).toHaveBeenCalledWith('שיחת משתמש:1Or', expect.any(String), expect.stringContaining('שלום, ותודה'));
-  });
+    expect(api.edit.mock.calls.length + api.create.mock.calls.length).toBe(writes);
 
-  it('does not remove an expert before a full calendar month passes', async () => {
-    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-20T00:00:00Z')));
-    const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+    const due = await run('2026-10-04T08:00Z');
+    const talk = contentOf(aliceTalk) as string;
+    const finalWrites = api.edit.mock.calls.length + api.create.mock.calls.length;
+    await run('2026-10-04T09:00Z');
 
-    expect(report.skipped).toStrictEqual(['1Or']);
-    expect(api.edit).not.toHaveBeenCalled();
-  });
-
-  it('removes all warned memberships after one month and replies to the original section', async () => {
-    const api = mockWiki(warningMessage(['CSS', 'HTML'], new Date('2026-11-09')));
-    const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
-
-    expect(report.removed).toStrictEqual(['1Or']);
-    expect(api.edit).toHaveBeenCalledTimes(3);
-    expect(api.edit).toHaveBeenNthCalledWith(1, css, expect.any(String), '[[משתמשת:דנה]], [[משתמש:פעיל]]', 25);
-    expect(api.edit).toHaveBeenNthCalledWith(2, html, expect.any(String), '', 26);
-    expect(api.edit).toHaveBeenNthCalledWith(3, 'שיחת משתמש:1Or', expect.any(String), expect.stringContaining('{{בעל ידע לשעבר|CSS|HTML}}'), 27);
-  });
-
-  it('cancels removal after new user contributions', async () => {
-    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
-    api.userContributes.mockImplementation(async function* active() {
-      yield [{ title: 'Article' }] as any;
+    expect({
+      removed: due.removed,
+      css: contentOf(css),
+      html: contentOf(html),
+      js: contentOf(js),
+      reply: talk.split('== Another discussion ==')[0],
+      writes: api.edit.mock.calls.length + api.create.mock.calls.length,
+    }).toMatchObject({
+      removed: ['Alice'],
+      css: `{{א|Bob}}${category}`,
+      html: `{{@@|Bob}}${category}`,
+      js: `{{א|Alice}}${category}`,
+      reply: expect.stringContaining(`[[${html}|HTML]]`),
+      writes: finalWrites,
     });
-    const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
-
-    expect(report.canceled).toStrictEqual(['1Or']);
-    expect(api.edit).toHaveBeenCalledTimes(1);
-    expect(api.edit.mock.calls[0][0]).toBe('שיחת משתמש:1Or');
   });
 
-  it('does not repeat a completed notification on a second run', async () => {
-    const closed = closeWarning(
-      warningMessage(['CSS'], new Date('2026-11-09')),
-      requireWarning(warningMessage(['CSS'], new Date('2026-11-09'))),
-      'הוסר',
-      now,
-    );
+  it('closes a notice for a returning editor without touching the topic', async () => {
+    const {
+      put, contentOf, run, active, api,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-08-01T08:00Z');
+    active.add('Alice');
+    const repeat = await run('2026-08-02T08:00Z');
 
-    expect(pendingWarning(closed)).toBeNull();
+    expect(repeat.skipped).toStrictEqual(['Alice']);
+
+    const next = await run('2026-09-01T08:00Z');
+
+    expect(next.closed).toStrictEqual(['Alice']);
+    expect(contentOf(aliceTalk)).toContain('תודה על חזרתך לפעילות');
+    expect(api.edit.mock.calls.some(([title]) => title === css)).toBe(false);
   });
 
-  it('fails safely on ambiguous multiple entries rather than removing arbitrary source text', async () => {
-    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')), '[[משתמש:1Or]], {{א|1Or}}');
+  it('retries a failed warning, and does not repost one archived during the same month', async () => {
+    const {
+      failEdit, put, contentOf, run,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    put(aliceTalk, '');
+    failEdit(aliceTalk);
 
-    await expect(runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false }))
-      .rejects.toThrow('Ambiguous knowledge expert entry');
-    expect(api.edit).not.toHaveBeenCalled();
+    expect((await run('2026-09-01T08:00Z')).failed).toStrictEqual(['Alice']);
+    expect(contentOf(aliceTalk)).toBe('');
+    expect((await run('2026-09-02T08:00Z')).warned).toStrictEqual(['Alice']);
+
+    put(aliceTalk, 'Archived');
+
+    const sameMonth = await run('2026-09-04T08:00Z');
+
+    expect({ skipped: sameMonth.skipped, talk: contentOf(aliceTalk) })
+      .toStrictEqual({ skipped: ['Alice'], talk: 'Archived' });
+
+    const nextMonth = await run('2026-10-04T08:00Z');
+
+    expect({ warned: nextMonth.warned, topic: contentOf(css) })
+      .toStrictEqual({ warned: ['Alice'], topic: `{{א|Alice}}${category}` });
+  });
+
+  it('recognizes a follow-up edit after a partial failure even when the last membership is gone', async () => {
+    const {
+      api, failEdit, put, contentOf, run,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    failEdit(closeSummary);
+
+    expect((await run('2026-10-01T08:00Z')).failed).toStrictEqual(['Alice']);
+    expect(contentOf(css)).toBe(category);
+    expect((await run('2026-10-02T08:00Z')).removed).toStrictEqual(['Alice']);
+
+    const repeat = await run('2026-10-04T08:00Z');
+
+    expect({
+      talk: contentOf(aliceTalk),
+      edits: api.edit.mock.calls.filter(([title]) => title === css).length,
+      repeat: repeat.removed,
+    }).toMatchObject({ talk: expect.stringContaining(`[[${css}|CSS]]`), edits: 1, repeat: [] });
+  });
+
+  it('does not remove a re-added membership while resuming a partially completed removal', async () => {
+    const {
+      failEdit, put, contentOf, run,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    put(html, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    failEdit(html);
+
+    expect((await run('2026-10-01T08:00Z')).failed).toStrictEqual(['Alice']);
+
+    put(css, `{{א|Alice}}${category}`);
+    put(html, `{{א|Alice}}, <!-- human change -->{{א|Bob}}${category}`);
+
+    expect((await run('2026-10-02T08:00Z')).removed).toStrictEqual(['Alice']);
+    expect([contentOf(css), contentOf(html)]).toStrictEqual([
+      `{{א|Alice}}${category}`, `<!-- human change -->{{א|Bob}}${category}`,
+    ]);
+
+    const reply = contentOf(aliceTalk)?.split('שמך הוסר')[1];
+
+    expect(reply).toContain('HTML');
+    expect(reply).not.toContain('CSS');
+  });
+
+  it('continues processing other users when a membership is ambiguous', async () => {
+    const {
+      put, contentOf, run, active,
+    } = wiki();
+    put(css, `{{א|Alice}}, [[משתמש:Alice]], {{א|Bob}}${category}`);
+    put(html, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    active.add('Bob');
+    const report = await run('2026-10-01T08:00Z');
+
+    expect(report).toMatchObject({ failed: ['Alice'], closed: ['Bob'] });
+    expect(contentOf(html)).toContain('{{א|Alice}}');
+  });
+
+  it('refuses to use state written by another editor or with malformed data', async () => {
+    const { put, run } = wiki();
+    const wrap = (value: string) => `<pre class="inactive-knowledge-experts-state">${value}</pre>`;
+    put(stateTitle, wrap('[]'));
+
+    await expect(run('2026-11-01T08:00Z')).rejects.toThrow('Untrusted cleanup state');
+
+    put(stateTitle, wrap('[["Alice",{"warnedOn":"2026-10-01","topics":["Article"]}]]'), botName);
+
+    await expect(run('2026-11-01T08:00Z')).rejects.toThrow('Invalid cleanup state');
+
+    put(stateTitle, wrap('{}'), botName);
+
+    await expect(run('2026-11-01T08:00Z')).rejects.toThrow('Invalid cleanup state');
   });
 });
 
-describe('inactive knowledge experts edge cases', () => {
-  it('finishes naturally when the final page is still inside the desired namespace prefix', async () => {
-    const api = mockWiki();
-    api.allPages.mockImplementation(async function* pages() {
-      yield [page(css, '[[משתמש:1Or]]')];
+describe('recovery and source validation', () => {
+  it('previews removal without even editing the tracking page', async () => {
+    const {
+      api, put, run, contentOf,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-08-01T08:00Z');
+    api.edit.mockClear();
+    api.create.mockClear();
+
+    await expect(run('2026-09-01T08:00Z', true)).resolves.toMatchObject({
+      dryRun: true, removed: ['Alice'],
     });
-
-    await expect(listKnowledgeExperts(api)).resolves.toStrictEqual([{ username: '1Or', title: css }]);
-  });
-
-  it('skips an active expert who has not been warned', async () => {
-    const api = mockWiki();
-    api.userContributes.mockImplementation(async function* active() {
-      yield [{ title: 'Article' }] as any;
-    });
-    const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
-
-    expect(report.skipped).toStrictEqual(['1Or']);
     expect(api.edit).not.toHaveBeenCalled();
+    expect(api.create).not.toHaveBeenCalled();
+    expect(contentOf(css)).toContain('{{א|Alice}}');
   });
 
-  it('replaces an expired warning with a fresh month-long warning', async () => {
-    const oldWarning = warningMessage(['CSS'], new Date('2026-09-01'));
-    const api = mockWiki(oldWarning);
-    const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+  it('recovers a reply whose acknowledgement was lost and then archived', async () => {
+    const {
+      failEdit, put, run, contentOf,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    put(aliceTalk, 'Old talk');
+    await run('2026-09-01T08:00Z');
+    failEdit(closeSummary, 'committed');
 
-    expect(report.warned).toStrictEqual(['1Or']);
-    expect(api.edit.mock.calls[0][2]).toStrictEqual(expect.stringContaining('Sapper-bot:knowledge-expert-closed'));
-    expect(api.edit.mock.calls[0][2]).toStrictEqual(expect.stringContaining('Sapper-bot:knowledge-expert-warning:2026-12-10'));
+    expect((await run('2026-10-01T08:00Z')).failed).toStrictEqual(['Alice']);
+
+    put(aliceTalk, 'Archived after successful reply');
+    const repeat = await run('2026-10-02T08:00Z');
+
+    expect(repeat.skipped).toStrictEqual(['Alice']);
+    expect(contentOf(aliceTalk)).toBe('Archived after successful reply');
   });
 
-  it('closes an old notice without attempting to remove a manually deleted membership', async () => {
-    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
-    const overrides: Record<string, { content: string; revid: number }> = {
-      [css]: { content: '[[משתמש:Someone]]', revid: 25 },
-      [html]: { content: '[[משתמש:1Or]]', revid: 26 },
-    };
-    api.articleContent.mockImplementation(async (title) => (
-      selectOverride(overrides, title, { content: warningMessage(['CSS'], new Date('2026-11-09')), revid: 27 })
-    ));
-    const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+  it('does not repeat a reply that succeeded despite a network error', async () => {
+    const { failEdit, put, run } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    failEdit(closeSummary, 'committed');
 
-    expect(report.removed).toStrictEqual(['1Or']);
-    expect(api.edit).toHaveBeenCalledTimes(1);
-    expect(api.edit.mock.calls[0][2]).toStrictEqual(expect.stringContaining('לא נמצאו עוד רישומים'));
+    expect((await run('2026-10-01T08:00Z')).failed).toStrictEqual(['Alice']);
+    expect((await run('2026-10-02T08:00Z')).skipped).toStrictEqual(['Alice']);
   });
 
-  it('handles a missing knowledge template safely during removal', async () => {
-    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
-    const overrides: Record<string, { title: string; missing?: string }[]> = {
-      [css]: [{ title: css, missing: '' }],
-    };
-    api.info.mockImplementation(async (titles) => (
-      selectOverride(overrides, titles[0], [{ title: titles[0], pageid: 1 }])
-    ));
-    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+  it('reports already completed removals if the user returns and the original notice is archived', async () => {
+    const {
+      failEdit, put, run, active, contentOf,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    put(html, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    failEdit(html);
+    await run('2026-10-01T08:00Z');
 
-    expect(api.edit).toHaveBeenCalledTimes(1);
-    expect(api.edit.mock.calls[0][0]).toBe('שיחת משתמש:1Or');
+    put(aliceTalk, 'Archived');
+    active.add('Alice');
+    const repeat = await run('2026-10-02T08:00Z');
+
+    expect(repeat.removed).toStrictEqual(['Alice']);
+    expect(contentOf(aliceTalk)).toContain('תודה על חזרתך לפעילות');
+    expect(contentOf(html)).toContain('{{א|Alice}}');
   });
 
-  it('also handles a knowledge template with no info record', async () => {
-    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
-    const overrides: Record<string, { title: string }[]> = { [css]: [] };
-    api.info.mockImplementation(async (titles) => (
-      selectOverride(overrides, titles[0], [{ title: titles[0], pageid: 1 }])
-    ));
-    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+  it('closes earlier warnings if registrations disappear', async () => {
+    const {
+      put, run, unregistered, contentOf,
+    } = wiki();
+    put(css, `{{א|Alice}}, {{א|Bob}}, {{א|Carol}}${category}`);
+    await run('2026-09-01T08:00Z');
+    put(aliceTalk, 'Notice removed');
+    put(css, 'Former topic');
+    unregistered.add('Carol');
 
-    expect(api.edit).toHaveBeenCalledTimes(1);
+    const result = await run('2026-10-01T08:00Z');
+
+    expect(result).toMatchObject({ skipped: ['Alice', 'Carol'], closed: ['Bob'] });
+    expect(contentOf(css)).toBe('Former topic');
   });
 
-  it('creates a user talk page if no page info is returned', async () => {
-    const api = mockWiki();
-    api.info.mockResolvedValue([]);
-    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+  it('never edits a redirect or a page whose source is unreadable', async () => {
+    const {
+      put, run, redirects, hidden, api,
+    } = wiki();
+    put(css, `{{א|Alice}}, {{א|Bob}}${category}`);
+    await run('2026-09-01T08:00Z');
+    redirects.add(css);
+    hidden.add(aliceTalk);
+    const report = await run('2026-10-01T08:00Z');
 
-    expect(api.create).toHaveBeenCalledTimes(1);
+    expect(report).toMatchObject({ failed: ['Alice'], closed: ['Bob'] });
+    expect(api.edit.mock.calls.filter(([title]) => title === css)).toHaveLength(0);
   });
 
-  it('uses the actual clock and processes no users when the explicit limit is zero', async () => {
-    const api = mockWiki();
-    const report = await runInactiveKnowledgeExperts(api, { maxUsers: 0 });
+  it('closes an archived warning without posting a separate cancellation for an active user', async () => {
+    const {
+      put, run, active, contentOf,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    put(aliceTalk, 'Archived');
+    active.add('Alice');
+    const result = await run('2026-10-01T08:00Z');
 
-    expect(report.totalUsers).toBe(3);
-    expect(report.warned).toStrictEqual([]);
+    expect(result.closed).toStrictEqual(['Alice']);
+    expect(contentOf(aliceTalk)).toBe('Archived');
   });
 
-  it('processes all users when no maxUsers limit is provided', async () => {
-    const api = mockWiki();
-    const report = await runInactiveKnowledgeExperts(api, { now });
+  it('keeps the base revision from a no-change state edit on a same-day retry', async () => {
+    const {
+      put, run, failEdit, contentOf,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    failEdit(aliceTalk);
+    await run('2026-09-01T08:00Z');
+    failEdit(stateTitle, 'nochange');
 
-    expect(report.warned).toStrictEqual(['1Or', 'דנה', 'פעיל']);
-    expect(api.edit).not.toHaveBeenCalled();
+    expect((await run('2026-09-01T09:00Z')).warned).toStrictEqual(['Alice']);
+    expect((await run('2026-10-01T08:00Z')).removed).toStrictEqual(['Alice']);
+    expect(contentOf(css)).toBe(category);
   });
 
-  it('inserts a follow-up within the original warning section', () => {
-    const talk = `${warningMessage(['CSS'], new Date('2026-11-09'))
-    }\n== הודעה אחרת ==\nתוכן אחר`;
-    const pending = requireWarning(talk);
-    const closed = closeWarning(talk, pending, 'ההסרה בוצעה', now);
+  it('handles a topic disappearing or being manually cleared after a partial write', async () => {
+    const {
+      put, run, failEdit, redirects, contentOf,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    put(html, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    failEdit(css);
+    await run('2026-10-01T08:00Z');
+    redirects.add(css);
+    put(html, `{{א|Bob}}${category}`);
+    const result = await run('2026-10-02T08:00Z');
 
-    expect(closed.indexOf('ההסרה בוצעה')).toBeLessThan(closed.indexOf('== הודעה אחרת =='));
-    expect(pendingWarning(closed)).toBeNull();
+    expect(result.closed).toContain('Alice');
+    expect(contentOf(aliceTalk)).not.toContain('שמך הוסר');
   });
 
-  it('selects the newest still pending warning when older warnings are already closed', () => {
-    const older = warningMessage(['CSS'], new Date('2026-09-09'));
-    const closed = closeWarning(older, requireWarning(older), 'הוסר', now);
-    const newer = warningMessage(['HTML'], new Date('2026-11-09'));
+  it('does not remove a member based on a warning marker added by somebody else', async () => {
+    const {
+      put, run, failEdit, contentOf,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    failEdit(aliceTalk);
+    await run('2026-09-01T08:00Z');
+    put(aliceTalk, '== רשימות בעלי הידע ==\n<!-- Sapper-bot:knowledge-expert:v2:2026-09-01 -->\n');
+    const result = await run('2026-10-01T08:00Z');
 
-    expect(pendingWarning(closed + newer)?.topics).toStrictEqual(['HTML']);
+    expect(result.failed).toStrictEqual(['Alice']);
+    expect(contentOf(css)).toContain('{{א|Alice}}');
   });
 
-  it('keeps a user safe when template has no matching member entry', () => {
-    expect(removeMember('[[משתמש:Other]]', 'Missing')).toBeNull();
-    expect(removeMember('[[משתמש:Unique]]', 'Unique')).toBe('');
+  it('treats an unsuccessful MediaWiki edit response as a failure', async () => {
+    const {
+      put, run, failEdit,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    failEdit(aliceTalk, 'rejected');
+
+    expect((await run('2026-09-01T08:00Z')).failed).toStrictEqual(['Alice']);
   });
 });
 
-describe('remaining guarded branches', () => {
-  it('removes the trailing member and its preceding separator', () => {
-    expect(removeMember('[[משתמש:First]], [[משתמש:Second]]', 'Second')).toBe('[[משתמש:First]]');
+describe('scheduled handler', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+    delete process.env.INACTIVE_KNOWLEDGE_EXPERTS_WRITE_ENABLED;
   });
 
-  it('refuses to close a warning when its marker has been removed', () => {
-    const warning = requireWarning(warningMessage(['CSS'], now));
+  it('checks the dry-run switch and skips all activity on Shabbat', async () => {
+    jest.useFakeTimers({ now: new Date('2026-11-14T08:00Z') });
+    const { api, put } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    createApi.mockReturnValue(api);
+    createApi.mockClear();
 
-    expect(() => closeWarning('No marker in this content', warning, 'done', now)).toThrow('Warning marker');
+    await expect(main()).resolves.toBeUndefined();
+
+    expect(createApi).not.toHaveBeenCalled();
+
+    jest.setSystemTime(new Date('2026-11-15T08:00Z'));
+
+    await expect(main()).resolves.toMatchObject({ dryRun: true, warned: ['Alice'] });
+    await expect(runHandler()).resolves.toMatchObject({ dryRun: true });
+    expect(api.create).not.toHaveBeenCalled();
   });
 
-  it('plans removals without editing even after a full warning month', async () => {
-    const api = mockWiki(warningMessage(['CSS', 'HTML'], new Date('2026-11-09')));
-    const report = await runInactiveKnowledgeExperts(api, { now, maxUsers: 1 });
+  it('enables writes only with explicit configuration', async () => {
+    jest.useFakeTimers({ now: new Date('2026-11-15T08:00Z') });
+    process.env.INACTIVE_KNOWLEDGE_EXPERTS_WRITE_ENABLED = 'true';
+    const { api, put } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    createApi.mockReturnValue(api);
 
-    expect(report).toMatchObject({ dryRun: true, removed: ['1Or'] });
-    expect(api.edit).not.toHaveBeenCalled();
-  });
-});
-
-describe('default options', () => {
-  it('uses the system date, read-only mode and all discovered users without explicit options', async () => {
-    const api = mockWiki();
-    const report = await runInactiveKnowledgeExperts(api);
-
-    expect(report.totalUsers).toBe(3);
-    expect(report.dryRun).toBe(true);
-    expect(api.edit).not.toHaveBeenCalled();
-  });
-});
-
-function persistentWiki(talk: string) {
-  const api = mockWiki(talk);
-  const contents = new Map([
-    [css, '{{א|1Or}}, [[משתמשת:דנה]], [[משתמש:פעיל]]'],
-    [html, '[[משתמש:1Or]]'],
-    ['שיחת משתמש:1Or', talk],
-  ]);
-  api.articleContent.mockImplementation(async (title) => ({
-    content: contents.get(title) ?? '', revid: 27,
-  }));
-  api.edit.mockImplementation(async (title, _summary, text) => {
-    contents.set(title, text);
-    return {
-      edit: {
-        result: 'Success', pageid: 1, title, contentmodel: 'wikitext',
-      },
-    };
-  });
-  return { api, contents };
-}
-
-describe('monthly idempotency', () => {
-  it('writes a warning only once on repeated runs in the same month', async () => {
-    const { api } = persistentWiki('');
-
-    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
-    const repeat = await runInactiveKnowledgeExperts(api, {
-      now: new Date('2026-12-11T09:00:00Z'), maxUsers: 1, dryRun: false,
-    });
-
-    expect(api.edit).toHaveBeenCalledTimes(1);
-    expect(api.userContributes).toHaveBeenCalledTimes(1);
-    expect(repeat.skipped).toStrictEqual(['1Or']);
-  });
-
-  it('does not repeat a completed removal or issue a new warning in the same month', async () => {
-    const { api, contents } = persistentWiki(warningMessage(['CSS'], new Date('2026-11-09')));
-
-    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
-    const repeat = await runInactiveKnowledgeExperts(api, {
-      now: new Date('2026-12-11T09:00:00Z'), maxUsers: 1, dryRun: false,
-    });
-
-    expect(contents.get('שיחת משתמש:1Or')).toContain('Sapper-bot:knowledge-expert-closed:2026-12');
-    expect(api.edit).toHaveBeenCalledTimes(2);
-    expect(api.userContributes).toHaveBeenCalledTimes(1);
-    expect(repeat.skipped).toStrictEqual(['1Or']);
-  });
-
-  it('allows processing again in a later month', async () => {
-    const api = mockWiki(warningMessage(['CSS'], now));
-    const report = await runInactiveKnowledgeExperts(api, {
-      now: new Date('2027-01-10T09:00:00Z'), maxUsers: 1, dryRun: false,
-    });
-
-    expect(report.removed).toStrictEqual(['1Or']);
-    expect(api.edit).toHaveBeenCalledTimes(2);
-  });
-
-  it('does not repeat a canceled warning in the same month', async () => {
-    const { api } = persistentWiki(warningMessage(['CSS'], new Date('2026-11-09')));
-    api.userContributes.mockImplementation(async function* active() {
-      yield [{ title: 'Article' }] as any;
-    });
-
-    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
-    const repeat = await runInactiveKnowledgeExperts(api, {
-      now: new Date('2026-12-11T09:00:00Z'), maxUsers: 1, dryRun: false,
-    });
-
-    expect(api.edit).toHaveBeenCalledTimes(1);
-    expect(api.userContributes).toHaveBeenCalledTimes(1);
-    expect(repeat.skipped).toStrictEqual(['1Or']);
+    await expect(main()).resolves.toMatchObject({ dryRun: false, warned: ['Alice'] });
+    expect(api.create).toHaveBeenCalledTimes(2);
   });
 });

@@ -13,6 +13,9 @@ import {
 import { contentFromPage, objectToFormData } from '../utilities';
 import BaseWikiApi, { defaultConfig } from './BaseWikiApi';
 
+type RegisteredUser = { name: string; registration: string | null };
+type RevisionFilters = { user?: string; since?: Date };
+
 export interface IWikiApi {
   login(): Promise<void>;
   request(path: string, method?: string, data?: Record<string, any>): Promise<any>;
@@ -26,6 +29,8 @@ export interface IWikiApi {
   create(
     articleTitle: string, summary: string, content: string, minor?: boolean
   ): Promise<any>;
+  getPage(title: string): Promise<WikiPage>;
+  registeredUsers(usernames: string[]): Promise<RegisteredUser[]>;
   articleContent(title: string): Promise<{ content: string, revid: number }>;
   externalUrl(link: string, protocol?: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<PageInfo[]>;
@@ -56,7 +61,8 @@ export interface IWikiApi {
   recentChanges(
     namespaces: number[], endTimestamp: string, limit?: number, type?: string, props?: string
   ): AsyncGenerator<RecentChange[], void, void>;
-  getArticleRevisions(title: string, limit: number, props?: string): AsyncGenerator<Revision[], void, void>;
+  getArticleRevisions(title: string, limit: number, props?: string, filters?: RevisionFilters):
+    AsyncGenerator<Revision[], void, void>;
   logs(
     type: string, namespaces: number[], endTimestamp: string, limit?: number
   ): AsyncGenerator<LogEvent[], void, void>;
@@ -67,7 +73,7 @@ export interface IWikiApi {
   markRead(): Promise<any>;
   getNotifications(readStatus?: string): Promise<any>;
   addComment(page: string, summary: string, content: string, commentid: string): Promise<any>;
-  allPages(namespace?: number, from?: string): AsyncGenerator<WikiPage[], void, void>;
+  allPages(namespace?: number, from?: string, prefix?: string): AsyncGenerator<WikiPage[], void, void>;
   getParsedContent(title: string): Promise<string>;
   getRedirectsTo(toNamespace: number, limit?: number, templates?: string, categories?: string):
     AsyncGenerator<WikiPage[], void, void>;
@@ -113,10 +119,13 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
       commentid,
     }));
   }
-  async function* allPages(namespace = 0, from = '') {
+  async function* allPages(namespace = 0, from = '', prefix = '') {
     const props = encodeURIComponent('revisions');
     const rvprops = encodeURIComponent('content|ids');
-    const path = `?action=query&format=json&generator=allpages&gapnamespace=${namespace}&gaplimit=500${from ? `&gapfrom=${from}` : ''}`
+    const pageFilter = prefix
+      ? `&gaplimit=50&gapfilterredir=nonredirects&gapprefix=${encodeURIComponent(prefix)}`
+      : '&gaplimit=500';
+    const path = `?action=query&format=json&generator=allpages&gapnamespace=${namespace}${pageFilter}${from ? `&gapfrom=${encodeURIComponent(from)}` : ''}`
       + `&prop=${props}`
       + `&rvprop=${rvprops}&rvslots=*`;
 
@@ -196,6 +205,24 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     return request(`?action=edit&format=json${editRights}${minor ? '&minor=true' : ''}`, 'post', objectToFormData(data));
   }
 
+  async function getPage(title: string): Promise<WikiPage> {
+    const path = `?action=query&format=json&prop=info%7Crevisions&rvprop=content%7Cids%7Cuser&rvslots=main&titles=${encodeURIComponent(title)}`;
+    const result = await request(path);
+    const [page] = Object.values(result.query.pages as Record<string, WikiPage>);
+    return page;
+  }
+
+  async function registeredUsers(usernames: string[]): Promise<RegisteredUser[]> {
+    const registered: RegisteredUser[] = [];
+    for (let index = 0; index < usernames.length; index += 50) {
+      const batch = encodeURIComponent(usernames.slice(index, index + 50).join('|'));
+      const result = await request(`?action=query&format=json&list=users&usprop=registration&ususers=${batch}`);
+      const { users } = result.query as { users: (RegisteredUser & { userid?: number })[] };
+      registered.push(...users.filter((user) => user.userid).map(({ name, registration }) => ({ name, registration })));
+    }
+    return registered;
+  }
+
   async function articleContent(
     title: string,
   ): Promise<{ content: string, revid: number }> {
@@ -219,10 +246,14 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     title: string,
     limit: number,
     props = 'content|user|size|comment',
+    { user, since }: RevisionFilters = {},
   ): AsyncGenerator<Revision[], void, void> {
     const encodedProps = encodeURIComponent(props);
     const batchLimit = Math.min(500, limit);
-    const path = `?action=query&format=json&rvslots=*&prop=revisions&titles=${encodeURIComponent(title)}&rvlimit=${batchLimit}&rvprop=${encodedProps}`;
+    const params = new URLSearchParams();
+    if (user) params.set('rvuser', user);
+    if (since) params.set('rvend', since.toISOString());
+    const path = `?action=query&format=json&rvslots=*&prop=revisions&titles=${encodeURIComponent(title)}&rvlimit=${batchLimit}&rvprop=${encodedProps}&${params}`;
 
     yield* baseWikiApi.continueQuery(
       path,
@@ -499,6 +530,8 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     recursiveSubCategories,
     backlinksTo,
     articleContent,
+    getPage,
+    registeredUsers,
     externalUrl,
     categroyTitles,
     info,
