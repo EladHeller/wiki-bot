@@ -26,7 +26,9 @@ const keyOf = (value: string) => normalize(value).toLocaleLowerCase('en');
 const unique = (values: string[]) => [...new Set(values)];
 const topicOf = (title: string) => title.slice(PREFIX.length);
 const talkTitle = (username: string) => 'שיחת משתמש:' + username;
-const userPattern = /\[\[\s*(?:משתמש|משתמשת|User)\s*:\s*([^\]|#]+)(?:\|[^\]]*)?\]\]|\{\{\s*א\s*\|\s*([^|}]+)(?:\|[^}]*)?\}\}/giu;
+const wikiUserLink = /\[\[\s*(?:משתמש|משתמשת|User)\s*:\s*([^\]|#]+)(?:\|[^\]]*)?\]\]/;
+const wikiUserTemplate = /\{\{\s*א\s*\|\s*([^|}]+)(?:\|[^}]*)?\}\}/;
+const userPattern = new RegExp(wikiUserLink.source + '|' + wikiUserTemplate.source, 'giu');
 
 function dateOnly(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
