@@ -94,7 +94,7 @@ describe('inactive knowledge experts cleanup', () => {
     const parsed = pendingWarning(warning);
 
     expect(parsed?.topics).toStrictEqual(['CSS', 'HTML']);
-    expect(pendingWarning(closeWarning(warning, (parsed as NonNullable<typeof parsed>), 'ההסרה בוטלה'))).toBeNull();
+    expect(pendingWarning(closeWarning(warning, (parsed as NonNullable<typeof parsed>), 'ההסרה בוטלה', now))).toBeNull();
     expect(formerExpertTemplates(Array.from({ length: 11 }, (_, i) => String(i))))
       .toBe('{{בעל ידע לשעבר|0|1|2|3|4|5|6|7|8|9}}\n{{בעל ידע לשעבר|10}}');
   });
@@ -165,6 +165,7 @@ describe('inactive knowledge experts cleanup', () => {
       warningMessage(['CSS'], new Date('2026-11-09')),
       requireWarning(warningMessage(['CSS'], new Date('2026-11-09'))),
       'הוסר',
+      now,
     );
 
     expect(pendingWarning(closed)).toBeNull();
@@ -279,7 +280,7 @@ describe('inactive knowledge experts edge cases', () => {
     const talk = `${warningMessage(['CSS'], new Date('2026-11-09'))
     }\n== הודעה אחרת ==\nתוכן אחר`;
     const pending = requireWarning(talk);
-    const closed = closeWarning(talk, pending, 'ההסרה בוצעה');
+    const closed = closeWarning(talk, pending, 'ההסרה בוצעה', now);
 
     expect(closed.indexOf('ההסרה בוצעה')).toBeLessThan(closed.indexOf('== הודעה אחרת =='));
     expect(pendingWarning(closed)).toBeNull();
@@ -287,7 +288,7 @@ describe('inactive knowledge experts edge cases', () => {
 
   it('selects the newest still pending warning when older warnings are already closed', () => {
     const older = warningMessage(['CSS'], new Date('2026-09-09'));
-    const closed = closeWarning(older, requireWarning(older), 'הוסר');
+    const closed = closeWarning(older, requireWarning(older), 'הוסר', now);
     const newer = warningMessage(['HTML'], new Date('2026-11-09'));
 
     expect(pendingWarning(closed + newer)?.topics).toStrictEqual(['HTML']);
@@ -327,5 +328,85 @@ describe('default options', () => {
     expect(report.totalUsers).toBe(3);
     expect(report.dryRun).toBe(true);
     expect(api.edit).not.toHaveBeenCalled();
+  });
+});
+
+describe('monthly idempotency', () => {
+  it('writes a warning only once on repeated runs in the same month', async () => {
+    const api = mockWiki();
+    let talk = '';
+    api.articleContent.mockImplementation(async (title) => {
+      if (title === css) return { content: '{{א|1Or}}', revid: 25 };
+      if (title === html) return { content: '[[משתמש:1Or]]', revid: 26 };
+      return { content: talk, revid: 27 };
+    });
+    api.edit.mockImplementation(async (title, _summary, text) => {
+      if (title === 'שיחת משתמש:1Or') talk = text;
+    });
+
+    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+    const repeat = await runInactiveKnowledgeExperts(api, {
+      now: new Date('2026-12-11T09:00:00Z'), maxUsers: 1, dryRun: false,
+    });
+
+    expect(api.edit).toHaveBeenCalledTimes(1);
+    expect(api.userContributes).toHaveBeenCalledTimes(1);
+    expect(repeat.skipped).toStrictEqual(['1Or']);
+  });
+
+  it('does not repeat a completed removal or issue a new warning in the same month', async () => {
+    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
+    let talk = warningMessage(['CSS'], new Date('2026-11-09'));
+    api.articleContent.mockImplementation(async (title) => {
+      if (title === css) return { content: '[[משתמש:1Or]]', revid: 25 };
+      if (title === html) return { content: '[[משתמש:1Or]]', revid: 26 };
+      return { content: talk, revid: 27 };
+    });
+    api.edit.mockImplementation(async (title, _summary, text) => {
+      if (title === 'שיחת משתמש:1Or') talk = text;
+    });
+
+    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+    const repeat = await runInactiveKnowledgeExperts(api, {
+      now: new Date('2026-12-11T09:00:00Z'), maxUsers: 1, dryRun: false,
+    });
+
+    expect(talk).toContain('Sapper-bot:knowledge-expert-closed:2026-12');
+    expect(api.edit).toHaveBeenCalledTimes(2);
+    expect(api.userContributes).toHaveBeenCalledTimes(1);
+    expect(repeat.skipped).toStrictEqual(['1Or']);
+  });
+
+  it('allows processing again in a later month', async () => {
+    const api = mockWiki(warningMessage(['CSS'], now));
+    const report = await runInactiveKnowledgeExperts(api, {
+      now: new Date('2027-01-10T09:00:00Z'), maxUsers: 1, dryRun: false,
+    });
+
+    expect(report.removed).toStrictEqual(['1Or']);
+    expect(api.edit).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not repeat a canceled warning in the same month', async () => {
+    const api = mockWiki(warningMessage(['CSS'], new Date('2026-11-09')));
+    let talk = warningMessage(['CSS'], new Date('2026-11-09'));
+    api.articleContent.mockImplementation(async (title) => (
+      title === css ? { content: '[[משתמש:1Or]]', revid: 25 } : { content: talk, revid: 27 }
+    ));
+    api.userContributes.mockImplementation(async function* active() {
+      yield [{ title: 'Article' }] as any;
+    });
+    api.edit.mockImplementation(async (title, _summary, text) => {
+      if (title === 'שיחת משתמש:1Or') talk = text;
+    });
+
+    await runInactiveKnowledgeExperts(api, { now, maxUsers: 1, dryRun: false });
+    const repeat = await runInactiveKnowledgeExperts(api, {
+      now: new Date('2026-12-11T09:00:00Z'), maxUsers: 1, dryRun: false,
+    });
+
+    expect(api.edit).toHaveBeenCalledTimes(1);
+    expect(api.userContributes).toHaveBeenCalledTimes(1);
+    expect(repeat.skipped).toStrictEqual(['1Or']);
   });
 });
