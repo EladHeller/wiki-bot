@@ -45,13 +45,13 @@ export function parseMembers(content: string): UserEntry[] {
   const end = content.search(/<noinclude\b/i);
   const body = (end < 0 ? content : content.slice(0, end));
   const comments = [...body.matchAll(/<!--[\s\S]*?-->/g)]
-    .map((match) => ({ start: match.index!, end: match.index! + match[0].length }));
+    .map((match) => ({ start: (match.index as number), end: (match.index as number) + match[0].length }));
   return [...body.matchAll(userPattern)].filter((match) => (
-    !comments.some((comment) => match.index! >= comment.start && match.index! < comment.end)
+    !comments.some((comment) => (match.index as number) >= comment.start && (match.index as number) < comment.end)
   )).map((match) => ({
     username: normalize(match[1] ?? match[2]),
-    start: match.index!,
-    end: match.index! + match[0].length,
+    start: (match.index as number),
+    end: (match.index as number) + match[0].length,
   }));
 }
 
@@ -75,7 +75,7 @@ function sectionEnd(content: string, start: number): number {
 export function pendingWarning(content: string): Warning | null {
   const markers = [...content.matchAll(/<!-- Sapper-bot:knowledge-expert-warning:(\d{4}-\d{2}-\d{2}) -->/g)];
   const warnings = markers.reverse().map((match) => {
-    const section = content.slice(match.index!, sectionEnd(content, match.index!));
+    const section = content.slice((match.index as number), sectionEnd(content, (match.index as number)));
     if (section.includes(CLOSED_MARKER)) return null;
     const topics = [...section.matchAll(/\[\[\s*תבנית:בעלי ידע\/([^\]|]+)(?:\|[^\]]*)?\]\]/g)]
       .map((topic) => normalize(topic[1]));
@@ -170,7 +170,7 @@ async function removeFromTopics(
     const entries = parseMembers(page.content).filter((entry) => keyOf(entry.username) === keyOf(username));
     if (entries.length === 0) continue;
     if (entries.length !== 1) throw new Error('Ambiguous knowledge expert entry: ' + title + ': ' + username);
-    const content = removeMember(page.content, username)!;
+    const content = removeMember(page.content, username) as string;
     if (!dryRun) await api.edit(title, 'הסרת בעל ידע לאחר התראה וחוסר פעילות', content, page.revid);
     removed.push(topic);
   }
@@ -187,7 +187,7 @@ export default async function runInactiveKnowledgeExperts(
   all.forEach(({ username, title }) => {
     const key = keyOf(username);
     if (!byUser.has(key)) byUser.set(key, { username, topics: [] });
-    byUser.get(key)!.topics.push(topicOf(title));
+    (byUser.get(key) as { username: string; topics: string[] }).topics.push(topicOf(title));
   });
   const users = [...byUser.values()];
   const result: RunReport = {
