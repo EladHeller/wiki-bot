@@ -13,7 +13,9 @@ const html = 'תבנית:בעלי ידע/HTML';
 const js = 'תבנית:בעלי ידע/JS';
 const aliceTalk = 'שיחת משתמש:Alice';
 const botName = 'Test-bot';
-const stateTitle = `משתמש:${botName}/תחזוקת בעלי ידע`;
+const logTitle = 'ויקיפדיה:בוט/ניקוי בעלי ידע לא פעילים';
+const warningLogSummary = 'רישום התראה ביומן הבוט';
+const removalLogSummary = 'רישום הסרה ביומן הבוט';
 const category = '<noinclude>[[קטגוריה:ויקיפדיה: בעלי ידע במחשבים]]</noinclude>';
 const closeSummary = 'עדכון בנוגע לרשימות בעלי הידע';
 const createApi = jest.fn<() => ReturnType<typeof WikiApiMock>>();
@@ -106,13 +108,15 @@ function wiki() {
     if (pageFor(title).revisions?.[0].revid !== revid) throw new Error('Edit conflict');
     return write(title, summary, content);
   });
+  const contentWrites = () => [...api.edit.mock.calls, ...api.create.mock.calls]
+    .filter(([title]) => title !== logTitle).length;
   const run = (date: string, dryRun = false) => {
     const now = new Date(date);
     return runInactiveKnowledgeExperts(api, { botName, now, dryRun });
   };
 
   return {
-    api, active, hidden, redirects, unregistered, registrations, put, contentOf, run, failEdit,
+    api, active, hidden, redirects, unregistered, registrations, put, contentOf, contentWrites, run, failEdit,
   };
 }
 
@@ -183,7 +187,7 @@ describe('the monthly cleanup', () => {
 
   it('warns once and waits a full month before removing only warned memberships', async () => {
     const {
-      api, put, contentOf, run, active,
+      contentWrites, put, contentOf, run, active,
     } = wiki();
     active.add('Bob');
     put(css, `[[משתמש:Alice]], {{א|Bob}}${category}`);
@@ -196,15 +200,15 @@ describe('the monthly cleanup', () => {
 
     put(aliceTalk, `${contentOf(aliceTalk)}\n== Another discussion ==\nKeep this.`);
     put(js, `{{א|Alice}}${category}`);
-    const writes = api.edit.mock.calls.length + api.create.mock.calls.length;
+    const writes = contentWrites();
     await run('2026-09-04T08:10Z');
     await run('2026-10-02T08:00Z');
 
-    expect(api.edit.mock.calls.length + api.create.mock.calls.length).toBe(writes);
+    expect(contentWrites()).toBe(writes);
 
     const due = await run('2026-10-04T08:00Z');
     const talk = contentOf(aliceTalk) as string;
-    const finalWrites = api.edit.mock.calls.length + api.create.mock.calls.length;
+    const finalWrites = contentWrites();
     await run('2026-10-04T09:00Z');
 
     expect({
@@ -213,7 +217,7 @@ describe('the monthly cleanup', () => {
       html: contentOf(html),
       js: contentOf(js),
       reply: talk.split('== Another discussion ==')[0],
-      writes: api.edit.mock.calls.length + api.create.mock.calls.length,
+      writes: contentWrites(),
     }).toMatchObject({
       removed: ['Alice'],
       css: `{{א|Bob}}${category}`,
@@ -327,20 +331,22 @@ describe('the monthly cleanup', () => {
     expect(contentOf(html)).toContain('{{א|Alice}}');
   });
 
-  it('refuses to use state written by another editor or with malformed data', async () => {
-    const { put, run } = wiki();
-    const wrap = (value: string) => `<pre class="inactive-knowledge-experts-state">${value}</pre>`;
-    put(stateTitle, wrap('[]'));
+  it('refuses to use a run log written by another editor or with malformed records', async () => {
+    const { put, run, contentOf } = wiki();
+    await run('2026-11-01T08:00Z');
+    const log = contentOf(logTitle);
+    put(logTitle, `${log}Edited by another user.`);
 
-    await expect(run('2026-11-01T08:00Z')).rejects.toThrow('Untrusted cleanup state');
+    await expect(run('2026-11-02T08:00Z')).rejects.toThrow('Untrusted cleanup log');
 
-    put(stateTitle, wrap('[["Alice",{"warnedOn":"2026-10-01","topics":["Article"]}]]'), botName);
+    const line = '["Alice",{"warnedOn":"2026-10-01","topics":["Article"]}]';
+    put(logTitle, `${log}<!-- knowledge-experts: ${line} -->\n`, botName);
 
-    await expect(run('2026-11-01T08:00Z')).rejects.toThrow('Invalid cleanup state');
+    await expect(run('2026-11-02T08:00Z')).rejects.toThrow('Invalid cleanup entry');
 
-    put(stateTitle, wrap('{}'), botName);
+    put(logTitle, `${log}<!-- knowledge-experts: {} -->\n`, botName);
 
-    await expect(run('2026-11-01T08:00Z')).rejects.toThrow('Invalid cleanup state');
+    await expect(run('2026-11-02T08:00Z')).rejects.toThrow('Invalid cleanup entry');
   });
 });
 
@@ -460,7 +466,7 @@ describe('recovery and source validation', () => {
     put(css, `{{א|Alice}}${category}`);
     failEdit(aliceTalk);
     await run('2026-09-01T08:00Z');
-    failEdit(stateTitle, 'nochange');
+    failEdit('עדכון מעקב אחר תחזוקת בעלי הידע', 'nochange');
 
     expect((await run('2026-09-01T09:00Z')).warned).toStrictEqual(['Alice']);
     expect((await run('2026-10-01T08:00Z')).removed).toStrictEqual(['Alice']);
@@ -506,6 +512,90 @@ describe('recovery and source validation', () => {
     failEdit(aliceTalk, 'rejected');
 
     expect((await run('2026-09-01T08:00Z')).failed).toStrictEqual(['Alice']);
+  });
+});
+
+describe('the public run log', () => {
+  it('keeps a dated section for every live run and logs signed notifications and removals once', async () => {
+    const { put, run, contentOf } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+
+    expect(contentOf(aliceTalk)).toContain('~~~~');
+
+    await run('2026-09-02T08:00Z');
+    await run('2026-10-01T08:00Z');
+    const talk = contentOf(aliceTalk);
+    const entries = contentOf(logTitle)?.split(/^== .* ==$/m);
+
+    expect(talk?.match(/~~~~/g)).toHaveLength(2);
+    expect(entries).toStrictEqual([
+      expect.stringContaining('זמני הריצות מוצגים לפי שעון ישראל'),
+      expect.stringContaining('* נשלחה התראה ל[[שיחת משתמש:Alice|Alice]].'),
+      expect.stringContaining('לא תועדו התראות או הסרות'),
+      expect.stringContaining(`* [[משתמש:Alice|Alice]] הוסר מרשימת [[${css}|CSS]].`),
+    ]);
+    expect(contentOf(logTitle)).toContain('== 2026-09-01 11:00:00 ==');
+  });
+
+  it('recovers a delivered warning after the talk page was archived and the log edit failed', async () => {
+    const {
+      put, run, contentOf, failEdit,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    failEdit(warningLogSummary);
+    const first = await run('2026-09-01T08:00Z');
+
+    expect(first.failed).toStrictEqual(['Alice']);
+    expect(contentOf(logTitle)).not.toContain('* נשלחה התראה');
+
+    put(aliceTalk, 'Archived after delivery');
+    const repeat = await run('2026-09-02T08:00Z');
+
+    expect(repeat.skipped).toStrictEqual(['Alice']);
+    expect(contentOf(aliceTalk)).toBe('Archived after delivery');
+    expect(contentOf(logTitle)).toContain(
+      '* נשלחה התראה ל[[שיחת משתמש:Alice|Alice]]. הפעולה בוצעה בריצה קודמת',
+    );
+  });
+
+  it('logs an interrupted removal exactly once even if the user was re-added before recovery', async () => {
+    const {
+      put, run, contentOf, failEdit,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    failEdit(removalLogSummary);
+    const first = await run('2026-10-01T08:00Z');
+
+    expect(first.failed).toStrictEqual(['Alice']);
+    expect(contentOf(css)).toBe(category);
+
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-10-02T08:00Z');
+    await run('2026-10-04T08:00Z');
+    const log = contentOf(logTitle);
+
+    expect(contentOf(css)).toContain('{{א|Alice}}');
+    expect(log?.match(/הוסר מרשימת/g)).toHaveLength(1);
+    expect(log).toContain(`[[${css}|CSS]]. הפעולה בוצעה בריצה קודמת`);
+  });
+
+  it('retains the removal entry when sending the reply fails and a later run sends it', async () => {
+    const {
+      put, run, contentOf, failEdit,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    failEdit(closeSummary);
+    await run('2026-10-01T08:00Z');
+
+    expect(contentOf(logTitle)).toContain(`* [[משתמש:Alice|Alice]] הוסר מרשימת [[${css}|CSS]].`);
+
+    await run('2026-10-02T08:00Z');
+
+    expect(contentOf(logTitle)?.match(/הוסר מרשימת/g)).toHaveLength(1);
+    expect(contentOf(aliceTalk)).toContain('שמך הוסר');
   });
 });
 
