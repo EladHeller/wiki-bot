@@ -520,7 +520,7 @@ Resources:
             Schedule: cron(0 9 ? * * *)
             Name: new-categories-scheduler
 
-InactiveKnowledgeExpertsFunction:
+  InactiveKnowledgeExpertsFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: inactive-knowledge-experts-function
@@ -534,7 +534,7 @@ InactiveKnowledgeExpertsFunction:
         Schedule:
           Type: Schedule
           Properties:
-            Schedule: cron(0 8 5 * ? *)
+            Schedule: cron(0 8 1,2,4 * ? *)
             Name: inactive-knowledge-experts-scheduler
             Enabled: false
 
