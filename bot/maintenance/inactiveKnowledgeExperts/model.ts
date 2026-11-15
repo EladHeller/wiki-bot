@@ -170,14 +170,16 @@ async function removeFromTopics(api: IWikiApi, username: string, topics: string[
   for (const topic of unique(topics)) {
     const title = PREFIX + topic;
     const [info] = await api.info([title]);
-    if (!info || info.missing !== undefined) continue;
-    const page = await api.articleContent(title);
-    const entries = parseMembers(page.content).filter((entry) => keyOf(entry.username) === keyOf(username));
-    if (entries.length === 0) continue;
-    if (entries.length !== 1) throw new Error(`Ambiguous knowledge expert entry: ${title}: ${username}`);
-    const content = removeMember(page.content, username) as string;
-    if (!dryRun) await api.edit(title, 'הסרת בעל ידע לאחר התראה וחוסר פעילות', content, page.revid);
-    removed.push(topic);
+    const page = info && info.missing === undefined ? await api.articleContent(title) : null;
+    if (page) {
+      const entries = parseMembers(page.content).filter((entry) => keyOf(entry.username) === keyOf(username));
+      if (entries.length > 0) {
+        if (entries.length !== 1) throw new Error(`Ambiguous knowledge expert entry: ${title}: ${username}`);
+        const content = removeMember(page.content, username) as string;
+        if (!dryRun) await api.edit(title, 'הסרת בעל ידע לאחר התראה וחוסר פעילות', content, page.revid);
+        removed.push(topic);
+      }
+    }
   }
   return removed;
 }
