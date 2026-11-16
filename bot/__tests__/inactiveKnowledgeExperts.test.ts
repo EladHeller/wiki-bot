@@ -121,7 +121,8 @@ function wiki() {
   };
 
   return {
-    api, active, hidden, redirects, userAliases, unregistered, registrations, put, contentOf, contentWrites, run, failEdit,
+    api, active, hidden, redirects, userAliases, unregistered, registrations,
+    put, contentOf, contentWrites, run, failEdit,
   };
 }
 
@@ -200,14 +201,17 @@ describe('the monthly cleanup', () => {
 
     const first = await run('2026-09-01T08:00Z');
 
-    expect(first).toMatchObject({ warned: ['Alice'], failed: [] });
     expect(api.registeredUsers).toHaveBeenCalledWith(['Alice']);
     expect(api.userContributes.mock.calls.map(([name]) => name)).toStrictEqual(['Alice']);
     expect(contentOf(aliceTalk)).toContain(`[[${html}]]`);
     expect(api.create.mock.calls.filter(([title]) => title === aliceTalk)).toHaveLength(1);
 
     const repeat = await run('2026-09-02T08:00Z');
-    expect(repeat).toMatchObject({ warned: [], skipped: ['Alice'], failed: [] });
+
+    expect({ first, repeat }).toMatchObject({
+      first: { warned: ['Alice'], failed: [] },
+      repeat: { warned: [], skipped: ['Alice'], failed: [] },
+    });
   });
 
   it('uses the original membership aliases when removing from multiple topics', async () => {
@@ -252,7 +256,9 @@ describe('the monthly cleanup', () => {
     const topic = put(css, `{{א|Alice}}${category}`);
     await run('2026-09-01T08:00Z');
     const legacy = JSON.stringify(['Alice', {
-      warnedOn: '2026-09-01', topics: [css], notified: true,
+      warnedOn: '2026-09-01',
+      topics: [css],
+      notified: true,
       removals: [{ title: css, revid: topic.revisions?.[0].revid }],
     }]);
     put(logTitle, `${contentOf(logTitle)}\n<!-- knowledge-experts: ${legacy} -->\n`, wikiUsername);
