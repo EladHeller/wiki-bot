@@ -150,6 +150,26 @@ describe('wiki API knowledge-expert lookups', () => {
       .toStrictEqual([names.slice(0, 50), ['Space & Co']]);
   });
 
+  it('resolves user page redirects in batches with normalized source titles', async () => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValueOnce({
+      query: {
+        normalized: [{ from: 'משתמש:old_name', to: 'משתמש:Old name' }],
+        redirects: [{ from: 'משתמש:Old name', to: 'משתמש:Current name' }],
+      },
+    }).mockResolvedValueOnce({ query: { redirects: [{ from: 'משתמש:Alias', to: 'משתמש:Target' }] } });
+    const names = ['משתמש:old_name', ...Array.from({ length: 49 }, (_, i) => `משתמש:Unchanged${i}`), 'משתמש:Alias'];
+
+    const result = await WikiApi(base).resolveRedirects(names);
+
+    expect([...result]).toStrictEqual([
+      ['משתמש:old_name', 'משתמש:Current name'],
+      ['משתמש:Alias', 'משתמש:Target'],
+    ]);
+    expect(base.request.mock.calls.map(([path]) => new URLSearchParams(path).get('titles')?.split('|')))
+      .toStrictEqual([names.slice(0, 50), ['משתמש:Alias']]);
+  });
+
   it('bounds recovery history by bot author and earliest date', async () => {
     const base = BaseWikiApiMock();
     base.continueQuery.mockImplementation(async function* query(_path, selector) {
