@@ -150,6 +150,58 @@ describe('wiki API knowledge-expert lookups', () => {
       .toStrictEqual([names.slice(0, 50), ['Space & Co']]);
   });
 
+  it('resolves user-page redirects in 50-name batches without using talk-page redirects', async () => {
+    const base = BaseWikiApiMock();
+    base.request
+      .mockResolvedValueOnce({
+        query: {
+          redirects: [
+            { from: 'משתמש:Old alias', to: 'משתמש:Alice' },
+            { from: 'משתמש:Other', to: 'ויקיפדיה:Project' },
+            { from: 'משתמש:Fragment', to: 'משתמש:Alice', tofragment: 'section' },
+            { from: 'משתמש:Not requested', to: 'משתמש:Alice' },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ query: { redirects: [{ from: 'משתמש:Old 51', to: 'משתמש:Bob' }] } });
+    const names = [
+      'Old alias', 'Other', 'Fragment',
+      ...Array.from({ length: 47 }, (_, index) => `Name ${index}`),
+      'Old 51',
+    ];
+    const redirects = await WikiApi(base).userPageRedirects(names);
+
+    expect([...redirects]).toStrictEqual([['Old alias', 'Alice'], ['Old 51', 'Bob']]);
+    expect(base.request.mock.calls.map(([path]) => new URLSearchParams(path).get('titles')?.split('|')))
+      .toStrictEqual([
+        names.slice(0, 50).map((name) => `משתמש:${name}`),
+        ['משתמש:Old 51'],
+      ]);
+  });
+
+  it('keeps the original alias when MediaWiki normalizes the source title', async () => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({
+      query: {
+        normalized: [
+          { from: 'משתמש:old_name', to: 'משתמש:Old name' },
+          { from: 'משתמש:Other', to: 'משתמש:Else' },
+        ],
+        redirects: [{ from: 'משתמש:Old name', to: 'משתמש:Current name' }],
+      },
+    });
+    const result = await WikiApi(base).userPageRedirects(['old_name']);
+
+    expect([...result]).toStrictEqual([['old_name', 'Current name']]);
+  });
+
+  it('accepts an API response without redirects', async () => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({ query: {} });
+
+    await expect(WikiApi(base).userPageRedirects(['Existing'])).resolves.toStrictEqual(new Map());
+  });
+
   it('bounds recovery history by bot author and earliest date', async () => {
     const base = BaseWikiApiMock();
     base.continueQuery.mockImplementation(async function* query(_path, selector) {

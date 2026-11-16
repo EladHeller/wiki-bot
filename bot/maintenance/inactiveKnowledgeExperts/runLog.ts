@@ -3,8 +3,11 @@ import { contentFromPage } from '../../utilities';
 import { IWikiApi } from '../../wiki/WikiApi';
 import { TOPIC_PREFIX } from './memberships';
 
-type Removal = { title: string; revid: number; completed?: true };
-export type Pending = { warnedOn: string; topics: string[]; notified?: true; removals?: Removal[] };
+export type Member = { username: string; topics: string[] };
+type Removal = { title: string; revid: number; completed?: true; usernames?: string[] };
+export type Pending = {
+  warnedOn: string; topics: string[]; members?: Member[]; notified?: true; removals?: Removal[]
+};
 type Closed = { closedOn: string };
 type UserState = Pending | Closed;
 type UserStates = Map<string, UserState>;
@@ -36,9 +39,17 @@ function isTopicTitle(title: unknown): title is string {
 function isPending(value: any): value is Pending {
   return typeof value.warnedOn === 'string' && datePattern.test(value.warnedOn)
     && Array.isArray(value.topics) && value.topics.length > 0 && value.topics.every(isTopicTitle)
+    && (value.members === undefined || (Array.isArray(value.members)
+      && value.members.length > 0 && value.members.every((member: Member) => (
+      typeof member.username === 'string' && member.username.length > 0
+      && Array.isArray(member.topics) && member.topics.length > 0
+      && member.topics.every((title) => value.topics.includes(title))
+    ))))
     && (value.removals === undefined || (Array.isArray(value.removals)
       && value.removals.every((item: Removal) => (
         value.topics.includes(item.title) && Number.isSafeInteger(item.revid)
+        && (item.usernames === undefined || (Array.isArray(item.usernames)
+          && item.usernames.length > 0 && item.usernames.every((name) => typeof name === 'string' && name.length > 0)))
       ))));
 }
 
