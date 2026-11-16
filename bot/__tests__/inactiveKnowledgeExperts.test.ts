@@ -703,3 +703,37 @@ describe('redirected knowledge-expert user pages', () => {
     expect(api.create.mock.calls.filter(([title]) => title !== logTitle)).toStrictEqual([]);
   });
 });
+
+describe('dry-run failure diagnostics', () => {
+  it('includes a non-Error rejection in the report', async () => {
+    const { api, put, run } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    api.userContributes.mockImplementation(async function* rejection() {
+      await Promise.reject('MediaWiki rejected the username');
+      yield [];
+    });
+
+    const report = await run('2026-11-01T08:00Z', true);
+
+    expect(report.failed).toStrictEqual(['Alice']);
+    expect(report.errors).toStrictEqual({ Alice: 'MediaWiki rejected the username' });
+    expect(api.edit).not.toHaveBeenCalled();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('retains an Error message when no stack is available', async () => {
+    const { api, put, run } = wiki();
+    const error = new Error('Unusable user account');
+    error.stack = undefined;
+    put(css, `{{א|Alice}}${category}`);
+    api.userContributes.mockImplementation(async function* rejection() {
+      await Promise.reject(error);
+      yield [];
+    });
+
+    const report = await run('2026-11-01T08:00Z', true);
+
+    expect(report.failed).toStrictEqual(['Alice']);
+    expect(report.errors).toStrictEqual({ Alice: 'Unusable user account' });
+  });
+});
