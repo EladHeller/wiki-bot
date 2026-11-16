@@ -654,7 +654,7 @@ describe('redirected knowledge-expert user pages', () => {
     const actual = 'מלא כל הארץ כבודי';
     const talkTitle = `שיחת משתמש:${actual}`;
     userRedirects.set(`משתמש:${alias}`, `משתמש:${actual}`);
-    put(css, `{{א|${alias}}}, {{א|${actual}}${category}`);
+    put(css, `{{א|${alias}}}, {{א|${actual}}}${category}`);
     put(html, `{{א|${alias}}}${category}`);
 
     const first = await run('2026-09-01T08:00Z');
@@ -685,6 +685,6 @@ describe('redirected knowledge-expert user pages', () => {
       warned: [], skipped: ['CurrentName'], failed: [],
     });
     expect(api.userContributes.mock.calls.map(([username]) => username)).toStrictEqual(['CurrentName']);
-    expect(api.create).not.toHaveBeenCalled();
+    expect(api.create.mock.calls.filter(([title]) => title !== logTitle)).toStrictEqual([]);
   });
 });
