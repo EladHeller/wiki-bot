@@ -397,7 +397,7 @@ describe('the monthly cleanup', () => {
       talk: contentOf(aliceTalk),
       edits: api.edit.mock.calls.filter(([title]) => title === css).length,
       repeat: repeat.removed,
-    }).toMatchObject({ talk: expect.stringContaining(`=== הסרה מתבניות בעלי ידע ===`), edits: 1, repeat: [] });
+    }).toMatchObject({ talk: expect.stringContaining('=== הסרה מתבניות בעלי ידע ==='), edits: 1, repeat: [] });
   });
 
   it('does not remove a re-added membership while resuming a partially completed removal', async () => {
@@ -660,8 +660,10 @@ describe('approved knowledge-expert notification text', () => {
     const nextSectionIndex = talk.indexOf('== Other discussion ==');
     const removal = talk.slice(removalIndex, nextSectionIndex);
 
-    expect({ removed: report.removed, validOrder: warningIndex < removalIndex && removalIndex < nextSectionIndex })
-      .toStrictEqual({ removed: ['Alice'], validOrder: true });
+    expect(report.removed).toStrictEqual(['Alice']);
+    expect(warningIndex).toBeGreaterThanOrEqual(0);
+    expect(removalIndex).toBeGreaterThan(warningIndex);
+    expect(nextSectionIndex).toBeGreaterThan(removalIndex);
     expect({
       date: removal.includes('בהמשך להודעה מ־2026-09-01'),
       topics: removal.includes(`* [[${css}]]\n* [[${html}]]`),
