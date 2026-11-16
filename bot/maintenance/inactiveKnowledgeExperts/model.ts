@@ -80,8 +80,14 @@ function warningSection(content: string, date: string): number {
   return -1;
 }
 
-function followUp(content: string, warning: Pending, removed: string[], active: boolean,
-  username: string, wikiUsername: string): string {
+function followUp(
+  content: string,
+  warning: Pending,
+  removed: string[],
+  active: boolean,
+  username: string,
+  wikiUsername: string,
+): string {
   const date = warning.warnedOn;
   const end = warningSection(content, date);
   if (end < 0 && removed.length === 0) return content;
