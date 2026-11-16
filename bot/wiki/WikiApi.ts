@@ -227,11 +227,18 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     const redirects = new Map<string, string>();
     const userTitle = /^(?:משתמש|משתמשת|User):(.+)$/iu;
     for (let index = 0; index < usernames.length; index += 50) {
-      const titles = usernames.slice(index, index + 50).map((name) => `משתמש:${name}`).join('|');
-      const result = await request(`?action=query&format=json&redirects=1&titles=${encodeURIComponent(titles)}`);
+      const batch = usernames.slice(index, index + 50);
+      const titles = batch.map((name) => `משתמש:${name}`);
+      const result = await request(`?action=query&format=json&redirects=1&titles=${encodeURIComponent(titles.join('|'))}`);
+      const originals = new Map(titles.map((title, i) => [title, batch[i]]));
+      const normalized = result.query?.normalized as { from: string; to: string }[] | undefined;
+      normalized?.forEach(({ from, to }) => {
+        const original = originals.get(from);
+        if (original) originals.set(to, original);
+      });
       const entries = result.query?.redirects as { from: string; to: string; tofragment?: string }[] | undefined;
       entries?.forEach(({ from, to, tofragment }) => {
-        const source = userTitle.exec(from)?.[1];
+        const source = originals.get(from);
         const target = userTitle.exec(to)?.[1];
         if (source && target && !tofragment) redirects.set(source, target);
       });
