@@ -26,6 +26,7 @@ export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocke
       ?? jest.fn<(target: string, namespace?: string) => AsyncGenerator<WikiPage[], void, void>>(),
     getPage: base.getPage ?? jest.fn<IWikiApi['getPage']>(),
     registeredUsers: base.registeredUsers ?? jest.fn<IWikiApi['registeredUsers']>(),
+    resolveRedirects: base.resolveRedirects ?? jest.fn<IWikiApi['resolveRedirects']>(),
     articleContent:
       base.articleContent
       ?? jest.fn<(title: string) => Promise<any>>(),
