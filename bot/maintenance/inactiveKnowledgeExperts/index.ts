@@ -5,8 +5,8 @@ import runInactiveKnowledgeExperts from './model';
 
 export default async function inactiveKnowledgeExperts(dryRun = true) {
   const api = WikiApi();
-  await api.login();
-  const report = await runInactiveKnowledgeExperts(api, { dryRun, botName: process.env.BOT_NAME as string });
+  const wikiUsername = await api.getAuthenticatedUsername();
+  const report = await runInactiveKnowledgeExperts(api, { dryRun, wikiUsername });
   console.log(JSON.stringify(report));
   return report;
 }

@@ -77,6 +77,27 @@ describe('wiki API edit assertions', () => {
   });
 });
 
+describe('wiki API authenticated username', () => {
+  it('reads the username from the authenticated session', async () => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({ query: { userinfo: { name: 'Authenticated account' } } });
+
+    await expect(WikiApi(base).getAuthenticatedUsername()).resolves.toBe('Authenticated account');
+    expect(base.request).toHaveBeenCalledWith(
+      '?action=query&meta=userinfo&assert=user&format=json',
+      undefined,
+      undefined,
+    );
+  });
+
+  it('rejects a response without an authenticated username', async () => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({ query: { userinfo: {} } });
+
+    await expect(WikiApi(base).getAuthenticatedUsername()).rejects.toThrow('authenticated username');
+  });
+});
+
 describe('wiki API knowledge-expert lookups', () => {
   it('filters all-pages at the source and keeps each batch within the revision limit', async () => {
     const base = BaseWikiApiMock();

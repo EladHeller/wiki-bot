@@ -11,6 +11,7 @@ import {
 export default function WikiApiMock(base: Partial<Mocked<IWikiApi>> = {}): Mocked<IWikiApi> {
   return {
     login: base.login ?? jest.fn<() => Promise<void>>(),
+    getAuthenticatedUsername: base.getAuthenticatedUsername ?? jest.fn<IWikiApi['getAuthenticatedUsername']>(),
     request: base.request ?? jest.fn<(path: string, method?: string, data?: Record<string, any>) => Promise<any>>(),
     continueQuery:
       base.continueQuery ?? jest.fn<(path: string,

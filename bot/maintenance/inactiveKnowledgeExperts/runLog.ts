@@ -55,10 +55,10 @@ function parseLog(content: string): UserStates {
   return users;
 }
 
-function readLog(page: WikiPage, botName: string): string {
+function readLog(page: WikiPage, wikiUsername: string): string {
   if (page.missing !== undefined) return LOG_INTRO;
   const { content } = existingContent(page);
-  if (page.revisions?.[0].user !== botName || !content.startsWith(LOG_INTRO)) {
+  if (page.revisions?.[0].user !== wikiUsername || !content.startsWith(LOG_INTRO)) {
     throw new Error(`Untrusted cleanup log in ${LOG_PAGE}`);
   }
   return content;
@@ -79,9 +79,9 @@ function formatActivity(username: string, activity: Activity): string {
   return `* ${task}${activity.recovered ? ' הפעולה בוצעה בריצה קודמת ותועדה לפי היסטוריית העריכות.' : ''}`;
 }
 
-export async function openRunLog(api: IWikiApi, botName: string, now: Date, dryRun: boolean) {
+export async function openRunLog(api: IWikiApi, wikiUsername: string, now: Date, dryRun: boolean) {
   let page = await api.getPage(LOG_PAGE);
-  let content = readLog(page, botName);
+  let content = readLog(page, wikiUsername);
   const users = parseLog(content);
   let actions = 0;
 
@@ -94,7 +94,7 @@ export async function openRunLog(api: IWikiApi, botName: string, now: Date, dryR
       missing: undefined,
       revisions: [{
         revid,
-        user: botName,
+        user: wikiUsername,
         size: updated.length,
         slots: { main: { '*': updated, contentmodel: 'wikitext', contentformat: 'text/x-wiki' } },
       }],
