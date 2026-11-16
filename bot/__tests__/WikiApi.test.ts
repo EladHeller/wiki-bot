@@ -159,6 +159,7 @@ describe('wiki API knowledge-expert lookups', () => {
             { from: 'משתמש:Old alias', to: 'משתמש:Alice' },
             { from: 'משתמש:Other', to: 'ויקיפדיה:Project' },
             { from: 'משתמש:Fragment', to: 'משתמש:Alice', tofragment: 'section' },
+            { from: 'משתמש:Not requested', to: 'משתמש:Alice' },
           ],
         },
       })
@@ -176,6 +177,22 @@ describe('wiki API knowledge-expert lookups', () => {
         names.slice(0, 50).map((name) => `משתמש:${name}`),
         ['משתמש:Old 51'],
       ]);
+  });
+
+  it('keeps the original alias when MediaWiki normalizes the source title', async () => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({
+      query: {
+        normalized: [
+          { from: 'משתמש:old_name', to: 'משתמש:Old name' },
+          { from: 'משתמש:Other', to: 'משתמש:Else' },
+        ],
+        redirects: [{ from: 'משתמש:Old name', to: 'משתמש:Current name' }],
+      },
+    });
+    const result = await WikiApi(base).userPageRedirects(['old_name']);
+
+    expect([...result]).toStrictEqual([['old_name', 'Current name']]);
   });
 
   it('accepts an API response without redirects', async () => {
