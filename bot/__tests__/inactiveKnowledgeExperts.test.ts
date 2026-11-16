@@ -324,14 +324,14 @@ describe('the monthly cleanup', () => {
       css: contentOf(css),
       html: contentOf(html),
       js: contentOf(js),
-      reply: talk.split('== Another discussion ==')[0],
+      reply: talk.split('=== הסרה מתבניות בעלי ידע ===')[1]?.split('== Another discussion ==')[0],
       writes: contentWrites(),
     }).toMatchObject({
       removed: ['Alice'],
       css: `{{א|Bob}}${category}`,
       html: `{{@@|Bob}}${category}`,
       js: `{{א|Alice}}${category}`,
-      reply: expect.stringContaining(`[[${html}|HTML]]`),
+      reply: expect.stringContaining(`* [[${html}]]`),
       writes: finalWrites,
     });
   });
@@ -397,7 +397,7 @@ describe('the monthly cleanup', () => {
       talk: contentOf(aliceTalk),
       edits: api.edit.mock.calls.filter(([title]) => title === css).length,
       repeat: repeat.removed,
-    }).toMatchObject({ talk: expect.stringContaining(`[[${css}|CSS]]`), edits: 1, repeat: [] });
+    }).toMatchObject({ talk: expect.stringContaining(`=== הסרה מתבניות בעלי ידע ===`), edits: 1, repeat: [] });
   });
 
   it('does not remove a re-added membership while resuming a partially completed removal', async () => {
