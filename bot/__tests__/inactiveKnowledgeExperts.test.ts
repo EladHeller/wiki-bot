@@ -121,8 +121,18 @@ function wiki() {
   };
 
   return {
-    api, active, hidden, redirects, userAliases, unregistered, registrations,
-    put, contentOf, contentWrites, run, failEdit,
+    api,
+    active,
+    hidden,
+    redirects,
+    userAliases,
+    unregistered,
+    registrations,
+    put,
+    contentOf,
+    contentWrites,
+    run,
+    failEdit,
   };
 }
 
