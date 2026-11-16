@@ -11,7 +11,7 @@ import {
 type Options = { wikiUsername: string; now?: Date; dryRun?: boolean };
 type RunLog = Awaited<ReturnType<typeof openRunLog>>;
 type Outcome = 'warned' | 'removed' | 'closed' | 'skipped';
-type Report = Record<Outcome, string[]> & { dryRun: boolean; failed: string[] };
+type Report = Record<Outcome, string[]> & { dryRun: boolean; failed: string[]; errors: Record<string, string> };
 
 const HEADING = 'רשימות בעלי הידע';
 const warningSummary = (date: string) => `הודעה על חוסר פעילות ברשימות בעלי הידע (${date})`;
@@ -78,12 +78,16 @@ async function recentlyActive(api: IWikiApi, username: string, now: Date): Promi
   return false;
 }
 
-async function readTopic(api: IWikiApi, title: string, username: string) {
+async function readTopic(api: IWikiApi, title: string, usernames: string[]) {
   const page = await api.getPage(title);
   if (page.missing !== undefined || page.redirect !== undefined) return undefined;
   const { content, revid } = existingContent(page);
   if (!isTopic(content)) return undefined;
-  return { page, revid, updated: withoutMember(content, username) };
+  const updated = usernames.reduce((state, name) => {
+    const next = withoutMember(state.content, name);
+    return next === undefined ? state : { content: next, changed: true };
+  }, { content, changed: false });
+  return { page, revid, updated: updated.changed ? updated.content : undefined };
 }
 
 async function accountEdited(
@@ -108,7 +112,7 @@ async function accountEdited(
 async function planRemovals(api: IWikiApi, warning: Pending, username: string): Promise<Pending> {
   const removals: NonNullable<Pending['removals']> = [];
   for (const title of warning.topics) {
-    const topic = await readTopic(api, title, username);
+    const topic = await readTopic(api, title, warning.names ?? [username]);
     if (topic && topic.updated !== undefined) removals.push({ title, revid: topic.revid });
   }
   return { ...warning, removals };
@@ -127,7 +131,7 @@ async function removeFromTopics(
   let { removals } = warning;
   for (const entry of warning.removals) {
     const { title, revid, completed } = entry;
-    const topic = await readTopic(api, title, username);
+    const topic = await readTopic(api, title, warning.names ?? [username]);
     if (topic) {
       const recovered = !completed && topic.revid !== revid
         && await accountEdited(api, title, summary, options.wikiUsername, warning.warnedOn, revid);
@@ -148,6 +152,7 @@ async function processUser(
   api: IWikiApi,
   username: string,
   topics: string[],
+  names: string[],
   log: RunLog,
   options: Required<Options>,
   today: string,
@@ -186,7 +191,7 @@ async function processUser(
       await log.save(username, { closedOn: today });
       return 'skipped';
     }
-    const newWarning = { warnedOn: today, topics };
+    const newWarning = { warnedOn: today, topics, names };
     await log.save(username, newWarning);
     if (!options.dryRun) {
       await writePage(api, talk, warningSummary(today), content + warningText(newWarning));
@@ -231,21 +236,36 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
   const today = israelDate.format(now);
   const log = await openRunLog(api, wikiUsername, now, dryRun);
   const topicsByUser = await listKnowledgeExperts(api);
+  const originalUsernames = [...topicsByUser.keys()];
+  const redirects = await api.resolveRedirects(originalUsernames.map((name) => `משתמש:${name}`));
+  const memberships = new Map<string, { topics: string[]; names: string[] }>();
+  topicsByUser.forEach((topics, name) => {
+    const target = redirects.get(`משתמש:${name}`);
+    const match = target && /^(?:משתמש|User):([^/#]+)$/iu.exec(target);
+    const username = match ? match[1].replaceAll('_', ' ') : name;
+    const previous = memberships.get(username) ?? { topics: [], names: [] };
+    memberships.set(username, {
+      topics: [...new Set([...previous.topics, ...topics])],
+      names: [...new Set([...previous.names, name])],
+    });
+  });
   const pendingUsers = [...log.users].filter(([, status]) => 'warnedOn' in status).map(([username]) => username);
-  const usernames = [...new Set([...pendingUsers, ...topicsByUser.keys()])];
+  const usernames = [...new Set([...pendingUsers, ...memberships.keys()])];
   const cutoff = shiftDate(now, -3, 0);
   const accounts = await api.registeredUsers(usernames);
   const eligible = new Set(accounts.filter(({ registration }) => !registration || new Date(registration) <= cutoff)
     .map(({ name }) => name));
   const report: Report = {
-    dryRun, warned: [], removed: [], closed: [], skipped: [], failed: [],
+    dryRun, warned: [], removed: [], closed: [], skipped: [], failed: [], errors: {},
   };
 
   for (const username of usernames) {
     try {
       if (eligible.has(username)) {
-        const topics = topicsByUser.get(username) ?? [];
-        const outcome = await processUser(api, username, topics, log, { now, wikiUsername, dryRun }, today);
+        const member = memberships.get(username);
+        const outcome = await processUser(
+          api, username, member?.topics ?? [], member?.names ?? [username], log, { now, wikiUsername, dryRun }, today,
+        );
         report[outcome].push(username);
       } else {
         if (pendingUsers.includes(username)) await log.save(username, { closedOn: today });
@@ -254,6 +274,7 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
     } catch (error) {
       logger.logError(`Knowledge-expert maintenance failed for ${username}: ${error}`);
       report.failed.push(username);
+      report.errors[username] = error instanceof Error ? error.stack ?? error.message : String(error);
     }
   }
   await log.finish(report.failed.length);
