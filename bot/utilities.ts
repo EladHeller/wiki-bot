@@ -253,6 +253,7 @@ export async function firstPageOf<T>(generator: AsyncGenerator<T, any, any>): Pr
 }
 
 export function getUserAgent(): string {
+  // BOT_NAME identifies the wiki account in the User-Agent. Each job defines its own name.
   const botName = process.env.BOT_NAME;
   const wikiBaseUrl = process.env.BASE_URL?.replace(/\/$/, '');
   return `${botName}/1.0 (${wikiBaseUrl}/wiki/User:${botName})`;

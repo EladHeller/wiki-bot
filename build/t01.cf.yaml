@@ -519,3 +519,23 @@ Resources:
           Properties:
             Schedule: cron(0 9 ? * * *)
             Name: new-categories-scheduler
+
+  InactiveKnowledgeExpertsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: inactive-knowledge-experts-function
+      Handler: dist/maintenance/inactiveKnowledgeExperts/index.main
+      ReservedConcurrentExecutions: 1
+      Timeout: 900
+      MemorySize: 512
+      Environment:
+        Variables:
+          INACTIVE_KNOWLEDGE_EXPERTS_WRITE_ENABLED: "false"
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 8 1,2,4 * ? *)
+            Name: inactive-knowledge-experts-scheduler
+            Enabled: false
+

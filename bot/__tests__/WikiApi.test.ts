@@ -76,3 +76,92 @@ describe('wiki API edit assertions', () => {
     ]);
   });
 });
+
+describe('wiki API authenticated username', () => {
+  it('reads the username from the authenticated session', async () => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({ query: { userinfo: { name: 'Authenticated account' } } });
+
+    await expect(WikiApi(base).getAuthenticatedUsername()).resolves.toBe('Authenticated account');
+    expect(base.request).toHaveBeenCalledWith(
+      '?action=query&meta=userinfo&assert=user&format=json',
+      undefined,
+      undefined,
+    );
+  });
+
+  it('rejects a response without an authenticated username', async () => {
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({ query: { userinfo: {} } });
+
+    await expect(WikiApi(base).getAuthenticatedUsername()).rejects.toThrow('authenticated username');
+  });
+});
+
+describe('wiki API knowledge-expert lookups', () => {
+  it('filters all-pages at the source and keeps each batch within the revision limit', async () => {
+    const base = BaseWikiApiMock();
+    base.continueQuery.mockImplementation(async function* query(_path, selector) {
+      yield selector?.({ query: { pages: { 1: { title: 'Template:A/B' } } } });
+    });
+    const api = WikiApi(base);
+    const result = await api.allPages(10, '', 'A/').next();
+    const params = new URLSearchParams(base.continueQuery.mock.calls[0][0]);
+
+    expect(Object.fromEntries(params)).toMatchObject({
+      generator: 'allpages', gapnamespace: '10', gaplimit: '50', gapprefix: 'A/', gapfilterredir: 'nonredirects',
+    });
+    expect(result.value).toStrictEqual([{ title: 'Template:A/B' }]);
+  });
+
+  it('loads page source and author together without following redirects', async () => {
+    const page = { title: 'User talk:Alice', redirect: '', revisions: [{ revid: 12, user: 'Alice' }] };
+    const base = BaseWikiApiMock();
+    base.request.mockResolvedValue({ query: { pages: { 1: page } } });
+
+    await expect(WikiApi(base).getPage(page.title)).resolves.toBe(page);
+
+    const params = new URLSearchParams(base.request.mock.calls[0][0]);
+
+    expect(Object.fromEntries(params)).toMatchObject({
+      prop: 'info|revisions', rvprop: 'content|ids|user', rvslots: 'main', titles: page.title,
+    });
+    expect(params.has('redirects')).toBe(false);
+  });
+
+  it('batches user lookups and drops unregistered accounts', async () => {
+    const base = BaseWikiApiMock();
+    base.request
+      .mockResolvedValueOnce({
+        query: {
+          users: [
+            { name: 'User 0', userid: 4, registration: null }, { name: 'Unregistered', missing: '' },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ query: { users: [{ name: 'Space & Co', userid: 7, registration: '2020-01-01T01:00:00Z' }] } });
+    const names = [...Array.from({ length: 50 }, (_, i) => `User ${i}`), 'Space & Co'];
+    const result = await WikiApi(base).registeredUsers(names);
+
+    expect(result).toStrictEqual([
+      { name: 'User 0', registration: null }, { name: 'Space & Co', registration: '2020-01-01T01:00:00Z' },
+    ]);
+    expect(base.request.mock.calls.map(([path]) => new URLSearchParams(path).get('ususers')?.split('|')))
+      .toStrictEqual([names.slice(0, 50), ['Space & Co']]);
+  });
+
+  it('bounds recovery history by bot author and earliest date', async () => {
+    const base = BaseWikiApiMock();
+    base.continueQuery.mockImplementation(async function* query(_path, selector) {
+      yield selector?.({ query: { pages: { 1: { revisions: [{ revid: 2 }] } } } });
+    });
+    const since = new Date('2026-08-01T00:00Z');
+    const api = WikiApi(base);
+    const result = await api.getArticleRevisions('Page', 25, 'ids', { user: 'A & B', since }).next();
+
+    expect(Object.fromEntries(new URLSearchParams(base.continueQuery.mock.calls[0][0]))).toMatchObject({
+      rvuser: 'A & B', rvend: since.toISOString(), rvlimit: '25',
+    });
+    expect(result.value).toStrictEqual([{ revid: 2 }]);
+  });
+});
