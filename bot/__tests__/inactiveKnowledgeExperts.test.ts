@@ -46,6 +46,7 @@ function wiki() {
   const registrations = new Map<string, string>();
   const hidden = new Set<string>();
   const redirects = new Set<string>();
+  const userAliases = new Map<string, string>();
   const failures = new Map<string, 'throw' | 'rejected' | 'committed' | 'nochange'>();
   const failEdit = (key: string, mode: 'throw' | 'rejected' | 'committed' | 'nochange' = 'throw') => failures.set(key, mode);
   let revision = 0;
@@ -96,6 +97,9 @@ function wiki() {
     yield [...history.keys()].filter((title) => title.startsWith('תבנית:בעלי ידע/'))
       .map(pageFor);
   });
+  api.userPageRedirects.mockImplementation(async (names) => new Map(
+    [...userAliases].filter(([name]) => names.includes(name)),
+  ));
   api.registeredUsers.mockImplementation(async (names) => names.filter((name) => !unregistered.has(name))
     .map((name) => ({ name, registration: registrations.get(name) ?? null })));
   api.userContributes.mockImplementation(async function* contributions(name) {
@@ -117,7 +121,7 @@ function wiki() {
   };
 
   return {
-    api, active, hidden, redirects, unregistered, registrations, put, contentOf, contentWrites, run, failEdit,
+    api, active, hidden, redirects, userAliases, unregistered, registrations, put, contentOf, contentWrites, run, failEdit,
   };
 }
 
@@ -184,6 +188,59 @@ describe('the monthly cleanup', () => {
     });
     expect(api.edit).not.toHaveBeenCalled();
     expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('checks the real account and combines aliases into a single warning', async () => {
+    const {
+      api, put, userAliases, run, contentOf,
+    } = wiki();
+    userAliases.set('Old alias', 'Alice');
+    put(css, `{{א|Old alias}}, {{א|Alice}}${category}`);
+    put(html, `{{א|Old alias}}${category}`);
+
+    const first = await run('2026-09-01T08:00Z');
+
+    expect(first).toMatchObject({ warned: ['Alice'], failed: [] });
+    expect(api.registeredUsers).toHaveBeenCalledWith(['Alice']);
+    expect(api.userContributes.mock.calls.map(([name]) => name)).toStrictEqual(['Alice']);
+    expect(contentOf(aliceTalk)).toContain(`[[${html}]]`);
+    expect(api.create.mock.calls.filter(([title]) => title === aliceTalk)).toHaveLength(1);
+
+    const repeat = await run('2026-09-02T08:00Z');
+    expect(repeat).toMatchObject({ warned: [], skipped: ['Alice'], failed: [] });
+  });
+
+  it('uses the original membership aliases when removing from multiple topics', async () => {
+    const {
+      put, userAliases, run, contentOf, api,
+    } = wiki();
+    userAliases.set('Old alias', 'Alice');
+    put(css, `{{א|Old alias}}, {{א|Alice}}, {{א|Bob}}${category}`);
+    put(html, `{{א|Old alias}}${category}`);
+
+    await run('2026-09-01T08:00Z');
+    const report = await run('2026-10-01T08:00Z');
+
+    expect(report).toMatchObject({ removed: ['Alice'], failed: [] });
+    expect([contentOf(css), contentOf(html)]).toStrictEqual([
+      `{{א|Bob}}${category}`, category,
+    ]);
+    expect(api.edit.mock.calls.filter(([title]) => title === css)).toHaveLength(1);
+    expect(contentOf(aliceTalk)).toContain('שמך הוסר');
+  });
+
+  it('does not treat a redirected name as inactive when the real account edits', async () => {
+    const {
+      put, userAliases, active, run, api,
+    } = wiki();
+    userAliases.set('Old alias', 'Alice');
+    put(css, `{{א|Old alias}}${category}`);
+    active.add('Alice');
+
+    await expect(run('2026-09-01T08:00Z')).resolves.toMatchObject({
+      warned: [], skipped: ['Alice'], failed: [],
+    });
+    expect(api.create.mock.calls.filter(([title]) => title === aliceTalk)).toHaveLength(0);
   });
 
   it('warns once and waits a full month before removing only warned memberships', async () => {
