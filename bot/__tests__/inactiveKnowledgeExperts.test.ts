@@ -121,7 +121,8 @@ function wiki() {
   };
 
   return {
-    api, active, hidden, redirects, userRedirects, unregistered, registrations, put, contentOf, contentWrites, run, failEdit,
+    api, active, hidden, redirects, userRedirects, unregistered,
+    registrations, put, contentOf, contentWrites, run, failEdit,
   };
 }
 
@@ -659,16 +660,20 @@ describe('redirected knowledge-expert user pages', () => {
 
     const first = await run('2026-09-01T08:00Z');
 
-    expect(first.warned).toStrictEqual([actual]);
-    expect(first.failed).toStrictEqual([]);
-    expect(contentOf(talkTitle)).toContain(`[[${html}]]`);
-    expect(contentOf(`שיחת משתמש:${alias}`)).toBe('');
-
+    const originalTalk = contentOf(talkTitle);
+    const aliasTalk = contentOf(`שיחת משתמש:${alias}`);
     const second = await run('2026-10-01T08:00Z');
 
-    expect(second).toMatchObject({ removed: [actual], failed: [] });
-    expect(contentOf(css)).toBe(category);
-    expect(contentOf(html)).toBe(category);
+    expect({
+      first, originalTalk, aliasTalk, second, cssSource: contentOf(css), htmlSource: contentOf(html),
+    }).toMatchObject({
+      first: { warned: [actual], failed: [] },
+      originalTalk: expect.stringContaining(`[[${html}]]`),
+      aliasTalk: '',
+      second: { removed: [actual], failed: [] },
+      cssSource: category,
+      htmlSource: category,
+    });
   });
 
   it('resumes warnings written before alias metadata was introduced', async () => {
@@ -709,7 +714,8 @@ describe('dry-run failure diagnostics', () => {
     const { api, put, run } = wiki();
     put(css, `{{א|Alice}}${category}`);
     api.userContributes.mockImplementation(async function* rejection() {
-      await Promise.reject('MediaWiki rejected the username');
+      const reason = 'MediaWiki rejected the username';
+      await Promise.reject(reason);
       yield [];
     });
 
