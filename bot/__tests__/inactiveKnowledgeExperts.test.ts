@@ -671,6 +671,21 @@ describe('redirected knowledge-expert user pages', () => {
     expect(contentOf(html)).toBe(category);
   });
 
+  it('resumes warnings written before alias metadata was introduced', async () => {
+    const { put, run, contentOf } = wiki();
+    const oldDate = '2026-09-01';
+    const intro = 'דף זה מתעד התראות והסרות שביצע הבוט ברשימות בעלי הידע. זמני הריצות מוצגים לפי שעון ישראל.';
+    const oldState = JSON.stringify(['Alice', { warnedOn: oldDate, topics: [css], notified: true }]);
+    put(logTitle, `${intro}\n<!-- knowledge-experts: ${oldState} -->\n`, wikiUsername);
+    put(css, `{{א|Alice}}${category}`);
+    put(aliceTalk, `== רשימות בעלי הידע ==\n<!-- Sapper-bot:knowledge-expert:v2:${oldDate} -->\nOld notice`);
+
+    const result = await run('2026-10-01T08:00Z');
+
+    expect(result.removed).toStrictEqual(['Alice']);
+    expect(contentOf(css)).toBe(category);
+  });
+
   it('uses the redirected account activity to avoid warning an active editor', async () => {
     const {
       put, userRedirects, active, run, api,
