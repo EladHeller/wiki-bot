@@ -707,6 +707,56 @@ describe('the public run log', () => {
   });
 });
 
+describe('dry-run failure diagnostics', () => {
+  it('reports a non-Error rejection in CloudWatch output', async () => {
+    const { api, put, run } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    api.userContributes.mockImplementation(async function* rejection() {
+      const reason = 'MediaWiki rejected the username';
+      await Promise.reject(reason);
+      yield [];
+    });
+
+    const report = await run('2026-11-01T08:00Z', true);
+
+    expect(report.failed).toStrictEqual(['Alice']);
+    expect(report.errors).toStrictEqual({ Alice: 'MediaWiki rejected the username' });
+    expect(api.edit).not.toHaveBeenCalled();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps an Error message when no stack is available', async () => {
+    const { api, put, run } = wiki();
+    const error = new Error('Unusable user account');
+    error.stack = undefined;
+    put(css, `{{א|Alice}}${category}`);
+    api.userContributes.mockImplementation(async function* rejection() {
+      await Promise.reject(error);
+      yield [];
+    });
+
+    const report = await run('2026-11-01T08:00Z', true);
+
+    expect(report.failed).toStrictEqual(['Alice']);
+    expect(report.errors).toStrictEqual({ Alice: 'Unusable user account' });
+  });
+
+  it('includes stack information when available', async () => {
+    const { api, put, run } = wiki();
+    const error = new Error('API failure');
+    put(css, `{{א|Alice}}${category}`);
+    api.userContributes.mockImplementation(async function* rejection() {
+      await Promise.reject(error);
+      yield [];
+    });
+
+    const report = await run('2026-11-01T08:00Z', true);
+
+    expect(report.failed).toStrictEqual(['Alice']);
+    expect(report.errors.Alice).toContain('Error: API failure');
+  });
+});
+
 describe('scheduled handler', () => {
   afterEach(() => {
     jest.useRealTimers();
