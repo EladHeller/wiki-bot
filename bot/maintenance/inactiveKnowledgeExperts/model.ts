@@ -263,9 +263,9 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
     try {
       if (eligible.has(username)) {
         const member = memberships.get(username);
-        const outcome = await processUser(
-          api, username, member?.topics ?? [], member?.names ?? [username], log, { now, wikiUsername, dryRun }, today,
-        );
+        const topics = member?.topics ?? [];
+        const names = member?.names ?? [username];
+        const outcome = await processUser(api, username, topics, names, log, { now, wikiUsername, dryRun }, today);
         report[outcome].push(username);
       } else {
         if (pendingUsers.includes(username)) await log.save(username, { closedOn: today });
