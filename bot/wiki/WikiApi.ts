@@ -32,6 +32,7 @@ export interface IWikiApi {
   ): Promise<any>;
   getPage(title: string): Promise<WikiPage>;
   registeredUsers(usernames: string[]): Promise<RegisteredUser[]>;
+  resolveRedirects(titles: string[]): Promise<Map<string, string>>;
   articleContent(title: string): Promise<{ content: string, revid: number }>;
   externalUrl(link: string, protocol?: string, namespace?: string): AsyncGenerator<WikiPage[], void, void>;
   info(titles: string[]): Promise<PageInfo[]>;
@@ -231,6 +232,23 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
       registered.push(...users.filter((user) => user.userid).map(({ name, registration }) => ({ name, registration })));
     }
     return registered;
+  }
+
+  async function resolveRedirects(titles: string[]): Promise<Map<string, string>> {
+    const redirects = new Map<string, string>();
+    for (let index = 0; index < titles.length; index += 50) {
+      const batch = titles.slice(index, index + 50);
+      const result = await request(`?action=query&format=json&redirects=1&titles=${encodeURIComponent(batch.join('|'))}`);
+      const originalTitles = new Map(batch.map((title) => [title, title]));
+      (result.query.normalized ?? []).forEach(({ from, to }: { from: string; to: string }) => {
+        const original = originalTitles.get(from);
+        if (original) originalTitles.set(to, original);
+      });
+      (result.query.redirects ?? []).forEach(({ from, to }: { from: string; to: string }) => {
+        redirects.set(originalTitles.get(from) ?? from, to);
+      });
+    }
+    return redirects;
   }
 
   async function articleContent(
@@ -543,6 +561,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
     articleContent,
     getPage,
     registeredUsers,
+    resolveRedirects,
     externalUrl,
     categroyTitles,
     info,
