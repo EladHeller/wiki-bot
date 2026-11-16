@@ -241,7 +241,7 @@ describe('the monthly cleanup', () => {
       `{{א|Bob}}${category}`, category,
     ]);
     expect(api.edit.mock.calls.filter(([title]) => title === css)).toHaveLength(1);
-    expect(contentOf(aliceTalk)).toContain('שמך הוסר');
+    expect(contentOf(aliceTalk)).toContain('=== הסרה מתבניות בעלי ידע ===');
   });
 
   it('supports legacy pending notices without member details', async () => {
@@ -419,7 +419,7 @@ describe('the monthly cleanup', () => {
       `{{א|Alice}}${category}`, `<!-- human change -->{{א|Bob}}${category}`,
     ]);
 
-    const reply = contentOf(aliceTalk)?.split('שמך הוסר')[1];
+    const reply = contentOf(aliceTalk)?.split('=== הסרה מתבניות בעלי ידע ===')[1];
 
     expect(reply).toContain('HTML');
     expect(reply).not.toContain('CSS');
@@ -595,7 +595,7 @@ describe('recovery and source validation', () => {
     const result = await run('2026-10-02T08:00Z');
 
     expect(result.closed).toContain('Alice');
-    expect(contentOf(aliceTalk)).not.toContain('שמך הוסר');
+    expect(contentOf(aliceTalk)).not.toContain('=== הסרה מתבניות בעלי ידע ===');
   });
 
   it('does not remove a member based on a warning marker added by somebody else', async () => {
@@ -620,6 +620,73 @@ describe('recovery and source validation', () => {
     failEdit(aliceTalk, 'rejected');
 
     expect((await run('2026-09-01T08:00Z')).failed).toStrictEqual(['Alice']);
+  });
+});
+
+describe('approved knowledge-expert notification text', () => {
+  it('uses the requested warning wording, bot talk link, and signature', async () => {
+    const { put, run, contentOf } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    put(html, `{{א|Alice}}${category}`);
+
+    await run('2026-09-01T08:00Z');
+    const message = contentOf(aliceTalk) as string;
+
+    expect({
+      title: message.includes('== בעלי ידע לא פעילים =='),
+      greeting: message.includes('שלום Alice,'),
+      introduction: message.includes('במסגרת תחזוקה שוטפת של תבניות בעלי הידע'),
+      templateList: message.includes(`* [[${css}]]\n* [[${html}]]`),
+      contact: message.includes('[[שיחת משתמש:Authenticated account|דף השיחה של הבוט]]'),
+      signature: message.includes('בידידות והערכה על תרומתך לוויקיפדיה, ~~~~'),
+    }).toStrictEqual({
+      title: true, greeting: true, introduction: true, templateList: true, contact: true, signature: true,
+    });
+    expect(message).toContain('יוסר שמך מהתבניות המפורטות לעיל בעוד כחודש');
+    expect(message).toContain('הודעה מפורשת על ההסרה תופיע בדף שיחתך');
+  });
+
+  it('puts the requested removal notice in a subsection of the original warning', async () => {
+    const { put, run, contentOf } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    put(html, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    put(aliceTalk, `${contentOf(aliceTalk)}\n== Other discussion ==\nPreserve this.\n`);
+
+    const report = await run('2026-10-01T08:00Z');
+    const talk = contentOf(aliceTalk) as string;
+    const warningIndex = talk.indexOf('== בעלי ידע לא פעילים ==');
+    const removalIndex = talk.indexOf('=== הסרה מתבניות בעלי ידע ===');
+    const nextSectionIndex = talk.indexOf('== Other discussion ==');
+    const removal = talk.slice(removalIndex, nextSectionIndex);
+
+    expect({ removed: report.removed, validOrder: warningIndex < removalIndex && removalIndex < nextSectionIndex })
+      .toStrictEqual({ removed: ['Alice'], validOrder: true });
+    expect({
+      date: removal.includes('בהמשך להודעה מ־2026-09-01'),
+      topics: removal.includes(`* [[${css}]]\n* [[${html}]]`),
+      explanation: removal.includes('אין בה משום ביקורת לגבי תרומתך או ידיעותיך'),
+      contact: removal.includes('[[שיחת משתמש:Authenticated account|דף השיחה של הבוט]]'),
+      signatures: talk.match(/בידידות והערכה על תרומתך לוויקיפדיה, ~~~~/g)?.length,
+    }).toStrictEqual({
+      date: true, topics: true, explanation: true, contact: true, signatures: 2,
+    });
+  });
+
+  it('appends the new removal subsection under an already-published legacy warning heading', async () => {
+    const { put, run, contentOf } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    put(aliceTalk, (contentOf(aliceTalk) as string)
+      .replace('== בעלי ידע לא פעילים ==', '== רשימות בעלי הידע =='));
+
+    const report = await run('2026-10-01T08:00Z');
+    const talk = contentOf(aliceTalk) as string;
+
+    expect(report).toMatchObject({ removed: ['Alice'], failed: [] });
+    expect(talk).toContain('== רשימות בעלי הידע ==');
+    expect(talk).toContain('=== הסרה מתבניות בעלי ידע ===');
+    expect(talk).not.toContain('== בעלי ידע לא פעילים ==');
   });
 });
 
@@ -703,7 +770,7 @@ describe('the public run log', () => {
     await run('2026-10-02T08:00Z');
 
     expect(contentOf(logTitle)?.match(/הוסר מרשימת/g)).toHaveLength(1);
-    expect(contentOf(aliceTalk)).toContain('שמך הוסר');
+    expect(contentOf(aliceTalk)).toContain('=== הסרה מתבניות בעלי ידע ===');
   });
 });
 
