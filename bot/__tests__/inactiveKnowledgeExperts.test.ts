@@ -46,6 +46,7 @@ function wiki() {
   const registrations = new Map<string, string>();
   const hidden = new Set<string>();
   const redirects = new Set<string>();
+  const userRedirects = new Map<string, string>();
   const failures = new Map<string, 'throw' | 'rejected' | 'committed' | 'nochange'>();
   const failEdit = (key: string, mode: 'throw' | 'rejected' | 'committed' | 'nochange' = 'throw') => failures.set(key, mode);
   let revision = 0;
@@ -96,6 +97,9 @@ function wiki() {
     yield [...history.keys()].filter((title) => title.startsWith('תבנית:בעלי ידע/'))
       .map(pageFor);
   });
+  api.resolveRedirects.mockImplementation(async (names) => new Map(
+    names.filter((name) => userRedirects.has(name)).map((name) => [name, userRedirects.get(name) as string]),
+  ));
   api.registeredUsers.mockImplementation(async (names) => names.filter((name) => !unregistered.has(name))
     .map((name) => ({ name, registration: registrations.get(name) ?? null })));
   api.userContributes.mockImplementation(async function* contributions(name) {
@@ -117,7 +121,7 @@ function wiki() {
   };
 
   return {
-    api, active, hidden, redirects, unregistered, registrations, put, contentOf, contentWrites, run, failEdit,
+    api, active, hidden, redirects, userRedirects, unregistered, registrations, put, contentOf, contentWrites, run, failEdit,
   };
 }
 
@@ -638,5 +642,49 @@ describe('scheduled handler', () => {
 
     await expect(main()).resolves.toMatchObject({ dryRun: false, skipped: ['Alice'], failed: [] });
     expect(api.create).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('redirected knowledge-expert user pages', () => {
+  it('groups the short redirected name with the actual account and removes both names after notification', async () => {
+    const {
+      put, userRedirects, run, contentOf,
+    } = wiki();
+    const alias = 'מכה"כ';
+    const actual = 'מלא כל הארץ כבודי';
+    const talkTitle = `שיחת משתמש:${actual}`;
+    userRedirects.set(`משתמש:${alias}`, `משתמש:${actual}`);
+    put(css, `{{א|${alias}}}, {{א|${actual}}${category}`);
+    put(html, `{{א|${alias}}}${category}`);
+
+    const first = await run('2026-09-01T08:00Z');
+
+    expect(first.warned).toStrictEqual([actual]);
+    expect(first.failed).toStrictEqual([]);
+    expect(contentOf(talkTitle)).toContain(`[[${html}]]`);
+    expect(contentOf(`שיחת משתמש:${alias}`)).toBe('');
+
+    const second = await run('2026-10-01T08:00Z');
+
+    expect(second).toMatchObject({ removed: [actual], failed: [] });
+    expect(contentOf(css)).toBe(category);
+    expect(contentOf(html)).toBe(category);
+  });
+
+  it('uses the redirected account activity to avoid warning an active editor', async () => {
+    const {
+      put, userRedirects, active, run, api,
+    } = wiki();
+    userRedirects.set('משתמש:OldName', 'משתמש:CurrentName');
+    put(css, `{{א|OldName}}${category}`);
+    active.add('CurrentName');
+
+    const report = await run('2026-09-01T08:00Z');
+
+    expect(report).toMatchObject({
+      warned: [], skipped: ['CurrentName'], failed: [],
+    });
+    expect(api.userContributes.mock.calls.map(([username]) => username)).toStrictEqual(['CurrentName']);
+    expect(api.create).not.toHaveBeenCalled();
   });
 });
