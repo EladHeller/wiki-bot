@@ -4,7 +4,7 @@ import { IWikiApi } from '../../wiki/WikiApi';
 import { TOPIC_PREFIX } from './memberships';
 
 type Removal = { title: string; revid: number; completed?: true };
-export type Pending = { warnedOn: string; topics: string[]; notified?: true; removals?: Removal[] };
+export type Pending = { warnedOn: string; topics: string[]; names?: string[]; notified?: true; removals?: Removal[] };
 type Closed = { closedOn: string };
 type UserState = Pending | Closed;
 type UserStates = Map<string, UserState>;
@@ -36,6 +36,8 @@ function isTopicTitle(title: unknown): title is string {
 function isPending(value: any): value is Pending {
   return typeof value.warnedOn === 'string' && datePattern.test(value.warnedOn)
     && Array.isArray(value.topics) && value.topics.length > 0 && value.topics.every(isTopicTitle)
+    && (value.names === undefined || (Array.isArray(value.names)
+      && value.names.length > 0 && value.names.every((name: unknown) => typeof name === 'string' && !!name)))
     && (value.removals === undefined || (Array.isArray(value.removals)
       && value.removals.every((item: Removal) => (
         value.topics.includes(item.title) && Number.isSafeInteger(item.revid)
