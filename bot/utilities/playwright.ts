@@ -15,7 +15,7 @@ export default function getChromiumLaunchOptions(
 
   return {
     headless: true,
-    timeout: 30 * 1000,
+    timeout: (isLambda ? 60 : 30) * 1000,
     ...(isLambda ? {
       args: lambdaArgs,
       env: {

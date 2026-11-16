@@ -15,7 +15,7 @@ describe('getChromiumLaunchOptions', () => {
   ])('should use serverless browser settings with a Lambda %s', (_label, environment) => {
     expect(getChromiumLaunchOptions(environment)).toStrictEqual({
       headless: true,
-      timeout: 30 * 1000,
+      timeout: 60 * 1000,
       args: [
         '--single-process',
         '--no-zygote',
