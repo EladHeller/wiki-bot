@@ -11,7 +11,7 @@ import {
 type Options = { wikiUsername: string; now?: Date; dryRun?: boolean };
 type RunLog = Awaited<ReturnType<typeof openRunLog>>;
 type Outcome = 'warned' | 'removed' | 'closed' | 'skipped';
-type Report = Record<Outcome, string[]> & { dryRun: boolean; failed: string[] };
+type Report = Record<Outcome, string[]> & { dryRun: boolean; failed: string[]; errors: Record<string, string> };
 
 const HEADING = 'רשימות בעלי הידע';
 const warningSummary = (date: string) => `הודעה על חוסר פעילות ברשימות בעלי הידע (${date})`;
@@ -249,7 +249,7 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
   const eligible = new Set(accounts.filter(({ registration }) => !registration || new Date(registration) <= cutoff)
     .map(({ name }) => name));
   const report: Report = {
-    dryRun, warned: [], removed: [], closed: [], skipped: [], failed: [],
+    dryRun, warned: [], removed: [], closed: [], skipped: [], failed: [], errors: {},
   };
 
   for (const username of usernames) {
@@ -265,6 +265,7 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
     } catch (error) {
       logger.logError(`Knowledge-expert maintenance failed for ${username}: ${error}`);
       report.failed.push(username);
+      report.errors[username] = error instanceof Error ? error.stack ?? error.message : String(error);
     }
   }
   await log.finish(report.failed.length);
