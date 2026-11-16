@@ -5,7 +5,7 @@ import {
   isTopic, listKnowledgeExperts, TOPIC_PREFIX, withoutMember,
 } from './memberships';
 import {
-  existingContent, openRunLog, Pending, writePage,
+  existingContent, openRunLog, Pending, Member, writePage,
 } from './runLog';
 
 type Options = { wikiUsername: string; now?: Date; dryRun?: boolean };
@@ -78,12 +78,13 @@ async function recentlyActive(api: IWikiApi, username: string, now: Date): Promi
   return false;
 }
 
-async function readTopic(api: IWikiApi, title: string, username: string) {
+async function readTopic(api: IWikiApi, title: string, usernames: string[]) {
   const page = await api.getPage(title);
   if (page.missing !== undefined || page.redirect !== undefined) return undefined;
   const { content, revid } = existingContent(page);
   if (!isTopic(content)) return undefined;
-  return { page, revid, updated: withoutMember(content, username) };
+  const updated = usernames.reduce((text, username) => withoutMember(text, username) ?? text, content);
+  return { page, revid, updated: updated === content ? undefined : updated };
 }
 
 async function accountEdited(
@@ -107,9 +108,11 @@ async function accountEdited(
 
 async function planRemovals(api: IWikiApi, warning: Pending, username: string): Promise<Pending> {
   const removals: NonNullable<Pending['removals']> = [];
+  const members = warning.members ?? [{ username, topics: warning.topics }];
   for (const title of warning.topics) {
-    const topic = await readTopic(api, title, username);
-    if (topic && topic.updated !== undefined) removals.push({ title, revid: topic.revid });
+    const usernames = members.filter((member) => member.topics.includes(title)).map((member) => member.username);
+    const topic = await readTopic(api, title, usernames);
+    if (topic && topic.updated !== undefined) removals.push({ title, revid: topic.revid, usernames });
   }
   return { ...warning, removals };
 }
@@ -127,7 +130,7 @@ async function removeFromTopics(
   let { removals } = warning;
   for (const entry of warning.removals) {
     const { title, revid, completed } = entry;
-    const topic = await readTopic(api, title, username);
+    const topic = await readTopic(api, title, entry.usernames ?? [username]);
     if (topic) {
       const recovered = !completed && topic.revid !== revid
         && await accountEdited(api, title, summary, options.wikiUsername, warning.warnedOn, revid);
@@ -147,11 +150,12 @@ async function removeFromTopics(
 async function processUser(
   api: IWikiApi,
   username: string,
-  topics: string[],
+  members: Member[],
   log: RunLog,
   options: Required<Options>,
   today: string,
 ): Promise<Outcome> {
+  const topics = [...new Set(members.flatMap((member) => member.topics))];
   const current = log.users.get(username);
   if (current && 'closedOn' in current && current.closedOn.slice(0, 7) === today.slice(0, 7)) return 'skipped';
   let warning = current && 'warnedOn' in current ? current : undefined;
@@ -186,7 +190,7 @@ async function processUser(
       await log.save(username, { closedOn: today });
       return 'skipped';
     }
-    const newWarning = { warnedOn: today, topics };
+    const newWarning = { warnedOn: today, topics, members };
     await log.save(username, newWarning);
     if (!options.dryRun) {
       await writePage(api, talk, warningSummary(today), content + warningText(newWarning));
@@ -231,8 +235,15 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
   const today = israelDate.format(now);
   const log = await openRunLog(api, wikiUsername, now, dryRun);
   const topicsByUser = await listKnowledgeExperts(api);
+  const redirects = await api.userPageRedirects([...topicsByUser.keys()]);
+  const membersByUser = new Map<string, Member[]>();
+  topicsByUser.forEach((topics, username) => {
+    const canonical = redirects.get(username) ?? username;
+    const members = membersByUser.get(canonical) ?? [];
+    membersByUser.set(canonical, [...members, { username, topics }]);
+  });
   const pendingUsers = [...log.users].filter(([, status]) => 'warnedOn' in status).map(([username]) => username);
-  const usernames = [...new Set([...pendingUsers, ...topicsByUser.keys()])];
+  const usernames = [...new Set([...pendingUsers, ...membersByUser.keys()])];
   const cutoff = shiftDate(now, -3, 0);
   const accounts = await api.registeredUsers(usernames);
   const eligible = new Set(accounts.filter(({ registration }) => !registration || new Date(registration) <= cutoff)
@@ -244,8 +255,8 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
   for (const username of usernames) {
     try {
       if (eligible.has(username)) {
-        const topics = topicsByUser.get(username) ?? [];
-        const outcome = await processUser(api, username, topics, log, { now, wikiUsername, dryRun }, today);
+        const members = membersByUser.get(username) ?? [];
+        const outcome = await processUser(api, username, members, log, { now, wikiUsername, dryRun }, today);
         report[outcome].push(username);
       } else {
         if (pendingUsers.includes(username)) await log.save(username, { closedOn: today });
