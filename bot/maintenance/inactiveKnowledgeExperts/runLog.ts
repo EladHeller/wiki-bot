@@ -41,10 +41,10 @@ function isPending(value: any): value is Pending {
     && Array.isArray(value.topics) && value.topics.length > 0 && value.topics.every(isTopicTitle)
     && (value.members === undefined || (Array.isArray(value.members)
       && value.members.length > 0 && value.members.every((member: Member) => (
-        typeof member.username === 'string' && member.username.length > 0
-        && Array.isArray(member.topics) && member.topics.length > 0
-        && member.topics.every((title) => value.topics.includes(title))
-      ))))
+      typeof member.username === 'string' && member.username.length > 0
+      && Array.isArray(member.topics) && member.topics.length > 0
+      && member.topics.every((title) => value.topics.includes(title))
+    ))))
     && (value.removals === undefined || (Array.isArray(value.removals)
       && value.removals.every((item: Removal) => (
         value.topics.includes(item.title) && Number.isSafeInteger(item.revid)
