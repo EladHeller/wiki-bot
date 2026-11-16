@@ -80,9 +80,8 @@ function warningSection(content: string, date: string): number {
   return -1;
 }
 
-function followUp(
-  content: string, warning: Pending, removed: string[], active: boolean, username: string, wikiUsername: string,
-): string {
+function followUp(content: string, warning: Pending, removed: string[], active: boolean,
+  username: string, wikiUsername: string): string {
   const date = warning.warnedOn;
   const end = warningSection(content, date);
   if (end < 0 && removed.length === 0) return content;
@@ -224,7 +223,8 @@ async function processUser(
     const newWarning = { warnedOn: today, topics, members };
     await log.save(username, newWarning);
     if (!options.dryRun) {
-      await writePage(api, talk, warningSummary(today), content + warningText(newWarning, username, options.wikiUsername));
+      const message = warningText(newWarning, username, options.wikiUsername);
+      await writePage(api, talk, warningSummary(today), content + message);
     }
     await log.save(username, { ...newWarning, notified: true }, { kind: 'warning' });
     return 'warned';
