@@ -8,7 +8,7 @@ import {
   existingContent, openRunLog, Pending, writePage,
 } from './runLog';
 
-type Options = { botName: string; now?: Date; dryRun?: boolean };
+type Options = { wikiUsername: string; now?: Date; dryRun?: boolean };
 type RunLog = Awaited<ReturnType<typeof openRunLog>>;
 type Outcome = 'warned' | 'removed' | 'closed' | 'skipped';
 type Report = Record<Outcome, string[]> & { dryRun: boolean; failed: string[] };
@@ -86,20 +86,20 @@ async function readTopic(api: IWikiApi, title: string, username: string) {
   return { page, revid, updated: withoutMember(content, username) };
 }
 
-async function botEdited(
+async function accountEdited(
   api: IWikiApi,
   title: string,
   summary: string,
-  botName: string,
+  wikiUsername: string,
   warnedOn: string,
   baseRev = 0,
 ) {
   const since = new Date(warnedOn);
   since.setUTCDate(since.getUTCDate() - 1);
-  for await (const revisions of api.getArticleRevisions(title, 25, 'ids|user|comment', { user: botName, since })) {
+  for await (const revisions of api.getArticleRevisions(title, 25, 'ids|user|comment', { user: wikiUsername, since })) {
     for (const { revid, user, comment } of revisions) {
       if ((revid as number) <= baseRev) return false;
-      if (user === botName && comment === summary) return true;
+      if (user === wikiUsername && comment === summary) return true;
     }
   }
   return false;
@@ -130,7 +130,7 @@ async function removeFromTopics(
     const topic = await readTopic(api, title, username);
     if (topic) {
       const recovered = !completed && topic.revid !== revid
-        && await botEdited(api, title, summary, options.botName, warning.warnedOn, revid);
+        && await accountEdited(api, title, summary, options.wikiUsername, warning.warnedOn, revid);
       const { updated } = topic;
       const shouldRemove = !completed && !recovered && canRemove && updated !== undefined;
       if (shouldRemove && !options.dryRun) await writePage(api, topic.page, summary, updated);
@@ -159,7 +159,7 @@ async function processUser(
   if (!warning && await recentlyActive(api, username, options.now)) return 'skipped';
 
   if (warning && !warning.notified
-      && await botEdited(api, title, warningSummary(warning.warnedOn), options.botName, warning.warnedOn)) {
+      && await accountEdited(api, title, warningSummary(warning.warnedOn), options.wikiUsername, warning.warnedOn)) {
     warning = { ...warning, notified: true };
     await log.save(username, warning, { kind: 'warning', recovered: true });
   }
@@ -175,7 +175,7 @@ async function processUser(
   const noticeExists = !!warning && warningSection(content, warning.warnedOn) >= 0;
 
   if (warning?.removals && !noticeExists
-    && await botEdited(api, title, closureSummary(warning.warnedOn), options.botName, warning.warnedOn)) {
+    && await accountEdited(api, title, closureSummary(warning.warnedOn), options.wikiUsername, warning.warnedOn)) {
     await log.save(username, { closedOn: today });
     return 'skipped';
   }
@@ -227,9 +227,9 @@ async function processUser(
 }
 
 export default async function runInactiveKnowledgeExperts(api: IWikiApi, options: Options): Promise<Report> {
-  const { now = new Date(), botName, dryRun = true } = options;
+  const { now = new Date(), wikiUsername, dryRun = true } = options;
   const today = israelDate.format(now);
-  const log = await openRunLog(api, botName, now, dryRun);
+  const log = await openRunLog(api, wikiUsername, now, dryRun);
   const topicsByUser = await listKnowledgeExperts(api);
   const pendingUsers = [...log.users].filter(([, status]) => 'warnedOn' in status).map(([username]) => username);
   const usernames = [...new Set([...pendingUsers, ...topicsByUser.keys()])];
@@ -245,7 +245,7 @@ export default async function runInactiveKnowledgeExperts(api: IWikiApi, options
     try {
       if (eligible.has(username)) {
         const topics = topicsByUser.get(username) ?? [];
-        const outcome = await processUser(api, username, topics, log, { now, botName, dryRun }, today);
+        const outcome = await processUser(api, username, topics, log, { now, wikiUsername, dryRun }, today);
         report[outcome].push(username);
       } else {
         if (pendingUsers.includes(username)) await log.save(username, { closedOn: today });

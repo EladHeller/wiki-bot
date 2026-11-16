@@ -12,7 +12,7 @@ const css = 'תבנית:בעלי ידע/CSS';
 const html = 'תבנית:בעלי ידע/HTML';
 const js = 'תבנית:בעלי ידע/JS';
 const aliceTalk = 'שיחת משתמש:Alice';
-const botName = 'Test-bot';
+const wikiUsername = 'Authenticated account';
 const logTitle = 'ויקיפדיה:בוט/ניקוי בעלי ידע לא פעילים';
 const warningLogSummary = 'רישום התראה ביומן הבוט';
 const removalLogSummary = 'רישום הסרה ביומן הבוט';
@@ -72,7 +72,7 @@ function wiki() {
         },
       };
     }
-    const page = put(title, content, botName, summary);
+    const page = put(title, content, wikiUsername, summary);
     if (failure === 'committed') throw new Error('Edit response lost');
     const result = failure === 'rejected' ? 'Failure' : 'Success';
     return {
@@ -82,6 +82,7 @@ function wiki() {
     };
   };
 
+  api.getAuthenticatedUsername.mockResolvedValue(wikiUsername);
   api.getPage.mockImplementation(async (title) => {
     const page = pageFor(title);
     if (hidden.has(title)) return { ...page, revisions: undefined };
@@ -112,7 +113,7 @@ function wiki() {
     .filter(([title]) => title !== logTitle).length;
   const run = (date: string, dryRun = false) => {
     const now = new Date(date);
-    return runInactiveKnowledgeExperts(api, { botName, now, dryRun });
+    return runInactiveKnowledgeExperts(api, { wikiUsername, now, dryRun });
   };
 
   return {
@@ -178,7 +179,7 @@ describe('the monthly cleanup', () => {
     registrations.set('New', new Date().toISOString());
     registrations.set('Alice', '2012-08-01T12:00:00Z');
 
-    await expect(runInactiveKnowledgeExperts(api, { botName })).resolves.toMatchObject({
+    await expect(runInactiveKnowledgeExperts(api, { wikiUsername })).resolves.toMatchObject({
       dryRun: true, warned: ['Alice'], skipped: ['Active', 'Renamed', 'New'],
     });
     expect(api.edit).not.toHaveBeenCalled();
@@ -340,11 +341,11 @@ describe('the monthly cleanup', () => {
     await expect(run('2026-11-02T08:00Z')).rejects.toThrow('Untrusted cleanup log');
 
     const line = '["Alice",{"warnedOn":"2026-10-01","topics":["Article"]}]';
-    put(logTitle, `${log}<!-- knowledge-experts: ${line} -->\n`, botName);
+    put(logTitle, `${log}<!-- knowledge-experts: ${line} -->\n`, wikiUsername);
 
     await expect(run('2026-11-02T08:00Z')).rejects.toThrow('Invalid cleanup entry');
 
-    put(logTitle, `${log}<!-- knowledge-experts: {} -->\n`, botName);
+    put(logTitle, `${log}<!-- knowledge-experts: {} -->\n`, wikiUsername);
 
     await expect(run('2026-11-02T08:00Z')).rejects.toThrow('Invalid cleanup entry');
   });
@@ -623,7 +624,7 @@ describe('scheduled handler', () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
-  it('enables writes only with explicit configuration', async () => {
+  it('enables writes only with explicit configuration and recognizes log entries by the authenticated account', async () => {
     jest.useFakeTimers({ now: new Date('2026-11-15T08:00Z') });
     process.env.INACTIVE_KNOWLEDGE_EXPERTS_WRITE_ENABLED = 'true';
     const { api, put } = wiki();
@@ -631,6 +632,11 @@ describe('scheduled handler', () => {
     createApi.mockReturnValue(api);
 
     await expect(main()).resolves.toMatchObject({ dryRun: false, warned: ['Alice'] });
+    expect(api.create).toHaveBeenCalledTimes(2);
+
+    jest.setSystemTime(new Date('2026-11-16T08:00Z'));
+
+    await expect(main()).resolves.toMatchObject({ dryRun: false, skipped: ['Alice'], failed: [] });
     expect(api.create).toHaveBeenCalledTimes(2);
   });
 });

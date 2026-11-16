@@ -18,6 +18,7 @@ type RevisionFilters = { user?: string; since?: Date };
 
 export interface IWikiApi {
   login(): Promise<void>;
+  getAuthenticatedUsername(): Promise<string>;
   request(path: string, method?: string, data?: Record<string, any>): Promise<any>;
   continueQuery(path: string, resultSelector?: (result: any) => any[], continueObject?: Record<string, string>):
     AsyncGenerator<any, void, void>;
@@ -97,6 +98,15 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
   async function request(path: string, method?: string, data?: Record<string, any>): Promise<any> {
     await tokenPromise;
     return baseWikiApi.request(path, method, data);
+  }
+
+  async function getAuthenticatedUsername(): Promise<string> {
+    const result = await request('?action=query&meta=userinfo&assert=user&format=json');
+    const name: unknown = result.query?.userinfo?.name;
+    if (typeof name !== 'string' || !name) {
+      throw new Error('MediaWiki did not return the authenticated username');
+    }
+    return name;
   }
 
   async function markRead(section = 'message') {
@@ -525,6 +535,7 @@ export default function WikiApi(baseWikiApi = BaseWikiApi(defaultConfig)): IWiki
 
   return {
     login,
+    getAuthenticatedUsername,
     request: baseWikiApi.request,
     continueQuery: baseWikiApi.continueQuery,
     recursiveSubCategories,
