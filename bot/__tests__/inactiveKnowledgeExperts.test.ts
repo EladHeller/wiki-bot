@@ -212,9 +212,10 @@ describe('the monthly cleanup', () => {
 
   it('uses the original membership aliases when removing from multiple topics', async () => {
     const {
-      put, userAliases, run, contentOf, api,
+      put, userAliases, run, contentOf, api, active,
     } = wiki();
     userAliases.set('Old alias', 'Alice');
+    active.add('Bob');
     put(css, `{{א|Old alias}}, {{א|Alice}}, {{א|Bob}}${category}`);
     put(html, `{{א|Old alias}}${category}`);
 
@@ -227,6 +228,39 @@ describe('the monthly cleanup', () => {
     ]);
     expect(api.edit.mock.calls.filter(([title]) => title === css)).toHaveLength(1);
     expect(contentOf(aliceTalk)).toContain('שמך הוסר');
+  });
+
+  it('supports legacy pending notices without member details', async () => {
+    const {
+      put, contentOf, run,
+    } = wiki();
+    put(css, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    const legacy = JSON.stringify(['Alice', { warnedOn: '2026-09-01', topics: [css], notified: true }]);
+    put(logTitle, `${contentOf(logTitle)}\n<!-- knowledge-experts: ${legacy} -->\n`, wikiUsername);
+
+    const report = await run('2026-10-01T08:00Z');
+
+    expect(report).toMatchObject({ removed: ['Alice'], failed: [] });
+    expect(contentOf(css)).toBe(category);
+  });
+
+  it('resumes legacy removals that have no explicit original usernames', async () => {
+    const {
+      put, contentOf, run,
+    } = wiki();
+    const topic = put(css, `{{א|Alice}}${category}`);
+    await run('2026-09-01T08:00Z');
+    const legacy = JSON.stringify(['Alice', {
+      warnedOn: '2026-09-01', topics: [css], notified: true,
+      removals: [{ title: css, revid: topic.revisions?.[0].revid }],
+    }]);
+    put(logTitle, `${contentOf(logTitle)}\n<!-- knowledge-experts: ${legacy} -->\n`, wikiUsername);
+
+    const report = await run('2026-10-01T08:00Z');
+
+    expect(report).toMatchObject({ removed: ['Alice'], failed: [] });
+    expect(contentOf(css)).toBe(category);
   });
 
   it('does not treat a redirected name as inactive when the real account edits', async () => {
