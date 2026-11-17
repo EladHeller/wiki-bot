@@ -13,7 +13,8 @@ type RunLog = Awaited<ReturnType<typeof openRunLog>>;
 type Outcome = 'warned' | 'removed' | 'closed' | 'skipped';
 type Report = Record<Outcome, string[]> & { dryRun: boolean; failed: string[]; errors: Record<string, string> };
 
-const HEADING = 'רשימות בעלי הידע';
+const HEADING = 'בעלי ידע לא פעילים';
+const LEGACY_HEADING = 'רשימות בעלי הידע';
 const warningSummary = (date: string) => `הודעה על חוסר פעילות ברשימות בעלי הידע (${date})`;
 const closureSummary = (date: string) => `עדכון בנוגע לרשימות בעלי הידע (${date})`;
 const warningMarker = (date: string) => `<!-- Sapper-bot:knowledge-expert:v2:${date} -->`;
@@ -35,26 +36,58 @@ function readTalk(page: WikiPage): string {
   return page.missing !== undefined ? '' : existingContent(page).content;
 }
 
-function warningText(warning: Pending): string {
-  return `\n\n== ${HEADING} ==\n${warningMarker(warning.warnedOn)}\n`
-    + 'שלום, ותודה על נכונותך לשתף מהידע שלך עם עורכי ויקיפדיה. שמך מופיע ברשימות הבאות:\n'
+const botTalkLink = (wikiUsername: string) => `[[שיחת משתמש:${wikiUsername}|דף השיחה של הבוט]]`;
+
+function warningText(warning: Pending, username: string, wikiUsername: string): string {
+  return `\n\n== ${HEADING} ==\n${warningMarker(warning.warnedOn)}\nשלום ${username},\n\n`
+    + 'במסגרת תחזוקה שוטפת של תבניות בעלי הידע, נמצא כי לא נרשמה פעילות משם המשתמש שלך '
+    + 'בוויקיפדיה העברית בשלוש השנים האחרונות.\n\n'
+    + 'נכון להיום, שמך רשום ב[[תבנית:בעלי ידע|תבניות בעלי הידע]] הבאות:\n'
     + `${topicLinks(warning.topics)}\n\n`
-    + 'חלפו לפחות שלוש שנים מאז העריכה האחרונה שלך בוויקיפדיה העברית. '
-    + 'כדי שהפניות ברשימות יגיעו לעורכים שזמינים להשיב, בעוד כחודש נסיר את שמך מהרשימות האלה. '
-    + 'עריכה בוויקיפדיה העברית לפני ההסרה תשאיר את שמך ברשימות. '
-    + 'גם אחרי ההסרה אפשר להוסיף את שמך בחזרה בכל עת. תודה על תרומתך לוויקיפדיה. ~~~~\n';
+    + 'מאחר שהרשמה לתבניות אלה נועדה לאפשר לעורכים אחרים לתייג בעלי ידע בדיונים רלוונטיים, '
+    + 'ולאור חוסר הפעילות הממושך, יוסר שמך מהתבניות המפורטות לעיל בעוד כחודש, '
+    + 'אם לא תירשם פעילות עד אז. הודעה מפורשת על ההסרה תופיע בדף שיחתך, בעת ביצועה. '
+    + `אם נפלה טעות בהודעה זו, ניתן לפנות ל${botTalkLink(wikiUsername)}.\n\n`
+    + 'במקרה של חזרה לפעילות מאוחר יותר, ניתן להוסיף את שמך מחדש לתבניות הרלוונטיות.\n\n'
+    + 'בידידות והערכה על תרומתך לוויקיפדיה, ~~~~\n';
+}
+
+function removalText(warning: Pending, removed: string[], username: string, wikiUsername: string): string {
+  return `=== הסרה מתבניות בעלי ידע ===\nשלום ${username},\n\n`
+    + `בהמשך להודעה מ־${warning.warnedOn}, ומאחר שלא נרשמה פעילות משם המשתמש שלך `
+    + 'בוויקיפדיה העברית בשלוש השנים האחרונות, הוסר שמך '
+    + 'מ[[תבנית:בעלי ידע|תבניות בעלי הידע]] הבאות:\n'
+    + `${topicLinks(removed)}\n\n`
+    + 'ההסרה נעשתה במסגרת תחזוקה שגרתית של רשימות בעלי הידע, '
+    + 'ואין בה משום ביקורת לגבי תרומתך או ידיעותיך. מטרתה היא לשמור על רשימות מעודכנות, '
+    + 'כך שתיוג בעלי ידע יפנה בעיקר לעורכים שעשויים להיות זמינים להשתתף בדיונים.\n\n'
+    + 'במקרה של חזרה לפעילות ורצון להירשם שוב לתחום כלשהו, '
+    + 'ניתן להוסיף את שמך לתבנית הרלוונטית בכל עת. '
+    + `אם לדעתך ההסרה נעשתה בטעות, ניתן לפנות ל${botTalkLink(wikiUsername)}.\n\n`
+    + 'בידידות והערכה על תרומתך לוויקיפדיה, ~~~~\n';
 }
 
 function warningSection(content: string, date: string): number {
-  const marker = `== ${HEADING} ==\n${warningMarker(date)}\n`;
-  const start = content.indexOf(marker);
-  if (start < 0) return -1;
-  const afterMarker = start + marker.length;
-  const nextHeading = /^==(?!=).+?==[ \t]*$/m.exec(content.slice(afterMarker));
-  return nextHeading ? afterMarker + nextHeading.index : content.length;
+  for (const heading of [HEADING, LEGACY_HEADING]) {
+    const marker = `== ${heading} ==\n${warningMarker(date)}\n`;
+    const start = content.indexOf(marker);
+    if (start >= 0) {
+      const afterMarker = start + marker.length;
+      const nextHeading = /^==(?!=).+?==[ \t]*$/m.exec(content.slice(afterMarker));
+      return nextHeading ? afterMarker + nextHeading.index : content.length;
+    }
+  }
+  return -1;
 }
 
-function followUp(content: string, warning: Pending, removed: string[], active: boolean): string {
+function followUp(
+  content: string,
+  warning: Pending,
+  removed: string[],
+  active: boolean,
+  username: string,
+  wikiUsername: string,
+): string {
   const date = warning.warnedOn;
   const end = warningSection(content, date);
   if (end < 0 && removed.length === 0) return content;
@@ -66,9 +99,12 @@ function followUp(content: string, warning: Pending, removed: string[], active: 
   const response = active
     ? `${removed.length > 0 ? `${message} ` : ''}תודה על חזרתך לפעילות. אין צורך בהסרה נוספת.`
     : message;
-  const note = `${response} ~~~~\n${closedMarker(date)}\n`;
+  const notice = removed.length > 0 && !active
+    ? removalText(warning, removed, username, wikiUsername)
+    : `: ${response} ~~~~\n`;
+  const note = `${notice}${closedMarker(date)}\n`;
   if (end < 0) return `${content.trimEnd()}\n\n== ${HEADING} ==\n${note}`;
-  return `${content.slice(0, end).trimEnd()}\n\n: ${note}\n${content.slice(end)}`;
+  return `${content.slice(0, end).trimEnd()}\n\n${note}\n${content.slice(end)}`;
 }
 
 async function recentlyActive(api: IWikiApi, username: string, now: Date): Promise<boolean> {
@@ -193,7 +229,8 @@ async function processUser(
     const newWarning = { warnedOn: today, topics, members };
     await log.save(username, newWarning);
     if (!options.dryRun) {
-      await writePage(api, talk, warningSummary(today), content + warningText(newWarning));
+      const message = warningText(newWarning, username, options.wikiUsername);
+      await writePage(api, talk, warningSummary(today), content + message);
     }
     await log.save(username, { ...newWarning, notified: true }, { kind: 'warning' });
     return 'warned';
@@ -222,7 +259,7 @@ async function processUser(
     : [];
   const latestTalk = removed.length > 0 ? await api.getPage(title) : talk;
   const latestContent = readTalk(latestTalk);
-  const updated = followUp(latestContent, plan, removed, active);
+  const updated = followUp(latestContent, plan, removed, active, username, options.wikiUsername);
   if (!options.dryRun && updated !== latestContent) {
     await writePage(api, latestTalk, closureSummary(plan.warnedOn), updated);
   }
