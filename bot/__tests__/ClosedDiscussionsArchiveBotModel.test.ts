@@ -158,7 +158,7 @@ describe('closedDiscussionsArchiveBotModel', () => {
 | קישור לדף || קישור לדף הדיונים
 |}
 
-{| class="wikitable"
+{| class="wikitable" id="archive-config"
 |+ דפים עם {{תב|דיווח מצב}} לארכוב אוטומטי
 ! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד !! הוספת מצב חדש !! עדכון מצב בדיון
 |-
@@ -195,14 +195,14 @@ describe('closedDiscussionsArchiveBotModel', () => {
       });
     });
 
-    it('should prefer the table marked with the configuration id', async () => {
-      const content = `{| class="wikitable"
+    it('should use the id even with different styling and headings', async () => {
+      const content = `{| class="wikitable" title='Example id="archive-config" table'
 ! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
 | [[דף לדוגמה]] || טופל || 7 || רבעון || ||
 |}
 
-{| class="wikitable" id="archive-config"
+{| style="width: 90% !important" id="archive-config"
 ! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
 | [[ויקיפדיה:מפעיל נולד]] || טופל || 7 || רבעון || ||
@@ -215,20 +215,20 @@ describe('closedDiscussionsArchiveBotModel', () => {
       expect(pages.map(({ page }) => page)).toStrictEqual(['ויקיפדיה:מפעיל נולד']);
     });
 
-    it('should fail if no archive configuration table can be identified', async () => {
-      const content = `{| class="wikitable"
-! עמודה !! הסבר
+    it('should fail if the table has the old headings but lacks the configuration id', async () => {
+      const content = `{| class="wikitable" id="example"
+! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
-| קישור לדף || קישור לדף הדיונים
+| [[דף לדוגמה]] || טופל || 7 || רבעון || ||
 |}`;
       wikiApi.articleContent.mockResolvedValue({ content, revid: 1 });
       model = ClosedDiscussionsArchiveBotModel(wikiApi);
 
-      await expect(model.getPagesToArchive()).rejects.toThrow('Archive configuration table not found on ויקיפדיה:בוט/ארכוב דיונים');
+      await expect(model.getPagesToArchive()).rejects.toThrow('Archive configuration table with id="archive-config" not found on ויקיפדיה:בוט/ארכוב דיונים');
     });
 
     it('should default new state flags to false when columns are missing', async () => {
-      const tableContent = `{| class="wikitable"
+      const tableContent = `{| class="wikitable" id="archive-config"
 |-
 ! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
@@ -245,7 +245,7 @@ describe('closedDiscussionsArchiveBotModel', () => {
     });
 
     it('should throw error for invalid page link', async () => {
-      const tableContent = `{| class="wikitable"
+      const tableContent = `{| class="wikitable" id="archive-config"
 |-
 ! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
@@ -259,7 +259,7 @@ describe('closedDiscussionsArchiveBotModel', () => {
     });
 
     it('should handle null archiveNavigatePage when link is invalid', async () => {
-      const tableContent = `{| class="wikitable"
+      const tableContent = `{| class="wikitable" id="archive-config"
 |-
 ! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
@@ -276,7 +276,7 @@ describe('closedDiscussionsArchiveBotModel', () => {
     });
 
     it('should default targeted archive regular archive mode when the config column is missing', async () => {
-      const tableContent = `{| class="wikitable"
+      const tableContent = `{| class="wikitable" id="archive-config"
 |-
 ! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-

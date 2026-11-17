@@ -22,8 +22,8 @@ import { logger } from '../../utilities/logger';
 export type ArchiveType = 'רבעון' | 'תבנית ארכיון' | 'תבנית ארכיון עם יעד' | 'מחיקה';
 export type TargetedArchiveRegularArchiveMode = 'תבנית הועבר' | 'ארכוב כפול';
 const CONFIG_PAGE_TITLE = 'ויקיפדיה:בוט/ארכוב דיונים';
-const CONFIG_TABLE_ID = /(?:^|\s)id\s*=\s*(?:"archive-config"|'archive-config'|archive-config)(?=\s|$)/i;
-const CONFIG_TABLE_HEADERS = /^![ \t]*קישור לדף[ \t]*(?:!!|\r?\n!)[ \t]*מצבים לארכוב[ \t]*(?=!!|\r?$)/m;
+const CONFIG_TABLE_ID = 'archive-config';
+const TABLE_ATTRIBUTE = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))/g;
 export type PageToArchive = {
   page: string;
   statuses: string[];
@@ -268,11 +268,13 @@ export default function ClosedDiscussionsArchiveBotModel(
 ): IClosedDiscussionsArchiveBotModel {
   async function getPagesToArchive(): Promise<PageToArchive[]> {
     const { content } = await getContent(wikiApi, CONFIG_PAGE_TITLE);
-    const tables = parseTableText(content);
-    const parsedTable = tables.find((table) => CONFIG_TABLE_ID.test(table.tableStyle))
-      ?? tables.find((table) => CONFIG_TABLE_HEADERS.test(table.text));
+    const parsedTable = parseTableText(content).find(({ text }) => {
+      const [openingLine] = text.slice(2).split('\n', 1);
+      return Array.from(openingLine.matchAll(TABLE_ATTRIBUTE))
+        .some(([, name, ...values]) => name.toLowerCase() === 'id' && values.includes(CONFIG_TABLE_ID));
+    });
     if (!parsedTable) {
-      throw new Error(`Archive configuration table not found on ${CONFIG_PAGE_TITLE}`);
+      throw new Error(`Archive configuration table with id="${CONFIG_TABLE_ID}" not found on ${CONFIG_PAGE_TITLE}`);
     }
     return parsedTable
       .rows.filter((row) => row.fields.length >= 6 && !row.isHeader)
