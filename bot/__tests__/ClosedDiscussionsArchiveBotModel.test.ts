@@ -151,10 +151,16 @@ describe('closedDiscussionsArchiveBotModel', () => {
   });
 
   describe('getPagesToArchive', () => {
-    it('should parse pages to archive from wiki table', async () => {
+    it('should find the archive configuration after a documentation table', async () => {
       const tableContent = `{| class="wikitable"
+! עמודה !! הסבר
 |-
-! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד !! הוספת מצב חדש !! עדכון מצב בדיון
+| קישור לדף || קישור לדף הדיונים
+|}
+
+{| class="wikitable"
+|+ דפים עם {{תב|דיווח מצב}} לארכוב אוטומטי
+! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד !! הוספת מצב חדש !! עדכון מצב בדיון
 |-
 | [[ויקיפדיה:מזנון]] || טופל,הועבר || 14 || רבעון || [[ויקיפדיה:מזנון]] || || כן || לא
 |-
@@ -189,10 +195,42 @@ describe('closedDiscussionsArchiveBotModel', () => {
       });
     });
 
+    it('should prefer the table marked with the configuration id', async () => {
+      const content = `{| class="wikitable"
+! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
+|-
+| [[דף לדוגמה]] || טופל || 7 || רבעון || ||
+|}
+
+{| class="wikitable" id="archive-config"
+! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
+|-
+| [[ויקיפדיה:מפעיל נולד]] || טופל || 7 || רבעון || ||
+|}`;
+      wikiApi.articleContent.mockResolvedValue({ content, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      const pages = await model.getPagesToArchive();
+
+      expect(pages.map(({ page }) => page)).toStrictEqual(['ויקיפדיה:מפעיל נולד']);
+    });
+
+    it('should fail if no archive configuration table can be identified', async () => {
+      const content = `{| class="wikitable"
+! עמודה !! הסבר
+|-
+| קישור לדף || קישור לדף הדיונים
+|}`;
+      wikiApi.articleContent.mockResolvedValue({ content, revid: 1 });
+      model = ClosedDiscussionsArchiveBotModel(wikiApi);
+
+      await expect(model.getPagesToArchive()).rejects.toThrow('Archive configuration table not found on ויקיפדיה:בוט/ארכוב דיונים');
+    });
+
     it('should default new state flags to false when columns are missing', async () => {
       const tableContent = `{| class="wikitable"
 |-
-! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
+! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
 | [[ויקיפדיה:מזנון]] || טופל || 14 || רבעון || [[ויקיפדיה:מזנון]] ||
 |}`;
@@ -209,7 +247,7 @@ describe('closedDiscussionsArchiveBotModel', () => {
     it('should throw error for invalid page link', async () => {
       const tableContent = `{| class="wikitable"
 |-
-! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
+! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
 | InvalidPageWithoutBrackets || טופל || 14 || רבעון || [[ויקיפדיה:מזנון]] ||
 |}`;
@@ -223,7 +261,7 @@ describe('closedDiscussionsArchiveBotModel', () => {
     it('should handle null archiveNavigatePage when link is invalid', async () => {
       const tableContent = `{| class="wikitable"
 |-
-! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
+! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
 | [[ויקיפדיה:מזנון]] || טופל || 14 || רבעון || InvalidNavigatePageWithoutBrackets ||
 |}`;
@@ -240,7 +278,7 @@ describe('closedDiscussionsArchiveBotModel', () => {
     it('should default targeted archive regular archive mode when the config column is missing', async () => {
       const tableContent = `{| class="wikitable"
 |-
-! דף !! מצבים !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
+! קישור לדף !! מצבים לארכוב !! ימים !! סוג ארכיון !! דף ניווט !! מצב ארכוב עם יעד
 |-
 | [[ויקיפדיה:מזנון]] || טופל || 14 || רבעון || [[ויקיפדיה:מזנון]] || 
 |}`;
