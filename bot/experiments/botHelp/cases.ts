@@ -4,6 +4,7 @@ export type HelpCase = {
   id: string;
   topic: HelpTopic;
   contextPage?: string;
+  requiresPage?: boolean;
   question: string;
   expectedSources: string[];
   evidence: string[];
@@ -112,6 +113,7 @@ export const helpCases: HelpCase[] = [
   {
     id: 'unknown-current-failure',
     topic: 'general',
+    requiresPage: true,
     question: 'הבוט לא ארכב אצלי היום. למה הוא הפסיק לעבוד?',
     expectedSources: [],
     evidence: [],

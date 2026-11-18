@@ -5,11 +5,12 @@ import OpenAI from 'openai';
 import archiveRules from '../experiments/botHelp/archiveRules';
 import { helpCases } from '../experiments/botHelp/cases';
 import {
-  indexText, measureCopyExample, measureRetrieval, renderReport, runExperiment,
+  formatHelpAnswer, indexText, measureCopyExample, measureRetrieval, prepareVerifiedRules, renderReport, runExperiment,
   sourceHash, validateSample, wikiContextForPage,
 } from '../experiments/botHelp/experiment';
 
 const [testCase] = helpCases;
+const generalCase = helpCases[12];
 const source = {
   id: testCase.expectedSources[0],
   title: 'Help',
@@ -64,6 +65,23 @@ describe('bot help experiment', () => {
     expect(measureCopyExample(helpCases[10], '{{תב|תיבת ארכיון אוטומטי}}')).toBeNull();
   });
 
+  it('renders only the verified example and preserves template references', () => {
+    const snippet = '{{תיבת ארכיון אוטומטי}}';
+    const wrapped = `<code><nowiki>${snippet}</nowiki></code>`;
+    const prepared = prepareVerifiedRules([`Use ${wrapped}`]);
+
+    expect(prepared).toStrictEqual({ text: ['Use EXAMPLE_1'], examples: { EXAMPLE_1: snippet } });
+    expect(formatHelpAnswer('ראו {{תב|תיבת ארכיון אוטומטי}}\nEXAMPLE_1', prepared.examples))
+      .toBe(`ראו {{תב|תיבת ארכיון אוטומטי}}\n${wrapped}`);
+  });
+
+  it.each(['<pre>{{מצב}}</pre>', '{{מצב}}', 'EXAMPLE_2', '{{תב|EXAMPLE_1}}', '|EXAMPLE_1'])(
+    'rejects unverified markup or incorrectly placed examples (%s)',
+    (answer) => {
+      expect(formatHelpAnswer(answer, { EXAMPLE_1: '{{מצב}}' })).toBeNull();
+    },
+  );
+
   it('keeps each evaluated example in the verified rules for its own archiver', () => {
     const rulesByTopic = new Map(archiveRules.map((rule) => [rule.topic, rule.text]));
     const matches = helpCases.filter((sample) => sample.copyExample)
@@ -109,7 +127,7 @@ describe('bot help experiment', () => {
   it('checkpoints completed answers and deletes temporary resources', async () => {
     const client = fakeClient();
     const checkpoint = jest.fn(async () => {});
-    const { results, cleanupErrors } = await runExperiment(client as unknown as OpenAI, [source], [testCase, helpCases[10]], 'test-model', checkpoint);
+    const { results, cleanupErrors } = await runExperiment(client as unknown as OpenAI, [source], [testCase, generalCase], 'test-model', checkpoint);
 
     expect(checkpoint).toHaveBeenCalledTimes(2);
     expect(results[0]).toMatchObject({
@@ -128,7 +146,7 @@ describe('bot help experiment', () => {
     const { results } = await runExperiment(
       client as unknown as OpenAI,
       [rules],
-      [testCase, helpCases[10]],
+      [testCase, generalCase],
       'test-model',
       checkpoint,
       new Map([[testCase.id, context]]),
@@ -144,13 +162,41 @@ describe('bot help experiment', () => {
         rewrite_query: true,
         filters: { type: 'eq', key: 'topic', value: 'user-talk' },
       }],
-      ['store', { query: helpCases[10].question, max_num_results: 5, rewrite_query: true }],
+      ['store', { query: generalCase.question, max_num_results: 5, rewrite_query: true }],
     ]);
     expect(client.responses.create.mock.calls).toStrictEqual([
-      [expect.objectContaining({ input: expect.stringContaining('"verifiedRules":["Verified behavior"]') })],
+      [expect.objectContaining({ input: expect.stringContaining('"verifiedRules":{"text":["Verified behavior"],"examples":{}}') })],
       [expect.objectContaining({ input: expect.stringContaining('"wikiContext":null') })],
     ]);
     expect(results[0].wikiContext).toStrictEqual(context);
+  });
+
+  it('asks for a page before attempting a diagnosis that requires one', async () => {
+    const client = fakeClient();
+    const checkpoint = jest.fn(async () => {});
+    const { results } = await runExperiment(client as unknown as OpenAI, [source], [helpCases[10]], 'test-model', checkpoint);
+
+    expect(client.vectorStores.search).not.toHaveBeenCalled();
+    expect(client.responses.create).not.toHaveBeenCalled();
+    expect(results[0].answer).toContain('באיזה דף או דיון מדובר?');
+  });
+
+  it('records rejected model output separately from the formatted answer', async () => {
+    const client = fakeClient();
+    client.responses.create.mockResolvedValueOnce({ status: 'completed', output_text: '<pre>{{מצב}}</pre>' });
+    const checkpoint = jest.fn(async () => {});
+    const context = { page: 'Requested page', lastEditedAt: '2026-11-18T00:00:00Z', configuration: [] };
+    const { results } = await runExperiment(
+      client as unknown as OpenAI,
+      [source],
+      [helpCases[10]],
+      'test-model',
+      checkpoint,
+      new Map([[helpCases[10].id, context]]),
+    );
+
+    expect(results[0]).toMatchObject({ answer: '', rejectedOutput: '<pre>{{מצב}}</pre>' });
+    expect(renderReport(results, 'test-model')).toContain('### Rejected raw model output');
   });
 
   it('cleans up even when indexing fails', async () => {
