@@ -1,3 +1,4 @@
+import OpenAI from 'openai';
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { WikiNotification } from '../types';
 import { getLocalTimeAndDate } from '../utilities';
@@ -6,6 +7,10 @@ import { getAllParagraphs, getParagraphContent, parseParagraph } from '../wiki/p
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import archiveParagraph, { moveTo } from './actions/archive';
 import askGPT from './gpt-bot/askGPT';
+import tagCommandPattern from './commands';
+import { answerTagHelp, createHelpClassifier } from './help/preview';
+import answerFromKnowledge from './help/knowledgeAnswer';
+import ClosedDiscussionsArchiveBotModel from '../maintenance/closedDiscussionsArchiveBot/ClosedDiscussionsArchiveBotModel';
 import { logger } from '../utilities/logger';
 import { checkExternalLinks } from './actions/checkPage';
 import { getRedirectTargetFromContent } from '../wiki/redirectParser';
@@ -184,6 +189,28 @@ async function askAction(api: IWikiApi, notification: WikiNotification, question
   }
 }
 
+async function helpAction(api: IWikiApi, notification: WikiNotification, question: string) {
+  const title = notification.title.full;
+  const user = notification.agent.name;
+  const url = new URL(notification['*'].links.primary.url);
+  const commentId = decodeURIComponent(url.hash.replace('#', ''));
+  const commentSummary = getCommentSummary(user);
+  const commentPrefix = getCommentPrefix(user);
+  let answer: string;
+  try {
+    const client = new OpenAI({ maxRetries: 0, timeout: 30_000 });
+    const model = process.env.BOT_HELP_MODEL || 'gpt-4o-mini';
+    const classify = createHelpClassifier(client, model);
+    const archive = ClosedDiscussionsArchiveBotModel(api);
+    const lookup = (query: string) => answerFromKnowledge(client, model, query);
+    ({ answer } = await answerTagHelp(question, title, classify, archive.getPagesToArchive, lookup));
+  } catch (error) {
+    logger.logError(`Failed to answer bot help: ${String(error)}`);
+    answer = failedMessage;
+  }
+  await api.addComment(title, commentSummary, `${commentPrefix}\n${answer}`, commentId);
+}
+
 async function checkAction(api: IWikiApi, notification: WikiNotification, checkTitle: string) {
   const title = notification.title.full;
   const user = notification.agent.name;
@@ -235,11 +262,9 @@ const actions = {
   ענה: askAction,
   העבר: moveAction,
   בדוק: checkAction,
+  עזרה: helpAction,
 };
-const commandRegex = new RegExp(
-  `(?<![\\p{L}\\p{N}_@])@(?:(?:משתמש|user):)?${escapedBotName}\\s+(${Object.keys(actions).join('|')}):([\\s\\S]*)`,
-  'iu',
-);
+const commandRegex = tagCommandPattern(botName, Object.keys(actions));
 const allowedGroups = ['autopatrolled', 'sysop', 'bureaucrat', 'patroller', 'templateeditor'];
 async function handleNotification(
   api: IWikiApi,

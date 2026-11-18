@@ -1,0 +1,39 @@
+name: Refresh bot help documentation
+
+on:
+  schedule:
+    - cron: '25 7 * * 0'
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/bot-help-refresh.yml
+      - bot/tag-bot/help/knowledgeIndex.ts
+      - scripts/bot-help-refresh.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bot-help-documentation
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.repository == 'EladHeller/wiki-bot' && github.ref == 'refs/heads/master'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.14.0
+      - run: npm ci
+      - run: npm run build
+      - name: Refresh from public Wikipedia documentation
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node scripts/bot-help-refresh.mjs

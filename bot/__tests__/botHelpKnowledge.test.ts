@@ -1,0 +1,181 @@
+import {
+  describe, expect, it, jest,
+} from '@jest/globals';
+import { createHash } from 'node:crypto';
+import type OpenAI from 'openai';
+import answerFromKnowledge from '../tag-bot/help/knowledgeAnswer';
+import {
+  findKnowledgeIndex, knowledgePages, knowledgeScope, refreshKnowledgeIndex,
+} from '../tag-bot/help/knowledgeIndex';
+
+const scope = 'test-space';
+const [title, secondTitle] = knowledgePages;
+const first = { title, text: 'bot overview' };
+const second = { title: secondTitle, text: 'bot tag commands' };
+const loaded = { id: 'active', status: 'completed', metadata: { scope, state: 'ready' } };
+
+async function* items<T>(values: T[]) {
+  yield* values;
+}
+
+function fakeOpenAI() {
+  return {
+    files: {
+      create: jest.fn(async () => ({ id: 'new-document' })),
+      delete: jest.fn(async () => {}),
+    },
+    vectorStores: {
+      list: jest.fn(() => items([loaded])),
+      create: jest.fn(async () => ({ id: 'new-index' })),
+      update: jest.fn(async () => ({ ...loaded, id: 'new-index' })),
+      delete: jest.fn(async () => {}),
+      files: {
+        list: jest.fn(() => items<{ id: string; attributes: { title: string; digest: string } | null }>([])),
+      },
+      fileBatches: {
+        createAndPoll: jest.fn(async () => ({ status: 'completed', file_counts: { completed: 2 } })),
+      },
+      search: jest.fn(async (): Promise<{
+        data: { attributes: Record<string, string> | null; content: { text: string }[] }[];
+      }> => ({
+        data: [{ attributes: { title }, content: [{ text: 'A public help extract' }] }],
+      })),
+    },
+    responses: {
+      create: jest.fn(async () => ({
+        status: 'completed', output_text: JSON.stringify({ explanation: 'תשובה מבוססת', citations: [title] }),
+      })),
+    },
+  };
+}
+
+function sourceDigest(text: string) {
+  return createHash('sha256').update(text).digest('hex');
+}
+
+const asClient = (mock: ReturnType<typeof fakeOpenAI>) => mock as unknown as OpenAI;
+
+describe('weekly help refresh', () => {
+  it('selects the newest complete published index in the requested namespace', async () => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.list.mockReturnValue(items([
+      { ...loaded, status: 'expired' },
+      { ...loaded, metadata: { scope: 'different', state: 'ready' } },
+      { ...loaded, metadata: { scope, state: 'pending' } },
+      loaded,
+    ]));
+
+    await expect(findKnowledgeIndex(asClient(mock), scope)).resolves.toBe('active');
+    await expect(findKnowledgeIndex(asClient(mock))).resolves.toBeNull();
+  });
+
+  it.each([[], [first, first], [{ ...first, text: ' ' }]])('rejects an incomplete source snapshot', async (...rows) => {
+    const mock = fakeOpenAI();
+
+    await expect(refreshKnowledgeIndex(asClient(mock), rows, scope)).rejects.toThrow('unique, nonempty sources');
+    expect(mock.vectorStores.list).not.toHaveBeenCalled();
+  });
+
+  it('builds an initial index and marks it ready only after processing', async () => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.list.mockReturnValue(items([]));
+    const result = await refreshKnowledgeIndex(asClient(mock), [first, second]);
+
+    expect(result).toStrictEqual({ uploaded: 2, changed: true });
+    expect(mock.vectorStores.update.mock.calls).toStrictEqual([['new-index', expect.objectContaining({
+      metadata: expect.objectContaining({ scope: knowledgeScope, state: 'ready' }),
+      expires_after: null,
+    })]]);
+  });
+
+  it('skips uploads if the active snapshot has the same files', async () => {
+    const mock = fakeOpenAI();
+    const digest = sourceDigest(JSON.stringify([[title, sourceDigest(first.text)]]));
+    mock.vectorStores.list.mockReturnValue(items([{ ...loaded, metadata: { ...loaded.metadata, digest } }]));
+
+    await expect(refreshKnowledgeIndex(asClient(mock), [first], scope))
+      .resolves.toStrictEqual({ uploaded: 0, changed: false });
+    expect(mock.files.create).not.toHaveBeenCalled();
+  });
+
+  it('reuses unchanged files and prunes only unreferenced files in superseded snapshots', async () => {
+    const mock = fakeOpenAI();
+    const kept = { id: 'shared', attributes: { title, digest: sourceDigest(first.text) } };
+    const obsolete = { id: 'obsolete', attributes: null };
+    mock.vectorStores.list.mockReturnValue(items([loaded, { ...loaded, id: 'older' }]));
+    mock.vectorStores.files.list
+      .mockReturnValueOnce(items([kept, obsolete]))
+      .mockReturnValueOnce(items([kept]))
+      .mockReturnValueOnce(items([kept]))
+      .mockReturnValueOnce(items([kept, obsolete]));
+
+    await expect(refreshKnowledgeIndex(asClient(mock), [first, second], scope))
+      .resolves.toStrictEqual({ uploaded: 1, changed: true });
+    expect(mock.vectorStores.fileBatches.createAndPoll.mock.calls).toStrictEqual([['new-index', {
+      files: expect.arrayContaining([expect.objectContaining({ file_id: 'shared' })]),
+    }]]);
+    expect(mock.vectorStores.delete.mock.calls).toStrictEqual([['older']]);
+    expect(mock.files.delete.mock.calls).toStrictEqual([['obsolete']]);
+  });
+
+  it.each([
+    { status: 'failed', file_counts: { completed: 2 } },
+    { status: 'completed', file_counts: { completed: 1 } },
+  ])('retains the existing snapshot if replacement fails', async (batch) => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.fileBatches.createAndPoll.mockResolvedValue(batch);
+
+    await expect(refreshKnowledgeIndex(asClient(mock), [first, second], scope)).rejects.toThrow('did not process');
+    expect(mock.vectorStores.update).not.toHaveBeenCalled();
+    expect(mock.vectorStores.delete.mock.calls).toStrictEqual([['new-index']]);
+    expect(mock.files.delete).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('documentation answers', () => {
+  it('uses only public source titles from the chunks and adds wiki links itself', async () => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.search.mockResolvedValue({
+      data: [
+        { attributes: { title: '[injected]' }, content: [] },
+        { attributes: { title }, content: [{ text: 'A public help extract' }] },
+      ],
+    });
+    const answer = await answerFromKnowledge(asClient(mock), 'test-model', 'What does the bot do?', scope);
+
+    expect(answer).toBe(`תשובה מבוססת\n\nמקורות: [[${title}]]`);
+    expect(mock.responses.create.mock.calls).toStrictEqual([[expect.objectContaining({
+      input: expect.stringContaining('A public help extract'),
+    })]]);
+  });
+
+  it('declines when there is no ready index', async () => {
+    const mock = fakeOpenAI();
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'Question')).resolves.toBeNull();
+    expect(mock.vectorStores.search).not.toHaveBeenCalled();
+  });
+
+  it('declines when search does not have any allowed source', async () => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.search.mockResolvedValue({ data: [{ attributes: null, content: [] }] });
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'Question', scope)).resolves.toBeNull();
+    expect(mock.responses.create).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { status: 'incomplete', output_text: 'Incomplete' },
+    { status: 'completed', output_text: '' },
+    { status: 'completed', output_text: '{' },
+    { status: 'completed', output_text: JSON.stringify({ explanation: '', citations: [title] }) },
+    { status: 'completed', output_text: JSON.stringify({ explanation: '{{תבנית}}', citations: [title] }) },
+    { status: 'completed', output_text: JSON.stringify({ explanation: 'Explanation', citations: [] }) },
+    { status: 'completed', output_text: JSON.stringify({ explanation: 'Explanation', citations: [secondTitle] }) },
+  ])('does not publish incomplete, unverifiable, or unsafe output', async (response) => {
+    const mock = fakeOpenAI();
+    mock.responses.create.mockResolvedValue(response);
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'Question', scope)).resolves.toBeNull();
+  });
+});
