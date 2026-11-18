@@ -3,6 +3,7 @@ import {
 } from '@jest/globals';
 import { createHash } from 'node:crypto';
 import type OpenAI from 'openai';
+import { operationSourcePath, repositorySource } from '../tag-bot/help/codeSources';
 import answerFromKnowledge from '../tag-bot/help/knowledgeAnswer';
 import {
   findKnowledgeIndex, knowledgePages, knowledgeScope, refreshKnowledgeIndex,
@@ -120,6 +121,15 @@ describe('weekly help refresh', () => {
     expect(mock.files.delete.mock.calls).toStrictEqual([['obsolete']]);
   });
 
+  it('cleans up successful uploads when another upload in the same batch fails', async () => {
+    const mock = fakeOpenAI();
+    mock.files.create.mockRejectedValueOnce(new Error('Upload rejected'));
+
+    await expect(refreshKnowledgeIndex(asClient(mock), [first, second], scope)).rejects.toThrow('Upload rejected');
+    expect(mock.vectorStores.fileBatches.createAndPoll).not.toHaveBeenCalled();
+    expect(mock.files.delete).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     { status: 'failed', file_counts: { completed: 2 } },
     { status: 'completed', file_counts: { completed: 1 } },
@@ -132,6 +142,28 @@ describe('weekly help refresh', () => {
     expect(mock.vectorStores.delete.mock.calls).toStrictEqual([['new-index']]);
     expect(mock.files.delete).toHaveBeenCalledTimes(2);
   });
+});
+
+describe('repository sources', () => {
+  it.each([
+    'bot/scripts/oneTime/example.ts',
+    'xmlbot/script.ts',
+    'build/t01.cf.yaml',
+    'build/wiki-bot-playwright/Dockerfile',
+    '.github/workflows/deploy.yml',
+    'package.json',
+  ])('covers operational source outside the manually labelled examples (%s)', (path) => {
+    expect(operationSourcePath(path)).toBe(true);
+    expect(repositorySource(`code:${path}`)?.path).toBe(path);
+  });
+
+  it.each(['bot/__tests__/example.test.ts', 'bot/../private.ts', 'bot/.env', 'build/random.pem', 'bot/foo.spec.ts'])(
+    'excludes test and unrelated paths (%s)',
+    (path) => {
+      expect(operationSourcePath(path)).toBe(false);
+      expect(repositorySource(`code:${path}`)).toBeUndefined();
+    },
+  );
 });
 
 describe('documentation answers', () => {
@@ -183,6 +215,42 @@ describe('documentation answers', () => {
 
     await expect(answerFromKnowledge(asClient(mock), 'test-model', 'מה עושה הבוט על דפי כדורסלנים?', scope))
       .resolves.toContain('[[ויקיפדיה:בוט/סדר בשדות תאריכים בתבניות אישיות ספורט]]');
+  });
+
+  it('searches English source for an operation without a curated Hebrew label', async () => {
+    const mock = fakeOpenAI();
+    const source = 'code:bot/scripts/oneTime/fixExample.ts';
+    const quote = 'function reconcileSettlementCategories(records) { return records.filter(isSettlement); }';
+    mock.vectorStores.search.mockResolvedValue({
+      data: [{ attributes: { title: source }, content: [{ text: quote }] }],
+    });
+    mock.responses.create.mockResolvedValueOnce({
+      status: 'completed', output_text: 'settlement categories',
+    }).mockResolvedValueOnce({
+      status: 'completed',
+      output_text: JSON.stringify({ explanation: 'הסקריפט מתאים קטגוריות של יישובים.', evidence: [{ source, quote }] }),
+    });
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'איך הסקריפט מתקן קטגוריות יישובים?', scope))
+      .resolves.toContain('מתאים קטגוריות של יישובים');
+    expect(mock.vectorStores.search).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { status: 'incomplete', output_text: 'settlement' },
+    { status: 'completed', output_text: '' },
+  ])('falls back to no answer without a useful translated query', async (translation) => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.search.mockResolvedValue({
+      data: [{
+        attributes: { title: 'code:bot/scripts/oneTime/fixExample.ts' }, content: [{ text: 'fix settlements' }],
+      }],
+    });
+    mock.responses.create.mockResolvedValueOnce(translation);
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'איך מטפלים בשינויי יישובים?', scope))
+      .resolves.toBeNull();
+    expect(mock.vectorStores.search).toHaveBeenCalledTimes(1);
   });
 
   it('declines when there is no ready index', async () => {

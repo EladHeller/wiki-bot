@@ -51,4 +51,22 @@ const sources = [
 
 const codeSources = new Map(sources.map((source) => [`code:${source.path}`, source]));
 
+export function operationSourcePath(path: string): boolean {
+  if (['package.json', 'xmlbot/package.json', 'build/wiki-bot-playwright/Dockerfile'].includes(path)) return true;
+  const sourceFile = /^(?:bot|xmlbot|scripts|build|\.github\/workflows)\/[a-zA-Z0-9_./-]+\.(?:ts|[cm]?js|sh|ya?ml)$/;
+  return sourceFile.test(path)
+    && !/(?:^|\/)(?:\.\.?|__tests__|TestsDocker|node_modules)(?:\/|$)|\.(?:test|spec)\./.test(path);
+}
+
+export function repositorySource(id: string): { path: string; label: string; reference: string } | undefined {
+  if (!id.startsWith('code:')) return undefined;
+  const path = id.slice('code:'.length);
+  if (!operationSourcePath(path)) return undefined;
+  return codeSources.get(id) ?? {
+    path,
+    label: path.split('/').join(' ').replace(/([a-z])([A-Z])/g, '$1 $2'),
+    reference: `https://github.com/EladHeller/wiki-bot/blob/master/${encodeURI(path)}`,
+  };
+}
+
 export default codeSources;

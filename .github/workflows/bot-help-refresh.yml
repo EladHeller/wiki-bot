@@ -6,9 +6,12 @@ on:
   push:
     branches: [master]
     paths:
-      - .github/workflows/bot-help-refresh.yml
       - bot/**
-      - scripts/bot-help-refresh.mjs
+      - xmlbot/**
+      - scripts/**
+      - build/**
+      - .github/workflows/**
+      - package.json
   workflow_dispatch:
 
 permissions:
@@ -23,7 +26,7 @@ jobs:
     if: github.repository == 'EladHeller/wiki-bot' && github.ref == 'refs/heads/master'
     environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:

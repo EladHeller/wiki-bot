@@ -1,7 +1,7 @@
 import copyrightViolationPages, { copyrightEditThreshold, extraCopyrightResultsPage } from '../../maintenance/copyrightViolationPages';
 import sportsReportPage from '../../sportPersonalityTemplatesYearsFormat/reportPage';
 
-const copyrightTopic = /זכויות\s+יוצרים|copyvios/iu;
+const copyrightTopic = /זכויות\s+ה?יוצרים|copyvios/iu;
 const reportQuestion = /לוג|יומן|ד(?:ו[״"']?ח|יווח)|איפה.*(?:תוצאות|ממצאים)|היכן.*(?:תוצאות|ממצאים)/u;
 const recentRunQuestion = /(?:ריצה|הרצה|הריצות|הרצות)\s+(?:ה)?אחרונ|(?:רץ|רצה)\s+(?:לאחרונה|היום|אתמול)/u;
 const copyrightExplanation = /איך|כיצד|מה\s+(?:עושה|בודק|הבוט)|באילו\s+דפים/u;

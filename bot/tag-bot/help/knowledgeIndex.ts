@@ -91,19 +91,25 @@ export async function refreshKnowledgeIndex(
   let published: Index;
   try {
     const batchFiles: OpenAI.VectorStores.FileBatchCreateParams.File[] = [];
-    for (const entry of entries) {
-      const attributes = { title: entry.title, digest: entry.digest };
-      let fileId = oldFileIds.get(JSON.stringify([entry.title, entry.digest]));
-      if (!fileId) {
-        const content = `# ${entry.title}\n\n${entry.text}`;
-        const file = await client.files.create({
-          file: await toFile(Buffer.from(content), `${scope}-${entry.digest}.md`),
-          purpose: 'assistants',
-        });
-        fileId = file.id;
-        uploaded.push(fileId);
-      }
-      batchFiles.push({ file_id: fileId, attributes });
+    for (let offset = 0; offset < entries.length; offset += 10) {
+      const outcomes = await Promise.allSettled(entries.slice(offset, offset + 10).map(async (entry) => {
+        const attributes = { title: entry.title, digest: entry.digest };
+        let fileId = oldFileIds.get(JSON.stringify([entry.title, entry.digest]));
+        if (!fileId) {
+          const content = `# ${entry.title}\n\n${entry.text}`;
+          const file = await client.files.create({
+            file: await toFile(Buffer.from(content), `${scope}-${entry.digest}.md`),
+            purpose: 'assistants',
+          });
+          fileId = file.id;
+          uploaded.push(fileId);
+        }
+        return { file_id: fileId, attributes };
+      }));
+      outcomes.forEach((outcome) => {
+        if (outcome.status === 'rejected') throw outcome.reason;
+        batchFiles.push(outcome.value);
+      });
     }
     const batch = await client.vectorStores.fileBatches.createAndPoll(pending.id, { files: batchFiles });
     if (batch.status !== 'completed' || batch.file_counts.completed !== entries.length) {

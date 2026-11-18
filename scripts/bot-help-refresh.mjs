@@ -1,7 +1,8 @@
+import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import OpenAI from 'openai';
-import codeSources from '../dist/tag-bot/help/codeSources.js';
+import { operationSourcePath, repositorySource } from '../dist/tag-bot/help/codeSources.js';
 import answerFromKnowledge from '../dist/tag-bot/help/knowledgeAnswer.js';
 import { knowledgePages, refreshKnowledgeIndex } from '../dist/tag-bot/help/knowledgeIndex.js';
 
@@ -29,14 +30,21 @@ const sources = knowledgePages.map((title) => {
   };
 });
 
-const indexedCode = await Promise.all(Array.from(codeSources, async ([title, { path, label }]) => ({
-  title,
-  text: `${label}\n\n${await readFile(new URL(`../${path}`, import.meta.url), 'utf8')}`,
-})));
+const root = new URL('..', import.meta.url);
+const trackedPaths = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
+  .split('\0').filter(operationSourcePath);
+const indexedCode = await Promise.all(trackedPaths.map(async (path) => {
+  const title = `code:${path}`;
+  const metadata = repositorySource(title);
+  return {
+    title,
+    text: `${metadata.label}\n\n${await readFile(new URL(path, root), 'utf8')}`,
+  };
+}));
 sources.push(...indexedCode);
 
 if (process.argv.includes('--prepare')) {
-  console.log(`Prepared ${sources.length} documentation and repository sources.`);
+  console.log(`Prepared ${knowledgePages.length} wiki pages and ${indexedCode.length} tracked code and configuration files.`);
   process.exit(0);
 }
 
