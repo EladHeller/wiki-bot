@@ -2,13 +2,14 @@ name: Bot help experiment
 
 on:
   push:
-    branches: [experiment/bot-help-index]
+    branches: ['experiment/bot-help-*']
     paths:
       - bot/experiments/botHelp/**
       - bot/tag-bot/help/**
       - scripts/bot-help-experiment.mjs
       - scripts/bot-help-preview.mjs
       - scripts/bot-help-refresh.mjs
+      - scripts/bot-help-verify.mjs
       - .github/workflows/bot-help-experiment.yml
   workflow_dispatch:
 
@@ -17,10 +18,11 @@ permissions:
 
 jobs:
   experiment:
-    if: github.repository == 'EladHeller/wiki-bot' && github.ref == 'refs/heads/experiment/bot-help-index'
+    if: github.repository == 'EladHeller/wiki-bot' && startsWith(github.ref, 'refs/heads/experiment/bot-help-')
     environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
+    continue-on-error: ${{ matrix.model == 'gpt-4.1-mini' }}
     strategy:
       fail-fast: false
       matrix:

@@ -3,12 +3,15 @@ import {
 } from '@jest/globals';
 import { createHash } from 'node:crypto';
 import type OpenAI from 'openai';
+import { operationSourcePath, repositorySource } from '../tag-bot/help/codeSources';
 import answerFromKnowledge from '../tag-bot/help/knowledgeAnswer';
 import {
   findKnowledgeIndex, knowledgePages, knowledgeScope, refreshKnowledgeIndex,
 } from '../tag-bot/help/knowledgeIndex';
 
 const scope = 'test-space';
+const question = 'איך עובד מצעד מדיה פורסט?';
+const extract = 'בוט מדיה פורסט מעדכן את המצעד השבועי לפי דף הנתונים של מדיה פורסט.';
 const [title, secondTitle] = knowledgePages;
 const first = { title, text: 'bot overview' };
 const second = { title: secondTitle, text: 'bot tag commands' };
@@ -38,12 +41,12 @@ function fakeOpenAI() {
       search: jest.fn(async (): Promise<{
         data: { attributes: Record<string, string> | null; content: { text: string }[] }[];
       }> => ({
-        data: [{ attributes: { title }, content: [{ text: 'A public help extract' }] }],
+        data: [{ attributes: { title }, content: [{ text: extract }] }],
       })),
     },
     responses: {
       create: jest.fn(async () => ({
-        status: 'completed', output_text: JSON.stringify({ explanation: 'תשובה מבוססת', citations: [title] }),
+        status: 'completed', output_text: JSON.stringify({ explanation: 'תשובה מבוססת', citations: ['P1'] }),
       })),
     },
   };
@@ -118,6 +121,15 @@ describe('weekly help refresh', () => {
     expect(mock.files.delete.mock.calls).toStrictEqual([['obsolete']]);
   });
 
+  it('cleans up successful uploads when another upload in the same batch fails', async () => {
+    const mock = fakeOpenAI();
+    mock.files.create.mockRejectedValueOnce(new Error('Upload rejected'));
+
+    await expect(refreshKnowledgeIndex(asClient(mock), [first, second], scope)).rejects.toThrow('Upload rejected');
+    expect(mock.vectorStores.fileBatches.createAndPoll).not.toHaveBeenCalled();
+    expect(mock.files.delete).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     { status: 'failed', file_counts: { completed: 2 } },
     { status: 'completed', file_counts: { completed: 1 } },
@@ -132,27 +144,145 @@ describe('weekly help refresh', () => {
   });
 });
 
+describe('repository sources', () => {
+  it.each([
+    'bot/scripts/oneTime/example.ts',
+    'xmlbot/script.ts',
+    'build/t01.cf.yaml',
+    'build/wiki-bot-playwright/Dockerfile',
+    '.github/workflows/deploy.yml',
+    'package.json',
+  ])('covers operational source outside the manually labelled examples (%s)', (path) => {
+    expect(operationSourcePath(path)).toBe(true);
+    expect(repositorySource(`code:${path}`)?.path).toBe(path);
+  });
+
+  it.each([
+    'bot/__tests__/example.test.ts', 'bot/experiments/botHelp/cases.ts', 'scripts/bot-help-verify.mjs',
+    'bot/../private.ts', 'bot/.env', 'build/random.pem', 'bot/foo.spec.ts',
+  ])(
+    'excludes test and unrelated paths (%s)',
+    (path) => {
+      expect(operationSourcePath(path)).toBe(false);
+      expect(repositorySource(`code:${path}`)).toBeUndefined();
+    },
+  );
+});
+
 describe('documentation answers', () => {
   it('uses only public source titles from the chunks and adds wiki links itself', async () => {
     const mock = fakeOpenAI();
     mock.vectorStores.search.mockResolvedValue({
       data: [
         { attributes: { title: '[injected]' }, content: [] },
-        { attributes: { title }, content: [{ text: 'A public help extract' }] },
+        { attributes: { title }, content: [{ text: extract }] },
       ],
     });
-    const answer = await answerFromKnowledge(asClient(mock), 'test-model', 'What does the bot do?', scope);
+    const answer = await answerFromKnowledge(asClient(mock), 'test-model', question, scope);
 
     expect(answer).toBe(`תשובה מבוססת\n\nמקורות: [[${title}]]`);
     expect(mock.responses.create.mock.calls).toStrictEqual([[expect.objectContaining({
-      input: expect.stringContaining('A public help extract'),
+      input: expect.stringContaining(extract),
     })]]);
+  });
+
+  it('declines an underspecified question before search', async () => {
+    const mock = fakeOpenAI();
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'מה הבוט עושה?', scope)).resolves.toBeNull();
+    expect(mock.vectorStores.list).not.toHaveBeenCalled();
+  });
+
+  it('does not use archiving material to answer a question about basketball players', async () => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.search.mockResolvedValue({
+      data: [{ attributes: { title }, content: [{ text: 'הבוט עוסק בארכוב דפי שיחה באופן אוטומטי.' }] }],
+    });
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'מה עושה הבוט על דפי כדורסלנים?', scope))
+      .resolves.toBeNull();
+    expect(mock.responses.create).not.toHaveBeenCalled();
+  });
+
+  it('links the associated public report when the model cites a code passage', async () => {
+    const mock = fakeOpenAI();
+    const source = 'code:bot/sportPersonalityTemplatesYearsFormat/model.ts';
+    const quote = 'const TEMPLATE_NAMES = ["אישיות כדורגל", "אישיות כדורסל"];';
+    mock.vectorStores.search.mockResolvedValue({
+      data: [{ attributes: { title: source }, content: [{ text: quote }] }],
+    });
+    mock.responses.create.mockResolvedValue({
+      status: 'completed',
+      output_text: JSON.stringify({ explanation: 'עיצוב שנים', citations: ['P1'] }),
+    });
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'מה עושה הבוט על דפי כדורסלנים?', scope))
+      .resolves.toContain('[[ויקיפדיה:בוט/סדר בשדות תאריכים בתבניות אישיות ספורט]]');
+  });
+
+  it('targets the right implementation even when global search would rank a help script first', async () => {
+    const mock = fakeOpenAI();
+    const source = 'code:bot/sportPersonalityTemplatesYearsFormat/model.ts';
+    mock.vectorStores.search.mockResolvedValue({
+      data: [{ attributes: { title: source }, content: [{ text: 'Actual basketball implementation' }] }],
+    });
+
+    await answerFromKnowledge(asClient(mock), 'test-model', 'מה עושה הבוט על דפי כדורסלנים?', scope);
+
+    expect(mock.vectorStores.search.mock.calls).toStrictEqual([['active', expect.objectContaining({
+      filters: { type: 'in', key: 'title', value: [source] },
+    })]]);
+  });
+
+  it('uses general search if a preferred implementation does not have an indexed result', async () => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.search.mockResolvedValueOnce({ data: [] });
+
+    await answerFromKnowledge(asClient(mock), 'test-model', 'מה עושה הבוט על דפי כדורסלנים?', scope);
+
+    expect(mock.vectorStores.search).toHaveBeenCalledTimes(2);
+  });
+
+  it('searches English source for an operation without a curated Hebrew label', async () => {
+    const mock = fakeOpenAI();
+    const source = 'code:bot/scripts/oneTime/fixExample.ts';
+    const quote = 'function reconcileSettlementCategories(records) { return records.filter(isSettlement); }';
+    mock.vectorStores.search.mockResolvedValue({
+      data: [{ attributes: { title: source }, content: [{ text: quote }] }],
+    });
+    mock.responses.create.mockResolvedValueOnce({
+      status: 'completed', output_text: 'settlement categories',
+    }).mockResolvedValueOnce({
+      status: 'completed',
+      output_text: JSON.stringify({ explanation: 'הסקריפט מתאים קטגוריות של יישובים.', citations: ['P1'] }),
+    });
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'איך הסקריפט מתקן קטגוריות יישובים?', scope))
+      .resolves.toContain('מתאים קטגוריות של יישובים');
+    expect(mock.vectorStores.search).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { status: 'incomplete', output_text: 'settlement' },
+    { status: 'completed', output_text: '' },
+  ])('falls back to no answer without a useful translated query', async (translation) => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.search.mockResolvedValue({
+      data: [{
+        attributes: { title: 'code:bot/scripts/oneTime/fixExample.ts' }, content: [{ text: 'fix settlements' }],
+      }],
+    });
+    mock.responses.create.mockResolvedValueOnce(translation);
+
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'איך מטפלים בשינויי יישובים?', scope))
+      .resolves.toBeNull();
+    expect(mock.vectorStores.search).toHaveBeenCalledTimes(1);
   });
 
   it('declines when there is no ready index', async () => {
     const mock = fakeOpenAI();
 
-    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'Question')).resolves.toBeNull();
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', question)).resolves.toBeNull();
     expect(mock.vectorStores.search).not.toHaveBeenCalled();
   });
 
@@ -160,7 +290,7 @@ describe('documentation answers', () => {
     const mock = fakeOpenAI();
     mock.vectorStores.search.mockResolvedValue({ data: [{ attributes: null, content: [] }] });
 
-    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'Question', scope)).resolves.toBeNull();
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', question, scope)).resolves.toBeNull();
     expect(mock.responses.create).not.toHaveBeenCalled();
   });
 
@@ -168,14 +298,14 @@ describe('documentation answers', () => {
     { status: 'incomplete', output_text: 'Incomplete' },
     { status: 'completed', output_text: '' },
     { status: 'completed', output_text: '{' },
-    { status: 'completed', output_text: JSON.stringify({ explanation: '', citations: [title] }) },
-    { status: 'completed', output_text: JSON.stringify({ explanation: '{{תבנית}}', citations: [title] }) },
+    { status: 'completed', output_text: JSON.stringify({ explanation: '', citations: ['P1'] }) },
+    { status: 'completed', output_text: JSON.stringify({ explanation: '{{תבנית}}', citations: ['P1'] }) },
     { status: 'completed', output_text: JSON.stringify({ explanation: 'Explanation', citations: [] }) },
-    { status: 'completed', output_text: JSON.stringify({ explanation: 'Explanation', citations: [secondTitle] }) },
+    { status: 'completed', output_text: JSON.stringify({ explanation: 'Explanation', citations: ['P99'] }) },
   ])('does not publish incomplete, unverifiable, or unsafe output', async (response) => {
     const mock = fakeOpenAI();
     mock.responses.create.mockResolvedValue(response);
 
-    await expect(answerFromKnowledge(asClient(mock), 'test-model', 'Question', scope)).resolves.toBeNull();
+    await expect(answerFromKnowledge(asClient(mock), 'test-model', question, scope)).resolves.toBeNull();
   });
 });

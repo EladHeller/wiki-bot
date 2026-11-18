@@ -4,6 +4,7 @@ import {
 import type OpenAI from 'openai';
 import type { WikiNotification } from '../types';
 import { describeConfiguredTiming, findRequestedStatus, fixedAnswers } from '../tag-bot/help/answers';
+import answerKnownOperation from '../tag-bot/help/operationHelp';
 import { createHelpClassifier, previewTagHelp } from '../tag-bot/help/preview';
 
 const page = 'ויקיפדיה:קטגוריה/אולם דיונים';
@@ -160,6 +161,14 @@ describe('tag help preview', () => {
 
   it('ignores rules for a different page', () => {
     expect(describeConfiguredTiming([config], 'Other page', 'טופל')).not.toContain('7');
+  });
+
+  it.each([
+    'מה קרה בריצה האחרונה של בוט הפרת זכויות יוצרים?',
+    'זכויות יוצרים',
+    'מי הכדורסלנים שזכו באליפות?',
+  ])('does not use the operation overview for a different request (%s)', (question) => {
+    expect(answerKnownOperation(question)).toBeNull();
   });
 
   it('requests structured classification from the chosen model', async () => {
