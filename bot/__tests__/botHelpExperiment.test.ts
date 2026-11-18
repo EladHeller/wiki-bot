@@ -2,15 +2,18 @@ import {
   describe, expect, it, jest,
 } from '@jest/globals';
 import OpenAI from 'openai';
+import archiveRules from '../experiments/botHelp/archiveRules';
 import { helpCases } from '../experiments/botHelp/cases';
 import {
-  indexText, measureRetrieval, renderReport, runExperiment, sourceHash, validateSample,
+  indexText, measureCopyExample, measureRetrieval, renderReport, runExperiment,
+  sourceHash, validateSample, wikiContextForPage,
 } from '../experiments/botHelp/experiment';
 
 const [testCase] = helpCases;
 const source = {
   id: testCase.expectedSources[0],
   title: 'Help',
+  topic: 'user-talk' as const,
   url: 'https://example.org/help',
   revision: '123',
   text: testCase.evidence[0],
@@ -54,6 +57,37 @@ describe('bot help experiment', () => {
     expect(measureRetrieval(helpCases[10], [])).toStrictEqual({ sourceHit: null, evidenceHit: null });
   });
 
+  it('distinguishes a template reference from copy-ready wikitext', () => {
+    expect(measureCopyExample(testCase, '{{תב|תיבת ארכיון אוטומטי}}')).toBe(false);
+    expect(measureCopyExample(testCase, '<code>{{תיבת ארכיון אוטומטי}}</code>')).toBe(false);
+    expect(measureCopyExample(testCase, '<code><nowiki>{{תיבת ארכיון אוטומטי}}</nowiki></code>')).toBe(true);
+    expect(measureCopyExample(helpCases[10], '{{תב|תיבת ארכיון אוטומטי}}')).toBeNull();
+  });
+
+  it('keeps each evaluated example in the verified rules for its own archiver', () => {
+    const rulesByTopic = new Map(archiveRules.map((rule) => [rule.topic, rule.text]));
+    const matches = helpCases.filter((sample) => sample.copyExample)
+      .map((sample) => measureCopyExample(sample, String(rulesByTopic.get(sample.topic))));
+
+    expect(matches).toStrictEqual([true, true, true, true, true, true]);
+  });
+
+  it('selects only live configuration matching the requested page', () => {
+    const rule = {
+      page: 'Requested page',
+      statuses: ['Done'],
+      daysAfterLastActivity: 7,
+      archiveType: 'תבנית ארכיון עם יעד' as const,
+      archiveNavigatePage: 'Archive navigation',
+      targetedArchiveRegularArchiveMode: 'תבנית הועבר' as const,
+      addNewState: true,
+      updateInDiscussionState: false,
+    };
+    const context = wikiContextForPage(rule.page, '2026-11-18T00:00:00Z', [{ ...rule, page: 'Other page' }, rule]);
+
+    expect(context).toStrictEqual({ page: rule.page, lastEditedAt: '2026-11-18T00:00:00Z', configuration: [rule] });
+  });
+
   it('labels and fingerprints sources', () => {
     expect(indexText(source)).toContain(source.url);
     expect(sourceHash(source)).not.toStrictEqual(sourceHash({ ...source, revision: '124' }));
@@ -62,8 +96,8 @@ describe('bot help experiment', () => {
   it('rejects invalid source and case counts, duplicate IDs, empty sources, and oversized content', () => {
     expect(() => validateSample([], [testCase])).toThrow('1-20 sources');
     expect(() => validateSample(Array(21).fill(source), [testCase])).toThrow('1-20 sources');
-    expect(() => validateSample([source], [])).toThrow('1-12 cases');
-    expect(() => validateSample([source], Array(13).fill(testCase))).toThrow('1-12 cases');
+    expect(() => validateSample([source], [])).toThrow('1-13 cases');
+    expect(() => validateSample([source], Array(14).fill(testCase))).toThrow('1-13 cases');
   });
 
   it('rejects duplicate, empty and oversized sources', () => {
@@ -84,6 +118,39 @@ describe('bot help experiment', () => {
     expect(cleanupErrors).toStrictEqual([]);
     expect(client.files.delete).toHaveBeenCalledTimes(1);
     expect(renderReport(results, 'test-model')).toContain('Expected source found in top 5 chunks: 1/1.');
+  });
+
+  it('scopes known topics and sends live context separately from indexed evidence', async () => {
+    const client = fakeClient();
+    const context = { page: 'Requested page', lastEditedAt: '2026-11-18T00:00:00Z', configuration: [] };
+    const rules = { ...source, id: 'rule:user-talk', text: 'Verified behavior' };
+    const checkpoint = jest.fn(async () => {});
+    const { results } = await runExperiment(
+      client as unknown as OpenAI,
+      [rules],
+      [testCase, helpCases[10]],
+      'test-model',
+      checkpoint,
+      new Map([[testCase.id, context]]),
+    );
+
+    expect(client.vectorStores.fileBatches.createAndPoll.mock.calls).toStrictEqual([['store', {
+      files: [{ file_id: 'file', attributes: { topic: 'user-talk' } }],
+    }]]);
+    expect(client.vectorStores.search.mock.calls).toStrictEqual([
+      ['store', {
+        query: testCase.question,
+        max_num_results: 5,
+        rewrite_query: true,
+        filters: { type: 'eq', key: 'topic', value: 'user-talk' },
+      }],
+      ['store', { query: helpCases[10].question, max_num_results: 5, rewrite_query: true }],
+    ]);
+    expect(client.responses.create.mock.calls).toStrictEqual([
+      [expect.objectContaining({ input: expect.stringContaining('"verifiedRules":["Verified behavior"]') })],
+      [expect.objectContaining({ input: expect.stringContaining('"wikiContext":null') })],
+    ]);
+    expect(results[0].wikiContext).toStrictEqual(context);
   });
 
   it('cleans up even when indexing fails', async () => {

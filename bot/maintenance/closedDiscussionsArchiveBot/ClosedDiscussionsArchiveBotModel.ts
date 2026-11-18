@@ -263,43 +263,47 @@ async function updateSourcePageStates(
   );
 }
 
+export function parseArchiveConfiguration(content: string): PageToArchive[] {
+  const parsedTable = parseTableText(content).find(({ text }) => {
+    const [openingLine] = text.slice(2).split('\n', 1);
+    return Array.from(openingLine.matchAll(TABLE_ATTRIBUTE))
+      .some(([, name, ...values]) => name.toLowerCase() === 'id' && values.includes(CONFIG_TABLE_ID));
+  });
+  if (!parsedTable) {
+    throw new Error(`Archive configuration table with id="${CONFIG_TABLE_ID}" not found on ${CONFIG_PAGE_TITLE}`);
+  }
+  return parsedTable
+    .rows.filter((row) => row.fields.length >= 6 && !row.isHeader)
+    .map((row) => {
+      const page = getInnerLink(row.fields[0] as string)?.link;
+      if (!page) {
+        throw new Error(`Invalid page: ${row.fields[0]}`);
+      }
+      const archiveNavigatePage = getInnerLink(row.fields[4] as string)?.link ?? null;
+      const archiveModeText = row.fields[5]?.toString().trim() || '';
+      const isValidArchiveMode = validateTargetedArchiveRegularArchiveMode(archiveModeText);
+      const targetedArchiveRegularArchiveMode = isValidArchiveMode ? archiveModeText : 'תבנית הועבר';
+      const addNewState = isYes(row.fields[6]?.toString());
+      const updateInDiscussionState = isYes(row.fields[7]?.toString());
+      return {
+        page,
+        statuses: (row.fields[1] as string).split(',').map((status) => status.trim()) as string[],
+        daysAfterLastActivity: parseInt(row.fields[2] as string, 10),
+        archiveType: (row.fields[3] as ArchiveType),
+        archiveNavigatePage,
+        targetedArchiveRegularArchiveMode,
+        addNewState,
+        updateInDiscussionState,
+      };
+    });
+}
+
 export default function ClosedDiscussionsArchiveBotModel(
   wikiApi: IWikiApi,
 ): IClosedDiscussionsArchiveBotModel {
   async function getPagesToArchive(): Promise<PageToArchive[]> {
     const { content } = await getContent(wikiApi, CONFIG_PAGE_TITLE);
-    const parsedTable = parseTableText(content).find(({ text }) => {
-      const [openingLine] = text.slice(2).split('\n', 1);
-      return Array.from(openingLine.matchAll(TABLE_ATTRIBUTE))
-        .some(([, name, ...values]) => name.toLowerCase() === 'id' && values.includes(CONFIG_TABLE_ID));
-    });
-    if (!parsedTable) {
-      throw new Error(`Archive configuration table with id="${CONFIG_TABLE_ID}" not found on ${CONFIG_PAGE_TITLE}`);
-    }
-    return parsedTable
-      .rows.filter((row) => row.fields.length >= 6 && !row.isHeader)
-      .map((row) => {
-        const page = getInnerLink(row.fields[0] as string)?.link;
-        if (!page) {
-          throw new Error(`Invalid page: ${row.fields[0]}`);
-        }
-        const archiveNavigatePage = getInnerLink(row.fields[4] as string)?.link ?? null;
-        const archiveModeText = row.fields[5]?.toString().trim() || '';
-        const isValidArchiveMode = validateTargetedArchiveRegularArchiveMode(archiveModeText);
-        const targetedArchiveRegularArchiveMode = isValidArchiveMode ? archiveModeText : 'תבנית הועבר';
-        const addNewState = isYes(row.fields[6]?.toString());
-        const updateInDiscussionState = isYes(row.fields[7]?.toString());
-        return {
-          page,
-          statuses: (row.fields[1] as string).split(',').map((status) => status.trim()) as string[],
-          daysAfterLastActivity: parseInt(row.fields[2] as string, 10),
-          archiveType: (row.fields[3] as ArchiveType),
-          archiveNavigatePage,
-          targetedArchiveRegularArchiveMode,
-          addNewState,
-          updateInDiscussionState,
-        };
-      });
+    return parseArchiveConfiguration(content);
   }
 
   async function getArchivableParagraphs(
