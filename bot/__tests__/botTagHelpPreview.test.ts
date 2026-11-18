@@ -94,13 +94,48 @@ describe('tag help preview', () => {
   });
 
   it('uses the live row to explain timing and the archive target requirement', async () => {
-    const classify = async () => 'page-timing' as const;
-    const notification = mention('@Sapper-bot עזרה: כמה ימים מחכים לדיון שסומן טופל?');
+    const classify = jest.fn(async () => 'status-date' as const);
+    const notification = mention('@Sapper-bot עזרה: כמה ימים מחכים לדיון שסומן כטופל?');
     const result = await previewTagHelp(notification, 'Sapper-bot', classify, readConfiguration);
 
+    expect(classify).not.toHaveBeenCalled();
     expect(result?.answer).toContain('7 ימי המתנה');
     expect(result?.answer).toContain('בלי ערך הדיון נשאר בדף');
     expect(result?.answer).toContain('צריך קישור לפסקה');
+  });
+
+  it('uses the model when a general timing question lacks a configured status', async () => {
+    const classify = jest.fn(async () => 'page-timing' as const);
+    const read = jest.fn(readConfiguration);
+    const result = await previewTagHelp(mention('@Sapper-bot עזרה: כמה ימים מחכים לדיון שסומן בוצע?'), 'Sapper-bot', classify, read);
+
+    expect(classify).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(result?.answer).toContain('צריך את הדף המדויק ואת הערך');
+  });
+
+  it.each([
+    ['צריך לפתח בוט כדי לארכב רק דיונים שמכילים מילים מסוימות?', 'filter-text'],
+    ['אפשר לפתח פעולה שתעדכן נתון מאתר העירייה?', 'new-task'],
+  ])('handles clear archive or development questions directly (%s)', async (question, intent) => {
+    const classify = jest.fn(async () => 'unsupported' as const);
+    const result = await previewTagHelp(mention(`@Sapper-bot עזרה: ${question}`), 'Sapper-bot', classify, readConfiguration);
+
+    expect(classify).not.toHaveBeenCalled();
+    expect(result?.intent).toBe(intent);
+  });
+
+  it.each([
+    'אפשר לארכב רק דיונים חדשים?',
+    'לארכב רק דיונים לפי מצב שמופיעה בהם מילה מסוימת?',
+    'אפשר לשמור את דברי העריכה של אתר חדשות?',
+    'איך לעדכן הגדרה באתר?',
+  ])('does not route partial phrase matches to a fixed answer (%s)', async (question) => {
+    const classify = jest.fn(async () => 'unsupported' as const);
+    const result = await previewTagHelp(mention(`@Sapper-bot עזרה: ${question}`), 'Sapper-bot', classify, readConfiguration);
+
+    expect(classify).toHaveBeenCalledTimes(1);
+    expect(result?.intent).toBe('unsupported');
   });
 
   it('asks for the status when it was never stated', async () => {

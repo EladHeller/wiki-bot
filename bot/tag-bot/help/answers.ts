@@ -53,7 +53,7 @@ export function findRequestedStatus(rows: PageToArchive[], page: string, questio
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
   if (statuses.length === 0) return '';
-  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])(?:כש|ש)?(${statuses.map((status) => RegExp.escape(status)).join('|')})(?![\\p{L}\\p{N}])`, 'gu');
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])(?:כש|כ|ש)?(${statuses.map((status) => RegExp.escape(status)).join('|')})(?![\\p{L}\\p{N}])`, 'gu');
   const requested = [...new Set(Array.from(question.matchAll(pattern), (match) => match[1]))];
   return requested.length === 1 ? requested[0] : '';
 }

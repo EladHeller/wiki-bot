@@ -69,6 +69,51 @@ const requestsImmediateAction = new RegExp([
 const explicitlyNamesOtherBot = /בוט\s+(?:לתיקון\s+)?קישורי\s+(?:ה)?שפה/u;
 const statusArchiveMode = /לפי\s+מצב|תבנית\s+ארכיון\s+עם\s+יעד/u;
 
+const asksForDuration = /כמה\s+(?:ימי(?:ם)?|זמן)|(?:מה|מהו)\s+(?:פרק\s+)?הזמן/u;
+const mentionsDiscussionState = /דיון|מצב|סימנו|מסמנ|מסומנ/u;
+const asksToFilterArchiving = /לארכב\s+רק|יארכב\s+רק|יתארכבו\s+רק/u;
+const mentionsTextCriterion = /מילי(?:ם|ת)|ביטוי|מופיעה|מופיעות/u;
+const mentionsExternalSource = /אתר|מקור\s+(?:חדש|חיצוני)/u;
+const asksToUpdate = /(?:לעדכן|מתעדכן|יעדכן|תעדכן|לסנכרן|יסנכרן|לשאוב)/u;
+const mentionsData = /נתון|נתוני|לוויקיפדיה|לערך|בערך/u;
+
+export async function answerTagHelp(
+  question: string,
+  page: string,
+  classify: Classifier,
+  loadConfiguration: () => Promise<PageToArchive[]>,
+): Promise<{ intent: HelpIntent; answer: string }> {
+  if (!question || requestsImmediateAction.test(question) || explicitlyNamesOtherBot.test(question)) {
+    return { intent: 'unsupported', answer: fixedAnswers.unsupported };
+  }
+  const explicitlyUsesStatusArchive = statusArchiveMode.test(question);
+  if (!explicitlyUsesStatusArchive && asksToFilterArchiving.test(question) && mentionsTextCriterion.test(question)) {
+    return { intent: 'filter-text', answer: fixedAnswers['filter-text'] };
+  }
+  if (mentionsExternalSource.test(question) && asksToUpdate.test(question) && mentionsData.test(question)) {
+    return { intent: 'new-task', answer: fixedAnswers['new-task'] };
+  }
+
+  let configuration: PageToArchive[] | undefined;
+  if (asksForDuration.test(question) && mentionsDiscussionState.test(question)) {
+    configuration = await loadConfiguration();
+    const requestedStatus = findRequestedStatus(configuration, page, question);
+    if (requestedStatus) {
+      return { intent: 'page-timing', answer: describeConfiguredTiming(configuration, page, requestedStatus) };
+    }
+  }
+
+  const intent = await classify(question, page);
+  if (userTalkOnly.has(intent) && explicitlyUsesStatusArchive) {
+    return { intent: 'unsupported', answer: fixedAnswers.unsupported };
+  }
+  if (intent !== 'page-timing') return { intent, answer: fixedAnswers[intent] };
+  configuration ??= await loadConfiguration();
+  const requestedStatus = findRequestedStatus(configuration, page, question);
+  const answer = describeConfiguredTiming(configuration, page, requestedStatus);
+  return { intent, answer };
+}
+
 export async function previewTagHelp(
   notification: Pick<WikiNotification, 'type' | 'wiki' | 'title' | '*'>,
   botName: string,
@@ -80,18 +125,5 @@ export async function previewTagHelp(
   if (!new URL(links.primary.url).hash) return null;
   const match = body.match(tagCommandPattern(botName, ['עזרה']));
   if (!match) return null;
-  const question = match[2].trim();
-  if (!question || requestsImmediateAction.test(question) || explicitlyNamesOtherBot.test(question)) {
-    return { intent: 'unsupported', answer: fixedAnswers.unsupported };
-  }
-  const page = notification.title.full;
-  const intent = await classify(question, page);
-  if (userTalkOnly.has(intent) && statusArchiveMode.test(question)) {
-    return { intent: 'unsupported', answer: fixedAnswers.unsupported };
-  }
-  if (intent !== 'page-timing') return { intent, answer: fixedAnswers[intent] };
-  const configuration = await loadConfiguration();
-  const requestedStatus = findRequestedStatus(configuration, page, question);
-  const answer = describeConfiguredTiming(configuration, page, requestedStatus);
-  return { intent, answer };
+  return answerTagHelp(match[2].trim(), notification.title.full, classify, loadConfiguration);
 }

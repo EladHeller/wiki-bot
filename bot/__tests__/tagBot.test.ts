@@ -9,9 +9,11 @@ const api = WikiApiMock();
 const archiveMock = jest.fn<(...args: unknown[]) => Promise<{ success: string } | { error: string }>>();
 const moveMock = jest.fn<(...args: unknown[]) => Promise<{ success: string } | { error: string }>>();
 const askMock = jest.fn<(question: string) => Promise<string>>();
+const helpResponse = jest.fn<(...args: unknown[]) => Promise<{ status: string; output_text: string }>>();
 const checkMock = jest.fn<(...args: unknown[]) => Promise<string>>();
 const logErrorMock = jest.fn();
 
+jest.unstable_mockModule('openai', () => ({ default: class { responses = { create: helpResponse }; } }));
 jest.unstable_mockModule('../wiki/WikiApi', () => ({ default: () => api }));
 jest.unstable_mockModule('../tag-bot/actions/archive', () => ({ default: archiveMock, moveTo: moveMock }));
 jest.unstable_mockModule('../tag-bot/gpt-bot/askGPT', () => ({ default: askMock }));
@@ -61,6 +63,47 @@ describe('tagBot', () => {
     moveMock.mockResolvedValue({ success: 'Moved' });
     askMock.mockResolvedValue('Answer');
     checkMock.mockResolvedValue('Checked');
+  });
+
+  it('does not handle the help command unless the pilot is enabled', async () => {
+    await run('@Test-bot עזרה: איך מתחילים?');
+
+    expect(helpResponse).not.toHaveBeenCalled();
+    expect(api.addComment).not.toHaveBeenCalled();
+  });
+
+  it('answers via the normal notification path when the help pilot is enabled', async () => {
+    process.env.BOT_HELP_ENABLED = 'true';
+    api.getUserGroups.mockResolvedValue(['autopatrolled']);
+    helpResponse.mockResolvedValue({ status: 'completed', output_text: '{"intent":"exclude-section"}' });
+    try {
+      await run('@Test-bot עזרה: איך משאירים פסקה בדף השיחה?');
+    } finally {
+      delete process.env.BOT_HELP_ENABLED;
+    }
+
+    expect(helpResponse).toHaveBeenCalledTimes(1);
+    expect(api.addComment).toHaveBeenCalledWith(
+      'שיחה:מקור',
+      expect.any(String),
+      expect.stringContaining('<code><nowiki>{{לא לארכוב}}</nowiki></code>'),
+      'comment',
+    );
+  });
+
+  it('uses the regular error reply when the enabled help pilot fails', async () => {
+    process.env.BOT_HELP_ENABLED = 'true';
+    process.env.BOT_HELP_MODEL = 'test-model';
+    helpResponse.mockRejectedValue(new Error('Unavailable'));
+    try {
+      await run('@Test-bot עזרה: איך משאירים פסקה בדף השיחה?');
+    } finally {
+      delete process.env.BOT_HELP_ENABLED;
+      delete process.env.BOT_HELP_MODEL;
+    }
+
+    expect(logErrorMock).toHaveBeenCalledWith('Failed to answer bot help: Unavailable');
+    expect(api.addComment).toHaveBeenCalledWith('שיחה:מקור', expect.any(String), expect.stringContaining('שגיאה לא ידועה'), 'comment');
   });
 
   it.each([
