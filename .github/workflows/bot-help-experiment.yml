@@ -1,8 +1,8 @@
 name: Bot help experiment
 
 on:
-  pull_request:
-    branches: [master]
+  push:
+    branches: [experiment/bot-help-index]
     paths:
       - bot/experiments/botHelp/**
       - scripts/bot-help-experiment.mjs
@@ -14,10 +14,7 @@ permissions:
 
 jobs:
   experiment:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.head.ref == 'experiment/bot-help-index')
+    if: github.repository == 'EladHeller/wiki-bot' && github.ref == 'refs/heads/experiment/bot-help-index'
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 15
