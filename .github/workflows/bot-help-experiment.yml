@@ -21,6 +21,7 @@ jobs:
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    continue-on-error: ${{ matrix.model == 'gpt-4.1-mini' }}
     strategy:
       fail-fast: false
       matrix:

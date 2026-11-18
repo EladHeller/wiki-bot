@@ -46,7 +46,7 @@ function fakeOpenAI() {
     },
     responses: {
       create: jest.fn(async () => ({
-        status: 'completed', output_text: JSON.stringify({ explanation: 'תשובה מבוססת', evidence: [{ source: title, quote: extract }] }),
+        status: 'completed', output_text: JSON.stringify({ explanation: 'תשובה מבוססת', citations: ['P1'] }),
       })),
     },
   };
@@ -201,7 +201,7 @@ describe('documentation answers', () => {
     expect(mock.responses.create).not.toHaveBeenCalled();
   });
 
-  it('accepts an exact code excerpt and links the associated public report', async () => {
+  it('links the associated public report when the model cites a code passage', async () => {
     const mock = fakeOpenAI();
     const source = 'code:bot/sportPersonalityTemplatesYearsFormat/model.ts';
     const quote = 'const TEMPLATE_NAMES = ["אישיות כדורגל", "אישיות כדורסל"];';
@@ -210,7 +210,7 @@ describe('documentation answers', () => {
     });
     mock.responses.create.mockResolvedValue({
       status: 'completed',
-      output_text: JSON.stringify({ explanation: 'עיצוב שנים', evidence: [{ source, quote }] }),
+      output_text: JSON.stringify({ explanation: 'עיצוב שנים', citations: ['P1'] }),
     });
 
     await expect(answerFromKnowledge(asClient(mock), 'test-model', 'מה עושה הבוט על דפי כדורסלנים?', scope))
@@ -228,7 +228,7 @@ describe('documentation answers', () => {
       status: 'completed', output_text: 'settlement categories',
     }).mockResolvedValueOnce({
       status: 'completed',
-      output_text: JSON.stringify({ explanation: 'הסקריפט מתאים קטגוריות של יישובים.', evidence: [{ source, quote }] }),
+      output_text: JSON.stringify({ explanation: 'הסקריפט מתאים קטגוריות של יישובים.', citations: ['P1'] }),
     });
 
     await expect(answerFromKnowledge(asClient(mock), 'test-model', 'איך הסקריפט מתקן קטגוריות יישובים?', scope))
@@ -272,15 +272,10 @@ describe('documentation answers', () => {
     { status: 'incomplete', output_text: 'Incomplete' },
     { status: 'completed', output_text: '' },
     { status: 'completed', output_text: '{' },
-    { status: 'completed', output_text: JSON.stringify({ explanation: '', evidence: [{ source: title, quote: extract }] }) },
-    { status: 'completed', output_text: JSON.stringify({ explanation: '{{תבנית}}', evidence: [{ source: title, quote: extract }] }) },
-    { status: 'completed', output_text: JSON.stringify({ explanation: 'Explanation', evidence: [] }) },
-    { status: 'completed', output_text: JSON.stringify({ explanation: 'Explanation', evidence: [{ source: secondTitle, quote: extract }] }) },
-    { status: 'completed', output_text: JSON.stringify({ explanation: 'פלט', evidence: [{ source: title, quote: 'קצר' }] }) },
-    {
-      status: 'completed',
-      output_text: JSON.stringify({ explanation: 'פלט', evidence: [{ source: title, quote: 'לא מופיע כך במקור שנשלף' }] }),
-    },
+    { status: 'completed', output_text: JSON.stringify({ explanation: '', citations: ['P1'] }) },
+    { status: 'completed', output_text: JSON.stringify({ explanation: '{{תבנית}}', citations: ['P1'] }) },
+    { status: 'completed', output_text: JSON.stringify({ explanation: 'Explanation', citations: [] }) },
+    { status: 'completed', output_text: JSON.stringify({ explanation: 'Explanation', citations: ['P99'] }) },
   ])('does not publish incomplete, unverifiable, or unsafe output', async (response) => {
     const mock = fakeOpenAI();
     mock.responses.create.mockResolvedValue(response);
