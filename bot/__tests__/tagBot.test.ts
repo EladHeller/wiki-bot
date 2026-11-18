@@ -87,6 +87,17 @@ describe('tagBot', () => {
     );
   });
 
+  it.each([
+    ['איך הבוט בודק הפרת זכויות יוצרים', 'לפחות 2,000 בתים'],
+    ['איפה דף הלוג של הפרת זכויות היוצרים?', '/עריכות/לוג|לוג הבדיקות בעקבות עריכות'],
+    ['מה עושה הבוט שרץ על דפי כדורסלנים?', '{{תב|אישיות כדורסל}}'],
+  ])('answers the production regression without relying on model text (%s)', async (question, expected) => {
+    await run(`@Test-bot עזרה: ${question}`);
+
+    expect(helpResponse).not.toHaveBeenCalled();
+    expect(api.addComment).toHaveBeenCalledWith('שיחה:מקור', expect.any(String), expect.stringContaining(expected), 'comment');
+  });
+
   it('uses the active archive table for a timing question for help', async () => {
     const table = `{| class="wikitable" id="archive-config"
 ! דף !! מצבים !! ימים !! סוג !! ניווט !! מצב ארכיון
@@ -118,7 +129,7 @@ describe('tagBot', () => {
 
     expect(helpResponse).not.toHaveBeenCalled();
     expect(listKnowledge).toHaveBeenCalledTimes(1);
-    expect(api.addComment).toHaveBeenCalledWith('שיחה:מקור', expect.any(String), expect.stringContaining('אפשר לשאול כאן על ארכוב'), 'comment');
+    expect(api.addComment).toHaveBeenCalledWith('שיחה:מקור', expect.any(String), expect.stringContaining('לא מצאתי תשובה מבוססת'), 'comment');
   });
 
   it('uses the regular error reply when help fails', async () => {

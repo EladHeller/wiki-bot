@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import OpenAI from 'openai';
+import codeSources from '../dist/tag-bot/help/codeSources.js';
 import answerFromKnowledge from '../dist/tag-bot/help/knowledgeAnswer.js';
 import { knowledgePages, refreshKnowledgeIndex } from '../dist/tag-bot/help/knowledgeIndex.js';
 
@@ -27,8 +29,14 @@ const sources = knowledgePages.map((title) => {
   };
 });
 
+const indexedCode = await Promise.all(Array.from(codeSources, async ([title, { path, label }]) => ({
+  title,
+  text: `${label}\n\n${await readFile(new URL(`../${path}`, import.meta.url), 'utf8')}`,
+})));
+sources.push(...indexedCode);
+
 if (process.argv.includes('--prepare')) {
-  console.log(`Prepared ${sources.length} public documentation sources.`);
+  console.log(`Prepared ${sources.length} documentation and repository sources.`);
   process.exit(0);
 }
 
@@ -43,12 +51,22 @@ if (process.argv.includes('--verify')) {
     if (first.uploaded !== sources.length || unchanged.changed || second.uploaded !== 1) {
       throw new Error('Unexpected file upload count during staged refresh');
     }
-    const answer = await answerFromKnowledge(
-      client, 'gpt-4o-mini', 'מאיפה Sapper-bot מביא את המצעד השבועי של מדיה פורסט?', scope,
-    );
-    if (!answer?.includes('מקורות:') || !answer.includes('מדיה פורסט')) {
-      throw new Error('No sourced answer from the staged documentation index');
-    }
+    const models = ['gpt-4o-mini', 'gpt-4.1-mini'];
+    const checks = await Promise.all(models.map(async (model) => {
+      const documentation = await answerFromKnowledge(
+        client, model, 'מאיפה Sapper-bot מביא את המצעד השבועי של מדיה פורסט?', scope,
+      );
+      const code = await answerFromKnowledge(
+        client, model, 'מה עושה בוט עיצוב שנות הפעילות בערכים של כדורסלנים?', scope,
+      );
+      const docsPass = Boolean(documentation?.includes('מקורות:') && documentation.includes('מדיה פורסט'));
+      const codePass = Boolean(code?.includes('שנים')
+        && code.includes('סדר בשדות תאריכים בתבניות אישיות ספורט'));
+      console.log(`${model}: documentation ${docsPass}, repository evidence ${codePass}`);
+      if (code) console.log(`${model} sports answer:\n${code}`);
+      return docsPass && codePass;
+    }));
+    if (!checks[0]) throw new Error('The default model did not pass grounded help verification');
     console.log(`Verified initial indexing, unchanged snapshot, one changed file and a sourced answer (${sources.length} sources).`);
   } finally {
     const files = new Set();

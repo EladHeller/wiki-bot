@@ -7,7 +7,7 @@ on:
     branches: [master]
     paths:
       - .github/workflows/bot-help-refresh.yml
-      - bot/tag-bot/help/knowledgeIndex.ts
+      - bot/**
       - scripts/bot-help-refresh.mjs
   workflow_dispatch:
 

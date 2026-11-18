@@ -2,7 +2,7 @@ name: Bot help experiment
 
 on:
   push:
-    branches: [experiment/bot-help-index]
+    branches: ['experiment/bot-help-*']
     paths:
       - bot/experiments/botHelp/**
       - bot/tag-bot/help/**
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   experiment:
-    if: github.repository == 'EladHeller/wiki-bot' && github.ref == 'refs/heads/experiment/bot-help-index'
+    if: github.repository == 'EladHeller/wiki-bot' && startsWith(github.ref, 'refs/heads/experiment/bot-help-')
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 15

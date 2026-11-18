@@ -3,12 +3,12 @@ import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import WikiApi from '../wiki/WikiApi';
 import sportPersonalityTemplatesYearsFormatModel from './model';
 
-const LOG_PAGE_TITLE = 'ויקיפדיה:בוט/סדר בשדות תאריכים בתבניות אישיות ספורט';
+import reportPage from './reportPage';
 
 export default async function sportPersonalityTemplatesYearsFormat() {
   const api = WikiApi();
   const { logs, processedCount } = await sportPersonalityTemplatesYearsFormatModel(api);
-  await writeAdminBotLogs(api, logs, LOG_PAGE_TITLE, false);
+  await writeAdminBotLogs(api, logs, reportPage, false);
 
   const updatedCount = logs.filter((log) => !log.error).length;
   const errorCount = logs.filter((log) => log.error).length;

@@ -1,10 +1,9 @@
 import botLoggerDecorator from '../decorators/botLoggerDecorator';
 import { runCopyrightViolationBot } from './copyrightViolationCore';
-
-const BASE_PAGE = 'ויקיפדיה:בוט/בדיקת הפרת זכויות יוצרים';
+import copyrightViolationPages from './copyrightViolationPages';
 
 export default async function copyrightViolationBot() {
-  await runCopyrightViolationBot(BASE_PAGE, 'new');
+  await runCopyrightViolationBot(copyrightViolationPages.new, 'new');
 }
 
 export const main = botLoggerDecorator(copyrightViolationBot, { botName: 'בוט הפרת זכויות יוצרים' });

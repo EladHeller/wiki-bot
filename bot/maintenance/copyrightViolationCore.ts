@@ -9,6 +9,7 @@ import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import { Paragraph } from '../wiki/paragraphParser';
 import { logger, stringify } from '../utilities/logger';
+import { copyrightEditThreshold, extraCopyrightResultsPage } from './copyrightViolationPages';
 
 const violationColor: Record<CopyViolaionRank, string> = {
   suspected: 'אדום',
@@ -27,7 +28,6 @@ const WEBSITE_FOR_VISIT = 'אתר לביקור';
 const DRAFT = 'טיוטה';
 const SAND_BOX = 'ארגז חול';
 const TEMP_ERRORS = ['timeout', 'search_error', 'unhandled_exception'];
-const EDIT_SIZE_THRESHOLD = 2000;
 
 function copyviosSearchLink(title: string) {
   return `https://copyvios.toolforge.org/?lang=he&project=wikipedia&title=${title.replace(/ /g, '_').replace(/"/g, '%22')}&oldid=&action=search&use_engine=1&use_links=1&turnitin=0`;
@@ -240,7 +240,7 @@ export async function handlePage(title: string, isMainNameSpace: boolean) {
 export async function runCopyrightViolationBot(basePage: string, runMode: 'new' | 'edit') {
   const LAST_RUN_PAGE = `${basePage}/ריצה אחרונה`;
   const TEMP_ERRORS_PAGE = `${basePage}/שגיאות זמניות`;
-  const LOG_PAGE = `${basePage}/לוג`;
+  const LOG_PAGE = extraCopyrightResultsPage(basePage);
 
   const api = WikiApi();
   await api.login();
@@ -258,7 +258,7 @@ export async function runCopyrightViolationBot(basePage: string, runMode: 'new' 
     if (processedPages.has(change.title)) {
       return;
     }
-    if (change.type === 'edit' && (change.newlen - change.oldlen) < EDIT_SIZE_THRESHOLD) {
+    if (change.type === 'edit' && (change.newlen - change.oldlen) < copyrightEditThreshold) {
       return;
     }
     processedPages.add(change.title);
