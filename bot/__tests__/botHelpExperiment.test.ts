@@ -19,6 +19,7 @@ const source = {
   revision: '123',
   text: testCase.evidence[0],
 };
+const plainAnswer = JSON.stringify({ explanation: 'Answer', example: 'none' });
 const hit = { sourceId: source.id, score: 1, text: source.text };
 
 function fakeClient() {
@@ -43,7 +44,7 @@ function fakeClient() {
       create: jest.fn(async (): Promise<{
         status: string; output_text: string; usage?: { input_tokens: number; output_tokens: number };
       }> => ({
-        status: 'completed', output_text: 'Answer', usage: { input_tokens: 10, output_tokens: 1 },
+        status: 'completed', output_text: plainAnswer, usage: { input_tokens: 10, output_tokens: 1 },
       })),
     },
   };
@@ -71,16 +72,21 @@ describe('bot help experiment', () => {
     const prepared = prepareVerifiedRules([`Use ${wrapped}`]);
 
     expect(prepared).toStrictEqual({ text: ['Use EXAMPLE_1'], examples: { EXAMPLE_1: snippet } });
-    expect(formatHelpAnswer('ראו {{תב|תיבת ארכיון אוטומטי}}\nEXAMPLE_1', prepared.examples))
-      .toBe(`ראו {{תב|תיבת ארכיון אוטומטי}}\n${wrapped}`);
+    expect(formatHelpAnswer({ explanation: 'ראו {{תב|תיבת ארכיון אוטומטי}}', example: 'EXAMPLE_1' }, prepared.examples))
+      .toBe(`ראו {{תב|תיבת ארכיון אוטומטי}}\n\n${wrapped}`);
   });
 
-  it.each(['<pre>{{מצב}}</pre>', '{{מצב}}', 'EXAMPLE_2', '{{תב|EXAMPLE_1}}', '|EXAMPLE_1'])(
-    'rejects unverified markup or incorrectly placed examples (%s)',
-    (answer) => {
-      expect(formatHelpAnswer(answer, { EXAMPLE_1: '{{מצב}}' })).toBeNull();
+  it.each(['<pre>{{מצב}}</pre>', '{{מצב}}', '|ארכוב=ארכיון', ' '])(
+    'rejects unverified markup and empty explanations (%s)',
+    (explanation) => {
+      expect(formatHelpAnswer({ explanation, example: 'none' }, {})).toBeNull();
     },
   );
+
+  it('rejects selection of an example outside the allowlist', () => {
+    expect(formatHelpAnswer({ explanation: 'ראו {{תב|מצב}}', example: 'EXAMPLE_2' }, { EXAMPLE_1: '{{מצב}}' }))
+      .toBeNull();
+  });
 
   it('keeps each evaluated example in the verified rules for its own archiver', () => {
     const rulesByTopic = new Map(archiveRules.map((rule) => [rule.topic, rule.text]));
@@ -183,7 +189,8 @@ describe('bot help experiment', () => {
 
   it('records rejected model output separately from the formatted answer', async () => {
     const client = fakeClient();
-    client.responses.create.mockResolvedValueOnce({ status: 'completed', output_text: '<pre>{{מצב}}</pre>' });
+    const output = JSON.stringify({ explanation: '<pre>{{מצב}}</pre>', example: 'none' });
+    client.responses.create.mockResolvedValueOnce({ status: 'completed', output_text: output });
     const checkpoint = jest.fn(async () => {});
     const context = { page: 'Requested page', lastEditedAt: '2026-11-18T00:00:00Z', configuration: [] };
     const { results } = await runExperiment(
@@ -195,7 +202,7 @@ describe('bot help experiment', () => {
       new Map([[helpCases[10].id, context]]),
     );
 
-    expect(results[0]).toMatchObject({ answer: '', rejectedOutput: '<pre>{{מצב}}</pre>' });
+    expect(results[0]).toMatchObject({ answer: '', rejectedOutput: output });
     expect(renderReport(results, 'test-model')).toContain('### Rejected raw model output');
   });
 
@@ -242,7 +249,7 @@ describe('bot help experiment response handling', () => {
 
   it('records zero usage if the response omits token counts', async () => {
     const client = fakeClient();
-    client.responses.create.mockResolvedValueOnce({ status: 'completed', output_text: 'Answer' });
+    client.responses.create.mockResolvedValueOnce({ status: 'completed', output_text: plainAnswer });
     const checkpoint = jest.fn(async () => {});
     const { results } = await runExperiment(client as unknown as OpenAI, [source], [testCase], 'test-model', checkpoint);
 
