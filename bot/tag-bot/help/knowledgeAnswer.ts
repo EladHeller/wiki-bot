@@ -17,7 +17,8 @@ const instructions = `ענה בעברית על הפעולה המסוימת שה�
 כתוב בטקסט רגיל בלי קישורים, קוד, תבניות, פרטי פריסה או מזהי גרסאות. אל תטען שפעולה ישנה עדיין פעילה רק מפני שהוזכרה בתיעוד.`;
 
 function words(text: string): string[] {
-  return text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? [];
+  const searchable = text.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+  return searchable.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? [];
 }
 
 async function searchSources(client: OpenAI, index: string, query: string) {
