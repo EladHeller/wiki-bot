@@ -91,6 +91,25 @@ describe('tagBot', () => {
     );
   });
 
+  it('uses the active archive table for a timing question through the enabled pilot', async () => {
+    process.env.BOT_HELP_ENABLED = 'true';
+    const table = `{| class="wikitable" id="archive-config"
+! דף !! מצבים !! ימים !! סוג !! ניווט !! מצב ארכיון
+|-
+| [[שיחה:מקור]] || טופל || 7 || תבנית ארכיון עם יעד || [[שיחה:מקור]] || תבנית הועבר
+|}`;
+    api.articleContent.mockResolvedValueOnce({ content: table, revid: 2 });
+    try {
+      await run('@Test-bot עזרה: כמה ימים עד ארכוב דיון שסומן כטופל?');
+    } finally {
+      delete process.env.BOT_HELP_ENABLED;
+    }
+
+    expect(helpResponse).not.toHaveBeenCalled();
+    expect(api.articleContent).toHaveBeenCalledWith('ויקיפדיה:בוט/ארכוב דיונים');
+    expect(api.addComment).toHaveBeenCalledWith('שיחה:מקור', expect.any(String), expect.stringContaining('7 ימי המתנה'), 'comment');
+  });
+
   it('uses the regular error reply when the enabled help pilot fails', async () => {
     process.env.BOT_HELP_ENABLED = 'true';
     process.env.BOT_HELP_MODEL = 'test-model';
@@ -102,7 +121,7 @@ describe('tagBot', () => {
       delete process.env.BOT_HELP_MODEL;
     }
 
-    expect(logErrorMock).toHaveBeenCalledWith('Failed to answer bot help: Unavailable');
+    expect(logErrorMock).toHaveBeenCalledWith('Failed to answer bot help: Error: Unavailable');
     expect(api.addComment).toHaveBeenCalledWith('שיחה:מקור', expect.any(String), expect.stringContaining('שגיאה לא ידועה'), 'comment');
   });
 

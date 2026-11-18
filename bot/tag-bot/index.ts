@@ -202,7 +202,7 @@ async function helpAction(api: IWikiApi, notification: WikiNotification, questio
     const archive = ClosedDiscussionsArchiveBotModel(api);
     ({ answer } = await answerTagHelp(question, title, classify, archive.getPagesToArchive));
   } catch (error) {
-    logger.logError(`Failed to answer bot help: ${error.message || error.data || error.toString()}`);
+    logger.logError(`Failed to answer bot help: ${String(error)}`);
     answer = failedMessage;
   }
   await api.addComment(title, commentSummary, `${commentPrefix}\n${answer}`, commentId);
