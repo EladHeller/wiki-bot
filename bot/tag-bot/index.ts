@@ -9,6 +9,7 @@ import archiveParagraph, { moveTo } from './actions/archive';
 import askGPT from './gpt-bot/askGPT';
 import tagCommandPattern from './commands';
 import { answerTagHelp, createHelpClassifier } from './help/preview';
+import answerFromKnowledge from './help/knowledgeAnswer';
 import ClosedDiscussionsArchiveBotModel from '../maintenance/closedDiscussionsArchiveBot/ClosedDiscussionsArchiveBotModel';
 import { logger } from '../utilities/logger';
 import { checkExternalLinks } from './actions/checkPage';
@@ -198,9 +199,11 @@ async function helpAction(api: IWikiApi, notification: WikiNotification, questio
   let answer: string;
   try {
     const client = new OpenAI({ maxRetries: 0, timeout: 30_000 });
-    const classify = createHelpClassifier(client, process.env.BOT_HELP_MODEL || 'gpt-4o-mini');
+    const model = process.env.BOT_HELP_MODEL || 'gpt-4o-mini';
+    const classify = createHelpClassifier(client, model);
     const archive = ClosedDiscussionsArchiveBotModel(api);
-    ({ answer } = await answerTagHelp(question, title, classify, archive.getPagesToArchive));
+    const lookup = (query: string) => answerFromKnowledge(client, model, query);
+    ({ answer } = await answerTagHelp(question, title, classify, archive.getPagesToArchive, lookup));
   } catch (error) {
     logger.logError(`Failed to answer bot help: ${String(error)}`);
     answer = failedMessage;
@@ -259,10 +262,9 @@ const actions = {
   ענה: askAction,
   העבר: moveAction,
   בדוק: checkAction,
+  עזרה: helpAction,
 };
 const commandRegex = tagCommandPattern(botName, Object.keys(actions));
-const pilotActions = { ...actions, עזרה: helpAction };
-const pilotCommandRegex = tagCommandPattern(botName, Object.keys(pilotActions));
 const allowedGroups = ['autopatrolled', 'sysop', 'bureaucrat', 'patroller', 'templateeditor'];
 async function handleNotification(
   api: IWikiApi,
@@ -281,7 +283,7 @@ async function handleNotification(
   console.log({ title });
   const { body } = notification['*'];
   console.log({ body });
-  const match = body.match(process.env.BOT_HELP_ENABLED === 'true' ? pilotCommandRegex : commandRegex);
+  const match = body.match(commandRegex);
   if (!match) {
     console.log('No supported command addressed to bot');
     return;
@@ -305,7 +307,7 @@ async function handleNotification(
     return;
   }
 
-  const action = pilotActions[command as keyof typeof pilotActions];
+  const action = actions[command as keyof typeof actions];
   await action(api, notification, argument.trim());
 }
 

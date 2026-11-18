@@ -82,10 +82,16 @@ export async function answerTagHelp(
   page: string,
   classify: Classifier,
   loadConfiguration: () => Promise<PageToArchive[]>,
+  lookup?: (query: string) => Promise<string | null>,
 ): Promise<{ intent: HelpIntent; answer: string }> {
-  if (!question || requestsImmediateAction.test(question) || explicitlyNamesOtherBot.test(question)) {
+  if (!question || requestsImmediateAction.test(question)) {
     return { intent: 'unsupported', answer: fixedAnswers.unsupported };
   }
+  const answerUnsupported = async () => ({
+    intent: 'unsupported' as const,
+    answer: await lookup?.(question) ?? fixedAnswers.unsupported,
+  });
+  if (explicitlyNamesOtherBot.test(question)) return answerUnsupported();
   const explicitlyUsesStatusArchive = statusArchiveMode.test(question);
   if (!explicitlyUsesStatusArchive && asksToFilterArchiving.test(question) && mentionsTextCriterion.test(question)) {
     return { intent: 'filter-text', answer: fixedAnswers['filter-text'] };
@@ -107,6 +113,7 @@ export async function answerTagHelp(
   if (userTalkOnly.has(intent) && explicitlyUsesStatusArchive) {
     return { intent: 'unsupported', answer: fixedAnswers.unsupported };
   }
+  if (intent === 'unsupported') return answerUnsupported();
   if (intent !== 'page-timing') return { intent, answer: fixedAnswers[intent] };
   configuration ??= await loadConfiguration();
   const requestedStatus = findRequestedStatus(configuration, page, question);

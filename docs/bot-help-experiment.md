@@ -20,4 +20,12 @@ Before connecting a public command, review all answers, add held-out paraphrases
 
 Run the preparation command above and then run `node scripts/bot-help-preview.mjs` with the OpenAI key. The preview feeds synthetic Hebrew Wikipedia mention notifications into the same command matcher used by the tag bot. It compares the original question set with new paraphrases and out-of-scope cases. The model only classifies the question. The program renders the reviewed answer and builds template references and copy-ready snippets. For the live timing case, the program uses the current public configuration that preparation collected.
 
-The preview runner neither logs in to Wikipedia nor publishes a response. The ordinary tag handler includes an opt-in pilot. Set BOT_HELP_ENABLED=true in the bot process to register the command. The pilot uses the existing permissions check and reads the current configuration for timing questions. The deployment does not set this flag. It covers the two archivers. Questions about an actual incident still need the specific discussion and evidence of the bot's activity.
+The preview runner neither logs in to Wikipedia nor publishes a response. The ordinary tag handler registers the help command after deployment. It uses the existing permissions check and reads current configuration for timing questions. It covers the two archivers. Questions about an actual incident still need the specific discussion and evidence of the bot's activity.
+
+## Documentation refresh
+
+After merge, GitHub Actions builds the public help index on the initial push to master, on relevant source changes, and on Sundays at 07:25 UTC. The job uses the existing OpenAI secret. The tag bot discovers the newest ready index. The index covers an explicit list of public documentation pages, maintenance instructions, and archive templates. Live archive rules and page-specific activity are outside the snapshot.
+
+Each refresh fingerprints the content. An unchanged snapshot requires no uploads. A new snapshot reattaches unchanged files and uploads changed documents. It becomes visible only after every document has been processed. The prior snapshot is retained while the replacement indexes, and the latest two ready snapshots are retained after publication. Known archive answers run without the documentation index. When the documentation index is unavailable or offers no supported answer, the command falls back to its existing clarification.
+
+The branch workflow validates the refresh using a randomly named disposable index. It tests the initial refresh, a no-op refresh, a change to one file, and retrieval for a documented bot operation.

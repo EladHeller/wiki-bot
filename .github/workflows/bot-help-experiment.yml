@@ -8,6 +8,7 @@ on:
       - bot/tag-bot/help/**
       - scripts/bot-help-experiment.mjs
       - scripts/bot-help-preview.mjs
+      - scripts/bot-help-refresh.mjs
       - .github/workflows/bot-help-experiment.yml
   workflow_dispatch:
 
@@ -40,6 +41,11 @@ jobs:
           BOT_HELP_MODEL: ${{ matrix.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: node scripts/bot-help-preview.mjs
+      - name: Verify documentation refresh in an isolated index
+        if: matrix.model == 'gpt-4o-mini'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node scripts/bot-help-refresh.mjs --verify
       - name: Publish experiment report
         if: always()
         run: |

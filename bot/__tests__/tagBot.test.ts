@@ -10,10 +10,18 @@ const archiveMock = jest.fn<(...args: unknown[]) => Promise<{ success: string } 
 const moveMock = jest.fn<(...args: unknown[]) => Promise<{ success: string } | { error: string }>>();
 const askMock = jest.fn<(question: string) => Promise<string>>();
 const helpResponse = jest.fn<(...args: unknown[]) => Promise<{ status: string; output_text: string }>>();
+const listKnowledge = jest.fn<() => AsyncGenerator<{ id: string; status: string; metadata: object }>>();
 const checkMock = jest.fn<(...args: unknown[]) => Promise<string>>();
 const logErrorMock = jest.fn();
 
-jest.unstable_mockModule('openai', () => ({ default: class { responses = { create: helpResponse }; } }));
+jest.unstable_mockModule('openai', () => ({
+  default: class {
+    responses = { create: helpResponse };
+
+    vectorStores = { list: listKnowledge };
+  },
+  toFile: jest.fn(),
+}));
 jest.unstable_mockModule('../wiki/WikiApi', () => ({ default: () => api }));
 jest.unstable_mockModule('../tag-bot/actions/archive', () => ({ default: archiveMock, moveTo: moveMock }));
 jest.unstable_mockModule('../tag-bot/gpt-bot/askGPT', () => ({ default: askMock }));
@@ -65,22 +73,10 @@ describe('tagBot', () => {
     checkMock.mockResolvedValue('Checked');
   });
 
-  it('does not handle the help command unless the pilot is enabled', async () => {
-    await run('@Test-bot עזרה: איך מתחילים?');
-
-    expect(helpResponse).not.toHaveBeenCalled();
-    expect(api.addComment).not.toHaveBeenCalled();
-  });
-
-  it('answers via the normal notification path when the help pilot is enabled', async () => {
-    process.env.BOT_HELP_ENABLED = 'true';
+  it('answers via the normal notification path with the help command', async () => {
     api.getUserGroups.mockResolvedValue(['autopatrolled']);
     helpResponse.mockResolvedValue({ status: 'completed', output_text: '{"intent":"exclude-section"}' });
-    try {
-      await run('@Test-bot עזרה: איך משאירים פסקה בדף השיחה?');
-    } finally {
-      delete process.env.BOT_HELP_ENABLED;
-    }
+    await run('@Test-bot עזרה: איך משאירים פסקה בדף השיחה?');
 
     expect(helpResponse).toHaveBeenCalledTimes(1);
     expect(api.addComment).toHaveBeenCalledWith(
@@ -91,33 +87,46 @@ describe('tagBot', () => {
     );
   });
 
-  it('uses the active archive table for a timing question through the enabled pilot', async () => {
-    process.env.BOT_HELP_ENABLED = 'true';
+  it('uses the active archive table for a timing question for help', async () => {
     const table = `{| class="wikitable" id="archive-config"
 ! דף !! מצבים !! ימים !! סוג !! ניווט !! מצב ארכיון
 |-
 | [[שיחה:מקור]] || טופל || 7 || תבנית ארכיון עם יעד || [[שיחה:מקור]] || תבנית הועבר
 |}`;
     api.articleContent.mockResolvedValueOnce({ content: table, revid: 2 });
-    try {
-      await run('@Test-bot עזרה: כמה ימים עד ארכוב דיון שסומן כטופל?');
-    } finally {
-      delete process.env.BOT_HELP_ENABLED;
-    }
+    await run('@Test-bot עזרה: כמה ימים עד ארכוב דיון שסומן כטופל?');
 
     expect(helpResponse).not.toHaveBeenCalled();
     expect(api.articleContent).toHaveBeenCalledWith('ויקיפדיה:בוט/ארכוב דיונים');
     expect(api.addComment).toHaveBeenCalledWith('שיחה:מקור', expect.any(String), expect.stringContaining('7 ימי המתנה'), 'comment');
   });
 
-  it('uses the regular error reply when the enabled help pilot fails', async () => {
-    process.env.BOT_HELP_ENABLED = 'true';
+  it('uses the same permissions check for help as for the existing commands', async () => {
+    api.articleContent.mockReset();
+    api.articleContent.mockResolvedValue({ content: '==רשימת משתמשים==', revid: 1 });
+
+    await run('@Test-bot עזרה: איך מעדכנים את מצעד הפזמונים?');
+
+    expect(helpResponse).not.toHaveBeenCalled();
+    expect(api.addComment).toHaveBeenCalledWith('שיחה:מקור', expect.any(String), expect.stringContaining('אינך מורשה להשתמש בבוט'), 'comment');
+  });
+
+  it('falls back to an archive help explanation when the documentation index is unavailable', async () => {
+    listKnowledge.mockReturnValue((async function* emptyIndex() { yield* []; }()));
+
+    await run('@Test-bot עזרה: איך מפעילים את בוט קישורי השפה?');
+
+    expect(helpResponse).not.toHaveBeenCalled();
+    expect(listKnowledge).toHaveBeenCalledTimes(1);
+    expect(api.addComment).toHaveBeenCalledWith('שיחה:מקור', expect.any(String), expect.stringContaining('אפשר לשאול כאן על ארכוב'), 'comment');
+  });
+
+  it('uses the regular error reply when help fails', async () => {
     process.env.BOT_HELP_MODEL = 'test-model';
     helpResponse.mockRejectedValue(new Error('Unavailable'));
     try {
       await run('@Test-bot עזרה: איך משאירים פסקה בדף השיחה?');
     } finally {
-      delete process.env.BOT_HELP_ENABLED;
       delete process.env.BOT_HELP_MODEL;
     }
 
