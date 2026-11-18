@@ -171,7 +171,7 @@ describe('bot help experiment', () => {
       ['store', { query: generalCase.question, max_num_results: 5, rewrite_query: true }],
     ]);
     expect(client.responses.create.mock.calls).toStrictEqual([
-      [expect.objectContaining({ input: expect.stringContaining('"verifiedRules":{"text":["Verified behavior"],"examples":{}}') })],
+      [expect.objectContaining({ input: expect.stringContaining('"verifiedRules":["Verified behavior"]') })],
       [expect.objectContaining({ input: expect.stringContaining('"wikiContext":null') })],
     ]);
     expect(results[0].wikiContext).toStrictEqual(context);
@@ -185,6 +185,17 @@ describe('bot help experiment', () => {
     expect(client.vectorStores.search).not.toHaveBeenCalled();
     expect(client.responses.create).not.toHaveBeenCalled();
     expect(results[0].answer).toContain('באיזה דף או דיון מדובר?');
+  });
+
+  it('records correct example selection independently of formatting', async () => {
+    const client = fakeClient();
+    const output = JSON.stringify({ explanation: '{{תיבת ארכיון אוטומטי}}', example: 'EXAMPLE_1' });
+    client.responses.create.mockResolvedValueOnce({ status: 'completed', output_text: output });
+    const rule = { ...source, ...archiveRules[0] };
+    const checkpoint = jest.fn(async () => {});
+    const { results } = await runExperiment(client as unknown as OpenAI, [rule], [testCase], 'test-model', checkpoint);
+
+    expect(results[0]).toMatchObject({ expectedExampleSelected: true, copyExampleHit: false, rejectedOutput: output });
   });
 
   it('records rejected model output separately from the formatted answer', async () => {

@@ -18,6 +18,10 @@ jobs:
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [gpt-4o-mini, gpt-4.1-mini]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -29,6 +33,7 @@ jobs:
       - run: npm run build
       - name: Run bounded read-only experiment
         env:
+          BOT_HELP_MODEL: ${{ matrix.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: node scripts/bot-help-experiment.mjs
       - name: Publish experiment report
@@ -40,6 +45,6 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: bot-help-experiment
+          name: bot-help-experiment-${{ matrix.model }}
           path: experiment-output/bot-help/
           retention-days: 7
