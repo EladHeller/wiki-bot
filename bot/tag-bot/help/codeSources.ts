@@ -53,9 +53,10 @@ const codeSources = new Map(sources.map((source) => [`code:${source.path}`, sour
 
 export function operationSourcePath(path: string): boolean {
   if (['package.json', 'xmlbot/package.json', 'build/wiki-bot-playwright/Dockerfile'].includes(path)) return true;
-  const harness = /^(?:bot\/experiments\/botHelp\/|scripts\/(?:bot-help-(?:experiment|preview|verify)|smoke-test)\.mjs$)/;
+  const harnessScript = /^scripts\/(?:bot-help-(?:experiment|preview|verify)|smoke-test)\.mjs$/;
+  const harness = path.startsWith('bot/experiments/botHelp/') || harnessScript.test(path);
   const sourceFile = /^(?:bot|xmlbot|scripts|build|\.github\/workflows)\/[a-zA-Z0-9_./-]+\.(?:ts|[cm]?js|sh|ya?ml)$/;
-  return !harness.test(path) && sourceFile.test(path)
+  return !harness && sourceFile.test(path)
     && !/(?:^|\/)(?:\.\.?|__tests__|TestsDocker|node_modules)(?:\/|$)|\.(?:test|spec)\./.test(path);
 }
 
