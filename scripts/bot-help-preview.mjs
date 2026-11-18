@@ -34,6 +34,14 @@ const cases = [
     ['unsupported', 'איך מונעים מארכוב לפי מצב לארכב פסקה מסוימת במדיניות של מחיקה?'],
     ['unsupported', 'איך מפעילים את בוט קישורי השפה בדף חדש?'],
   ].map(([intent, question, page], index) => ({ id: `paraphrase-${index + 1}`, intent, question, page })),
+  ...[
+    ['exclude-section', 'יש לי דיון נעוץ בראש דף השיחה; איך שומרים דווקא עליו כשהשאר מתארכבים?'],
+    ['status-date', 'הבוט בארכוב לפי מצב מחשיב שינוי כותרת בדיון בתור פעילות שממנה צריך להתחיל לספור?'],
+    ['page-timing', 'כאן, מה פרק הזמן שקבעו למצב ״לא יבוצע״?', configuredPage, 'לא יבוצע'],
+    ['unsupported', 'איך מפעילים סנכרון קטגוריות אוטומטי?'],
+    ['new-task', 'אפשר לפתח פעולה שתשאב נתון מאתר של המועצה ותעדכן אותו אחת לחודש בערך?'],
+  ].map(([intent, question, page, status], index) => ({ id: `additional-${index + 1}`, intent, question, page, status })),
+
 ];
 
 const client = new OpenAI({ maxRetries: 0, timeout: 45_000 });
@@ -67,7 +75,7 @@ function passedCheck(row) {
   if (row.copy && !row.actual.answer.includes(`<code><nowiki>${row.copy}</nowiki></code>`)) return false;
   if (row.intent === 'page-timing') {
     const current = manifest.wikiContexts['configured-closed-discussions'].configuration
-      .find((rule) => rule.page === row.page && rule.statuses.includes('טופל'));
+      .find((rule) => rule.page === row.page && rule.statuses.includes(row.status ?? 'טופל'));
     if (!current || !row.actual.answer.includes(`${current.daysAfterLastActivity} ימי המתנה`)) return false;
     if (current.archiveType === 'תבנית ארכיון עם יעד' && !row.actual.answer.includes('בלי ערך הדיון נשאר בדף')) return false;
   }
@@ -79,7 +87,8 @@ const report = [
   '',
   `Model: ${model}`,
   `Original cases: ${passed(development)}/${development.length}.`,
-  `New cases: ${passed(paraphrases)}/${paraphrases.length}.`,
+  `Follow-up cases: ${passed(paraphrases)}/${paraphrases.length}.`,
+  `Additional cases: ${passed(paraphrases.filter((row) => row.id.startsWith('additional-')))}/5.`,
   '',
   ...rows.flatMap((row) => [
     `## ${row.id}`,

@@ -48,6 +48,16 @@ ${talkDocs}`,
 export type HelpIntent = keyof typeof fixedAnswers | 'page-timing';
 export const helpIntents: HelpIntent[] = [...Object.keys(fixedAnswers) as (keyof typeof fixedAnswers)[], 'page-timing'];
 
+export function findRequestedStatus(rows: PageToArchive[], page: string, question: string): string {
+  const statuses = [...new Set(rows.filter((rule) => rule.page === page).flatMap((rule) => rule.statuses))]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  if (statuses.length === 0) return '';
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])(?:כש|ש)?(${statuses.map((status) => RegExp.escape(status)).join('|')})(?![\\p{L}\\p{N}])`, 'gu');
+  const requested = [...new Set(Array.from(question.matchAll(pattern), (match) => match[1]))];
+  return requested.length === 1 ? requested[0] : '';
+}
+
 export function describeConfiguredTiming(
   rows: PageToArchive[],
   page: string,

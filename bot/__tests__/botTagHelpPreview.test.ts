@@ -3,7 +3,7 @@ import {
 } from '@jest/globals';
 import type OpenAI from 'openai';
 import type { WikiNotification } from '../types';
-import { describeConfiguredTiming, fixedAnswers } from '../tag-bot/help/answers';
+import { describeConfiguredTiming, findRequestedStatus, fixedAnswers } from '../tag-bot/help/answers';
 import { createHelpClassifier, previewTagHelp } from '../tag-bot/help/preview';
 
 const page = 'ויקיפדיה:קטגוריה/אולם דיונים';
@@ -37,14 +37,14 @@ describe('tag help preview', () => {
     { ...mention('@Sapper-bot עזרה: שאלה'), type: 'edit' },
     { ...mention('@Sapper-bot עזרה: שאלה'), wiki: 'enwiki' },
   ])('ignores notifications outside the pilot command', async (notification) => {
-    const classify = jest.fn(async () => ({ intent: 'start' as const, status: '' }));
+    const classify = jest.fn(async () => 'start' as const);
 
     await expect(previewTagHelp(notification, 'Sapper-bot', classify, readConfiguration)).resolves.toBeNull();
     expect(classify).not.toHaveBeenCalled();
   });
 
   it('asks what is needed when the question is empty', async () => {
-    const classify = jest.fn(async () => ({ intent: 'start' as const, status: '' }));
+    const classify = jest.fn(async () => 'start' as const);
     const result = await previewTagHelp(mention('@Sapper-bot עזרה: '), 'Sapper-bot', classify, readConfiguration);
 
     expect(result).toStrictEqual({ intent: 'unsupported', answer: fixedAnswers.unsupported });
@@ -52,7 +52,7 @@ describe('tag help preview', () => {
   });
 
   it('builds the template reference and copyable code from the same fixed answer', async () => {
-    const classify = jest.fn(async () => ({ intent: 'exclude-section' as const, status: '' }));
+    const classify = jest.fn(async () => 'exclude-section' as const);
     const read = jest.fn(readConfiguration);
     const notification = mention('@משתמש:Sapper-bot עזרה:  איך משאירים את הדיון?');
     const result = await previewTagHelp(notification, 'Sapper-bot', classify, read);
@@ -63,8 +63,38 @@ describe('tag help preview', () => {
     expect(result?.answer).toContain('<code><nowiki>{{לא לארכוב}}</nowiki></code>');
   });
 
+  it.each([
+    'תארכב את הפסקה הזו עכשיו בבקשה',
+    'אפשר לארכב את הדיון הזה עכשיו?',
+    'איך מפעילים את בוט קישורי השפה?',
+  ])('handles explicit out-of-scope requests before classifying (%s)', async (question) => {
+    const classify = jest.fn(async () => 'start' as const);
+    const result = await previewTagHelp(mention(`@Sapper-bot עזרה: ${question}`), 'Sapper-bot', classify, readConfiguration);
+
+    expect(classify).not.toHaveBeenCalled();
+    expect(result?.intent).toBe('unsupported');
+  });
+
+  it('keeps the two archive mechanisms separate even if the model misclassifies', async () => {
+    const classify = async () => 'exclude-section' as const;
+    const notification = mention('@Sapper-bot עזרה: איך מונעים מארכוב לפי מצב לארכב פסקה?');
+    const result = await previewTagHelp(notification, 'Sapper-bot', classify, readConfiguration);
+
+    expect(result?.intent).toBe('unsupported');
+  });
+
+  it('finds the most specific complete status and asks for a single status when needed', () => {
+    const rules = [{ ...config, statuses: ['בוצע', 'לא בוצע', 'טופל', ''] }];
+
+    expect(findRequestedStatus(rules, page, 'דיון שסומן ״לא בוצע״')).toBe('לא בוצע');
+    expect(findRequestedStatus(rules, page, 'דיון שטופל')).toBe('טופל');
+    expect(findRequestedStatus(rules, page, 'אם טופל או בוצע')).toBe('');
+    expect(findRequestedStatus(rules, page, 'אם טופל, ואז שוב טופל')).toBe('טופל');
+    expect(findRequestedStatus(rules, 'Other page', 'טופל')).toBe('');
+  });
+
   it('uses the live row to explain timing and the archive target requirement', async () => {
-    const classify = async () => ({ intent: 'page-timing' as const, status: 'טופל' });
+    const classify = async () => 'page-timing' as const;
     const notification = mention('@Sapper-bot עזרה: כמה ימים מחכים לדיון שסומן טופל?');
     const result = await previewTagHelp(notification, 'Sapper-bot', classify, readConfiguration);
 
@@ -73,8 +103,8 @@ describe('tag help preview', () => {
     expect(result?.answer).toContain('צריך קישור לפסקה');
   });
 
-  it.each(['', 'לא נטען בשאלה'])('asks for the status when it was never stated (%s)', async (status) => {
-    const classify = async () => ({ intent: 'page-timing' as const, status });
+  it('asks for the status when it was never stated', async () => {
+    const classify = async () => 'page-timing' as const;
     const result = await previewTagHelp(mention('@Sapper-bot עזרה: כמה זמן?'), 'Sapper-bot', classify, readConfiguration);
 
     expect(result?.answer).toContain('צריך את הדף המדויק ואת הערך');
@@ -98,18 +128,18 @@ describe('tag help preview', () => {
   });
 
   it('requests structured classification from the chosen model', async () => {
-    const create = jest.fn(async () => ({ status: 'completed', output_text: '{"intent":"start","status":""}' }));
+    const create = jest.fn(async () => ({ status: 'completed', output_text: '{"intent":"start"}' }));
     const client = { responses: { create } } as unknown as OpenAI;
     const classify = createHelpClassifier(client, 'test-model');
 
-    await expect(classify('שאלה', page)).resolves.toStrictEqual({ intent: 'start', status: '' });
+    await expect(classify('שאלה', page)).resolves.toBe('start');
     expect(create.mock.calls).toStrictEqual([[expect.objectContaining({
       model: 'test-model', input: JSON.stringify({ question: 'שאלה', page }), store: false,
     })]]);
   });
 
   it.each([
-    { status: 'incomplete', output_text: '{"intent":"start","status":""}' },
+    { status: 'incomplete', output_text: '{"intent":"start"}' },
     { status: 'completed', output_text: '' },
   ])('reports an unusable classification response', async (response) => {
     const client = { responses: { create: async () => response } } as unknown as OpenAI;
