@@ -6,6 +6,7 @@ import { getAllParagraphs, getParagraphContent, parseParagraph } from '../wiki/p
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import archiveParagraph, { moveTo } from './actions/archive';
 import askGPT from './gpt-bot/askGPT';
+import tagCommandPattern from './commands';
 import { logger } from '../utilities/logger';
 import { checkExternalLinks } from './actions/checkPage';
 import { getRedirectTargetFromContent } from '../wiki/redirectParser';
@@ -236,10 +237,7 @@ const actions = {
   העבר: moveAction,
   בדוק: checkAction,
 };
-const commandRegex = new RegExp(
-  `(?<![\\p{L}\\p{N}_@])@(?:(?:משתמש|user):)?${escapedBotName}\\s+(${Object.keys(actions).join('|')}):([\\s\\S]*)`,
-  'iu',
-);
+const commandRegex = tagCommandPattern(botName, Object.keys(actions));
 const allowedGroups = ['autopatrolled', 'sysop', 'bureaucrat', 'patroller', 'templateeditor'];
 async function handleNotification(
   api: IWikiApi,

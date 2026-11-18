@@ -2,7 +2,7 @@
 
 This isolated spike evaluates a daily-snapshot design before adding a public help command. It never edits Wikipedia, reads AWS, changes the production vector store, or deploys a bot. The sample contains five public wiki pages, seven repository sources, and two short sets of verified archive rules.
 
-Run `npm run build && node scripts/bot-help-experiment.mjs --prepare` to collect and validate a sample without an API key. Run `npm run build && node scripts/bot-help-experiment.mjs` with `OPENAI_API_KEY` to execute the hosted retrieval and answer experiment. `BOT_HELP_MODEL` defaults to the existing `gpt-4o-mini` baseline and can be overridden locally. CI runs the same benchmark with the revised prompt on both gpt-4o-mini and gpt-4.1-mini.
+Run `npm run build && node scripts/bot-help-experiment.mjs --prepare` to collect and validate a sample without an API key. Run `npm run build && node scripts/bot-help-experiment.mjs` with `OPENAI_API_KEY` to execute the hosted retrieval and answer experiment. `BOT_HELP_MODEL` defaults to the existing `gpt-4o-mini` baseline and can be overridden locally. The model comparison evaluated the generative benchmark with gpt-4o-mini and gpt-4.1-mini. CI now runs the read-only tag preview described below.
 
 The GitHub Actions workflow uses the existing production environment solely to obtain `OPENAI_API_KEY`; it requests no AWS credentials, OIDC token or wiki password. Environment protection rules may require approval. The workflow runs on pushes to the experiment branch in the original repository.
 
@@ -15,3 +15,9 @@ The snapshot records source URLs, wiki revision IDs, code revision, timestamps a
 Outputs are written to `experiment-output/bot-help/`: `manifest.json`, `corpus.json`, `results.json` and `report.md`. These files are ignored by git; Actions retains an artifact for seven days. Do not interpret an incomplete run as a successful experiment.
 
 Before connecting a public command, review all answers, add held-out paraphrases, and add topic detection and live tools for individual discussions. Daily incremental refresh and atomic index activation are subsequent work, not features demonstrated by this spike.
+
+## Read-only tag preview
+
+Run the preparation command above and then run `node scripts/bot-help-preview.mjs` with the OpenAI key. The preview feeds synthetic Hebrew Wikipedia mention notifications into the same command matcher used by the tag bot. It compares the original question set with new paraphrases and out-of-scope cases. The model only classifies the question. The program renders the reviewed answer and builds template references and copy-ready snippets. For the live timing case, the program uses the current public configuration that preparation collected.
+
+The preview does not register the new command in the running bot. It neither logs in to Wikipedia nor publishes a response. It covers the two archivers. Questions about an actual incident still need the specific discussion and evidence of the bot's activity.

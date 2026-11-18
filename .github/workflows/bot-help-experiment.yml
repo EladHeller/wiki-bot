@@ -5,7 +5,9 @@ on:
     branches: [experiment/bot-help-index]
     paths:
       - bot/experiments/botHelp/**
+      - bot/tag-bot/help/**
       - scripts/bot-help-experiment.mjs
+      - scripts/bot-help-preview.mjs
       - .github/workflows/bot-help-experiment.yml
   workflow_dispatch:
 
@@ -31,11 +33,13 @@ jobs:
           node-version: 24.14.0
       - run: npm ci
       - run: npm run build
-      - name: Run bounded read-only experiment
+      - name: Prepare public wiki context
+        run: node scripts/bot-help-experiment.mjs --prepare
+      - name: Run bounded tag preview
         env:
           BOT_HELP_MODEL: ${{ matrix.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: node scripts/bot-help-experiment.mjs
+        run: node scripts/bot-help-preview.mjs
       - name: Publish experiment report
         if: always()
         run: |
