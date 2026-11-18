@@ -4,7 +4,9 @@ import {
 import { createHash } from 'node:crypto';
 import type OpenAI from 'openai';
 import answerFromKnowledge from '../tag-bot/help/knowledgeAnswer';
-import { findKnowledgeIndex, knowledgePages, refreshKnowledgeIndex } from '../tag-bot/help/knowledgeIndex';
+import {
+  findKnowledgeIndex, knowledgePages, knowledgeScope, refreshKnowledgeIndex,
+} from '../tag-bot/help/knowledgeIndex';
 
 const scope = 'test-space';
 const [title, secondTitle] = knowledgePages;
@@ -77,11 +79,11 @@ describe('weekly help refresh', () => {
   it('builds an initial index and marks it ready only after processing', async () => {
     const mock = fakeOpenAI();
     mock.vectorStores.list.mockReturnValue(items([]));
-    const result = await refreshKnowledgeIndex(asClient(mock), [first, second], scope);
+    const result = await refreshKnowledgeIndex(asClient(mock), [first, second]);
 
     expect(result).toStrictEqual({ uploaded: 2, changed: true });
     expect(mock.vectorStores.update.mock.calls).toStrictEqual([['new-index', expect.objectContaining({
-      metadata: expect.objectContaining({ scope, state: 'ready' }),
+      metadata: expect.objectContaining({ scope: knowledgeScope, state: 'ready' }),
       expires_after: null,
     })]]);
   });
