@@ -9,6 +9,7 @@ on:
       - scripts/bot-help-experiment.mjs
       - scripts/bot-help-preview.mjs
       - scripts/bot-help-refresh.mjs
+      - scripts/bot-help-verify.mjs
       - .github/workflows/bot-help-experiment.yml
   workflow_dispatch:
 

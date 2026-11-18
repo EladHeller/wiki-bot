@@ -157,7 +157,10 @@ describe('repository sources', () => {
     expect(repositorySource(`code:${path}`)?.path).toBe(path);
   });
 
-  it.each(['bot/__tests__/example.test.ts', 'bot/../private.ts', 'bot/.env', 'build/random.pem', 'bot/foo.spec.ts'])(
+  it.each([
+    'bot/__tests__/example.test.ts', 'bot/experiments/botHelp/cases.ts', 'scripts/bot-help-verify.mjs',
+    'bot/../private.ts', 'bot/.env', 'build/random.pem', 'bot/foo.spec.ts',
+  ])(
     'excludes test and unrelated paths (%s)',
     (path) => {
       expect(operationSourcePath(path)).toBe(false);
@@ -215,6 +218,29 @@ describe('documentation answers', () => {
 
     await expect(answerFromKnowledge(asClient(mock), 'test-model', 'מה עושה הבוט על דפי כדורסלנים?', scope))
       .resolves.toContain('[[ויקיפדיה:בוט/סדר בשדות תאריכים בתבניות אישיות ספורט]]');
+  });
+
+  it('targets the right implementation even when global search would rank a help script first', async () => {
+    const mock = fakeOpenAI();
+    const source = 'code:bot/sportPersonalityTemplatesYearsFormat/model.ts';
+    mock.vectorStores.search.mockResolvedValue({
+      data: [{ attributes: { title: source }, content: [{ text: 'Actual basketball implementation' }] }],
+    });
+
+    await answerFromKnowledge(asClient(mock), 'test-model', 'מה עושה הבוט על דפי כדורסלנים?', scope);
+
+    expect(mock.vectorStores.search.mock.calls).toStrictEqual([['active', expect.objectContaining({
+      filters: { type: 'in', key: 'title', value: [source] },
+    })]]);
+  });
+
+  it('uses general search if a preferred implementation does not have an indexed result', async () => {
+    const mock = fakeOpenAI();
+    mock.vectorStores.search.mockResolvedValueOnce({ data: [] });
+
+    await answerFromKnowledge(asClient(mock), 'test-model', 'מה עושה הבוט על דפי כדורסלנים?', scope);
+
+    expect(mock.vectorStores.search).toHaveBeenCalledTimes(2);
   });
 
   it('searches English source for an operation without a curated Hebrew label', async () => {
