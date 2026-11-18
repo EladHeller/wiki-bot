@@ -11,3 +11,4 @@ coverage/
 .vscode/
 GEMINI.md
 .gemini
+experiment-output/

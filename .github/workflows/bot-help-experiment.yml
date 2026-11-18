@@ -1,0 +1,48 @@
+name: Bot help experiment
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - bot/experiments/botHelp/**
+      - scripts/bot-help-experiment.mjs
+      - .github/workflows/bot-help-experiment.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.head.ref == 'experiment/bot-help-index')
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.14.0
+      - run: npm ci
+      - run: npm run build
+      - name: Run bounded read-only experiment
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node scripts/bot-help-experiment.mjs
+      - name: Publish experiment report
+        if: always()
+        run: |
+          if [ -f experiment-output/bot-help/report.md ]; then
+            cat experiment-output/bot-help/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: bot-help-experiment
+          path: experiment-output/bot-help/
+          retention-days: 7
