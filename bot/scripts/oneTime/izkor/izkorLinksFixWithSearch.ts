@@ -25,7 +25,7 @@ const TEMPLATE_NAME = 'יזכור';
 const BASE_URL = 'https://izkor.gov.il';
 const REPORT_PAGE_TITLE = 'משתמש:Sapper-bot/ניסיונות תיקון קישורי יזכור - חיפוש';
 const FIX_RESULTS_PAGE_TITLE = 'משתמש:Sapper-bot/ניסיונות תיקון קישורי יזכור - חיפוש';
-
+const engine = '147443261dd5c4363';
 // Delay between requests to avoid overwhelming the server
 const delay = (ms: number) => new Promise((resolve) => {
   setTimeout(resolve, ms);
@@ -155,7 +155,7 @@ async function attemptFix(
     };
   }
 
-  const foundUrl = await googleSearch(`site:izkor.gov.il ${getNameFromUrl ? nameFromUrl : name}`);
+  const foundUrl = await googleSearch(`site:izkor.gov.il ${getNameFromUrl ? nameFromUrl : name}`, engine);
 
   if (!foundUrl) {
     return {

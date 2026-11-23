@@ -1,20 +1,20 @@
 import { logger } from '../utilities/logger';
 
-const { GOOGLE_SEARCH_API_KEY, GOOGLE_SEARCH_CX } = process.env;
+const { GOOGLE_SEARCH_API_KEY } = process.env;
 let isGoogleSearchEnabled = true;
-export default async function googleSearch(searchText: string): Promise<string | null> {
+export default async function googleSearch(searchText: string, specificEngine: string): Promise<string | null> {
   if (!isGoogleSearchEnabled) {
     logger.logWarning('Google Search is disabled');
     return null;
   }
-  if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_CX) {
+  if (!GOOGLE_SEARCH_API_KEY) {
     throw new Error('Missing Google Search API credentials');
   }
 
   try {
     const url = new URL('https://www.googleapis.com/customsearch/v1');
     url.searchParams.append('key', GOOGLE_SEARCH_API_KEY);
-    url.searchParams.append('cx', GOOGLE_SEARCH_CX);
+    url.searchParams.append('cx', specificEngine);
     url.searchParams.append('q', searchText);
     url.searchParams.append('num', '1');
 
