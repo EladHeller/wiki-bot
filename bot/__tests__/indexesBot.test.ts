@@ -47,6 +47,52 @@ describe('indexesBot validation', () => {
     (jest.mocked(logger.logWarning)).mockImplementation(() => { });
   });
 
+  describe('individual index membership validation', () => {
+    const indexName = 'ת"א טק - עילית';
+    const templatePage = 'תבנית:מדד תל אביב בסיס/נתונים';
+    const companyIndexesPage = 'תבנית:מדדי הבורסה לניירות ערך בתל אביב/נתונים';
+    const stocks = Array.from({ length: 87 }, (_, i) => ({
+      CompanyId: i + 1, ShortName: `חברה ${i + 1}`, Symbol: `SYM${i + 1}`, Weight: 1,
+    }));
+
+    beforeEach(() => {
+      const publishedStocks = stocks.map(({ ShortName }) => ShortName).join(' • ');
+      const pages: Record<string, { content: string; revid: number }> = {
+        [templatePage]: { content: `{{#switch: {{{1}}}\n|${indexName}=${publishedStocks}\n}}`, revid: 123 },
+        'תבנית:מדד תל אביב בסיס': {
+          content: `== מדדים נכללים ==\n[[${indexName}]]`, revid: 124,
+        },
+        'תבנית:מדדי הבורסה לניירות ערך בתל אביב': {
+          content: `{|\n| ${indexName} || {{תב|תבנית1}}\n|}`, revid: 125,
+        },
+        [companyIndexesPage]: { content: '{{#switch: {{{1}}}\n}}', revid: 126 },
+        'תבנית:חברות מאיה/נתונים': { content: '{{#switch: {{{ID}}}}}', revid: 127 },
+        'תבנית:חברות מאיה/שם מלא/נתונים': { content: '{{#switch: {{{ID}}}}}', revid: 128 },
+      };
+      mockApi.articleContent.mockImplementation((page: string) => Promise.resolve(pages[page]));
+      jest.mocked(getIndicesList).mockResolvedValue([{ Name: indexName, Id: '173' } as any]);
+    });
+
+    it.each([60, 0])('aborts both updates when one index drops from 87 members to %i', async (count) => {
+      jest.mocked(getIndexStocks).mockResolvedValue(stocks.slice(0, count));
+
+      await expect(indexesBot()).rejects.toThrow(`in index ${indexName} (${87 - count} out of 87)`);
+
+      expect(mockApi.edit).not.toHaveBeenCalled();
+      expect(mockApi.purge).not.toHaveBeenCalled();
+    });
+
+    it('updates both templates after a small drop in index membership', async () => {
+      jest.mocked(getIndexStocks).mockResolvedValue(stocks.slice(0, 86));
+
+      await indexesBot();
+
+      expect(mockApi.edit).toHaveBeenCalledWith(companyIndexesPage, 'עדכון', expect.any(String), 126);
+      expect(mockApi.edit).toHaveBeenCalledWith(templatePage, 'עדכון', expect.any(String), 123);
+      expect(logger.logWarning).not.toHaveBeenCalled();
+    });
+  });
+
   describe('base index template validation', () => {
     it('should throw error when more than 10% of indexes are deleted', async () => {
       const oldTemplateContent = `{{#switch: {{{1}}}

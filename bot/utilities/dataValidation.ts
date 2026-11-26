@@ -1,17 +1,12 @@
 import { logger } from './logger';
 
-export default function validateDataChanges(
-  oldData: Record<string, string>,
-  newData: Record<string, any>,
-  templateName: string,
+export function validateCountChanges(
+  oldCount: number,
+  newCount: number,
+  recordName: string,
   deletionThreshold = 20,
   warningThreshold = 10,
 ): void {
-  const oldKeys = Object.keys(oldData);
-  const newKeys = Object.keys(newData);
-  const oldCount = oldKeys.length;
-  const newCount = newKeys.length;
-
   if (oldCount === 0) {
     return;
   }
@@ -23,13 +18,29 @@ export default function validateDataChanges(
 
   if (exceedsDeletionThreshold) {
     throw new Error(
-      `Deleted ${deletionPercentage.toFixed(1)}% of records in ${templateName} (${deletedCount} out of ${oldCount}). Exceeds ${deletionThreshold}% threshold, aborting update.`,
+      `Deleted ${deletionPercentage.toFixed(1)}% of records in ${recordName} (${deletedCount} out of ${oldCount}). Exceeds ${deletionThreshold}% threshold, aborting update.`,
     );
   }
 
   if (exceedsWarningThreshold) {
     logger.logWarning(
-      `Warning: Deleted ${deletionPercentage.toFixed(1)}% of records in ${templateName} (${deletedCount} out of ${oldCount}).`,
+      `Warning: Deleted ${deletionPercentage.toFixed(1)}% of records in ${recordName} (${deletedCount} out of ${oldCount}).`,
     );
   }
+}
+
+export default function validateDataChanges(
+  oldData: Record<string, string>,
+  newData: Record<string, any>,
+  templateName: string,
+  deletionThreshold?: number,
+  warningThreshold?: number,
+): void {
+  validateCountChanges(
+    Object.keys(oldData).length,
+    Object.keys(newData).length,
+    templateName,
+    deletionThreshold,
+    warningThreshold,
+  );
 }
