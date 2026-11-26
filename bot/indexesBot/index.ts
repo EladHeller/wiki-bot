@@ -6,7 +6,7 @@ import { getParagraphContent } from '../wiki/paragraphParser';
 import WikiApi, { IWikiApi } from '../wiki/WikiApi';
 import { getInnerLinks } from '../wiki/wikiLinkParser';
 import parseTableText from '../wiki/wikiTableParser';
-import validateDataChanges from '../utilities/dataValidation';
+import validateDataChanges, { validateCountChanges } from '../utilities/dataValidation';
 
 const companyWikiPageTemplate = 'תבנית:חברות מאיה/נתונים';
 const companyNameTemplate = 'תבנית:חברות מאיה/שם מלא/נתונים';
@@ -16,6 +16,7 @@ const companyIndexesTemplatesBase = 'תבנית:מדדי הבורסה לנייר
 const companiesIndexesTemplates = `${companyIndexesTemplatesBase}/נתונים`;
 
 const templateStart = '#switch: {{{1}}}';
+const stockSeparator = '•';
 type IndexData = {
   indexName: string;
   indexStocks: string[];
@@ -148,7 +149,9 @@ export default async function indexesBot() {
     data: indexes,
     companyIndexesDict,
   } = await getIndexes(api);
-  const newTemplateData = indexes.map((index) => [index.indexName, `${index.indexStocks.join(' • ')}`]);
+  const newTemplateData = indexes.map(({ indexName, indexStocks }) => [
+    indexName, indexStocks.join(` ${stockSeparator} `),
+  ]);
 
   const oldTemplate = findTemplate(content, templateStart, indexesTemplatePage);
   const oldData = getTemplateKeyValueData(oldTemplate);
@@ -156,6 +159,10 @@ export default async function indexesBot() {
   const newTemplateDataRecord = Object.fromEntries(newTemplateData);
 
   validateDataChanges(oldData, newTemplateDataRecord, 'מדד תל אביב בסיס', 10, 1);
+  indexes.forEach(({ indexName, indexStocks }) => {
+    const oldStockCount = (oldData[indexName] ?? '').split(stockSeparator).filter((stock) => stock.trim()).length;
+    validateCountChanges(oldStockCount, indexStocks.length, `index ${indexName}`);
+  });
 
   const newTemplateText = templateFromKeyValueData(newTemplateDataRecord, templateStart);
   const newContent = content.replace(oldTemplate, newTemplateText);
